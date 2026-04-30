@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import { VehicleImage } from '@/components/ui/vehicle-image'
 import { Fuel, Gauge, Settings, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Vehicle } from '@/types'
@@ -66,8 +66,8 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
       <div className="group bg-background-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-1">
         {/* Image container with consistent 4:3 aspect ratio - clickable link */}
         <Link href={`/veiculo/${vehicle.slug}`} className="relative aspect-[4/3] overflow-hidden bg-background-soft vehicle-image-container block">
-          <Image
-            src={vehicle.photos?.[0] || '/placeholder.jpg'}
+          <VehicleImage
+            src={vehicle.photos?.[0]}
             alt={`${vehicle.brand} ${vehicle.model}`}
             fill
             className="card-vehicle-image transition-transform duration-500 group-hover:scale-[1.03]"
@@ -109,8 +109,8 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
     <div className="group bg-background-card border border-border rounded-2xl overflow-hidden flex flex-col md:flex-row transition-all duration-300 hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1">
       {/* Image container - fixed 4:3 aspect + object-cover */}
       <Link href={`/veiculo/${vehicle.slug}`} className="relative aspect-[4/3] md:w-[55%] shrink-0 overflow-hidden bg-background-soft block">
-        <Image
-          src={vehicle.photos?.[0] || '/placeholder.jpg'}
+        <VehicleImage
+          src={vehicle.photos?.[0]}
           alt={`${vehicle.brand} ${vehicle.model}`}
           fill
           className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"

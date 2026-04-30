@@ -5,6 +5,14 @@
 
 import { Vehicle } from '@/types'
 import { realInventoryVehicles } from './vehicle-inventory-data'
+import {
+  appendVehicleToSnapshot,
+  loadLatestAdsHomeSnapshot,
+  loadLatestListSnapshot,
+  loadLatestVehicleSnapshot,
+  saveInventorySnapshot,
+  InventorySnapshotSources,
+} from './inventory-snapshot'
 
 // AutoConf API Types
 export interface AutoConfVehicle {
@@ -175,7 +183,19 @@ export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Prom
     throw new Error(`AutoConf API error: ${response.status} ${response.statusText}`)
   }
 
-  return response.json()
+  const data = (await response.json()) as AutoConfResponse
+  // Cache only the broad "first-page no-filters" response to keep the snapshot
+  // representative of the full inventory; per-filter caching would balloon rows.
+  const isBroadQuery = !filters.marca_id && !filters.modelo_id && !filters.preco_de
+    && !filters.preco_ate && !filters.ano_de && !filters.ano_ate
+  if (isBroadQuery && (data.veiculos?.length ?? 0) > 0) {
+    void saveInventorySnapshot(
+      InventorySnapshotSources.list,
+      data,
+      data.veiculos.length,
+    )
+  }
+  return data
 }
 
 /**
@@ -275,9 +295,22 @@ export async function fetchAdsHome(): Promise<AdsHomeResponse> {
 
     console.log(`[fetchAdsHome] Found ${adsDesktop.length} desktop banners, ${adsMobile.length} mobile banners, ${destaques.length} vehicles`)
 
-    return { adsDesktop, adsMobile, destaques }
+    const result: AdsHomeResponse = { adsDesktop, adsMobile, destaques }
+    if (adsDesktop.length || adsMobile.length || destaques.length) {
+      void saveInventorySnapshot(
+        InventorySnapshotSources.adsHome,
+        result,
+        destaques.length,
+      )
+    }
+    return result
   } catch (error) {
     console.error('Error fetching ads home:', error)
+    const cached = await loadLatestAdsHomeSnapshot<AdsHomeResponse>().catch(() => null)
+    if (cached) {
+      console.warn('[fetchAdsHome] Using Supabase snapshot fallback')
+      return cached
+    }
     return emptyResponse
   }
 }
@@ -306,7 +339,11 @@ export async function fetchAutoConfVehicleById(vehicleId: number): Promise<AutoC
   }
 
   const data = await response.json()
-  return data.veiculo || null
+  const veiculo = (data.veiculo || null) as AutoConfVehicle | null
+  if (veiculo) {
+    void appendVehicleToSnapshot(vehicleId, veiculo)
+  }
+  return veiculo
 }
 
 /**
@@ -464,10 +501,25 @@ export async function getVehicles(filters: AutoConfFilters = {}): Promise<{
     }
   } catch (error) {
     console.error('Error fetching vehicles from AutoConf:', error)
-    // Return real inventory data as fallback when API fails (403, timeout, etc.)
-    console.warn('Using real inventory data as fallback')
     const page = filters.pagina || 1
     const perPage = filters.registros_por_pagina || 20
+
+    // Tier 1 fallback: last successful snapshot from Supabase
+    const snapshot = await loadLatestListSnapshot().catch(() => null)
+    if (snapshot && snapshot.veiculos?.length) {
+      console.warn(`[autoconf] Using Supabase snapshot fallback (${snapshot.veiculos.length} vehicles)`)
+      const start = (page - 1) * perPage
+      const end = start + perPage
+      return {
+        vehicles: snapshot.veiculos.map(mapAutoConfToVehicle).slice(start, end),
+        total: snapshot.veiculos.length,
+        page,
+        totalPages: Math.ceil(snapshot.veiculos.length / perPage),
+      }
+    }
+
+    // Tier 2 fallback: bundled JSON (stale but always available)
+    console.warn('[autoconf] Using bundled inventory fallback')
     const start = (page - 1) * perPage
     const end = start + perPage
     return {
@@ -483,23 +535,35 @@ export async function getVehicles(filters: AutoConfFilters = {}): Promise<{
  * Fetch a single vehicle by ID and map to our interface
  */
 export async function getVehicleById(id: string): Promise<Vehicle | null> {
+  const numericId = parseInt(id)
   try {
-    const numericId = parseInt(id)
     if (isNaN(numericId)) {
-      // Try to find in real inventory data by id string
       return mockVehicles.find(v => v.id === id) || null
     }
 
     const autoconfVehicle = await fetchAutoConfVehicleById(numericId)
-    if (!autoconfVehicle) {
-      // Vehicle not found in API, try real inventory data
-      return mockVehicles.find(v => v.id === id) || null
+    if (autoconfVehicle) {
+      return mapAutoConfToVehicle(autoconfVehicle)
     }
 
-    return mapAutoConfToVehicle(autoconfVehicle)
+    // API responded but vehicle not found — try snapshot then bundled
+    const snapshotVehicle = await loadLatestVehicleSnapshot(numericId).catch(() => null)
+    if (snapshotVehicle) return mapAutoConfToVehicle(snapshotVehicle)
+
+    const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+    const fromList = listSnapshot?.veiculos.find(v => v.id === numericId)
+    if (fromList) return mapAutoConfToVehicle(fromList)
+
+    return mockVehicles.find(v => v.id === id) || null
   } catch (error) {
     console.error('Error fetching vehicle by ID:', error)
-    // Return from real inventory data as fallback when API fails
+    if (!isNaN(numericId)) {
+      const snapshotVehicle = await loadLatestVehicleSnapshot(numericId).catch(() => null)
+      if (snapshotVehicle) return mapAutoConfToVehicle(snapshotVehicle)
+      const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+      const fromList = listSnapshot?.veiculos.find(v => v.id === numericId)
+      if (fromList) return mapAutoConfToVehicle(fromList)
+    }
     return mockVehicles.find(v => v.id === id) || null
   }
 }
@@ -538,7 +602,16 @@ export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
     return mapAutoConfToVehicle(vehicle)
   } catch (error) {
     console.error('Error fetching vehicle by slug:', error)
-    // Return from real inventory data as fallback when API fails
+    const slugParts = slug.split('-')
+    const potentialId = slugParts[slugParts.length - 1]
+    if (potentialId && /^\d+$/.test(potentialId)) {
+      const vehicleId = parseInt(potentialId, 10)
+      const snapshotVehicle = await loadLatestVehicleSnapshot(vehicleId).catch(() => null)
+      if (snapshotVehicle) return mapAutoConfToVehicle(snapshotVehicle)
+    }
+    const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+    const fromList = listSnapshot?.veiculos.find(v => generateVehicleSlug(v) === slug)
+    if (fromList) return mapAutoConfToVehicle(fromList)
     return mockVehicles.find(v => v.slug === slug) || null
   }
 }
@@ -581,7 +654,13 @@ export async function getRelatedVehicles(currentId: string, brand: string, limit
     return filtered.map(mapAutoConfToVehicle)
   } catch (error) {
     console.error('Error fetching related vehicles:', error)
-    // Return from real inventory data as fallback when API fails
+    const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+    if (listSnapshot?.veiculos.length) {
+      return listSnapshot.veiculos
+        .filter(v => String(v.id) !== currentId)
+        .slice(0, limit)
+        .map(mapAutoConfToVehicle)
+    }
     return mockVehicles
       .filter(v => v.id !== currentId)
       .slice(0, limit)
@@ -714,8 +793,28 @@ export async function getHomeSlides(
       })
     }
 
-    // Priority 4: Final fallback to local data
-    console.warn('[getHomeSlides] API returned no vehicles, using local inventory')
+    // Priority 4: Supabase snapshot (last successful AutoConf list)
+    const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+    if (listSnapshot?.veiculos.length) {
+      console.warn(`[getHomeSlides] Using Supabase snapshot (${listSnapshot.veiculos.length} vehicles)`)
+      const sorted = [...listSnapshot.veiculos].sort(
+        (a, b) => parseFloat(b.valorvenda) - parseFloat(a.valorvenda),
+      )
+      const unique = deduplicateVehicles(sorted)
+      return unique.slice(0, limit).map((v, index) => {
+        const vehicle = mapAutoConfToVehicle(v)
+        return {
+          type: 'vehicle' as const,
+          image: vehicle.photos?.[0] || '',
+          targetUrl: `/veiculo/${vehicle.slug}`,
+          vehicle,
+          ordem: index,
+        }
+      })
+    }
+
+    // Priority 5: Final fallback to bundled local data
+    console.warn('[getHomeSlides] No snapshot, using bundled inventory')
     const sortedMock = [...mockVehicles].sort((a, b) => (b.price || 0) - (a.price || 0))
     const uniqueMock = deduplicateMappedVehicles(sortedMock)
     return uniqueMock.slice(0, limit).map((vehicle, index) => ({
@@ -727,7 +826,23 @@ export async function getHomeSlides(
     }))
   } catch (error) {
     console.error('[getHomeSlides] Error:', error)
-    // Final fallback
+    const listSnapshot = await loadLatestListSnapshot().catch(() => null)
+    if (listSnapshot?.veiculos.length) {
+      const sorted = [...listSnapshot.veiculos].sort(
+        (a, b) => parseFloat(b.valorvenda) - parseFloat(a.valorvenda),
+      )
+      const unique = deduplicateVehicles(sorted)
+      return unique.slice(0, limit).map((v, index) => {
+        const vehicle = mapAutoConfToVehicle(v)
+        return {
+          type: 'vehicle' as const,
+          image: vehicle.photos?.[0] || '',
+          targetUrl: `/veiculo/${vehicle.slug}`,
+          vehicle,
+          ordem: index,
+        }
+      })
+    }
     const sortedMock = [...mockVehicles].sort((a, b) => (b.price || 0) - (a.price || 0))
     const uniqueMock = deduplicateMappedVehicles(sortedMock)
     return uniqueMock.slice(0, limit).map((vehicle, index) => ({

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
-import Image from 'next/image'
+import { VehicleImage } from '@/components/ui/vehicle-image'
 import Link from 'next/link'
 import { ArrowRight, Zap } from 'lucide-react'
 import { Container } from '@/components/ui/container'
@@ -102,8 +102,8 @@ export function FeaturedSupercars({ vehicles = [] }: FeaturedSupercarsProps) {
               {/* Image container - clickable link */}
               <Link href={`/veiculo/${vehicle.slug}`} className="block">
                 <div className="relative aspect-[4/3] overflow-hidden bg-background-soft vehicle-image-container">
-                  <Image
-                    src={vehicle.photos?.[0] || '/placeholder.jpg'}
+                  <VehicleImage
+                    src={vehicle.photos?.[0]}
                     alt={`${vehicle.brand} ${vehicle.model}`}
                     fill
                     className="card-vehicle-image transition-transform duration-500 group-hover:scale-105"
