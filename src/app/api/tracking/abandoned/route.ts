@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from "@/lib/supabase/tracking-client"
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 const N8N_ABANDONED_WEBHOOK = process.env.N8N_ABANDONED_LEAD_WEBHOOK_URL
 const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET

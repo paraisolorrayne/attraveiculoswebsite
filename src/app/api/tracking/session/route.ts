@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from "@/lib/supabase/tracking-client"
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 // Use service role for tracking (no user auth required)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Insert a session, or return the existing row's id when the session_id
 // already exists (page reload within the same sessionStorage lifetime).

@@ -170,6 +170,17 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['site_settings']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['site_settings']['Insert']>
       }
+      inventory_snapshots: {
+        Row: {
+          id: string
+          source: string
+          payload: Json
+          vehicle_count: number
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['inventory_snapshots']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['inventory_snapshots']['Insert']>
+      }
       admin_users: {
         Row: {
           id: string

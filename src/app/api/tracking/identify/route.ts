@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from "@/lib/supabase/tracking-client"
 import { createHash } from 'crypto'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // N8N webhook URL and secret for enrichment
 const N8N_ENRICHMENT_WEBHOOK = process.env.N8N_ENRICHMENT_WEBHOOK_URL

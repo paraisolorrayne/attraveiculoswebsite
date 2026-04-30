@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { VehicleImage } from '@/components/ui/vehicle-image'
 import Link from 'next/link'
 import { ArrowRight, MessageCircle, Gauge, CalendarDays } from 'lucide-react'
 import { Container } from '@/components/ui/container'
@@ -79,8 +79,8 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
               className="block relative rounded-2xl overflow-hidden bg-background-card border border-border shadow-lg shadow-black/5"
             >
               <div className="relative aspect-[5/4] md:aspect-[16/11] overflow-hidden">
-                <Image
-                  src={main.photos?.[0] || '/placeholder.jpg'}
+                <VehicleImage
+                  src={main.photos?.[0]}
                   alt={`${main.brand} ${main.model}`}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
@@ -186,8 +186,8 @@ function SecondaryPick({ vehicle }: { vehicle: Vehicle }) {
         href={`/veiculo/${vehicle.slug}`}
         className="relative aspect-square sm:aspect-[4/5] overflow-hidden"
       >
-        <Image
-          src={vehicle.photos?.[0] || '/placeholder.jpg'}
+        <VehicleImage
+          src={vehicle.photos?.[0]}
           alt={`${vehicle.brand} ${vehicle.model}`}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
