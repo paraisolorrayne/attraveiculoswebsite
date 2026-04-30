@@ -184,10 +184,15 @@ export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Prom
   }
 
   const data = (await response.json()) as AutoConfResponse
-  // Cache only the broad "first-page no-filters" response to keep the snapshot
-  // representative of the full inventory; per-filter caching would balloon rows.
+  // Cache only the broad "first-page no-filters, large page size" response so
+  // small-page-size calls (e.g. getRelatedVehicles with 5 items) don't
+  // overwrite a comprehensive 100-vehicle snapshot from the listing page.
+  const pageSize = filters.registros_por_pagina ?? 20
   const isBroadQuery = !filters.marca_id && !filters.modelo_id && !filters.preco_de
     && !filters.preco_ate && !filters.ano_de && !filters.ano_ate
+    && !filters.km_de && !filters.km_ate && !filters.combustivel_id
+    && !filters.cambio_id && !filters.cor_id
+    && pageSize >= 50
   if (isBroadQuery && (data.veiculos?.length ?? 0) > 0) {
     void saveInventorySnapshot(
       InventorySnapshotSources.list,
@@ -261,6 +266,11 @@ export async function fetchAdsHome(): Promise<AdsHomeResponse> {
 
     if (!response.ok) {
       console.error(`AutoConf Ads Home API error: ${response.status}`)
+      const cached = await loadLatestAdsHomeSnapshot<AdsHomeResponse>().catch(() => null)
+      if (cached) {
+        console.warn('[fetchAdsHome] Non-OK status — using Supabase snapshot fallback')
+        return cached
+      }
       return emptyResponse
     }
 
