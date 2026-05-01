@@ -10,6 +10,7 @@
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3'
 const HANDLE = 'attraveiculos'
+const DEFAULT_CHANNEL_ID = 'UCkjTjmzoOvIZJR-Ze0hNVDg'
 const SHORT_DURATION_LIMIT_SECONDS = 60
 const MAX_RESULTS = 50 // hard limit per call; we paginate twice = up to 100 videos
 const MAX_PAGES = 2
@@ -92,7 +93,10 @@ async function ytFetch<T>(path: string, params: Record<string, string>, apiKey: 
 }
 
 async function resolveChannelId(apiKey: string): Promise<string> {
+  // Override via env, then hardcoded default (saves 1 API call per cold cache),
+  // then fall back to resolving from the @handle.
   if (process.env.YOUTUBE_CHANNEL_ID) return process.env.YOUTUBE_CHANNEL_ID
+  if (DEFAULT_CHANNEL_ID) return DEFAULT_CHANNEL_ID
 
   const data = await ytFetch<ChannelListResponse>(
     'channels',
