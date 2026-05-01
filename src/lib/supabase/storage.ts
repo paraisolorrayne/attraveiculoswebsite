@@ -262,6 +262,10 @@ export async function uploadBlogImage(file: File): Promise<UploadResult> {
 const SNAPSHOT_FETCH_TIMEOUT_MS = 15_000
 const SNAPSHOT_MAX_BYTES = 8 * 1024 * 1024
 const SNAPSHOT_CONCURRENCY = 4
+const SNAPSHOT_MAX_ATTEMPTS = 2
+const SNAPSHOT_RETRY_DELAY_MS = 800
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
 function isAlreadyInBucket(url: string, bucket: string): boolean {
   return url.includes(`/storage/v1/object/public/${bucket}/`)
@@ -279,17 +283,11 @@ function extOfContentType(contentType: string | null, fallbackUrl: string): stri
 }
 
 /**
- * Download an external image and re-upload to Supabase Storage so blog posts
- * stop depending on third-party CDNs (link rot prevention).
- *
- * Returns the snapshotted URL on success, or the original URL on any failure
- * — callers should treat this as best-effort, not load-bearing.
+ * One attempt to download + upload. Returns null on retriable failure
+ * (network, 5xx, upload error), throws on permanent failure (4xx, oversize,
+ * non-image content-type), and returns the snapshotted URL on success.
  */
-export async function snapshotExternalImage(externalUrl: string): Promise<string> {
-  if (!externalUrl) return externalUrl
-  if (isAlreadyInBucket(externalUrl, BLOG_IMAGES_BUCKET)) return externalUrl
-  if (!/^https?:\/\//i.test(externalUrl)) return externalUrl
-
+async function snapshotAttempt(externalUrl: string): Promise<string | null> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), SNAPSHOT_FETCH_TIMEOUT_MS)
 
@@ -300,18 +298,17 @@ export async function snapshotExternalImage(externalUrl: string): Promise<string
       headers: { 'User-Agent': 'Attra-BlogSnapshot/1.0' },
     })
     if (!res.ok) {
-      console.warn(`[snapshotImage] HTTP ${res.status} for ${externalUrl}`)
-      return externalUrl
+      // 5xx is retriable; 4xx is permanent (don't retry into the same wall)
+      if (res.status >= 500) return null
+      throw new Error(`HTTP ${res.status}`)
     }
     const contentType = res.headers.get('content-type')
     if (contentType && !contentType.startsWith('image/')) {
-      console.warn(`[snapshotImage] non-image content-type ${contentType} for ${externalUrl}`)
-      return externalUrl
+      throw new Error(`non-image content-type ${contentType}`)
     }
     const buf = await res.arrayBuffer()
     if (buf.byteLength > SNAPSHOT_MAX_BYTES) {
-      console.warn(`[snapshotImage] too large (${buf.byteLength}b) for ${externalUrl}`)
-      return externalUrl
+      throw new Error(`too large (${buf.byteLength}b)`)
     }
 
     const ext = extOfContentType(contentType, externalUrl)
@@ -326,22 +323,48 @@ export async function snapshotExternalImage(externalUrl: string): Promise<string
         cacheControl: '31536000',
         upsert: false,
       })
-    if (error) {
-      console.warn(`[snapshotImage] upload failed for ${externalUrl}: ${error.message}`)
-      return externalUrl
-    }
+    if (error) return null // upload errors are usually transient (network/5xx)
 
     const { data: urlData } = supabase.storage
       .from(BLOG_IMAGES_BUCKET)
       .getPublicUrl(filePath)
     return urlData.publicUrl
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.warn(`[snapshotImage] error for ${externalUrl}: ${msg}`)
-    return externalUrl
   } finally {
     clearTimeout(timeoutId)
   }
+}
+
+/**
+ * Download an external image and re-upload to Supabase Storage so blog posts
+ * stop depending on third-party CDNs (link rot prevention).
+ *
+ * Best-effort with one retry on transient failures (network, 5xx, upload).
+ * Returns the original URL on permanent failure — callers should not depend
+ * on the snapshot succeeding.
+ */
+export async function snapshotExternalImage(externalUrl: string): Promise<string> {
+  if (!externalUrl) return externalUrl
+  if (isAlreadyInBucket(externalUrl, BLOG_IMAGES_BUCKET)) return externalUrl
+  if (!/^https?:\/\//i.test(externalUrl)) return externalUrl
+
+  for (let attempt = 1; attempt <= SNAPSHOT_MAX_ATTEMPTS; attempt++) {
+    try {
+      const url = await snapshotAttempt(externalUrl)
+      if (url) return url
+      // Retriable failure — wait and try again unless we've exhausted attempts
+      if (attempt < SNAPSHOT_MAX_ATTEMPTS) {
+        await sleep(SNAPSHOT_RETRY_DELAY_MS * attempt)
+        continue
+      }
+      console.warn(`[snapshotImage] giving up after ${attempt} attempts for ${externalUrl}`)
+      return externalUrl
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(`[snapshotImage] permanent failure for ${externalUrl}: ${msg}`)
+      return externalUrl
+    }
+  }
+  return externalUrl
 }
 
 /**

@@ -19,7 +19,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { snapshotExternalImages } from '@/lib/supabase/storage'
-import type { CarReviewGalleryImage } from '@/types'
+import type { CarReviewFields, CarReviewGalleryImage } from '@/types'
 import {
   fetchLatestInstagramPost,
   extractImageUrls,
@@ -124,6 +124,24 @@ async function logRun(params: {
   }
 }
 
+/** Discriminate the gallery union (`string[] | CarReviewGalleryImage[]`). */
+function isStringGallery(
+  gallery: CarReviewFields['gallery_images']
+): gallery is string[] {
+  return gallery.length === 0 || typeof gallery[0] === 'string'
+}
+
+/** Apply URL substitution to a gallery without losing its discriminated type. */
+function rewriteGallery(
+  gallery: CarReviewFields['gallery_images'],
+  apply: (url: string) => string
+): CarReviewFields['gallery_images'] {
+  if (isStringGallery(gallery)) {
+    return gallery.map(apply)
+  }
+  return gallery.map((g): CarReviewGalleryImage => ({ ...g, url: apply(g.url) }))
+}
+
 /**
  * Snapshot all external image URLs in a post (featured, gallery, content) into
  * Supabase Storage, so the post is immune to upstream link rot.
@@ -134,10 +152,11 @@ async function snapshotPostImages(post: GeneratedBlog['post']): Promise<Generate
   if (post.featured_image) urls.push(post.featured_image)
 
   const gallery = post.car_review?.gallery_images
-  if (Array.isArray(gallery)) {
-    for (const g of gallery) {
-      const url = typeof g === 'string' ? g : g.url
-      if (url) urls.push(url)
+  if (gallery) {
+    if (isStringGallery(gallery)) {
+      for (const u of gallery) if (u) urls.push(u)
+    } else {
+      for (const g of gallery) if (g.url) urls.push(g.url)
     }
   }
 
@@ -154,7 +173,6 @@ async function snapshotPostImages(post: GeneratedBlog['post']): Promise<Generate
   if (urls.length === 0) return post
 
   const map = await snapshotExternalImages(urls)
-
   const apply = (url: string) => map[url] ?? url
 
   let nextContent = post.content
@@ -164,19 +182,15 @@ async function snapshotPostImages(post: GeneratedBlog['post']): Promise<Generate
     }
   }
 
-  let nextGallery: typeof gallery = gallery
-  if (Array.isArray(gallery)) {
-    nextGallery = (gallery as Array<string | CarReviewGalleryImage>).map(g =>
-      typeof g === 'string' ? apply(g) : { ...g, url: apply(g.url) }
-    ) as typeof gallery
-  }
-
   return {
     ...post,
     featured_image: apply(post.featured_image),
     content: nextContent,
     car_review: post.car_review
-      ? { ...post.car_review, gallery_images: nextGallery ?? post.car_review.gallery_images }
+      ? {
+          ...post.car_review,
+          gallery_images: rewriteGallery(post.car_review.gallery_images, apply),
+        }
       : post.car_review,
   }
 }

@@ -152,7 +152,7 @@ export interface EducativoFields {
 	// Pillar page support — when true, this post acts as a topical hub
 	// linking to the listed children posts. Renders with TOC + collection schema.
 	is_pillar?: boolean
-	pillar_intro?: string // short HTML/markdown intro for TOC area
+	pillar_intro?: string // plain-text intro shown above the TOC; preserves line breaks via CSS
 	pillar_children?: PillarChildLink[]
 }
 

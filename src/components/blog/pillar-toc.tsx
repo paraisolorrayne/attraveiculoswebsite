@@ -29,10 +29,9 @@ export function PillarTOC({ intro, items }: PillarTOCProps) {
           </div>
 
           {intro && (
-            <p
-              className="text-foreground-secondary leading-relaxed mb-8"
-              dangerouslySetInnerHTML={{ __html: intro }}
-            />
+            <p className="text-foreground-secondary leading-relaxed mb-8 whitespace-pre-line">
+              {intro}
+            </p>
           )}
 
           <ul className="space-y-3">

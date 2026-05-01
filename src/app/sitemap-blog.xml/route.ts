@@ -2,7 +2,6 @@ import { getBlogPosts } from '@/lib/blog-api'
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
 
-export const dynamic = 'force-dynamic'
 export const revalidate = 1800
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL

@@ -64,13 +64,8 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: [
-      `${SITE_URL}/sitemap.xml`,
-      `${SITE_URL}/sitemap-pages.xml`,
-      `${SITE_URL}/sitemap-blog.xml`,
-      `${SITE_URL}/sitemap-estoque.xml`,
-      `${SITE_URL}/sitemap-manual.xml`,
-    ],
+    // Index sitemap referencia os sub-sitemaps; crawlers seguem a partir dele.
+    sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,
   }
 }
