@@ -194,7 +194,7 @@ function vehicleToFeedItem(vehicle: VehicleData): FeedItem {
   const defaultImageUrl = 'https://via.placeholder.com/500x400?text=Attra+Veiculo'
   const imageLink = isValidUrl(vehicle.foto) ? vehicle.foto : defaultImageUrl
   const additionalImageLinks = (vehicle.fotos || [])
-    .filter(url => isValidUrl(url))
+    .filter(url => isValidUrl(url) && url !== imageLink)
     .slice(0, 10)
   
   // Determine availability
