@@ -1,9 +1,18 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
+import { Button } from '@/components/ui/button'
 import { BlogTabs } from '@/components/blog'
+import { YouTubePreview } from '@/components/videos/youtube-preview'
 import { getBlogPosts } from '@/lib/blog-api'
+import { fetchAttraYouTubeFeed } from '@/lib/youtube'
 import { EDITORIAL_SECTION } from '@/lib/constants'
+
+export const revalidate = 1800
+
+const POSTS_PREVIEW_LIMIT = 6
 
 export const metadata: Metadata = {
 	title: 'Blog Attra | Insights sobre Superesportivos e Veículos Premium',
@@ -19,10 +28,10 @@ export const metadata: Metadata = {
 export default async function BlogPage() {
 	const breadcrumbItems = [{ label: 'Blog', href: EDITORIAL_SECTION.route }]
 
-	// Fetch posts by type
-	const [educativoPosts, reviewPosts] = await Promise.all([
-		getBlogPosts({ type: 'educativo' }),
-		getBlogPosts({ type: 'car_review' })
+	const [educativoPosts, reviewPosts, ytFeed] = await Promise.all([
+		getBlogPosts({ type: 'educativo', limit: POSTS_PREVIEW_LIMIT }),
+		getBlogPosts({ type: 'car_review', limit: POSTS_PREVIEW_LIMIT }),
+		fetchAttraYouTubeFeed(),
 	])
 
 	return (
@@ -45,12 +54,32 @@ export default async function BlogPage() {
 				</Container>
 			</section>
 
-			{/* Blog Content */}
+			{/* Posts em destaque (limitado) */}
 			<section className="py-12">
 				<Container>
 					<BlogTabs
 						educativoPosts={educativoPosts}
 						reviewPosts={reviewPosts}
+					/>
+
+					<div className="mt-10 flex justify-center">
+						<Button asChild variant="outline" size="lg">
+							<Link href="/blog/arquivo">
+								Ver todos os artigos
+								<ArrowRight className="w-4 h-4 ml-2" />
+							</Link>
+						</Button>
+					</div>
+				</Container>
+			</section>
+
+			{/* Vídeos do YouTube */}
+			<section className="py-12 lg:py-16 bg-background-soft border-y border-border">
+				<Container>
+					<YouTubePreview
+						videos={ytFeed.videos}
+						shorts={ytFeed.shorts}
+						channelUrl={ytFeed.channelUrl}
 					/>
 				</Container>
 			</section>

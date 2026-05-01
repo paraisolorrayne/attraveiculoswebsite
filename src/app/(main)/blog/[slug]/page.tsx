@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getBlogPost } from '@/lib/blog-api'
+import { buildBlogPostSchemas } from '@/lib/blog-schema'
 import { EducativoTemplate, CarReviewTemplate } from '@/components/blog'
 import { InstagramEmbedProvider } from '@/components/blog/instagram-embed-provider'
 
@@ -51,8 +52,17 @@ export default async function BlogPostPage({ params }: PageProps) {
 		? <CarReviewTemplate post={post} />
 		: <EducativoTemplate post={post} />
 
+	const schemas = buildBlogPostSchemas(post)
+
 	return (
 		<InstagramEmbedProvider>
+			{schemas.map((schema, i) => (
+				<script
+					key={i}
+					type="application/ld+json"
+					dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+				/>
+			))}
 			{template}
 		</InstagramEmbedProvider>
 	)

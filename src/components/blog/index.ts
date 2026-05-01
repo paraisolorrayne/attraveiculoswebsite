@@ -7,4 +7,5 @@ export * from './listen-to-content'
 export * from './instagram-embed'
 export * from './instagram-embed-provider'
 export * from './blog-content-renderer'
+export * from './pillar-toc'
 

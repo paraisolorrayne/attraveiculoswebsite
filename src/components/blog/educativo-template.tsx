@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/utils'
 import { ListenToContent } from './listen-to-content'
 import { BlogContentRenderer } from './blog-content-renderer'
+import { PillarTOC } from './pillar-toc'
 
 interface EducativoTemplateProps {
   post: DualBlogPost
@@ -117,6 +118,14 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
         </section>
+      )}
+
+      {/* Pillar TOC — only renders for is_pillar=true */}
+      {post.educativo?.is_pillar && post.educativo.pillar_children && (
+        <PillarTOC
+          intro={post.educativo.pillar_intro}
+          items={post.educativo.pillar_children}
+        />
       )}
 
       {/* Content */}

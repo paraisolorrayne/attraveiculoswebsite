@@ -115,6 +115,24 @@ tração, acabamento. Nunca invente dados que não estão no briefing.
 SEO: use heading hierarchy (h2, h3). Parágrafos curtos. Cite a Attra Veículos
 naturalmente. Inclua uma CTA para o estoque no final do texto.
 
+LINKS — REGRA EDITORIAL: nunca escreva URLs cruas no texto, nem rótulos
+genéricos como "URL:", "URL Detalhada:", "Link:", "Acesse:", "Saiba mais:",
+"Mais informações:", "Confira em:". Sempre integre o link como âncora HTML
+em prosa natural — exemplo: "veja o exemplar disponível na <a href='/veiculo/...'>página
+do veículo</a>" em vez de "URL Detalhada: https://...". Os links existem
+para o leitor, não para o robô — tem que ler bem em voz alta.
+
+LLMO (otimização para LLMs como ChatGPT, Perplexity, Gemini):
+- O primeiro parágrafo (lede) deve responder DIRETAMENTE a pergunta principal
+  do título nos primeiros 200 caracteres, em prosa autocontida (sem "neste
+  artigo vamos ver") — LLMs extraem esse trecho como resposta.
+- Use tabelas HTML semânticas (<table>) para specs e comparativos, não imagens
+  embutidas — LLMs leem tabelas, não pixels.
+- Cite fontes externas com nome explícito quando relevante (montadora, INMETRO,
+  imprensa especializada). Aumenta credibilidade para LLMs e Google.
+- Estruture FAQs com pergunta literal e resposta autossuficiente — cada
+  resposta precisa fazer sentido lida isolada da pergunta.
+
 REGRA CRÍTICA — PREÇOS PROIBIDOS: nunca, em hipótese alguma, mencione valores
 monetários, preços, faixas de preço, cifras em reais, "R$", "milhões", "mil
 reais", "a partir de", "ticket", "investimento de X", ou qualquer equivalente.
@@ -196,6 +214,42 @@ export function sanitizePrices(html: string): string {
   return out
 }
 
+/**
+ * Remove rótulos genéricos antes de URLs cruas e converte em âncora HTML
+ * com texto natural. Cobre casos como:
+ *   "URL Detalhada: https://..."
+ *   "URL: https://..."
+ *   "Link: https://..."
+ *   "Acesse: https://..."
+ *   "Saiba mais: https://..."
+ *   "Mais informações: https://..."
+ *   "Confira em: https://..."
+ */
+const URL_LABEL_PATTERNS: Array<{ re: RegExp; anchor: string }> = [
+  { re: /(?:URL|Link)\s+Detalhada?\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'ver detalhes do veículo' },
+  { re: /\bURL\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'ver no estoque Attra' },
+  { re: /\bLink\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'ver no estoque Attra' },
+  { re: /\bAcesse\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'ver no estoque Attra' },
+  { re: /\bSaiba\s+mais\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'saiba mais' },
+  { re: /\bMais\s+informa[çc][õo]es\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'mais informações' },
+  { re: /\bConfira\s+em\s*:\s*(<a[^>]*>[^<]+<\/a>|https?:\/\/\S+)/gi, anchor: 'confira aqui' },
+]
+
+export function sanitizeUrlLabels(html: string): string {
+  let out = html
+  for (const { re, anchor } of URL_LABEL_PATTERNS) {
+    out = out.replace(re, (_match, capture) => {
+      // If the captured value is already an <a>, just keep it (drop the label)
+      if (capture.startsWith('<a')) return capture
+      // Otherwise wrap the bare URL in a natural anchor
+      return `<a href="${capture}">${anchor}</a>`
+    })
+  }
+  // Caso o modelo escreva "veja a URL Detalhada do veículo" sem URL: remover só o rótulo feio
+  out = out.replace(/\b(?:URL|Link)\s+Detalhada?\b/gi, 'ficha completa')
+  return out
+}
+
 function injectImages(html: string, images: string[]): string {
   if (images.length === 0) return html.replace(/<img[^>]*src=['"]IMAGEM_\d+['"][^>]*>/g, '')
   return html.replace(/<img([^>]*)src=['"]IMAGEM_(\d+)['"]([^>]*)>/g, (_match, pre, idx, post) => {
@@ -260,7 +314,7 @@ DADOS DO VEÍCULO:
 - Categoria: ${vehicle.category}
 - Preço: (NÃO MENCIONAR NO TEXTO — sempre use "sob consulta" quando falar do aspecto comercial)
 - Opcionais já catalogados: ${(vehicle.options ?? []).slice(0, 20).join(', ') || 'consulte o anúncio'}
-- URL do veículo no site: https://attraveiculos.com.br/veiculo/${vehicle.slug}
+- Página do veículo (use como destino de âncora natural, NÃO escreva o link cru): https://attraveiculos.com.br/veiculo/${vehicle.slug}
 
 Imagens disponíveis (${images.length}): use placeholders <img src="IMAGEM_0">,
 <img src="IMAGEM_1"> etc dentro do content_html. Distribua 3-5 imagens ao
@@ -270,7 +324,7 @@ ${JSON_SCHEMA_REVIEW}
 `.trim()
 
   const raw = await callGemini(prompt)
-  const content = sanitizePrices(injectImages(raw.content_html, images))
+  const content = sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))
 
   const carReview: CarReviewFields = {
     vehicle_id: vehicle.id,
@@ -333,7 +387,7 @@ function vehicleBriefing(v: Vehicle): string {
     `- Ano: ${v.year_manufacture}/${v.year_model}`,
     `- Potência: ${v.horsepower ? v.horsepower + ' cv' : 'não informada'}`,
     `- Câmbio: ${v.transmission}`,
-    `- URL: https://attraveiculos.com.br/veiculo/${v.slug}`,
+    `- Página do veículo (destino de âncora, NÃO escreva o link cru): https://attraveiculos.com.br/veiculo/${v.slug}`,
   ].join('\n')
 }
 
@@ -384,7 +438,7 @@ ${JSON_SCHEMA_EDUCATIVO}
 `.trim()
 
   const raw = await callGemini(prompt)
-  const content = sanitizePrices(injectImages(raw.content_html, images))
+  const content = sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))
 
   const educativo: EducativoFields = {
     category: 'Curadoria',
@@ -464,7 +518,7 @@ ${hasVehicle ? JSON_SCHEMA_REVIEW : JSON_SCHEMA_EDUCATIVO}
 `.trim()
 
   const raw = await callGemini(prompt)
-  const content = sanitizePrices(injectImages(raw.content_html, images))
+  const content = sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))
 
   if (hasVehicle && input.vehicle) {
     const v = input.vehicle

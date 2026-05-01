@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import { ToastProvider } from '@/components/ui/toast'
 import { VisitorTrackingProvider } from '@/components/providers/visitor-tracking-provider'
 import { AnalyticsProvider, AnalyticsNoScript } from '@/components/analytics'
+import { buildOrganizationSchema, buildWebsiteSchema } from '@/lib/blog-schema'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -89,6 +90,14 @@ export default function RootLayout({
       <head>
         {/* Analytics scripts loaded in head for optimal tracking */}
         <AnalyticsProvider />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationSchema()) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebsiteSchema()) }}
+        />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased`}>
         {/* GTM NoScript fallback for users without JavaScript */}

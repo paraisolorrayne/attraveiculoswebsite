@@ -140,10 +140,20 @@ export interface BlogAuthor {
 	avatar?: string
 }
 
+export interface PillarChildLink {
+	slug: string
+	label?: string
+}
+
 export interface EducativoFields {
 	category: string // "Curadoria", "Mercado", "Dicas", "Lifestyle"
 	topic: string
 	seo_keyword: string
+	// Pillar page support — when true, this post acts as a topical hub
+	// linking to the listed children posts. Renders with TOC + collection schema.
+	is_pillar?: boolean
+	pillar_intro?: string // short HTML/markdown intro for TOC area
+	pillar_children?: PillarChildLink[]
 }
 
 export interface CarReviewSpecs {
