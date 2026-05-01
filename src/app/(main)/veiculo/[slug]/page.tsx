@@ -13,12 +13,11 @@ import { EngineAudioPlayer } from '@/components/vehicles/engine-audio-player'
 import { AIVehicleDescription, AIVehicleDescriptionSkeleton } from '@/components/vehicles/ai-vehicle-description'
 import { RelatedVehiclesSkeleton } from '@/components/ui/skeleton'
 import { VehicleContextSetter } from '@/components/vehicles/vehicle-context-setter'
-import { VehicleVideos, VehicleVideosSkeleton } from '@/components/vehicles/vehicle-videos'
+import { VehicleVideosServer, VehicleVideosSkeleton } from '@/components/vehicles/vehicle-videos'
 import { VehicleDatasheetSection } from '@/components/vehicles/vehicle-datasheet'
 import { FAQSection } from '@/components/home'
 import { getVehicleBySlug } from '@/lib/autoconf-api'
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
-import { searchVehicleVideos } from '@/lib/youtube'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { buildVehiclePageSchemas } from '@/lib/vehicle-schema'
@@ -168,10 +167,10 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 		permanentRedirect(`/veiculo/${vehicle.slug}`)
 	}
 
-	// Fetch engine sound, related YouTube videos and technical datasheet in parallel
-	const [vehicleSound, vehicleVideos, datasheet] = await Promise.all([
+	// Fetch engine sound and technical datasheet in parallel
+	// (YouTube videos are fetched inside VehicleVideosServer for Suspense streaming)
+	const [vehicleSound, datasheet] = await Promise.all([
 		getVehicleSoundByVehicleId(vehicle.id),
-		searchVehicleVideos(vehicle.brand, vehicle.model),
 		Promise.resolve(findVehicleDatasheet(vehicle.brand, vehicle.model, vehicle.version)),
 	])
 
@@ -359,9 +358,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 			{/* YouTube Videos from Attra channel */}
 			<Container className="pb-8 lg:pb-12">
 				<Suspense fallback={<VehicleVideosSkeleton />}>
-					<VehicleVideos
-						videos={vehicleVideos}
-						vehicleName={joinNonEmpty([vehicle.brand, vehicle.model]) || 'Veículo'}
+					<VehicleVideosServer
 						brand={vehicle.brand}
 						model={vehicle.model}
 					/>
