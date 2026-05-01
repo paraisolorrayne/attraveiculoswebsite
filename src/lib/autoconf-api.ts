@@ -426,7 +426,15 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
  * Generate a URL-friendly slug for the vehicle
  */
 function generateVehicleSlug(vehicle: AutoConfVehicle): string {
-  const base = `${vehicle.marca_nome}-${vehicle.modelopai_nome}-${vehicle.anomodelo}`
+  // Filter out null/undefined/empty parts BEFORE joining \u2014 template literals
+  // coerce null to the literal string "null", which produced ugly slugs like
+  // "null-corvette-z06-2023-989248" when AutoConf returned marca_nome: null.
+  const parts = [vehicle.marca_nome, vehicle.modelopai_nome, vehicle.anomodelo]
+    .map(p => (p == null ? '' : String(p)).trim())
+    .filter(p => p.length > 0)
+
+  const base = parts.join('-') || 'veiculo'
+
   return base
     .toLowerCase()
     .normalize('NFD')

@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { redirect, permanentRedirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
@@ -143,6 +143,13 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 
 	if (!vehicle) {
 		redirect('/veiculos?veiculo_indisponivel=true')
+	}
+
+	// Canonical redirect: if the URL slug differs from the regenerated canonical
+	// slug (e.g. legacy "null-corvette-z06-2023-989248" → "corvette-z06-2023-989248"),
+	// 308-redirect so Google consolidates ranking signals on the clean URL.
+	if (vehicle.slug && vehicle.slug !== slug) {
+		permanentRedirect(`/veiculo/${vehicle.slug}`)
 	}
 
 	// Fetch engine sound from admin panel database (if configured)
