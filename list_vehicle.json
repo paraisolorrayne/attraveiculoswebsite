@@ -1,48 +1,2669 @@
 [
   {
-    "count": 3,
-    "registros_por_pagina": "20",
+    "count": 15,
+    "registros_por_pagina": "100",
     "pagina_atual": 1,
     "ultima_pagina": 1,
     "veiculos": [
       {
-        "id": "bmw-x5-2024-001",
-        "marca_nome": "BMW",
-        "modelopai_nome": "X5",
-        "anomodelo": 2024,
-        "preco": "580000.00",
-        "estoque": 1,
-        "km_total": 3200,
-        "cambio_nome": "Automático",
-        "cor_nome": "Branca",
-        "procedencia": "Brasil",
-        "foto_principal_url": "https://via.placeholder.com/500x400?text=BMW+X5+2024"
-      },
-      {
-        "id": "porsche-911-2023-002",
-        "marca_nome": "Porsche",
-        "modelopai_nome": "911 Carrera S",
-        "anomodelo": 2023,
-        "preco": "1150000.00",
-        "estoque": 1,
-        "km_total": 4500,
-        "cambio_nome": "Manual",
-        "cor_nome": "Cinza",
-        "procedencia": "Importado",
-        "foto_principal_url": "https://via.placeholder.com/500x400?text=Porsche+911+2023"
-      },
-      {
-        "id": "range-rover-2023-003",
-        "marca_nome": "Range Rover",
-        "modelopai_nome": "Sport",
-        "anomodelo": 2023,
-        "preco": "550000.00",
-        "estoque": 1,
-        "km_total": 5800,
-        "cambio_nome": "Automático",
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [
+          {
+            "nome": "Blindado",
+            "id": 10,
+            "categoria": "SEGURANCA",
+            "destaque": 0,
+            "slug": "blindado"
+          }
+        ],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 990053,
+        "modelo_id": 368057,
+        "modelo_nome": "PULSE ABARTH 1.3 Turbo 16V Flex Aut.",
+        "modelo_slug": "pulse-abarth-1-3-turbo-16v-flex-aut",
+        "modelopai_id": 2054,
+        "modelopai_nome": "PULSE",
+        "modelopai_slug": "pulse",
+        "marca_id": 21,
+        "marca_nome": "Fiat",
+        "marca_apelido": "Fiat",
+        "marca_slug": "fiat",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 39,
         "cor_nome": "Preto",
-        "procedencia": "Brasil",
-        "foto_principal_url": "https://via.placeholder.com/500x400?text=Range+Rover+2023"
+        "cor_slug": "preto",
+        "combustivel_id": 5,
+        "combustivel_nome": "Flex",
+        "combustivel_slug": "flex",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2023",
+        "anomodelo": "2023",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "C**-***0",
+        "placa_completa": "CUR4G80",
+        "km": 7500,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/5320378f-0b02-426c-bfa9-3757774e1976.jpg",
+        "valorvenda": "190000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-30 18:04:48",
+        "atualizacao": "2026-04-30 18:06:24",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/5320378f-0b02-426c-bfa9-3757774e1976.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/fce8cb94-f093-4005-a75f-1a6c548943c0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/e9faaab1-0dcc-4595-99a3-adf4ee1c4861.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/8fff5bfb-6016-4552-90b1-f8372408cd4c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/0d1e1ebd-9883-41ae-a797-5028dfed1e67.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/6f4affa7-8531-43ff-af9d-b6961dec1a7e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/b617adf3-4da5-4ca7-9cef-aba9c56da3d1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/71eeec46-1415-47b4-b51c-ce7f48df0c87.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/f96cc445-5023-4440-824f-0ddf1be91842.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/adc6c1ab-409a-43f2-9b10-1626a5802bd8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/f68595e6-7e53-48fc-8252-15494ab00f2a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/8a425394-9cc4-4973-8e1d-c50522a4e3ee.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/11d60bec-452c-43ff-a0db-bc95ef0817bb.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/c480d9e0-0b20-45a5-99f0-b7f4bf7b1234.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/cacd1595-58cf-4f28-bdc6-04efa0d77996.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/e135b776-a8a3-45b7-a14d-c74cb6756e97.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/bd9db8b1-4cf0-44e8-9a6a-e755e2223135.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/f400143e-ec14-4d13-92c5-f9d9b9d6b695.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/61cf9141-9aa9-4c0d-a4cc-27df393e3b7a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990053/5cdfa317-3467-417f-bd7d-3dae5f3ea0be.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          907552,
+          948596,
+          974236,
+          964847
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 990031,
+        "modelo_id": 8692,
+        "modelo_nome": "X2 M35i 2.0 Turbo 306cv Aut.",
+        "modelo_slug": "x2-m35i-2-0-turbo-306cv-aut",
+        "modelopai_id": 1865,
+        "modelopai_nome": "X2",
+        "modelopai_slug": "x2",
+        "marca_id": 7,
+        "marca_nome": "BMW",
+        "marca_apelido": "BMW",
+        "marca_slug": "bmw",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 43,
+        "cor_nome": "Cinza",
+        "cor_slug": "cinza",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2020",
+        "anomodelo": "2020",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "R**-***8",
+        "placa_completa": "RFE1B78",
+        "km": 36270,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/55700168-c6d1-40d2-ae36-7a6ea084f680.jpg",
+        "valorvenda": "225000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-30 17:51:53",
+        "atualizacao": "2026-04-30 17:52:31",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/55700168-c6d1-40d2-ae36-7a6ea084f680.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/24c808f1-c223-4454-9a4b-8048a07f9f7b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/5e06a579-ad22-4ff2-8df5-7645cdec151d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/17cd5420-c512-42b2-92ca-24f6cb45e8d8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/4a8d12e4-b757-4760-802a-f9c87e87b102.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/2612dba6-43cb-49df-be47-b2be23693f95.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/113ae4ea-458d-444d-ba05-6b54e9a4f309.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/33c67f2d-4281-448e-b1f5-4599d4889549.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/8bb8b882-d7db-45ec-98e7-796ede30a307.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/75564acd-1cab-42ab-a5f7-f0eaa4557948.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/22146131-8129-427b-9008-6699e266b84c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/c2d341ef-9d06-4e43-baaa-5758c590ab7d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/24d477a4-0265-4b99-b333-099410feda82.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/ff0c60d7-e0eb-448b-bef3-2ac59bd9f1c8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/25d743e1-21c6-436e-be14-484fe6cf71a4.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/fa37d19e-11b9-4fa3-bd66-d6ad0f61d5a7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/b7004d25-2a99-4b90-9d65-753580f3231d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/26244e76-6595-46db-b463-a61cd76e08c5.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/347409e4-fa1c-42cb-b041-ebf6a200142c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/990031/c91188d0-a3a4-413a-a084-81473a269491.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          905395,
+          963938,
+          948364,
+          950539
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [
+          {
+            "nome": "Alarme",
+            "id": 7,
+            "categoria": "SEGURANCA",
+            "destaque": 0,
+            "slug": "alarme"
+          },
+          {
+            "nome": "Travas elétricas",
+            "id": 5,
+            "categoria": "CONFORTO",
+            "destaque": 0,
+            "slug": "travas-eletricas"
+          },
+          {
+            "nome": "Vidros elétricos dianteiros",
+            "id": 4,
+            "categoria": "JANELAS",
+            "destaque": 0,
+            "slug": "vidros-eletricos-dianteiros"
+          }
+        ],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 789896,
+        "modelo_id": 2024856,
+        "modelo_nome": "Macan 4 (Elétrico)",
+        "modelo_slug": "macan-4-eletrico",
+        "modelopai_id": 722,
+        "modelopai_nome": "Macan",
+        "modelopai_slug": "macan",
+        "marca_id": 47,
+        "marca_nome": "Porsche",
+        "marca_apelido": "Porsche",
+        "marca_slug": "porsche",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 42,
+        "cor_nome": "Azul",
+        "cor_slug": "azul",
+        "combustivel_id": 4,
+        "combustivel_nome": "Elétrico",
+        "combustivel_slug": "eletrico",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2024",
+        "anomodelo": "2024",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "T**-***9",
+        "placa_completa": "TFR6G59",
+        "km": 4580,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/eedef2d0-1f99-4fe7-be35-f2144e2124a3.jpg",
+        "valorvenda": "599000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-30 17:47:29",
+        "atualizacao": "2026-04-30 17:48:57",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/eedef2d0-1f99-4fe7-be35-f2144e2124a3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/f7ffc02c-950c-4ac0-9136-a48334edbf0d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/73c99ce4-cd2b-4353-89c0-a0b02953e695.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/cb57398d-fc7e-457b-aeb3-0b7d9c9670e6.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/584de23b-07eb-47cd-ba0a-aacbdeed7b5d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/03807311-d333-4cb0-a4af-b9c0bb8cdf33.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/bcadf622-bfcf-47ee-943e-6a6a6baaee1b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/366b73db-cce8-48ab-b7a9-eb68f15e445e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/a41da484-3184-4ec4-9a91-64d32c38e478.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/2c5428eb-a65d-460e-b063-6b04cb67e83c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/0f3261e8-db20-402d-99b3-d43b1c0e51ab.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/e35ef627-8227-4af2-aa62-ac4464864f10.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/54478c39-5590-4233-8880-0320236b79fa.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/09a438ac-af80-4b6b-9617-8f55e4667947.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/1d7f8a9e-ca9d-413c-85b0-8a73735369d5.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/6fe9de85-4af7-4af1-8eb2-772daf522934.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/f9944f87-59bd-4a2c-a6d9-a4649ceaa64a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/bda87abb-24d9-45b7-94a9-e4dc4e6206d9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/e557341e-20e2-4bc8-9bb4-29dffcefa9a3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/789896/060c50e0-b0db-468b-be45-cbbfdec0189b.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [
+          {
+            "nome": "Airbag motorista",
+            "id": 1,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-motorista"
+          },
+          {
+            "nome": "Airbag passageiro",
+            "id": 11,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-passageiro"
+          },
+          {
+            "nome": "Ar-condicionado",
+            "id": 2,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "ar-condicionado"
+          },
+          {
+            "nome": "Direção hidráulica",
+            "id": 3,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "direcao-hidraulica"
+          },
+          {
+            "nome": "Farol de neblina",
+            "id": 40,
+            "categoria": "OUTROS",
+            "destaque": 1,
+            "slug": "farol-de-neblina"
+          },
+          {
+            "nome": "Freios ABS",
+            "id": 8,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "freio-abs"
+          },
+          {
+            "nome": "Teto solar",
+            "id": 20,
+            "categoria": "JANELAS",
+            "destaque": 1,
+            "slug": "teto-solar"
+          }
+        ],
+        "tags": [],
+        "sugestoes": [
+          857868,
+          967301,
+          747725,
+          737186
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 989983,
+        "modelo_id": 205531,
+        "modelo_nome": "Macan T 2.0 Turbo",
+        "modelo_slug": "macan-t-2-0-turbo",
+        "modelopai_id": 722,
+        "modelopai_nome": "Macan",
+        "modelopai_slug": "macan",
+        "marca_id": 47,
+        "marca_nome": "Porsche",
+        "marca_apelido": "Porsche",
+        "marca_slug": "porsche",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 43,
+        "cor_nome": "Cinza",
+        "cor_slug": "cinza",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2023",
+        "anomodelo": "2024",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "S**-***7",
+        "placa_completa": "SVV8B57",
+        "km": 19930,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/64fb1fd8-2321-43c4-9fe6-ca91292bcfc9.jpg",
+        "valorvenda": "499000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-30 17:31:23",
+        "atualizacao": "2026-04-30 17:34:33",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/64fb1fd8-2321-43c4-9fe6-ca91292bcfc9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/88d2cac5-40be-487e-ad2d-3ac8d416516c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/6840803e-bdd4-4360-b141-1b8a5981d717.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/7b3173b3-7934-4807-bc9a-846ad91d55a1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/05a6b6d6-ba1f-4e19-aab1-ad666256eedc.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/01027d10-40a3-4315-bce3-2459352b442e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/076a584b-431b-4dfe-abde-f9b618d4fbb9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/023e008b-3ed4-4689-8442-d6888c8911d2.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/19e7f32b-fca8-4338-9175-2e523381d49c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/71655398-1834-4c35-aa60-5c183c17f967.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/0752e974-9c71-4512-8c18-85702e9349ac.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/35eb0f67-cf0c-4cd8-b3ca-03dd575d4df0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/35dbc908-f8a5-4da7-ac5e-f03582975d1e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/221aada4-d1c7-4d81-a5df-ca9dcd5629e9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/f4eab384-35d1-40df-9e68-e760ac601dcf.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/0cb48a14-24bb-4772-bef9-8c38ff5c6da3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/7eeb0e5f-78c1-46d7-9830-11cd86abb447.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/c7c8f610-d5db-437c-aa0a-255da91c7e36.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/488a7d7c-d917-4d2e-9b7c-222b83ffef3b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989983/e77abc51-c909-4bcc-94ef-794139ad7950.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          967301,
+          747725,
+          874967,
+          857868
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 989248,
+        "modelo_id": null,
+        "modelo_nome": "Z06",
+        "modelo_slug": "z06",
+        "modelopai_id": 1863,
+        "modelopai_nome": "Corvette Z06",
+        "modelopai_slug": "outros",
+        "marca_id": 23,
+        "marca_nome": "Chevrolet",
+        "marca_apelido": "Chevrolet",
+        "marca_slug": "gm-chevrolet",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 39,
+        "cor_nome": "Preto",
+        "cor_slug": "preto",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2022",
+        "anomodelo": "2023",
+        "marca_semfipe": null,
+        "modelopai_semfipe": "Corvette Z06",
+        "modelo_semfipe": "Z06",
+        "placa": "S**-***0",
+        "placa_completa": "SIY1B40",
+        "km": 20300,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 2,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/963f0be6-48b6-4a4c-b0ec-d1e55c591abd.jpg",
+        "valorvenda": "1890000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-30 11:18:14",
+        "atualizacao": "2026-04-30 11:19:35",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/963f0be6-48b6-4a4c-b0ec-d1e55c591abd.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/044710b4-a62e-419d-962d-11b2478a27b1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/b8abecae-d1b3-4c23-9d70-fd0bcd13392d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/3634bb7e-5493-4909-97f7-51297187b4dc.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/ed6bb7ce-215e-432c-88b5-1d44bd63527c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/7bdafc1a-c903-4c42-8a80-2dc03f7c3a1f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/89576c62-a005-4998-8d0c-c681c9e228e3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/244ad716-d8b6-4252-9909-79317aee2987.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/661912fd-7fae-4f1d-981e-cfda2cf0ccba.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/5ad08f47-14b4-4e14-84ef-fed7688592a8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/de5bc1ed-e608-4aec-a58c-e6fcd16b4a4b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/639ccf74-300b-4402-a703-ca522f95258f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/fe3cd321-f589-49d7-9272-974451950666.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/1944fe5b-1d58-4165-90f2-93da815472e1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/c9e00b38-5700-4313-8edf-953f72a4ff1e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/4c2d22fb-c7ec-48ac-90c3-579140405c2c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/e5aaa6a0-898a-49f7-bf17-bf7e15cb6c65.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/31148dbb-6769-4ff7-98d7-04d0910007e0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/5d563bb3-8622-439d-ba13-e304e90aca7a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/989248/c0754887-39a4-4aff-9240-f66075104018.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          916079,
+          843087,
+          905269,
+          916079
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 988095,
+        "modelo_id": 9240,
+        "modelo_nome": "G-63 AMG 4M 4.0 Bi-TB Magno Edition Aut.",
+        "modelo_slug": "g-63-amg-4m-4-0-bi-tb-magno-edition-aut",
+        "modelopai_id": 578,
+        "modelopai_nome": "G-63",
+        "modelopai_slug": "g-63",
+        "marca_id": 39,
+        "marca_nome": "Mercedes",
+        "marca_apelido": "Mercedes",
+        "marca_slug": "mercedes-benz",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 43,
+        "cor_nome": "Cinza",
+        "cor_slug": "cinza",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2021",
+        "anomodelo": "2021",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "D**-***3",
+        "placa_completa": "DCU0G63",
+        "km": 25500,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/acdc9acc-d79a-4027-bb66-2a8cbaca8c00.jpg",
+        "valorvenda": "1850000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-29 10:51:44",
+        "atualizacao": "2026-04-29 11:16:23",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/acdc9acc-d79a-4027-bb66-2a8cbaca8c00.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/e038d1cd-ce1f-410b-87ad-62f95604d855.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/aa8ac411-d5fc-4de1-b787-9744ab65ffaf.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/57e6554f-e76c-4c12-9369-46b3eada83c0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/5a6f5715-01fc-4f53-9d17-f3f83072ae3e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/df641514-b0da-463d-ae74-bcc680bbff42.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/2d115421-1214-4b67-b114-2996be3e4edb.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/6c471c1f-72a0-401d-b7a2-88d03cd3ed24.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/e7550422-21ac-4277-b0a4-8a7fa123537a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/ea100a1d-5e6b-4210-bdbe-99694120a071.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/18417c4e-c829-4b8c-a030-96425584107a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/c78fd873-73bd-4b58-b4db-2e322bdf3b81.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/da2c7f04-69ca-4a6f-acbe-e086406f2845.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/396a03f2-2c85-4530-bf3e-181915819643.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/ab9a1b58-db91-45f5-b3e0-5cf8c513f4c2.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/37136256-d77c-42ee-901b-deb8ed1c8e86.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/e962a0da-2273-4a47-8cbe-2bbc35e7b016.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/b823a3d5-98cf-45fa-9475-fb4eb4fe4664.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/6ab9ed51-e968-4dff-b5ee-a7da35da509f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988095/451719c7-5622-44d3-bf75-02d925cd1aaf.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          952516,
+          737186,
+          857868,
+          949287
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 988028,
+        "modelo_id": 9005,
+        "modelo_nome": "Macan GTS 2.9 Bi-Turbo ",
+        "modelo_slug": "macan-gts-2-9-bi-turbo-380cv",
+        "modelopai_id": 722,
+        "modelopai_nome": "Macan",
+        "modelopai_slug": "macan",
+        "marca_id": 47,
+        "marca_nome": "Porsche",
+        "marca_apelido": "Porsche",
+        "marca_slug": "porsche",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 43,
+        "cor_nome": "Cinza",
+        "cor_slug": "cinza",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2023",
+        "anomodelo": "2024",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "S**-***0",
+        "placa_completa": "SDO6A10",
+        "km": 18560,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/4ad4814b-f80e-418a-8322-c5216159f4ce.jpg",
+        "valorvenda": "689000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-29 10:28:37",
+        "atualizacao": "2026-04-29 10:32:12",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/4ad4814b-f80e-418a-8322-c5216159f4ce.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/e52b2369-0ea3-4cee-94fe-31cb4981f0fa.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/eeffd67d-a569-4ec0-86eb-c58adea67189.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/7956aec2-c01d-4401-af2d-4ab57b8c32f8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/6332c11f-3a83-4386-bca7-a7c3a4ba7f45.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/c03819bc-93a4-4494-a368-dbadc69dd7da.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/8e86a1b2-6fab-4dea-bba9-df798c7dd6a2.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/e34d972c-6933-4a25-acf0-31ebd7ea6425.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/cb57f94f-13c3-4e33-ab36-4b04a00681c7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/eea27fa7-ffee-489d-93a6-cd7e27265ddc.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/0d4a6fa0-7b8c-489b-83cc-d774088bbf3d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/1df9cda0-c7e2-472d-bc12-eefceb5a3874.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/0cf8b503-c68c-4fc9-94ce-21546dedec4d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/535f13b0-98da-4721-bf96-77c6801d38f3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/c18b6a75-9c12-4102-85e9-d89d218c45bc.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/5b25d966-5972-4bf4-97cc-d973a40d234d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/ab98931b-397d-4fbd-9e7e-cd856cd5e553.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/f7bbe100-f114-4a4f-a2f9-4e3e45635695.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/78ef14bf-279f-4ce1-b534-aab6f7cdcb56.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/988028/ddc95a36-c716-4155-ac2f-6decb8d24818.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          857868,
+          967301,
+          747725,
+          737186
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [
+          {
+            "nome": "Alarme",
+            "id": 7,
+            "categoria": "SEGURANCA",
+            "destaque": 0,
+            "slug": "alarme"
+          },
+          {
+            "nome": "Travas elétricas",
+            "id": 5,
+            "categoria": "CONFORTO",
+            "destaque": 0,
+            "slug": "travas-eletricas"
+          },
+          {
+            "nome": "Turbo",
+            "id": 52,
+            "categoria": "OUTROS",
+            "destaque": 0,
+            "slug": "turbo"
+          },
+          {
+            "nome": "Vidros elétricos dianteiros",
+            "id": 4,
+            "categoria": "JANELAS",
+            "destaque": 0,
+            "slug": "vidros-eletricos-dianteiros"
+          }
+        ],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 857868,
+        "modelo_id": 741639,
+        "modelo_nome": "X5 XDRIVE 50e 3.0 X-Line Aut. (Hibrido)",
+        "modelo_slug": "x5-xdrive-50e-3-0-x-line-aut-hibrido",
+        "modelopai_id": 146,
+        "modelopai_nome": "X5",
+        "modelopai_slug": "x5",
+        "marca_id": 7,
+        "marca_nome": "BMW",
+        "marca_apelido": "BMW",
+        "marca_slug": "bmw",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 42,
+        "cor_nome": "Azul",
+        "cor_slug": "azul",
+        "combustivel_id": 10,
+        "combustivel_nome": "Gasolina e Elétrico",
+        "combustivel_slug": "gasolina-e-eletrico",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2023",
+        "anomodelo": "2024",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "S**-***9",
+        "placa_completa": "SYI7B09",
+        "km": 42620,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/45c248de-d3e8-4fb6-996f-0bc502cff020.jpg",
+        "valorvenda": "579000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-28 18:12:24",
+        "atualizacao": "2026-04-28 18:15:09",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/45c248de-d3e8-4fb6-996f-0bc502cff020.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/411cc6c0-495e-4d82-8eef-77973974583e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/3d8c99b7-e5af-45c6-a35d-808090de1642.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/0c300522-f57f-4389-a474-240dc1e60c14.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/7cfa17a3-7c1c-40f0-803b-043ed052701e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/58554723-4027-429f-8ff6-2f82d5f76da1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/9091476c-0470-41b6-9987-da106196d665.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/ab3152b7-39e2-4f9a-94d9-c615e45d0fe2.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/2dbbdfa5-4ffb-428b-8ad4-b9168eae2835.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/da09a2b4-973d-4f2c-97d8-cd5f436832d9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/42492178-8e52-4f91-b120-9d39fae9548b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/b76b94a5-2629-47b5-939f-bdc84c1f31de.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/0a143eb9-e29c-4e3f-a860-8683a155fd15.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/36ade3a9-0a77-48be-a6f4-77009afadb7c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/0e4e51bb-a504-401a-8e50-f16d91e9184c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/4b91e19a-8074-4907-b8d5-ef203b28fc5f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/4198d200-8e8a-4797-8c18-14883d6333e9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/28578cb8-a090-4367-805a-07c62f775941.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/72ad5556-7f90-4489-b11e-895adb40e4d0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/857868/8ff7d17f-fe15-49e5-bdb7-42b172bb03f3.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [
+          {
+            "nome": "Airbag motorista",
+            "id": 1,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-motorista"
+          },
+          {
+            "nome": "Airbag passageiro",
+            "id": 11,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-passageiro"
+          },
+          {
+            "nome": "Ar-condicionado",
+            "id": 2,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "ar-condicionado"
+          },
+          {
+            "nome": "Direção elétrica",
+            "id": 45,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "direcao-eletrica"
+          },
+          {
+            "nome": "Farol de neblina",
+            "id": 40,
+            "categoria": "OUTROS",
+            "destaque": 1,
+            "slug": "farol-de-neblina"
+          },
+          {
+            "nome": "Freios ABS",
+            "id": 8,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "freio-abs"
+          },
+          {
+            "nome": "Teto solar",
+            "id": 20,
+            "categoria": "JANELAS",
+            "destaque": 1,
+            "slug": "teto-solar"
+          }
+        ],
+        "tags": [],
+        "sugestoes": [
+          967301,
+          747725,
+          874967,
+          737186,
+          952516,
+          949287
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 987613,
+        "modelo_id": 8906,
+        "modelo_nome": "X6 XDRIVE 40i M Sport 3.0 Bi-Turbo",
+        "modelo_slug": "x6-xdrive-40i-m-sport-3-0-bi-turbo",
+        "modelopai_id": 147,
+        "modelopai_nome": "X6",
+        "modelopai_slug": "x6",
+        "marca_id": 7,
+        "marca_nome": "BMW",
+        "marca_apelido": "BMW",
+        "marca_slug": "bmw",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 39,
+        "cor_nome": "Preto",
+        "cor_slug": "preto",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2021",
+        "anomodelo": "2021",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "R**-***0",
+        "placa_completa": "REM2A10",
+        "km": 73980,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/dce3752a-f824-41ba-8ac7-2f0bedeaba99.jpg",
+        "valorvenda": "479000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-28 16:50:32",
+        "atualizacao": "2026-04-28 16:53:34",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/dce3752a-f824-41ba-8ac7-2f0bedeaba99.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/ca62e754-5db9-45ec-bb7e-638869627f10.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/c6a20bdf-c025-4ef8-a1b9-9f9a7e466813.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/4d365e48-d09e-4120-a7cc-25e4e1e54c39.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/995e3ca4-54ef-412e-a47e-5f26c5c391ff.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/89c9b6f7-cbb7-41e8-82a6-067c76ee5331.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/961f087e-c294-4e58-a878-d67c3aa2d205.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/27c46e4d-1ad5-4e55-a40e-699747b8da29.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/8c295520-0f3c-47c8-9c78-59538fe709db.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/8ad97344-b5fa-4cb6-9982-4420a2c24199.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/049aaf2a-ea95-4aaa-a815-4ec49278c85e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/e0d91edd-076c-43e6-bb3c-efc17e70281d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/6dfd345c-4142-4f79-89cd-deb9953161e1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/765a0df7-85d9-406b-9c70-97afde8dc881.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/411e9027-35f7-490f-bd5a-3f889ecc0af5.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/78f14f74-dfea-4a8c-9e16-95fcd266d990.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/8ad26641-ed95-4f41-8741-bbf56de16bdc.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/0643f6a0-757b-4294-9458-fc7fc6c5e696.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/55a380e9-61ba-4e5c-b6ac-5bbfb55de1e6.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/987613/40cd7988-6e1e-4dab-ab01-e90539c3f934.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          948364,
+          963938,
+          905395,
+          950539
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [
+          {
+            "nome": "Alarme",
+            "id": 7,
+            "categoria": "SEGURANCA",
+            "destaque": 0,
+            "slug": "alarme"
+          },
+          {
+            "nome": "Travas elétricas",
+            "id": 5,
+            "categoria": "CONFORTO",
+            "destaque": 0,
+            "slug": "travas-eletricas"
+          },
+          {
+            "nome": "Turbo",
+            "id": 52,
+            "categoria": "OUTROS",
+            "destaque": 0,
+            "slug": "turbo"
+          },
+          {
+            "nome": "Vidros elétricos dianteiros",
+            "id": 4,
+            "categoria": "JANELAS",
+            "destaque": 0,
+            "slug": "vidros-eletricos-dianteiros"
+          }
+        ],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 964847,
+        "modelo_id": 9300,
+        "modelo_nome": "F-Pace 3.0 R-Dynamic SE AWD 340cv Aut.",
+        "modelo_slug": "f-pace-3-0-r-dynamic-se-awd-340cv-aut",
+        "modelopai_id": 409,
+        "modelopai_nome": "F-Pace",
+        "modelopai_slug": "f-pace",
+        "marca_id": 28,
+        "marca_nome": "Jaguar",
+        "marca_apelido": "Jaguar",
+        "marca_slug": "jaguar",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 39,
+        "cor_nome": "Preto",
+        "cor_slug": "preto",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2021",
+        "anomodelo": "2021",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "R**-***2",
+        "placa_completa": "RNI9D22",
+        "km": 32100,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/d6aa5b8f-f369-407e-a3b4-cb18b38c9029.jpg",
+        "valorvenda": "299000.00",
+        "valorpromocao": null,
+        "pericia": 3,
+        "versao_descricao": "3.0 P340 MHEV R-DYNAMIC SE AWD AUTOMÁTICO",
+        "publicacao": "2026-04-28 16:19:31",
+        "atualizacao": "2026-04-28 16:19:46",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/d6aa5b8f-f369-407e-a3b4-cb18b38c9029.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/5f8b11d6-ce79-4421-8052-d87e68408c46.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/33cf7c04-a70f-4931-a4ef-3fbb7714791f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/d25b7a02-5b8a-4010-850b-08b8fbdaf5be.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/a38f61e7-b337-489b-9648-dcc4dc327c1f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/5c167b3b-6a6d-4b21-a135-3c6abaed60c8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/5dba2adb-c403-499d-aaa2-5a79f089daef.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/ce7d45bc-e9c3-45af-8d41-12fea770beed.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/560e41c0-658e-4276-a864-666bd486cea7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/3370bd2e-2cb7-4a05-98c2-1b0222705bee.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/839c27c2-3708-4e72-92eb-706aac46a5c8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/4c95c49b-df98-44ad-b2c9-b492a31e11ca.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/4993f489-a8f4-46cd-aa51-f9beb222cbd5.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/2f5ac07a-2973-4011-b15e-b976d9dc424b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/d2b67f79-6b85-44ec-8d89-75768d309ef3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/1672b240-db84-4aa0-b4e8-ae2d977c73ea.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/9e632928-be2a-4796-9136-27684437aa5f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/10bf2f9c-4b08-4941-aedc-ed5b2d851db7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/4c70f2d7-6d1f-4227-a2f7-cdf74a41082e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/964847/783c6f8f-5570-4f46-8ef0-befa0beaf1f1.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [
+          {
+            "nome": "Airbag motorista",
+            "id": 1,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-motorista"
+          },
+          {
+            "nome": "Airbag passageiro",
+            "id": 11,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-passageiro"
+          },
+          {
+            "nome": "Ar-condicionado",
+            "id": 2,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "ar-condicionado"
+          },
+          {
+            "nome": "Direção elétrica",
+            "id": 45,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "direcao-eletrica"
+          },
+          {
+            "nome": "Farol de neblina",
+            "id": 40,
+            "categoria": "OUTROS",
+            "destaque": 1,
+            "slug": "farol-de-neblina"
+          },
+          {
+            "nome": "Freios ABS",
+            "id": 8,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "freio-abs"
+          },
+          {
+            "nome": "Teto solar",
+            "id": 20,
+            "categoria": "JANELAS",
+            "destaque": 1,
+            "slug": "teto-solar"
+          }
+        ],
+        "tags": [],
+        "sugestoes": [
+          974236,
+          948596,
+          907552,
+          974236,
+          874967,
+          747725
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 986855,
+        "modelo_id": 218,
+        "modelo_nome": "R8 5.2 V10 Quattro R-tronic/S-tronic",
+        "modelo_slug": "r8-5-2-v10-quattro-r-tronic-s-tronic",
+        "modelopai_id": 33,
+        "modelopai_nome": "R8",
+        "modelopai_slug": "r8",
+        "marca_id": 6,
+        "marca_nome": "Audi",
+        "marca_apelido": "Audi",
+        "marca_slug": "audi",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 41,
+        "cor_nome": "Vermelho",
+        "cor_slug": "vermelho",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2021",
+        "anomodelo": "2021",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "Q**-***3",
+        "placa_completa": "QAY3I43",
+        "km": 6670,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 2,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/e5e73e7b-c414-4f8a-86de-6c8a9408764c.jpg",
+        "valorvenda": "1790000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-28 10:37:59",
+        "atualizacao": "2026-04-28 12:12:57",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/e5e73e7b-c414-4f8a-86de-6c8a9408764c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/1955f506-ff08-42c2-b70b-52af45b44307.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/b5e660e8-6360-4531-9895-098e19c96912.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/c35ee751-ca31-4235-83c5-ba656a77741f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/7874b28a-0ab8-412a-a44d-de3862d4c423.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/dc3b05f3-8c06-4ed5-b1bc-57ecfd70a7d3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/6f7a14b8-2244-49a4-a97f-7784e996f254.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/c8797231-5ef0-4aeb-8cdc-4721a47560fb.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/330dc772-a273-4c4f-80ff-6cec25470d27.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/006b2183-8feb-411e-9ab1-2022b7142116.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/505ab6f0-49a4-482e-8bc7-3e7fec94fd75.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/e6617b35-94df-496a-973b-102d12d1e95c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/ccbf1f42-fc39-4032-99c2-5057ccbb76d3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/798655c4-9c0b-4a8e-8cca-73e38ce6979d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/f01aaebb-8deb-4b6f-bbe3-17f2946a4f25.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/e020054e-763b-4f6d-9312-86c3eda7fd3c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/c3259c70-86cb-4b7d-bbf8-1299ca95a420.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/67caa91c-5cc9-4223-b84d-74827ded61ad.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/c238626e-4f18-4134-ba12-50d115b9f611.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/986855/f131c75c-3fc7-454f-8e7e-fbad22a7bfac.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          843087,
+          905269,
+          801175,
+          843087,
+          916079,
+          721351
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 981829,
+        "modelo_id": 2839,
+        "modelo_nome": "Range Rover Sport SVR SUPERCHA. 5.0 V8",
+        "modelo_slug": "range-rover-sport-svr-superchaged-5-0-v8",
+        "modelopai_id": 466,
+        "modelopai_nome": "Range Rover",
+        "modelopai_slug": "range",
+        "marca_id": 33,
+        "marca_nome": "Land Rover",
+        "marca_apelido": "Land Rover",
+        "marca_slug": "land-rover",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 43,
+        "cor_nome": "Cinza",
+        "cor_slug": "cinza",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 6,
+        "carroceria_nome": "SUV / Utilitário Esportivo",
+        "carroceria_slug": "suv",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2021",
+        "anomodelo": "2021",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "R**-***5",
+        "placa_completa": "REW5A75",
+        "km": 24500,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/5a522790-3f10-494b-b6e9-752899da6f41.jpg",
+        "valorvenda": "690000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-22 16:49:26",
+        "atualizacao": "2026-04-23 10:01:07",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/5a522790-3f10-494b-b6e9-752899da6f41.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/27f485f7-842c-4bcd-87c5-1e5d2831023c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/a143f4f9-b4f0-4453-a49f-a7e4d935af89.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/73d53ba6-3a1d-441b-bfbc-68dd68fa91ca.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/4630d419-fef6-4276-a6b1-52be4a0665df.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/ac0e528c-db9b-401e-a857-66c99aa2700a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/2542c00c-590b-414a-986f-6ebff5ca4246.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/4010f6a8-7079-4b8e-8315-09fd82275d18.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/86a54d21-f227-41c3-aef4-b67771d1eb90.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/3bac1075-8f65-42b0-8bb3-43e039eac1b9.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/6f1f55be-c251-4515-9568-a25d020d8983.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/db15334b-b584-47e8-aac1-0225a5e6f1b7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/4fc14319-274b-476a-a5f3-e2e85902fc0a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/4907a100-7d43-4f57-a286-04162347f827.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/d0901af5-9afb-4bf7-9bc0-b48bc4a65b9e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/c9ed90af-dbe0-4d91-9bb9-93ee093e460c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/2b000938-3207-4e5c-b0ff-5c09b83051b1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/ba111d40-f3d5-449e-8db3-f3516282034d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/29adcbd8-7880-48ba-adfb-6f2eaf033e80.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981829/7539152c-ebcd-4e04-8e0a-802029627477.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          857868,
+          967301,
+          747725,
+          737186,
+          952516,
+          949287
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 981743,
+        "modelo_id": 9203,
+        "modelo_nome": "M3 Competition M 3.0 Bi-TB 510cv",
+        "modelo_slug": "m3-competition-m-3-0-bi-tb-510cv",
+        "modelopai_id": 139,
+        "modelopai_nome": "M3",
+        "modelopai_slug": "m3",
+        "marca_id": 7,
+        "marca_nome": "BMW",
+        "marca_apelido": "BMW",
+        "marca_slug": "bmw",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 42,
+        "cor_nome": "Azul",
+        "cor_slug": "azul",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 5,
+        "carroceria_nome": "Sedã",
+        "carroceria_slug": "seda",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2022",
+        "anomodelo": "2022",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "F**-***1",
+        "placa_completa": "FCM1J11",
+        "km": 35020,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/6295671b-3fa6-417a-a21e-d5bce86fb874.jpg",
+        "valorvenda": "569000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-22 16:15:15",
+        "atualizacao": "2026-04-22 16:21:27",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/6295671b-3fa6-417a-a21e-d5bce86fb874.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/c406cf56-98e7-4b96-8de8-7df8df5cd472.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/6963fcc6-5ee2-45fa-bd8a-709a235f227c.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/2637063b-b681-4c3c-b08f-7842078cf3a4.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/ee4f5497-30ac-49bd-8fc5-4f9289dd14a5.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/3f353ab6-4520-475a-899a-a1c1d279bb6d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/6376efbb-6985-4ddd-8a87-f6de2d266c18.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/18a71bf3-407f-4fd2-83e8-c3009dd49c3a.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/779ed0e6-546a-4186-925e-198eac825d01.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/2420058c-b7b5-47a6-92e1-826fa053db88.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/5ab76317-0ca9-4211-af01-2c93b9683854.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/2406c4d5-cefd-403e-b9c4-954da76b5a47.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/f64c09f3-b94a-4c6a-9778-8533331126d3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/8535b11d-cb8a-4ab0-a77a-32fcf0532db3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/6ee9b72e-d1ab-407b-ba7d-f214df74110d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/72267a8d-b0e0-4cc6-9c06-384dae35d0ba.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/eeada5f9-ff4e-446b-bbda-2f2486c5b1d3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/7aade3ba-3780-48dd-816b-b6b1c7d59188.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/e2203eb7-da28-4cd7-8c61-e99ede24a734.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/981743/2c09e5f4-d99b-4c7d-853e-d21c9bd3bcfa.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          781869,
+          932445,
+          976728,
+          779673
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 979596,
+        "modelo_id": 9293,
+        "modelo_nome": "X6 M Competition 4.4 V8 BI-TB 625CV Aut.",
+        "modelo_slug": "x6-m-competition-4-4-v8-bi-tb-625cv-aut",
+        "modelopai_id": 147,
+        "modelopai_nome": "X6",
+        "modelopai_slug": "x6",
+        "marca_id": 7,
+        "marca_nome": "BMW",
+        "marca_apelido": "BMW",
+        "marca_slug": "bmw",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 37,
+        "cor_nome": "Branco",
+        "cor_slug": "branco",
+        "combustivel_id": 1,
+        "combustivel_nome": "Gasolina",
+        "combustivel_slug": "gasolina",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2023",
+        "anomodelo": "2024",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "S**-***0",
+        "placa_completa": "SCO7D20",
+        "km": 16170,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 4,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/117f724a-b487-4d6c-a13a-7c0ebdbba391.jpg",
+        "valorvenda": "949000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": null,
+        "publicacao": "2026-04-20 09:53:15",
+        "atualizacao": "2026-04-20 11:22:21",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/117f724a-b487-4d6c-a13a-7c0ebdbba391.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/10f1b5ed-5d6e-4e21-aa79-fbbb52ac953b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/61d33916-61d7-415a-af46-773cdeadb517.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/1e4c1be2-2fa2-4ed4-b025-71442ce395bb.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/4f4c0736-ede8-43fa-81b3-fd9e5312ac15.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/e6b8fea2-7e28-406c-b232-5c2af7228a66.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/129c0a0d-0d9b-4777-9df0-e8bfef5db394.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/4786e90c-7121-43a2-a5de-c8764ddc0c8e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/afe4d997-2264-4c87-8d52-f47c9ca8b2c1.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/462a624e-710b-4117-9570-138159c0e9b3.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/e772b8c2-6ffe-4bb1-95bd-702b655d066e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/05806da7-1c89-49c7-99ea-edec47861fd8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/c22a7d12-3eda-42d9-8825-f8b8a6bc075f.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/6c430789-36cd-4898-8c97-f716d19ef10d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/762b3f4d-7393-4e3d-b23e-030c0a9103a4.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/7ccfcc9f-1e40-4a2c-817a-cfed80302161.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/5c1341c6-e69a-4d73-a016-56661b1ff9b8.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/9b43d4de-45eb-4f34-a34f-3d740e670679.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/017d6a4a-e0ed-4b0e-8779-fd52b59cf897.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/979596/4fbd6f37-3361-449a-8a85-38541c59ea8b.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [],
+        "tags": [],
+        "sugestoes": [
+          801175,
+          734435,
+          949004,
+          905269,
+          843087,
+          916079
+        ],
+        "favorito": false
+      },
+      {
+        "prioridade": 0,
+        "prioridade_veiculo": 1,
+        "acessorios": [
+          {
+            "nome": "Alarme",
+            "id": 7,
+            "categoria": "SEGURANCA",
+            "destaque": 0,
+            "slug": "alarme"
+          },
+          {
+            "nome": "Travas elétricas",
+            "id": 5,
+            "categoria": "CONFORTO",
+            "destaque": 0,
+            "slug": "travas-eletricas"
+          },
+          {
+            "nome": "Turbo",
+            "id": 52,
+            "categoria": "OUTROS",
+            "destaque": 0,
+            "slug": "turbo"
+          },
+          {
+            "nome": "Vidros elétricos dianteiros",
+            "id": 4,
+            "categoria": "JANELAS",
+            "destaque": 0,
+            "slug": "vidros-eletricos-dianteiros"
+          }
+        ],
+        "filtro": "estoque",
+        "filtroTipo": "seminovo",
+        "premium": false,
+        "id": 916079,
+        "modelo_id": 3239639,
+        "modelo_nome": "GT 63 S AMG E Performance Aut. 2p",
+        "modelo_slug": "gt-63-s-amg-e-performance-aut-2p",
+        "modelopai_id": 594,
+        "modelopai_nome": "GT",
+        "modelopai_slug": "gt",
+        "marca_id": 39,
+        "marca_nome": "Mercedes",
+        "marca_apelido": "Mercedes",
+        "marca_slug": "mercedes-benz",
+        "tipo_id": 1,
+        "tipo_nome": "Carros",
+        "tipo_slug": "carros",
+        "cor_id": 39,
+        "cor_nome": "Preto",
+        "cor_slug": "preto",
+        "combustivel_id": 10,
+        "combustivel_nome": "Gasolina e Elétrico",
+        "combustivel_slug": "gasolina-e-eletrico",
+        "cambio_id": 2,
+        "cambio_nome": "Automático",
+        "cambio_slug": "automatico",
+        "carroceria_id": 1,
+        "carroceria_nome": "Conversível/Cupê",
+        "carroceria_slug": "conversivel",
+        "revenda_id": 1663,
+        "revenda_nome": "Attra Veículos",
+        "revenda_slug": "attra-veiculos",
+        "status_id": 9,
+        "anofabricacao": "2025",
+        "anomodelo": "2025",
+        "marca_semfipe": null,
+        "modelopai_semfipe": null,
+        "modelo_semfipe": null,
+        "placa": "S**-***3",
+        "placa_completa": "SPA0G63",
+        "km": 1800,
+        "potencia": null,
+        "potencia2": null,
+        "consumourbano": null,
+        "consumourbano2": null,
+        "consumorodoviario": null,
+        "consumorodoviario2": null,
+        "garantia_id": 12,
+        "garantiafabrica": null,
+        "tipo_negociacao": 2,
+        "portas": 2,
+        "foto": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/a9db9092-342f-4a01-a72c-0d01ca66d86e.jpg",
+        "valorvenda": "1890000.00",
+        "valorpromocao": null,
+        "pericia": 1,
+        "versao_descricao": "4.0 V8 TURBO PHEV S E PERFORMANCE COUPÉ 2P 4MATIC+ SPEEDSHIFT",
+        "publicacao": "2026-04-17 11:24:31",
+        "atualizacao": "2026-04-17 11:24:31",
+        "zero_km": 0,
+        "has_molicar": 0,
+        "fotos": [
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/a9db9092-342f-4a01-a72c-0d01ca66d86e.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/a7bf50ae-bcf9-4013-b651-a7c5b0637c07.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/ac576898-6779-4691-bfa1-f5355659d45b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/3269a17d-f21a-46ad-9d2d-5f9ffed59629.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/6ac1cdd4-16ad-4a5d-ba9c-9482f9c52f53.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/bfae4cba-3d53-4669-a611-ae3f8ed1e5ac.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/e96a6e15-07c4-4625-8304-8e4eed70456d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/c487540d-3927-4aac-822c-aca2b57d5d68.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/d2b31283-5716-4d48-a7a1-24dd027327fe.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/3bafec8e-9f86-4d38-b737-e60b093e2083.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/4a3a3c4f-c641-45b0-93cb-3280a5cb09b4.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/f53c0614-83ea-4399-92db-1877d73f9661.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/fcf5c0a9-823d-47a1-b7e9-b364b350030b.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/975e9dc4-81be-4fa8-88ef-e1dba147700d.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/4cf07499-ae19-4489-b805-be53f9a0a089.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/2745b455-cdde-46ec-b9ed-d46f182f11ff.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/b6bcb788-d11c-4293-a8d2-25aa0bfc2476.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/fc527b75-5d7c-4414-9f68-2eae23d40da7.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/e83c0539-f48d-4da8-93f0-4630d5d3fde0.jpg",
+            "photo_url": null
+          },
+          {
+            "url": "https://autoconf-production.s3.amazonaws.com/veiculos/fotos/916079/7cea7fa0-a44f-4967-bf7a-8494596da787.jpg",
+            "photo_url": null
+          }
+        ],
+        "acessorios_destaque": [
+          {
+            "nome": "Airbag motorista",
+            "id": 1,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-motorista"
+          },
+          {
+            "nome": "Airbag passageiro",
+            "id": 11,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "airbag-passageiro"
+          },
+          {
+            "nome": "Ar-condicionado",
+            "id": 2,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "ar-condicionado"
+          },
+          {
+            "nome": "Direção elétrica",
+            "id": 45,
+            "categoria": "CONFORTO",
+            "destaque": 1,
+            "slug": "direcao-eletrica"
+          },
+          {
+            "nome": "Farol de neblina",
+            "id": 40,
+            "categoria": "OUTROS",
+            "destaque": 1,
+            "slug": "farol-de-neblina"
+          },
+          {
+            "nome": "Freios ABS",
+            "id": 8,
+            "categoria": "SEGURANCA",
+            "destaque": 1,
+            "slug": "freio-abs"
+          }
+        ],
+        "tags": [],
+        "sugestoes": [
+          843087,
+          905269,
+          801175,
+          721351
+        ],
+        "favorito": false
       }
     ]
   }
