@@ -15,8 +15,16 @@ git fetch origin
 git checkout master
 git pull --ff-only origin master
 
+# Carrega as variáveis de ambiente ANTES do build.
+# O Next.js lê .env.production automaticamente, mas se as vars estiverem
+# apenas no shell/PM2, o build não as enxerga e pode falhar.
+set -a; source .env.production; set +a
+
 npm ci
 npm run build        # dispara o postbuild que copia .next/static + public
+
+# Valida que o bundle standalone foi gerado corretamente.
+test -f .next/standalone/server.js || { echo "ERRO: server.js não gerado — build falhou"; exit 1; }
 
 # Troca o processo antigo (que rodava `npm start` = `next start`) pelo
 # server.js do bundle standalone — sem isso as rotas que não são a home

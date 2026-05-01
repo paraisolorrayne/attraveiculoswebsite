@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Json } from '@/types/database'
 import type { AutoConfResponse, AutoConfVehicle } from './autoconf-api'
 

@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/types/database'
+
+// Re-export from the standalone admin module so existing callers
+// (`import { createAdminClient } from '@/lib/supabase/server'`) keep working.
+export { createAdminClient } from './admin'
 
 /**
  * Create a Supabase client for use in Server Components and Route Handlers
@@ -31,27 +34,5 @@ export async function createClient() {
       },
     }
   )
-}
-
-/**
- * Create a Supabase Admin client with service role key
- * IMPORTANT: This bypasses Row Level Security (RLS)
- * Only use for server-side operations that need elevated privileges
- * NEVER expose this client to the browser
- */
-export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase admin credentials')
-  }
-
-  return createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
 }
 
