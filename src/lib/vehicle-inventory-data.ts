@@ -34,7 +34,7 @@ function generateVehicleSlug(vehicle: AutoConfVehicle): string {
  * Determine vehicle category based on characteristics
  */
 function determineCategoryFromVehicle(vehicle: AutoConfVehicle, price: number): string {
-  const brand = vehicle.marca_nome.toLowerCase()
+  const brand = (vehicle.marca_nome || '').toLowerCase()
 
   // Supercars/Sports
   const supercarBrands = ['ferrari', 'lamborghini', 'mclaren', 'bugatti', 'pagani', 'koenigsegg']
@@ -68,12 +68,17 @@ function determineCategoryFromVehicle(vehicle: AutoConfVehicle, price: number): 
 function generateDescription(vehicle: AutoConfVehicle): string {
   const isNew = vehicle.zero_km === 1
   const km = (vehicle.km ?? 0).toLocaleString('pt-BR')
+  const brand = vehicle.marca_nome || 'Veículo'
+  const model = vehicle.modelopai_nome || ''
+  const year = vehicle.anomodelo || ''
+  const fuel = vehicle.combustivel_nome || 'Não informado'
+  const transmission = vehicle.cambio_nome || 'Não informado'
 
   if (isNew) {
-    return `${vehicle.marca_nome} ${vehicle.modelopai_nome} ${vehicle.anomodelo} 0km. ${vehicle.versao_descricao || ''} Motor ${vehicle.combustivel_nome}, câmbio ${vehicle.cambio_nome}. Verifique a disponibilidade com nossos consultores.`
+    return `${brand} ${model} ${year} 0km. ${vehicle.versao_descricao || ''} Motor ${fuel}, câmbio ${transmission}. Verifique a disponibilidade com nossos consultores.`
   }
 
-  return `${vehicle.marca_nome} ${vehicle.modelopai_nome} ${vehicle.anomodelo} com apenas ${km} km rodados. ${vehicle.versao_descricao || ''} Motor ${vehicle.combustivel_nome}, câmbio ${vehicle.cambio_nome}. Documentação em dia, pronto para entrega.`
+  return `${brand} ${model} ${year} com apenas ${km} km rodados. ${vehicle.versao_descricao || ''} Motor ${fuel}, câmbio ${transmission}. Documentação em dia, pronto para entrega.`
 }
 
 /**
