@@ -108,14 +108,13 @@ interface VehicleData {
   marca_nome: string
   modelopai_nome: string
   anomodelo: number
-  preco: string
-  estoque: number
-  km_total?: number
+  valorvenda: string
+  status_id: number
+  km?: number
   cambio_nome?: string
   cor_nome?: string
-  procedencia?: string
-  foto_principal_url?: string
-  fotos_adicionais_urls?: string[]
+  foto?: string
+  fotos?: string[]
 }
 
 async function getVehicleInventory(): Promise<VehicleData[]> {
@@ -137,22 +136,25 @@ async function getVehicleInventory(): Promise<VehicleData[]> {
     const vehicles = response?.veiculos || []
     
     // Transform to VehicleData format
-    return vehicles.map((v: Record<string, unknown>) => ({
-      id: String(v.id),
-      marca_nome: String(v.marca_nome || ''),
-      modelopai_nome: String(v.modelopai_nome || ''),
-      anomodelo: Number(v.anomodelo) || new Date().getFullYear(),
-      preco: String(v.preco || '0'),
-      estoque: Number(v.estoque) || 0,
-      km_total: Number(v.km_total) || 0,
-      cambio_nome: v.cambio_nome ? String(v.cambio_nome) : undefined,
-      cor_nome: v.cor_nome ? String(v.cor_nome) : undefined,
-      procedencia: v.procedencia ? String(v.procedencia) : undefined,
-      foto_principal_url: v.foto_principal_url ? String(v.foto_principal_url) : undefined,
-      fotos_adicionais_urls: Array.isArray(v.fotos_adicionais_urls) 
-        ? (v.fotos_adicionais_urls as string[]) 
-        : undefined,
-    }))
+    return vehicles.map((v: Record<string, unknown>) => {
+      const fotos = Array.isArray(v.fotos)
+        ? (v.fotos as Array<{ url?: string }>).map(f => f?.url).filter((u): u is string => !!u)
+        : undefined
+
+      return {
+        id: String(v.id),
+        marca_nome: String(v.marca_nome || ''),
+        modelopai_nome: String(v.modelopai_nome || ''),
+        anomodelo: Number(v.anomodelo) || new Date().getFullYear(),
+        valorvenda: String(v.valorvenda || '0'),
+        status_id: Number(v.status_id) || 0,
+        km: Number(v.km) || 0,
+        cambio_nome: v.cambio_nome ? String(v.cambio_nome) : undefined,
+        cor_nome: v.cor_nome ? String(v.cor_nome) : undefined,
+        foto: v.foto ? String(v.foto) : undefined,
+        fotos,
+      }
+    })
   } catch (error) {
     console.error('Error loading vehicle inventory:', error)
     // Return empty array on error (feed will be empty but valid)
@@ -169,7 +171,7 @@ function vehicleToFeedItem(vehicle: VehicleData): FeedItem {
   const brand = vehicle.marca_nome || 'Unknown'
   const model = vehicle.modelopai_nome || 'Unknown'
   const year = vehicle.anomodelo || new Date().getFullYear()
-  const price = parseFloat(vehicle.preco) || 0
+  const price = parseFloat(vehicle.valorvenda) || 0
   
   // Generate unique ID
   const id = `ATTRA-${brand.toUpperCase().slice(0, 3)}-${year}-${vehicle.id || Math.random().toString(36).substr(2, 9)}`
@@ -178,7 +180,7 @@ function vehicleToFeedItem(vehicle: VehicleData): FeedItem {
   const title = `${brand} ${model} ${year}`
   
   // Build description with key features
-  const km = vehicle.km_total ? `${vehicle.km_total.toLocaleString('pt-BR')} km` : 'Detalhes disponíveis'
+  const km = vehicle.km ? `${vehicle.km.toLocaleString('pt-BR')} km` : 'Detalhes disponíveis'
   const transmission = vehicle.cambio_nome ? `câmbio ${vehicle.cambio_nome}` : ''
   const color = vehicle.cor_nome ? `cor ${vehicle.cor_nome}` : ''
   const features = [km, transmission, color].filter(Boolean).join(', ')
@@ -190,21 +192,20 @@ function vehicleToFeedItem(vehicle: VehicleData): FeedItem {
   
   // Get images (validate URLs for security)
   const defaultImageUrl = 'https://via.placeholder.com/500x400?text=Attra+Veiculo'
-  const imageLink = isValidUrl(vehicle.foto_principal_url) ? vehicle.foto_principal_url : defaultImageUrl
-  const additionalImageLinks = (vehicle.fotos_adicionais_urls || [])
-    .filter(url => isValidUrl(url)) // Only include valid URLs
-    .slice(0, 10) // Google allows max 10
+  const imageLink = isValidUrl(vehicle.foto) ? vehicle.foto : defaultImageUrl
+  const additionalImageLinks = (vehicle.fotos || [])
+    .filter(url => isValidUrl(url))
+    .slice(0, 10)
   
   // Determine availability
-  const availability = (vehicle.estoque || 0) > 0 ? 'in stock' : 'out of stock'
+  const availability = vehicle.status_id === 9 ? 'in stock' : 'out of stock'
   
   // Custom labels for AI discovery
   const customLabels: FeedItem['customLabels'] = {
     label0: 'Premium Curated', // Always
     label1: 'Pronta Entrega', // If available
     label2: vehicle.cambio_nome?.toLowerCase().includes('automático') ? 'Automático' : undefined,
-    label3: (vehicle.km_total || 999999) <= 5000 ? 'Baixa Quilometragem' : undefined,
-    label4: vehicle.procedencia || undefined, // Origin (imported, etc)
+    label3: (vehicle.km || 999999) <= 5000 ? 'Baixa Quilometragem' : undefined,
   }
   
   return {
