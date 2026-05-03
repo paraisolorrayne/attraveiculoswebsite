@@ -196,9 +196,10 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 			question: `Qual o motor do ${dsName}?`,
 			answer: `O ${dsName} é equipado com motor ${datasheet.engine} de ${datasheet.displacement}, que entrega ${datasheet.power} e ${datasheet.torque}. A transmissão é ${datasheet.transmission} com ${datasheet.drivetrain.toLowerCase()}.`,
 		})
+		const accelValue = datasheet.acceleration.replace(/\s*\(0.100\s*km\/h\)/, '')
 		vehicleFaqs.push({
 			question: `Qual a aceleração e velocidade máxima do ${dsName}?`,
-			answer: `O ${dsName} acelera de 0 a 100 km/h em ${datasheet.acceleration} e atinge velocidade máxima de ${datasheet.topSpeed}. Peso em ordem de marcha: ${datasheet.weight}.`,
+			answer: `O ${dsName} acelera de 0 a 100 km/h em ${accelValue} e atinge velocidade máxima de ${datasheet.topSpeed}. Peso em ordem de marcha: ${datasheet.weight}.`,
 		})
 		if (datasheet.brakes) {
 			vehicleFaqs.push({

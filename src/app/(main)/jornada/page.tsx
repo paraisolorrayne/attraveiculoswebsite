@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 // Schema markup para SEO
 function JornadaSchema() {
-  const schema = {
+  const serviceSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Jornada Attra - Curadoria Premium de Veículos',
@@ -29,7 +29,37 @@ function JornadaSchema() {
     areaServed: { '@type': 'Country', name: 'Brasil' },
     serviceType: ['Curadoria de Veículos Premium', 'Logística Nacional', 'Vistoria Técnica', 'Consultoria Automotiva'],
   }
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+
+  const iconicListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Carros Icônicos que Passaram pela Attra',
+    description: 'Acervo histórico de veículos premium e supercarros marcantes comercializados pela Attra Veículos.',
+    numberOfItems: ICONIC_CARS.length,
+    itemListElement: ICONIC_CARS.map((car, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'Vehicle',
+        name: `${car.brand} ${car.model}`,
+        description: car.editorial,
+        image: car.photo,
+        vehicleModelDate: String(car.year),
+        ...(car.engine ? { vehicleEngine: { '@type': 'EngineSpecification', name: car.engine } } : {}),
+        brand: { '@type': 'Brand', name: car.brand },
+        model: car.model,
+        color: car.color,
+        mileageFromOdometer: { '@type': 'QuantitativeValue', value: parseInt(car.mileage) || 0, unitCode: 'KMT' },
+      },
+    })),
+  }
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(iconicListSchema) }} />
+    </>
+  )
 }
 
 const journeySteps = [

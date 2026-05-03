@@ -23,7 +23,7 @@ export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheet
 		{ icon: CircleGauge, label: 'Cilindrada', value: datasheet.displacement },
 		{ icon: Zap, label: 'Potência', value: vehicle.horsepower ? `${vehicle.horsepower} cv` : datasheet.power },
 		{ icon: RotateCw, label: 'Torque', value: vehicle.torque ? `${vehicle.torque} Nm` : datasheet.torque },
-		{ icon: Gauge, label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : datasheet.acceleration },
+		{ icon: Gauge, label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : datasheet.acceleration.replace(/\s*\(0.100\s*km\/h\)/, '') },
 		{ icon: ArrowUpRight, label: 'Velocidade máxima', value: vehicle.top_speed ? `${vehicle.top_speed} km/h` : datasheet.topSpeed },
 		{ icon: Car, label: 'Transmissão', value: vehicle.transmission || datasheet.transmission },
 		{ icon: Shield, label: 'Tração', value: datasheet.drivetrain },
