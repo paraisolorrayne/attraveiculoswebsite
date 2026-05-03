@@ -335,7 +335,7 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
       const vName = [v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')
       return {
         '@type': 'ListItem',
-        position: i + 1,
+        position: (currentPage - 1) * perPage + i + 1,
         item: {
           '@type': 'Vehicle',
           name: vName,
