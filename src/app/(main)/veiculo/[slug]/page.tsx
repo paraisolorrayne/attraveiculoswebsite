@@ -73,8 +73,8 @@ interface VehiclePageProps {
 	params: Promise<{ slug: string }>
 }
 
-/** Build a self-contained one-line summary used both as meta description and
- * as the LLMO lede (first paragraph). LLMs extract this verbatim. */
+/** Build a self-contained one-line summary used as meta description,
+ * Open Graph / Twitter Card text, and JSON-LD description. */
 function buildVehicleSummary(vehicle: Vehicle): string {
 	const name = joinNonEmpty([vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model])
 		|| 'Veículo premium'
@@ -210,7 +210,6 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	}
 
 	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs)
-	const summary = buildVehicleSummary(vehicle)
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -272,11 +271,6 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 								{formatPrice(vehicle.price)}
 							</p>
 						</div>
-
-						{/* LLMO summary — self-contained sentence that LLMs and snippets extract verbatim */}
-						<p className="text-base lg:text-lg text-foreground-secondary leading-relaxed border-l-4 border-primary/30 pl-4">
-							{summary}
-						</p>
 
 						{/* Engine Audio Player - shows if vehicle has sound configured in admin */}
 						{vehicleSound && (
