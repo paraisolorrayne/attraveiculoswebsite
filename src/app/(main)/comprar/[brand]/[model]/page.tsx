@@ -367,7 +367,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
 							url: SITE_URL,
 						},
 						// FAQ Schema
-						...(modelVehicles.length >= 0 && {
+						...({
 							'@graph': [{
 								'@type': 'FAQPage',
 								mainEntity: [

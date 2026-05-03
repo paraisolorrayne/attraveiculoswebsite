@@ -195,7 +195,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 											</span>
 											{modelVehicles.length > 0 && (
 												<span className="px-2 py-0.5 bg-primary/10 text-primary rounded font-medium">
-													{modelVehicles.length} disponível
+													{modelVehicles.length} {modelVehicles.length === 1 ? 'disponível' : 'disponíveis'}
 												</span>
 											)}
 										</div>
