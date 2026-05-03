@@ -104,7 +104,7 @@ export const ICONIC_CARS: IconicCar[] = [
 		mileage: '0 km',
 		engine: 'V6 3.0L biturbo + motor elétrico',
 		power: '680 cv',
-		photo: 'https://autoconf-production.s3.amazonaws.com/uploads/photo/file/17795613/Copia_de_20250110_ATTRA_MCLAREN_ARTURA_SPIDER_SILICA_WHITE__M7Y8233_low_quality.webp',
+		photo: 'https://autoconf-production.s3.amazonaws.com/veiculos/fotos/982895/b360d07c-aaa0-4c72-b275-4d6ad5ad6c91.jpg',
 		category: 'supercar',
 		editorial: 'O primeiro McLaren híbrido plug-in. Com chassi em fibra de carbono e motor V6 desenvolvido do zero, combina eficiência com performance brutal em um pacote de apenas 1.395 kg — o futuro dos supercarros.',
 		highlights: ['Primeiro McLaren híbrido plug-in', 'Chassi MCLA em fibra de carbono', 'Apenas 1.395 kg com motor elétrico'],
