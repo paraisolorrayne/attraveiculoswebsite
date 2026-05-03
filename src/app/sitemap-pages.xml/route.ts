@@ -1,6 +1,7 @@
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
 import { SEO_BRANDS } from '@/lib/seo-brands'
+import { COMPARATIVOS, GUIAS_COMPRA, PERFIS_COMPRADOR, REGIOES_SEO } from '@/lib/seo-content'
 
 export const revalidate = 3600
 
@@ -36,6 +37,34 @@ export async function GET() {
         priority: 0.7,
       })),
     ]),
+    // Layer 3 — Comparativos
+    ...COMPARATIVOS.map(c => ({
+      loc: `${BASE}/comparativo/${c.slug}`,
+      lastmod,
+      changefreq: 'monthly' as const,
+      priority: 0.7,
+    })),
+    // Layer 3 — Guias de compra
+    ...GUIAS_COMPRA.map(g => ({
+      loc: `${BASE}/guia/${g.slug}`,
+      lastmod,
+      changefreq: 'monthly' as const,
+      priority: 0.7,
+    })),
+    // Layer 4 — Perfis psicológicos
+    ...PERFIS_COMPRADOR.map(p => ({
+      loc: `${BASE}/comprar/perfil/${p.slug}`,
+      lastmod,
+      changefreq: 'monthly' as const,
+      priority: 0.6,
+    })),
+    // Layer 5 — Expansão geográfica
+    ...REGIOES_SEO.map(r => ({
+      loc: `${BASE}/comprar/regiao/${r.slug}`,
+      lastmod,
+      changefreq: 'monthly' as const,
+      priority: 0.7,
+    })),
   ]
 
   return sitemapResponse(pages)

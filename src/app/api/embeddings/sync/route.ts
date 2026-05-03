@@ -70,12 +70,19 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// Remove embeddings for vehicles no longer in stock
+		// Remove embeddings for vehicles no longer in stock.
+		// GUARD: if AutoConf is down or returns an empty list, activeIds will be
+		// empty and the DELETE below would wipe ALL embeddings. Skip the cleanup
+		// in that scenario to avoid data loss.
 		const activeIds = vehicles.map(v => v.id)
-		await supabase
-			.from('vehicle_embeddings')
-			.delete()
-			.not('vehicle_id', 'in', `(${activeIds.join(',')})`)
+		if (activeIds.length > 0) {
+			await supabase
+				.from('vehicle_embeddings')
+				.delete()
+				.not('vehicle_id', 'in', `(${activeIds.join(',')})`)
+		} else {
+			console.warn('[embeddings/sync] activeIds is empty — skipping stale-embedding cleanup to prevent data loss (AutoConf may be down)')
+		}
 
 		return NextResponse.json({
 			synced,

@@ -12,6 +12,7 @@ import { formatDate } from '@/lib/utils'
 import { ListenToContent } from './listen-to-content'
 import { BlogContentRenderer } from './blog-content-renderer'
 import { PillarTOC } from './pillar-toc'
+import { SEOInternalLinks } from './seo-internal-links'
 
 interface EducativoTemplateProps {
   post: DualBlogPost
@@ -173,6 +174,9 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
           </div>
         </Container>
       </section>
+
+      {/* SEO Internal Links — /comprar/ pages */}
+      <SEOInternalLinks title={post.title} />
     </article>
   )
 }

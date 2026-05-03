@@ -30,7 +30,7 @@ function autoDealerNode(baseUrl: string) {
   }
 }
 
-function availabilityFromStatus(status: Vehicle['status']): string {
+export function availabilityFromStatus(status: Vehicle['status']): string {
   switch (status) {
     case 'available':
     case 'highlight':

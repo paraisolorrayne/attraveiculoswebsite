@@ -14,6 +14,7 @@ import { veiculosFAQs } from '@/lib/faq-data'
 import { Search, Globe, Shield, Check, ArrowRight, CalendarCheck } from 'lucide-react'
 import Link from 'next/link'
 import { VehicleUnavailableToast } from '@/components/vehicles/vehicle-unavailable-toast'
+import { availabilityFromStatus } from '@/lib/vehicle-schema'
 
 // Brand similarity groups for vehicle suggestions
 // When a brand has no stock, vehicles from brands in the same group(s) are suggested
@@ -348,7 +349,8 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
             '@type': 'Offer',
             price: v.price,
             priceCurrency: 'BRL',
-            availability: v.status === 'available' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            availability: availabilityFromStatus(v.status),
+            itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
           },
           image: v.photos?.[0],
         },

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { formatDate, cn } from '@/lib/utils'
 import { ListenToContent } from './listen-to-content'
 import { BlogContentRenderer } from './blog-content-renderer'
+import { SEOInternalLinks } from './seo-internal-links'
 
 interface CarReviewTemplateProps {
   post: DualBlogPost
@@ -854,6 +855,15 @@ export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
       {/* CTA FINAL */}
       {/* ================================================================== */}
       <CTASection brand={car_review?.brand} model={car_review?.model} />
+
+      {/* ================================================================== */}
+      {/* SEO INTERNAL LINKS — /comprar/ pages */}
+      {/* ================================================================== */}
+      <SEOInternalLinks
+        brand={car_review?.brand}
+        model={car_review?.model}
+        title={post.title}
+      />
 
       {/* ================================================================== */}
       {/* RODAPÉ DO ARTIGO - Links relacionados */}

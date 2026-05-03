@@ -9,6 +9,7 @@ import { getVehicles } from '@/lib/autoconf-api'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
+import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 
 interface ModelPageProps {
@@ -342,11 +343,9 @@ export default async function ModelPage({ params }: ModelPageProps) {
 										'@type': 'Offer',
 										price: v.price,
 										priceCurrency: 'BRL',
-										availability: v.status === 'available' || v.status === 'highlight'
-											? 'https://schema.org/InStock'
-											: v.status === 'reserved'
-												? 'https://schema.org/LimitedAvailability'
-												: 'https://schema.org/OutOfStock',
+										availability: availabilityFromStatus(v.status),
+										seller: { '@type': 'AutoDealer', name: 'Attra Veículos', url: SITE_URL },
+										itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
 									},
 								},
 							})),

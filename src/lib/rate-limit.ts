@@ -2,7 +2,10 @@
  * Rate Limiting Utility
  * 
  * Simple in-memory rate limiter for API routes.
- * For production, consider using Redis or a distributed cache.
+ * Works correctly in single-instance PM2 (fork mode). If the app scales to
+ * PM2 cluster mode or multiple containers, each process will have its own
+ * Map — effectively multiplying the allowed rate by the number of instances.
+ * In that scenario, migrate to a shared store such as Redis or Upstash.
  */
 
 export interface RateLimitConfig {

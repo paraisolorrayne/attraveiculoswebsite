@@ -8,6 +8,7 @@ import { findSEOBrand, getAllBrandSlugs, SEO_BRANDS } from '@/lib/seo-brands'
 import { getVehicles } from '@/lib/autoconf-api'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
+import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 
@@ -319,12 +320,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
 											'@type': 'Offer',
 											price: v.price,
 											priceCurrency: 'BRL',
-											availability: v.status === 'available' || v.status === 'highlight'
-												? 'https://schema.org/InStock'
-												: v.status === 'reserved'
-													? 'https://schema.org/LimitedAvailability'
-													: 'https://schema.org/OutOfStock',
-											seller: { '@type': 'AutoDealer', name: 'Attra Veículos' },
+											availability: availabilityFromStatus(v.status),
+											seller: { '@type': 'AutoDealer', name: 'Attra Veículos', url: SITE_URL },
+											itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
 										},
 									},
 								}))
