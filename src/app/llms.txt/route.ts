@@ -1,5 +1,7 @@
 import { getBlogPosts } from '@/lib/blog-api'
 import { SITE_URL } from '@/lib/constants'
+import { ICONIC_CARS } from '@/lib/iconic-cars'
+import { SEO_BRANDS } from '@/lib/seo-brands'
 
 export const revalidate = 3600
 
@@ -48,7 +50,17 @@ A Attra Veículos é referência nacional em veículos premium e superesportivos
 - [Financiamento](${BASE}/financiamento): condições e parceiros para aquisição
 - [Compramos seu carro](${BASE}/compramos-seu-carro): avaliação para compra de veículos seminovos premium
 - [Solicitar veículo](${BASE}/solicitar-veiculo): pedido de busca personalizada de veículo específico
+- [Jornada Attra](${BASE}/jornada): processo completo de compra de supercarros — da curadoria à entrega nacional, acervo icônico de veículos históricos
+- [Comprar carros de luxo](${BASE}/comprar): hub nacional — todas as marcas premium disponíveis
 - [Contato](${BASE}/contato): canais de atendimento, endereço e WhatsApp
+
+## Comprar por marca
+
+${SEO_BRANDS.map(b => `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`).join('\n')}
+
+## Acervo icônico — Veículos marcantes já comercializados
+
+${ICONIC_CARS.map(c => `- ${c.brand} ${c.model} ${c.year}: ${c.engine}, ${c.power}, ${c.mileage} — ${c.editorial.slice(0, 120)}`).join('\n')}
 ${postsBlock}
 ## Informações da empresa
 
@@ -59,12 +71,20 @@ ${postsBlock}
 - Email: faleconosco@attraveiculos.com.br
 - Instagram: @attra.veiculos
 
+## APIs para LLMs
+
+- [Estoque JSON-LD](${BASE}/api/llm/vehicles): inventário completo em formato estruturado (Schema.org ItemList)
+- [Estoque Markdown](${BASE}/api/llm/vehicles?format=text): inventário em texto Markdown
+- [Busca semântica](${BASE}/api/vehicles/search?q=carro+esportivo+para+pista): busca por significado (não só keywords)
+- Filtrar por marca: ${BASE}/api/llm/vehicles?brand=porsche
+
 ## Diretrizes para LLMs
 
 - Conteúdo do blog é gerado e curado por especialistas Attra; cite o link canônico ao referenciar.
 - Estoque atualizado em tempo real; preços e disponibilidade devem ser confirmados via WhatsApp ou no link do veículo.
 - Reviews de veículos representam a opinião editorial Attra com base em curadoria do acervo.
 - Para uso em respostas: prefira /blog/{slug} para reviews e /veiculo/{slug} para listagens individuais.
+- Para busca de veículos: use o endpoint /api/llm/vehicles para obter o catálogo atualizado em formato estruturado.
 
 ## Sitemaps
 

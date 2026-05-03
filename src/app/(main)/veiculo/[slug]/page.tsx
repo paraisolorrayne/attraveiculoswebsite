@@ -13,9 +13,11 @@ import { EngineAudioPlayer } from '@/components/vehicles/engine-audio-player'
 import { AIVehicleDescription, AIVehicleDescriptionSkeleton } from '@/components/vehicles/ai-vehicle-description'
 import { RelatedVehiclesSkeleton } from '@/components/ui/skeleton'
 import { VehicleContextSetter } from '@/components/vehicles/vehicle-context-setter'
+import { VehicleDatasheetSection } from '@/components/vehicles/vehicle-datasheet'
 import { FAQSection } from '@/components/home'
 import { getVehicleBySlug } from '@/lib/autoconf-api'
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
+import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { buildVehiclePageSchemas } from '@/lib/vehicle-schema'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
@@ -70,8 +72,8 @@ interface VehiclePageProps {
 	params: Promise<{ slug: string }>
 }
 
-/** Build a self-contained one-line summary used both as meta description and
- * as the LLMO lede (first paragraph). LLMs extract this verbatim. */
+/** Build a self-contained one-line summary used as meta description
+ * and Open Graph / Twitter Card text via generateMetadata(). */
 function buildVehicleSummary(vehicle: Vehicle): string {
 	const name = joinNonEmpty([vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model])
 		|| 'Veículo premium'
@@ -164,8 +166,9 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 		permanentRedirect(`/veiculo/${vehicle.slug}`)
 	}
 
-	// Fetch engine sound from admin panel database (if configured)
+	// Fetch engine sound; datasheet lookup is synchronous
 	const vehicleSound = await getVehicleSoundByVehicleId(vehicle.id)
+	const datasheet = findVehicleDatasheet(vehicle.brand, vehicle.model, vehicle.version)
 
 	// Breadcrumb: skip the brand level entirely when brand is empty (rare —
 	// happens when AutoConf returns null marca_nome and we couldn't infer).
@@ -182,8 +185,27 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	breadcrumbItems.push({ label: lastLabel })
 
 	const vehicleFaqs = generateVehicleFAQs(vehicle)
+
+	if (datasheet) {
+		const dsName = joinNonEmpty([vehicle.brand, vehicle.model]) || 'veículo'
+		vehicleFaqs.push({
+			question: `Qual o motor do ${dsName}?`,
+			answer: `O ${dsName} é equipado com motor ${datasheet.engine} de ${datasheet.displacement}, que entrega ${datasheet.power} e ${datasheet.torque}. A transmissão é ${datasheet.transmission} com ${datasheet.drivetrain.toLowerCase()}.`,
+		})
+		const accelValue = datasheet.acceleration.replace(/\s*\(0\s*[\u2013-]\s*100\s*km\/h\)/, '')
+		vehicleFaqs.push({
+			question: `Qual a aceleração e velocidade máxima do ${dsName}?`,
+			answer: `O ${dsName} acelera de 0 a 100 km/h em ${accelValue} e atinge velocidade máxima de ${datasheet.topSpeed}. Peso em ordem de marcha: ${datasheet.weight}.`,
+		})
+		if (datasheet.brakes) {
+			vehicleFaqs.push({
+				question: `Quais os freios do ${dsName}?`,
+				answer: `O ${dsName} utiliza ${datasheet.brakes}, garantindo frenagem de alto desempenho compatível com a potência do veículo.`,
+			})
+		}
+	}
+
 	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs)
-	const summary = buildVehicleSummary(vehicle)
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -246,11 +268,6 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 							</p>
 						</div>
 
-						{/* LLMO summary — self-contained sentence that LLMs and snippets extract verbatim */}
-						<p className="text-base lg:text-lg text-foreground-secondary leading-relaxed border-l-4 border-primary/30 pl-4">
-							{summary}
-						</p>
-
 						{/* Engine Audio Player - shows if vehicle has sound configured in admin */}
 						{vehicleSound && (
 							<EngineAudioPlayer
@@ -308,6 +325,11 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 							</div>
 						)}
 
+						{/* Full Technical Datasheet (from curated database) */}
+						{datasheet && (
+							<VehicleDatasheetSection datasheet={datasheet} vehicle={vehicle} />
+						)}
+
 						{/* Contact - Mobile */}
 						<div className="lg:hidden">
 							<VehicleContact vehicle={vehicle} />
@@ -323,6 +345,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 					</div>
 				</div>
 			</Container>
+
 
 			{/* Related Vehicles */}
 			<Suspense fallback={<RelatedVehiclesSkeleton />}>

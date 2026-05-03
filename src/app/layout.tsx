@@ -28,22 +28,27 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   metadataBase: new URL('https://attraveiculos.com.br'),
   title: {
-    default: 'Attra Veículos - Carros Premium em Uberlândia',
+    default: 'Attra Veículos | Supercarros e Veículos Premium no Brasil',
     template: '%s | Attra Veículos',
   },
   description:
     'Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil. Porsche, BMW, Mercedes-Benz, Audi, Land Rover e mais.',
   keywords: [
+    'comprar carro de luxo brasil',
+    'supercarros brasil',
     'carros premium',
     'veículos importados',
-    'supercarros',
+    'porsche seminovo brasil',
+    'ferrari brasil',
+    'bmw premium brasil',
+    'mercedes amg brasil',
     'Uberlândia',
     'Porsche',
     'BMW',
     'Mercedes-Benz',
     'Audi',
     'Land Rover',
-    'concessionária',
+    'concessionária premium',
   ],
   authors: [{ name: 'Attra Veículos' }],
   creator: 'Attra Veículos',
@@ -64,15 +69,15 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://attraveiculos.com.br',
     siteName: 'Attra Veículos',
-    title: 'Attra Veículos - Carros Premium em Uberlândia',
+    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
     description:
-      'Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
+      'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Attra Veículos - Carros Premium em Uberlândia',
+    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
     description:
-      'Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
+      'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
   },
   robots: {
     index: true,

@@ -1,5 +1,6 @@
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
+import { SEO_BRANDS } from '@/lib/seo-brands'
 
 export const revalidate = 3600
 
@@ -24,6 +25,17 @@ export async function GET() {
     { loc: `${BASE}/glossario-automotivo`, lastmod, changefreq: 'weekly', priority: 0.5 },
     { loc: `${BASE}/politica-privacidade`, lastmod, changefreq: 'yearly', priority: 0.3 },
     { loc: `${BASE}/termos-uso`, lastmod, changefreq: 'yearly', priority: 0.3 },
+    // SEO landing pages — brand/model hubs
+    { loc: `${BASE}/comprar`, lastmod, changefreq: 'daily', priority: 0.8 },
+    ...SEO_BRANDS.flatMap(brand => [
+      { loc: `${BASE}/comprar/${brand.slug}`, lastmod, changefreq: 'daily', priority: 0.8 },
+      ...brand.models.map(model => ({
+        loc: `${BASE}/comprar/${brand.slug}/${model.slug}`,
+        lastmod,
+        changefreq: 'daily' as const,
+        priority: 0.7,
+      })),
+    ]),
   ]
 
   return sitemapResponse(pages)

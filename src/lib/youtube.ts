@@ -210,6 +210,7 @@ export async function fetchAttraYouTubeFeed(): Promise<YouTubeFeed> {
   }
 }
 
+
 export function formatDuration(seconds: number): string {
   if (seconds <= 0) return '–'
   const h = Math.floor(seconds / 3600)

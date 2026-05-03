@@ -4,18 +4,19 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { MapPin, Award, Clock, Star, Users, Truck, Search, FileCheck, CheckCircle, Phone, MessageCircle, ArrowRight, Shield, Handshake, Eye, FileText, CreditCard, HeadphonesIcon, Play, Youtube } from 'lucide-react'
+import { MapPin, Award, Clock, Star, Users, Truck, Search, FileCheck, CheckCircle, Phone, MessageCircle, ArrowRight, Shield, Handshake, Eye, FileText, CreditCard, HeadphonesIcon, Play, Youtube, Trophy, Sparkles, Car } from 'lucide-react'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
 
 export const metadata: Metadata = {
-  title: 'Jornada Attra | Curadoria Completa de Supercarros com Entrega Nacional',
-  description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Da seleção à entrega na sua garagem, em qualquer cidade do Brasil. Atendimento nacional para colecionadores.',
-  keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil'],
+  title: 'Jornada Attra | Curadoria de Supercarros, Acervo Icônico e Entrega Nacional',
+  description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra — Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
+  keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil', 'carros icônicos Attra', 'histórico supercarros'],
 }
 
 // Schema markup para SEO
 function JornadaSchema() {
-  const schema = {
+  const serviceSchema = {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Jornada Attra - Curadoria Premium de Veículos',
@@ -28,7 +29,37 @@ function JornadaSchema() {
     areaServed: { '@type': 'Country', name: 'Brasil' },
     serviceType: ['Curadoria de Veículos Premium', 'Logística Nacional', 'Vistoria Técnica', 'Consultoria Automotiva'],
   }
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+
+  const iconicListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Carros Icônicos que Passaram pela Attra',
+    description: 'Acervo histórico de veículos premium e supercarros marcantes comercializados pela Attra Veículos.',
+    numberOfItems: ICONIC_CARS.length,
+    itemListElement: ICONIC_CARS.map((car, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'Vehicle',
+        name: `${car.brand} ${car.model}`,
+        description: car.editorial,
+        image: car.photo,
+        vehicleModelDate: String(car.year),
+        ...(car.engine ? { vehicleEngine: { '@type': 'EngineSpecification', name: car.engine } } : {}),
+        brand: { '@type': 'Brand', name: car.brand },
+        model: car.model,
+        color: car.color,
+        mileageFromOdometer: { '@type': 'QuantitativeValue', value: parseInt(car.mileage.replace(/\./g, '')) || 0, unitCode: 'KMT' },
+      },
+    })),
+  }
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(iconicListSchema) }} />
+    </>
+  )
 }
 
 const journeySteps = [
@@ -390,6 +421,84 @@ export default function JornadaPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Iconic Cars Gallery */}
+      <section className="py-20 lg:py-28 bg-background-soft">
+        <Container>
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
+              <Trophy className="w-4 h-4 text-primary" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Acervo Histórico</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              Carros Icônicos que Passaram pela Attra
+            </h2>
+            <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
+              Um registro permanente dos veículos mais notáveis que já fizeram parte do nosso acervo.
+              Cada um deles representa um capítulo da história automotiva que tivemos o privilégio de intermediar.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ICONIC_CARS.map((car) => (
+              <article
+                key={car.id}
+                className="group bg-background-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all"
+              >
+                <div className="relative aspect-[4/3] bg-background">
+                  <Image
+                    src={car.photo}
+                    alt={`${car.brand} ${car.model} ${car.version || ''} ${car.year} — Attra Veículos`}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <span className="px-2.5 py-1 bg-primary/90 text-white text-xs font-semibold rounded-full">
+                      {getCategoryLabel(car.category)}
+                    </span>
+                    <span className="px-2.5 py-1 bg-black/70 text-white text-xs font-medium rounded-full">
+                      {car.year}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-primary text-xs font-semibold uppercase tracking-wider">{car.brand}</p>
+                    <span className="text-xs text-foreground-secondary whitespace-nowrap">{car.mileage}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mb-1">
+                    {car.model} {car.version && <span className="text-foreground-secondary font-normal">{car.version}</span>}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-foreground-secondary mb-3">
+                    <Car className="w-3.5 h-3.5" />
+                    <span>{car.engine} • {car.power}</span>
+                  </div>
+                  <p className="text-sm text-foreground-secondary leading-relaxed mb-3">
+                    {car.editorial}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {car.highlights.map((h) => (
+                      <span key={h} className="inline-flex items-center gap-1 px-2 py-1 bg-primary/5 border border-primary/10 rounded text-xs text-foreground-secondary">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* Editorial claim — based on cumulative inventory since 2009 */}
+          <div className="text-center mt-12">
+            <p className="text-foreground-secondary text-sm">
+              Mais de <strong className="text-foreground">500 supercarros</strong> já passaram pela Attra desde 2009.
+              Acima estão alguns dos destaques mais recentes.
+            </p>
           </div>
         </Container>
       </section>
