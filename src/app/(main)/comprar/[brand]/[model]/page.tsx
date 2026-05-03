@@ -366,30 +366,33 @@ export default async function ModelPage({ params }: ModelPageProps) {
 							name: 'Attra Veículos',
 							url: SITE_URL,
 						},
-						// FAQ Schema
-						...({
-							'@graph': [{
-								'@type': 'FAQPage',
-								mainEntity: [
-									{
-										'@type': 'Question',
-										name: `Qual o preço do ${model.fullName} no Brasil?`,
-										acceptedAnswer: {
-											'@type': 'Answer',
-											text: `O preço do ${model.fullName} varia conforme ano, versão e quilometragem. A Attra Veículos oferece condições de financiamento e aceita veículos na troca.`,
-										},
-									},
-									{
-										'@type': 'Question',
-										name: `A Attra entrega ${model.fullName} em todo o Brasil?`,
-										acceptedAnswer: {
-											'@type': 'Answer',
-											text: 'Sim. A Attra realiza entrega nacional com logística especializada, transporte em caminhão fechado, seguro completo e rastreamento em tempo real.',
-										},
-									},
-								],
-							}],
-						}),
+					}),
+				}}
+			/>
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						'@context': 'https://schema.org',
+						'@type': 'FAQPage',
+						mainEntity: [
+							{
+								'@type': 'Question',
+								name: `Qual o preço do ${model.fullName} no Brasil?`,
+								acceptedAnswer: {
+									'@type': 'Answer',
+									text: `O preço do ${model.fullName} varia conforme ano, versão e quilometragem. A Attra Veículos oferece condições de financiamento e aceita veículos na troca.`,
+								},
+							},
+							{
+								'@type': 'Question',
+								name: `A Attra entrega ${model.fullName} em todo o Brasil?`,
+								acceptedAnswer: {
+									'@type': 'Answer',
+									text: 'Sim. A Attra realiza entrega nacional com logística especializada, transporte em caminhão fechado, seguro completo e rastreamento em tempo real.',
+								},
+							},
+						],
 					}),
 				}}
 			/>
