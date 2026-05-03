@@ -49,7 +49,7 @@ function JornadaSchema() {
         brand: { '@type': 'Brand', name: car.brand },
         model: car.model,
         color: car.color,
-        mileageFromOdometer: { '@type': 'QuantitativeValue', value: parseInt(car.mileage) || 0, unitCode: 'KMT' },
+        mileageFromOdometer: { '@type': 'QuantitativeValue', value: parseInt(car.mileage.replace(/\./g, '')) || 0, unitCode: 'KMT' },
       },
     })),
   }

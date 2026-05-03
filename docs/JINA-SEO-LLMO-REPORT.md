@@ -188,7 +188,7 @@ Comparar embeddings das páginas de veículos da Attra com embeddings das buscas
 
 ### API Key da Jina
 
-Já fornecida: `jina_cd6437dfd7a74ff1a6c758eff3dd35fcvtT6eh8cCHw_LHT0K5iBRAmrHX1k`
+Armazenada como variável de ambiente `JINA_API_KEY` (não committar no repositório)
 
 ### Endpoints
 
@@ -266,4 +266,134 @@ export async function generateEmbeddings(texts: string[]) {
 
 ---
 
-*Relatório gerado em 03/05/2026 com testes reais usando a API Jina AI (key: jina_cd...X1k)*
+*Relatório gerado em 03/05/2026 com testes reais usando a API Jina AI*
+
+---
+
+## 7. Estratégia de Conteúdo e Arquitetura SEO (Análise ChatGPT)
+
+### 7.1 Problema Central
+
+A Attra está olhando SEO como "institucional" (concessionária premium) quando deveria focar em **intenção de compra real de alto ticket**. Quem compra carro de R$300k–R$1M+ não busca "concessionária" — busca **modelo, status, performance e exclusividade**.
+
+### 7.2 Camadas de Intenção de Busca
+
+#### 🔴 Camada 1 — Alta Intenção (Dinheiro na Mesa)
+
+Termos obrigatórios onde a Attra precisa aparecer:
+
+- `comprar carro de luxo brasil`
+- `comprar supercarro brasil`
+- `carros de luxo à venda brasil`
+- `carros importados premium brasil`
+- `loja de supercarros brasil`
+
+Transacional com filtro:
+- `comprar porsche seminovo brasil`
+- `comprar bmw m sport brasil`
+- `mercedes amg preço brasil`
+- `audi rs à venda brasil`
+
+**Status atual**: Attra NÃO aparece nessas buscas.
+
+#### 🟠 Camada 2 — Intenção por Marca
+
+Onde o cliente entra no funil:
+
+- `porsche seminovo brasil` / `ferrari brasil preço`
+- `bmw premium usados brasil` / `mercedes benz usados luxo brasil`
+- `porsche 911 brasil preço` / `mercedes amg gt brasil`
+- `bmw m3 / m4 / m5 brasil`
+
+#### 🟡 Camada 3 — Intenção por Perfil (Psicológico)
+
+Diferencial competitivo — quase ninguém trabalha:
+
+- `carro para executivo luxo brasil`
+- `carros de alto padrão brasil` / `carro premium para empresário`
+- `carros exclusivos alto desempenho`
+- `carros de luxo acima de 300 mil`
+
+#### 🟢 Camada 4 — Status / Aspiração (Topo de Funil)
+
+Volume + autoridade:
+
+- `melhores carros de luxo do brasil`
+- `carros mais caros do brasil`
+- `carros esportivos mais desejados`
+- `carros premium mais vendidos brasil`
+
+#### 🔵 Camada 5 — Geográfica (Expansão)
+
+Expandir de local para nacional:
+
+- `comprar carro de luxo em minas gerais`
+- `loja de supercarros minas gerais`
+- `carros premium entrega brasil`
+
+### 7.3 Arquitetura de Site Proposta
+
+Transformar o estoque em **árvore de intenção de compra**:
+
+```
+/carros-de-luxo-brasil (hub nacional)
+    /porsche
+        /porsche-911
+        /porsche-cayenne
+    /bmw
+        /bmw-m3
+        /bmw-x5
+    /mercedes
+        /mercedes-amg-gt
+        /c63-amg
+    /ferrari
+        /ferrari-roma
+        /ferrari-sf90
+```
+
+Cada nível responde uma busca diferente. Hoje a Attra não responde nenhuma com força.
+
+### 7.4 Páginas Prioritárias
+
+| Tipo | Exemplo | Keywords Target | Prioridade |
+|------|---------|-----------------|------------|
+| Transação direta | "Comprar Porsche no Brasil" | comprar porsche brasil, porsche à venda | 🔴 Alta |
+| Modelo específico | "Porsche 911 à venda no Brasil" | porsche 911 preço brasil, comprar porsche 911 | 🔴 Alta |
+| Linha performance | "BMW M3 à venda no Brasil" | bmw m3 preço brasil, bmw m3 competition | 🔴 Alta |
+| Comparação | "BMW M3 vs Mercedes C63 AMG" | bmw m3 vs c63 amg, comparação esportivos | 🟠 Média |
+| Guia de compra | "Como comprar carro de luxo no Brasil" | como comprar carro importado brasil | 🟡 Média |
+
+### 7.5 Erros Atuais da Estratégia
+
+1. **Ranqueando onde não tem dinheiro** — "concessionária premium uberlândia" = baixo volume + baixa intenção
+2. **Não captura busca por modelo** — quem compra Porsche busca "Porsche 911 preço Brasil", não "concessionária"
+3. **Site não estruturado para SEO transacional** — cada carro deveria ser uma página forte, não item de estoque descartável
+4. **Concorrência indireta ignorada** — WebMotors, iCarros, OLX Premium, dealers nacionais
+
+### 7.6 Plano de Execução — 4 Semanas
+
+**Semana 1 — Fundamento:**
+- Criar páginas: "Comprar carro de luxo no Brasil", "Comprar Porsche Brasil", "Comprar BMW Brasil"
+- Ajustar títulos com intenção, H1 claro, URLs limpas
+
+**Semana 2 — Dinheiro Direto:**
+- Páginas de modelo: Porsche 911, BMW M3, Mercedes C63 AMG, Range Rover Sport
+- Começar pelos carros que mais giram
+
+**Semana 3 — Escala:**
+- 2 conteúdos/semana: comparativos + guias de compra
+
+**Semana 4 — Otimização:**
+- Internal linking: marca → modelo → estoque, conteúdo → páginas de venda
+
+### 7.7 Ajuste de Mentalidade
+
+| De | Para |
+|----|------|
+| Loja que usa site | Empresa que usa Google como canal de vendas |
+| Página de carro = catálogo | Página de carro = landing page |
+| Estoque = rotativo | Estoque = ativo de tráfego |
+| SEO = branding | SEO = aquisição |
+| Mercado local | Hub nacional de carros premium |
+
+> **Nota importante**: As páginas de gancho de busca devem ser discretas — atrair sem gritar e sem entregar a estratégia para a concorrência.
