@@ -13,6 +13,7 @@ import { X } from 'lucide-react'
 // Minimal navigation for premium boutique feel
 const navigation = [
   { name: 'Veículos', href: '/veiculos' },
+  { name: 'Importação', href: '/importacao-de-veiculos-de-luxo' },
   { name: 'Jornada Attra', href: '/jornada' },
   { name: 'Serviços', href: '/servicos' },
   { name: 'Notícias', href: '/news' },
