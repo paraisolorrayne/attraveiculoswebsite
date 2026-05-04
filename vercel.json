@@ -1,9 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/news-ingestion",
-      "schedule": "0 3 * * 0"
-    }
-  ]
-}
-

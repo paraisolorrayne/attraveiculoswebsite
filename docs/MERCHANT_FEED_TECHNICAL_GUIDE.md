@@ -500,7 +500,7 @@ Sentry.captureMessage('Feed generated successfully', 'info')
 
 1. **ISR em vez de SSG:** Regenerar a cada 1 hora (não a cada request)
 2. **Compressão**: Servir com `gzip` (economia ~70% em tamanho)
-3. **CDN**: Colocar feed na Vercel Edge (distribuição global)
+3. **CDN**: Colocar Cloudflare na frente do Nginx para distribuição global
 4. **Índices BD**: Fazer índice em `vehicles.status` e `vehicles.updated_at`
 
 ### Scaling Vertical (Se > 5000 veículos)

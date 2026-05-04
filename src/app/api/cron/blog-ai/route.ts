@@ -7,7 +7,7 @@ import { runDailyBlogAi, type ForceOptions } from '@/lib/jobs/daily-blog-ai'
 //   POST /api/cron/blog-ai   (with Authorization: Bearer <CRON_SECRET>)
 
 // Generation can take a while (multiple Gemini calls). Give it room.
-export const maxDuration = 300 // 5 minutes (Vercel Hobby max is 10s, Pro is 300s)
+export const maxDuration = 300 // 5 minutes — long-form Gemini generation can take ~2min
 
 const CRON_SECRET = process.env.CRON_SECRET || ''
 

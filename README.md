@@ -242,7 +242,10 @@ npm run build
 
 ---
 
-## 🌐 Migração do Vercel para Servidor Próprio
+## 🌐 Deploy em servidor próprio (VPS + PM2 + Nginx)
+
+> O site da Attra roda em VPS Interlivre com Next.js standalone + PM2 + Nginx
+> (sem Vercel). Fluxo abaixo é o procedimento canônico de provisionamento.
 
 ### Passo 1: Preparar o Servidor
 

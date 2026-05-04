@@ -123,7 +123,7 @@
 
 - [ ] **Executar deploy**
   - [ ] Merge para `main`
-  - [ ] Deploy automático via Vercel
+  - [ ] Deploy via SSH + git pull + npm run build + pm2 restart attra
   - [ ] Aguardar 5min de estabilidade
 
 - [ ] **Validações pós-deploy**

@@ -20,7 +20,7 @@ interface GeoLocationResponse {
  */
 export async function GET(request: Request) {
   try {
-    // Get client IP from headers (works with Vercel/Cloudflare)
+    // Get client IP from headers (set by reverse proxy: Nginx/Cloudflare/etc.)
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
     const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || ''

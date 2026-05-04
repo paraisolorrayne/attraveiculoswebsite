@@ -142,7 +142,7 @@ async function main() {
   console.log('\n🎉 Migration complete!')
   console.log('\n📋 Next steps:')
   console.log('   1. Test the application locally')
-  console.log('   2. Add SUPABASE_SERVICE_ROLE_KEY to Vercel environment variables')
+  console.log('   2. Add SUPABASE_SERVICE_ROLE_KEY to .env.production no servidor')
   console.log('   3. Deploy to production')
 }
 

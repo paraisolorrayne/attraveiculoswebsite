@@ -93,10 +93,9 @@ git commit -m "feat: implement merchant feed XML/RSS"
 # 2. Push para origin
 git push origin feature/merchant-feed
 
-# 3. Abrir PR no GitHub
-# (Vercel ainda faz deploy automático no preview)
+# 3. Abrir PR no GitHub e aguardar review/CI
 
-# 4. Testar em staging (Vercel URL)
+# 4. Testar em staging
 curl https://staging.attraveiculos.com.br/api/feed/estoque
 ```
 
@@ -121,9 +120,9 @@ curl https://staging.attraveiculos.com.br/api/feed/estoque
 git checkout main
 git merge --no-ff feature/merchant-feed
 
-# 2. Push (auto-deploy via Vercel)
-git push origin main
-# Vercel faz deploy automático em < 2 minutos
+# 2. Push para master e fazer deploy no servidor
+git push origin master
+# DevOps puxa no VPS Interlivre: git pull + npm run build + pm2 restart attra --update-env
 
 # 3. Verificar
 curl https://attraveiculos.com.br/api/feed/estoque
@@ -342,7 +341,7 @@ LEAD METRICS:
    ├─ Tag "ai_shopping" em leads
    └─ Report: leads_ai_shopping_per_day
 
-4. Vercel Analytics:
+4. Server monitoring (PM2 + Nginx logs ou ferramenta externa):
    ├─ Monitor: /api/feed/estoque uptime + latency
    └─ Alert se down > 5 min
 ```
