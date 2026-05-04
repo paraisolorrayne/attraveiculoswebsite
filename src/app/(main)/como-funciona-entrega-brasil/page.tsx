@@ -2,11 +2,11 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { CONFIANCA_PAGES } from '@/lib/seo-content'
+import { findConfianca } from '@/lib/seo-content'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Truck } from 'lucide-react'
 
-const data = CONFIANCA_PAGES[2]
+const data = findConfianca('como-funciona-entrega-brasil')!
 
 export const metadata: Metadata = {
 	title: data.metaTitle,
