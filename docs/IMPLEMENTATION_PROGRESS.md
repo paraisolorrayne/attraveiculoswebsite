@@ -39,7 +39,7 @@
 # URL: https://github.com/attra-veiculos/website
 # Branch: feature/merchant-feed → staging
 
-# Vercel fará auto-deploy
+# Deploy via SSH no servidor (git pull + npm run build + pm2 restart)
 
 # Testar em:
 curl https://staging.attraveiculos.com.br/api/feed/estoque.xml
@@ -60,7 +60,7 @@ curl https://staging.attraveiculos.com.br/api/feed/estoque.xml
 ### **STEP 7: Deploy para Produção** (Manual)
 ```bash
 # Merge PR para main
-# Vercel fará auto-deploy em produção
+# Deploy via SSH no servidor (git pull + npm run build + pm2 restart) em produção
 
 # Verificar:
 curl https://attraveiculos.com.br/api/feed/estoque.xml

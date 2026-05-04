@@ -7,8 +7,8 @@
  * Run: Every Sunday at 00:00
  *
  * Usage:
- * - Vercel Cron: Add to vercel.json
- * - Manual: Call /api/cron/news-ingestion endpoint
+ * - Supabase pg_cron (preferido) ou cron job no servidor → /api/cron/news-ingestion
+ * - Manual: Call /api/cron/news-ingestion endpoint with CRON_SECRET
  */
 
 import { createClient } from '@supabase/supabase-js'

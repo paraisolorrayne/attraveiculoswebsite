@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runWeeklyNewsIngestion } from '@/lib/jobs/weekly-news-ingestion'
 
 // This endpoint can be called by:
-// 1. Vercel Cron (add to vercel.json)
-// 2. Manual execution (GET /api/cron/news-ingestion?secret=xxx)
-// 3. External scheduler (GitHub Actions, etc)
+// 1. Supabase pg_cron (preferred — see migrations/blog_ai_automation)
+// 2. External scheduler (cron job no servidor, GitHub Actions, etc.)
+// 3. Manual execution (GET /api/cron/news-ingestion?secret=xxx)
 
 const CRON_SECRET = process.env.CRON_SECRET || ''
 
@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const secret = searchParams.get('secret')
 
-  // Check for Vercel Cron authorization or secret parameter
-  const isVercelCron = authHeader === `Bearer ${CRON_SECRET}`
+  // Accept Authorization: Bearer <secret> or ?secret=<secret> query param
+  const isAuthorizedCron = authHeader === `Bearer ${CRON_SECRET}`
   const hasValidSecret = secret === CRON_SECRET && CRON_SECRET !== ''
 
-  if (!isVercelCron && !hasValidSecret) {
+  if (!isAuthorizedCron && !hasValidSecret) {
     // Allow in development without secret
     if (process.env.NODE_ENV !== 'development') {
       return NextResponse.json(

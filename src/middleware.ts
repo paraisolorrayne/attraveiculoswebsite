@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
   if (origin && host) {
     try {
       const originHost = new URL(origin).host
-      if (originHost !== host && !originHost.endsWith('.vercel.app')) {
+      if (originHost !== host) {
         logSecurityEvent('suspicious_origin_blocked', request, { origin, host })
         return NextResponse.json(
           { error: 'Forbidden' },

@@ -166,7 +166,7 @@ AIs (ChatGPT, Gemini) analisam descrições para fazer recomendações. Mais det
 
 **P4: Quanto de budget para "promover" o feed?**
 > R$ 0 para o próprio feed. Custos apenas infraestrutura:
-> - Vercel (hosting Next.js): ~R$ 100/mês
+> - VPS Interlivre (hosting Next.js): ~R$ 80-150/mês
 > - Cloudinary (imagens): já tem
 > - Google Merchant: Grátis
 > 
@@ -187,13 +187,13 @@ curl https://attraveiculos.com.br/api/feed/estoque.xml
 **Checklist:**
 1. [ ] Arquivo `src/app/api/feed/estoque/route.ts` existe?
 2. [ ] Deploy foi feito? (`npm run build && npm run start`)
-3. [ ] Log de erro no Vercel/servidor?
-4. [ ] Porta correta? (Dev: 3000, Prod: via Vercel)
+3. [ ] Log de erro no servidor (pm2 log attra)?
+4. [ ] Porta correta? (Dev: 3000, Prod: 3000 via Nginx reverse proxy)
 
 **Solução:**
 ```bash
 # Ver logs do deploy
-vercel logs --prod
+pm2 log attra --lines 100
 
 # Testar localmente
 npm run dev
@@ -201,7 +201,7 @@ curl http://localhost:3000/api/feed/estoque
 
 # Se local OK, problema é deploy
 # Fazer redeploy
-git push origin main  # Vai auto-trigger Vercel
+git push origin master  # DevOps faz pull + build + pm2 restart no servidor
 ```
 
 ---
@@ -257,7 +257,7 @@ const vehicles = await getVehicleInventory()
 console.log(`Loaded ${vehicles.length} vehicles`)
 vehicles.slice(0, 1).forEach(v => console.log(v)) // Primeiro veículo
 
-// Isso vai mostrar no log de produção (Vercel)
+// Isso vai mostrar no pm2 log attra em produção
 ```
 
 ---
@@ -411,7 +411,7 @@ N8N Dashboard → Workflows → "Lead AI Shopping"
    /api/feed/estoque-page-2.xml → Items 5001-10000
    ```
 
-3. **Usar CDN (Vercel Edge)**
+3. **Usar CDN (Cloudflare na frente do Nginx)**
    - Set `cacheMaxAge: 3600` nas headers
    - Feed servido de edge location mais próximo
 
@@ -443,7 +443,7 @@ P3: Criar issue no GitHub
 
 ```
 Toda segunda-feira, 9h:
-☐ Feed uptime: > 99%? (checar Vercel status)
+☐ Feed uptime: > 99%? (checar pm2 status / monitoring externo)
 ☐ Feed size: entre 100KB - 1MB?
 ☐ Google Merchant: parse success 100%?
 ☐ Lead volume: esperado para semana?

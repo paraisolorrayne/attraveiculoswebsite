@@ -32,8 +32,8 @@ Agende uma reunião com:
 git push origin feature/merchant-feed
 # → Abrir PR: feature/merchant-feed → staging
 
-# 2. Vercel fará auto-deploy em ~2 min
-# Observar: Build logs em https://vercel.com/dashboard
+# 2. DevOps puxa no VPS: git pull + npm run build + pm2 restart
+# Observar build no servidor (pm2 log attra)
 
 # 3. Testar em Staging
 curl https://staging.attraveiculos.com.br/api/feed/estoque.xml
@@ -137,7 +137,7 @@ export function AttraConcierge({ vehicleId }: Props) {
 
 ### Deploy Staging (Amanhã)
 - [ ] PR criado e merged
-- [ ] Vercel deployment bem-sucedido
+- [ ] Deploy no VPS bem-sucedido (pm2 status mostra attra online)
 - [ ] Teste de endpoint OK
 - [ ] XML validado
 - [ ] Headers corretos

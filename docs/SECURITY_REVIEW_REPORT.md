@@ -227,7 +227,7 @@ Cache-Control: public, s-maxage=3600, stale-while-revalidate=7200
 
 **Breakdown:**
 - `public`: Cache is shareable across browsers and CDNs ✅
-- `s-maxage=3600`: Vercel/CDN caches for 1 hour ✅
+- `s-maxage=3600`: CDN/Nginx caches for 1 hour ✅
 - `stale-while-revalidate=7200`: Serve stale content for up to 2 hours while regenerating in background ✅
 
 **Timeline:**
@@ -511,7 +511,7 @@ curl -i -H "If-None-Match: \"5373a7af\"" http://localhost:3003/api/feed/estoque
 curl -i http://localhost:3003/api/feed/estoque | grep -i cache
 
 ✅ cache-control: public, s-maxage=3600, stale-while-revalidate=7200
-✅ Vercel CDN can cache for 1 hour
+✅ CDN (Cloudflare/Nginx) can cache for 1 hour
 ✅ Stale content served for up to 2 hours during regeneration
 ```
 
@@ -562,7 +562,7 @@ curl -i http://localhost:3003/api/feed/estoque | grep -i "x-content\|content-typ
 ### Immediate (Ready Now) ✅
 - ✅ Deploy to staging with these changes
 - ✅ Monitor error logs for any issues
-- ✅ Verify ETag caching works with Vercel CDN
+- ✅ Verify ETag caching works through CDN/reverse proxy
 
 ### Short Term (Week 1-2)
 1. **Rate Limiting:** Implement IP-based rate limiting (100 requests/minute)
@@ -598,9 +598,9 @@ curl -i http://localhost:3003/api/feed/estoque | grep -i "x-content\|content-typ
    //   .digest('hex')
    ```
 
-3. **Advanced Rate Limiting:** Use Vercel Edge Middleware
+3. **Advanced Rate Limiting:** Use a distributed rate limiter (Redis/Upstash) when scaling horizontally
    ```typescript
-   // Leverage Vercel's built-in rate limiting for global distribution
+   // Leverage Redis/Upstash for distributed rate limiting across PM2 workers
    ```
 
 ---
