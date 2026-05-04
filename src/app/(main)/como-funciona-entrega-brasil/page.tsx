@@ -66,7 +66,7 @@ export default function EntregaBrasilPage() {
 								Ver estoque <ArrowRight className="w-4 h-4" />
 							</Link>
 							<a
-								href={getWhatsAppUrl('Olá! Gostaria de saber sobre o prazo e processo de entrega.')}
+								href={getWhatsAppUrl('Olá! Gostaria de saber sobre o prazo e processo de entrega. [ref: /como-funciona-entrega-brasil]')}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

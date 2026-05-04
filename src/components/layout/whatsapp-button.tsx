@@ -17,10 +17,39 @@ interface WhatsAppButtonProps {
   sourcePage?: string // Optional - will auto-detect from pathname if not provided
 }
 
+// SEO content pages that should default to WhatsApp direct (not chat widget)
+const SEO_PAGE_PREFIXES = [
+  '/comprar/modelo/',
+  '/preco/',
+  '/comprar/condicao/',
+  '/comprar/preco/',
+  '/comprar/perfil/',
+  '/guia/',
+  '/importacao/',
+  '/importacao-de-veiculos-de-luxo',
+  '/por-que-comprar-na-attra',
+  '/garantia-e-procedencia',
+  '/como-funciona-entrega-brasil',
+]
+
+const isSeoPage = (path: string): boolean =>
+  SEO_PAGE_PREFIXES.some(prefix => path.startsWith(prefix))
+
+// Build a human-readable label from the SEO page path for tracking
+const getSeoPageLabel = (path: string): string => {
+  const slug = path.split('/').filter(Boolean).pop() || path
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 // Fallback: Determine page behavior based on sourcePage (used when DB returns 'default')
 const getDefaultPageBehavior = (sourcePage: string, vehicleId?: string): PageBehavior => {
   // Vehicle page: /veiculo/[slug] - uses N8N webhook, shows toast
   if (sourcePage.includes('/veiculo/') || vehicleId) {
+    return 'vehicle'
+  }
+
+  // SEO content pages: WhatsApp direct with page-source tracking
+  if (isSeoPage(sourcePage)) {
     return 'vehicle'
   }
 
@@ -42,6 +71,19 @@ const getContextMessage = (sourcePage: string, pageBehavior: PageBehavior, vehic
       message: `Olá! Tenho interesse no ${vehicleBrand} ${vehicleModel}. Gostaria de mais informações.`,
       icon: Car,
       buttonText: 'Tenho interesse',
+      behavior: 'vehicle' as PageBehavior,
+    }
+  }
+
+  // SEO content pages: WhatsApp direct with page-source tracking
+  if (isSeoPage(sourcePage)) {
+    const label = getSeoPageLabel(sourcePage)
+    return {
+      title: 'Falar com especialista',
+      subtitle: 'Atendimento direto via WhatsApp',
+      message: `Olá! Vim da página "${label}" e gostaria de mais informações. [ref: ${sourcePage}]`,
+      icon: Car,
+      buttonText: 'Abrir WhatsApp',
       behavior: 'vehicle' as PageBehavior,
     }
   }
@@ -184,6 +226,10 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
 
   // Generate WhatsApp redirect URL with formatted message including location and year
   const getWhatsAppRedirectUrl = () => {
+    // SEO pages: use tracked message with page source reference
+    if (isSeoPage(currentPage) && !vehicleBrand) {
+      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(context.message)}`
+    }
     const formattedMessage = generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMessage)}`
   }

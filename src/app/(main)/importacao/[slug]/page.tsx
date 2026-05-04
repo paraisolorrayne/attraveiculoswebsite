@@ -61,7 +61,7 @@ export default async function ImportacaoMarcaPage({ params }: PageProps) {
 							{data.intro}
 						</p>
 						<a
-							href={getWhatsAppUrl(`Olá! Tenho interesse em importar um ${data.brand}. Gostaria de mais informações.`)}
+							href={getWhatsAppUrl(`Olá! Tenho interesse em importar um ${data.brand}. Gostaria de mais informações. [ref: /importacao/${data.slug}]`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -138,7 +138,7 @@ export default async function ImportacaoMarcaPage({ params }: PageProps) {
 						</p>
 						<div className="flex flex-wrap justify-center gap-4 mb-8">
 							<a
-								href={getWhatsAppUrl(`Olá! Quero um orçamento para importar um ${data.brand}.`)}
+								href={getWhatsAppUrl(`Olá! Quero um orçamento para importar um ${data.brand}. [ref: /importacao/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

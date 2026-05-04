@@ -64,7 +64,7 @@ export default async function ModeloPage({ params }: PageProps) {
 						</p>
 						<div className="flex flex-wrap gap-3">
 							<a
-								href={getWhatsAppUrl(`Olá! Tenho interesse no ${data.brand} ${data.model}. Gostaria de saber sobre disponibilidade.`)}
+								href={getWhatsAppUrl(`Olá! Tenho interesse no ${data.brand} ${data.model}. Gostaria de saber sobre disponibilidade. [ref: /comprar/modelo/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -168,7 +168,7 @@ export default async function ModeloPage({ params }: PageProps) {
 							Consulte disponibilidade e condições diretamente com um especialista Attra.
 						</p>
 						<a
-							href={getWhatsAppUrl(`Olá! Gostaria de saber mais sobre o ${data.brand} ${data.model} disponível na Attra.`)}
+							href={getWhatsAppUrl(`Olá! Gostaria de saber mais sobre o ${data.brand} ${data.model} disponível na Attra. [ref: /comprar/modelo/${data.slug}]`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -257,7 +257,7 @@ export default async function ModeloPage({ params }: PageProps) {
 								<ArrowRight className="w-4 h-4" />
 							</Link>
 							<a
-								href={getWhatsAppUrl(`Olá! Quero encontrar o ${data.brand} ${data.model} ideal. Podem me ajudar?`)}
+								href={getWhatsAppUrl(`Olá! Quero encontrar o ${data.brand} ${data.model} ideal. Podem me ajudar? [ref: /comprar/modelo/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

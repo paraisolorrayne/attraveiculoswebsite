@@ -122,7 +122,7 @@ export default async function GuiaPage({ params }: PageProps) {
 					<div className="max-w-2xl mx-auto text-center">
 						<div className="flex flex-wrap justify-center gap-4 mb-8">
 							<a
-								href={getWhatsAppUrl(`Olá! Li o guia sobre ${data.title.toLowerCase()} e gostaria de falar com um especialista.`)}
+								href={getWhatsAppUrl(`Olá! Li o guia sobre ${data.title.toLowerCase()} e gostaria de falar com um especialista. [ref: /guia/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

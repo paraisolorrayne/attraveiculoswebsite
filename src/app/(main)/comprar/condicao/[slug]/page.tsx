@@ -58,7 +58,7 @@ export default async function CondicaoPage({ params }: PageProps) {
 							{data.definicao}
 						</p>
 						<a
-							href={getWhatsAppUrl(`Olá! Gostaria de consultar ${data.title.toLowerCase()} disponíveis.`)}
+							href={getWhatsAppUrl(`Olá! Gostaria de consultar ${data.title.toLowerCase()} disponíveis. [ref: /comprar/condicao/${data.slug}]`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -161,7 +161,7 @@ export default async function CondicaoPage({ params }: PageProps) {
 								Ver estoque completo <ArrowRight className="w-4 h-4" />
 							</Link>
 							<a
-								href={getWhatsAppUrl('Olá! Gostaria de ver as opções de veículos disponíveis.')}
+								href={getWhatsAppUrl(`Olá! Gostaria de ver as opções de veículos disponíveis. [ref: /comprar/condicao/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

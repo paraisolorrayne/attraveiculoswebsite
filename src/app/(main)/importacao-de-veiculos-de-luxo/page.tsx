@@ -42,7 +42,7 @@ export default function ImportacaoPage() {
 							{data.intro}
 						</p>
 						<a
-							href={getWhatsAppUrl('Olá! Tenho interesse no serviço de importação de veículos. Gostaria de mais informações.')}
+							href={getWhatsAppUrl('Olá! Tenho interesse no serviço de importação de veículos. Gostaria de mais informações. [ref: /importacao-de-veiculos-de-luxo]')}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -180,7 +180,7 @@ export default function ImportacaoPage() {
 							Entre em contato e receba um orçamento detalhado sem compromisso.
 						</p>
 						<a
-							href={getWhatsAppUrl('Olá! Gostaria de receber um orçamento para importação de veículo.')}
+							href={getWhatsAppUrl('Olá! Gostaria de receber um orçamento para importação de veículo. [ref: /importacao-de-veiculos-de-luxo]')}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

@@ -204,8 +204,8 @@ export const MODELOS: ModeloPage[] = [
 			{ pergunta: 'A Attra entrega o Macan em todo o Brasil?', resposta: 'Sim. Entrega nacional em caminhão fechado com seguro completo.' },
 		],
 		modelosRelacionados: [
-			{ nome: 'Audi Q5', href: '/comprar/modelo/audi-q5' },
-			{ nome: 'BMW X3', href: '/comprar/modelo/bmw-x3' },
+			{ nome: 'Audi Q8', href: '/comprar/modelo/audi-q8' },
+			{ nome: 'BMW X5', href: '/comprar/modelo/bmw-x5' },
 			{ nome: 'Porsche Cayenne', href: '/comprar/modelo/porsche-cayenne' },
 		],
 	},

@@ -62,7 +62,7 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 							{data.oQueDaPraComprar}
 						</p>
 						<a
-							href={getWhatsAppUrl(`Olá! Estou buscando veículos na faixa de ${data.title.replace('Carros de Luxo de ', '').replace('Carros de Luxo ', '')}.`)}
+							href={getWhatsAppUrl(`Olá! Estou buscando veículos na faixa de ${data.title.replace('Carros de Luxo de ', '').replace('Carros de Luxo ', '')}. [ref: /comprar/preco/${data.slug}]`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -119,7 +119,7 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 						</h2>
 						<div className="flex flex-wrap justify-center gap-4 mb-8">
 							<a
-								href={getWhatsAppUrl(`Olá! Quero receber opções de veículos na faixa de ${data.title.replace('Carros de Luxo de ', '').replace('Carros de Luxo ', '')}.`)}
+								href={getWhatsAppUrl(`Olá! Quero receber opções de veículos na faixa de ${data.title.replace('Carros de Luxo de ', '').replace('Carros de Luxo ', '')}. [ref: /comprar/preco/${data.slug}]`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
