@@ -28,9 +28,9 @@ const ROTATION_INTERVAL_MS = 9000
  * Pode ser trocado/expandido depois.
  */
 const MANIFESTO_LINES = [
-  'Selecionados,\nnão listados.',
-  'Curadoria.\nNão estoque.',
-  'O endereço\ndos raros.',
+  'Seleção,\nsem igual.',
+  'Critério.\nNão estoque.',
+  'O lugar\ndo extraordinário.',
 ] as const
 
 const CHAMPAGNE = '#B8A47C'
