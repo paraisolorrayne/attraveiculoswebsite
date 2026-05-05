@@ -92,14 +92,17 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
               style={{ opacity: i === safeIndex ? 1 : 0 }}
               aria-hidden={i !== safeIndex}
             >
-              {/* Mobile: contain centralizado — carro inteiro visível. */}
+              {/* Mobile: cover preenche o viewport inteiro — sem letterbox.
+                  Texto centralizado lê sobre overlay vertical forte. Contain
+                  causava quebra de layout (faixas pretas top/bottom + texto
+                  fragmentado). */}
               <Image
                 src={vehicle.photos[0]}
                 alt={`${vehicle.brand} ${vehicle.model}`}
                 fill
                 priority={i === 0}
                 className="lg:hidden"
-                style={{ objectFit: 'contain', objectPosition: 'center' }}
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
                 sizes="100vw"
               />
               {/* Desktop: cover preenchendo o container inteiro com object-position
