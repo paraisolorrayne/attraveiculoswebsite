@@ -22,6 +22,34 @@ const whatsappMessage =
 
 const ROTATION_INTERVAL_MS = 8000
 
+/**
+ * Optional poetic tagline shown under the model — gives the meta line room
+ * to breathe and avoids the "classified ad" feeling. Hand-picked per brand.
+ * Falls back to a generic line if brand isn't mapped.
+ */
+const TAGLINES_BY_BRAND: Record<string, string> = {
+  Ferrari: 'A engenharia italiana em estado bruto.',
+  Lamborghini: 'Sem desculpas. Sem comparações.',
+  Porsche: 'A precisão alemã em forma de esporte.',
+  McLaren: 'Fórmula 1 nas ruas.',
+  'Aston Martin': 'O silêncio antes da emoção.',
+  Bentley: 'Luxo construído para durar gerações.',
+  'Rolls-Royce': 'Mais que um carro — uma declaração.',
+  'Mercedes-Benz': 'O melhor ou nada.',
+  BMW: 'Performance que conversa com o piloto.',
+  Audi: 'Tecnologia que define o passo.',
+  'Land Rover': 'Onde o asfalto termina.',
+  Maserati: 'Caráter italiano em cada detalhe.',
+  Maybach: 'O extraordinário ao alcance.',
+  Chevrolet: 'Performance americana indomável.',
+  Dodge: 'Potência sem máscara.',
+  Ford: 'Tradição e potência.',
+}
+
+function taglineFor(brand: string): string {
+  return TAGLINES_BY_BRAND[brand] ?? 'Curadoria nacional desde 2009.'
+}
+
 export function HomeHero({ vehicles = [] }: HomeHeroProps) {
   const slides = vehicles.filter(v => v.photos?.[0]).slice(0, 3)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -55,8 +83,7 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
     }
   }, [slides.length, restartTick])
 
-  // Modulo clamp keeps render correct if slides shrink at runtime; the next
-  // tick or manual click realigns state itself.
+  // Modulo clamp keeps render correct if slides shrink at runtime.
   const safeIndex = slides.length > 0 ? activeIndex % slides.length : 0
   const activeVehicle = slides[safeIndex] ?? null
 
@@ -94,79 +121,106 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
           <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460]" />
         )}
 
-        {/* Cinematic gradient — subtle vignette for centered text legibility */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.45)_0%,rgba(0,0,0,0.7)_100%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+        {/* Single gradient — let the photo breathe (Avantgarde pattern). */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
       </div>
 
-      {/* Centered editorial copy — focuses on the vehicle (Avantgarde/Païto pattern) */}
+      {/* Centered editorial copy — the only element competing for attention.
+          No bottom action bar (PM decision: action bar destroys luxury).
+          The global WhatsAppButton (layout.tsx) handles persistent CTA via FAB. */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
         {activeVehicle ? (
           <>
-            <p className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-4 sm:mb-6">
-              Acervo Attra · Em destaque
+            <p className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-5 sm:mb-7">
+              Acervo Attra
             </p>
 
-            <h1 className="text-white font-light tracking-tight leading-[1.05] mb-3 sm:mb-4
-                           text-[clamp(2.25rem,7vw,5.5rem)]">
-              <span className="block">{activeVehicle.brand}</span>
-              <span className="block font-normal">{activeVehicle.model}</span>
+            <h1 className="text-white tracking-tight leading-[0.98] mb-4 sm:mb-5
+                           text-[clamp(2.5rem,7.5vw,6rem)]">
+              <span className="block font-light">{activeVehicle.brand}</span>
+              <span className="block font-light italic">{activeVehicle.model}</span>
             </h1>
 
-            {/* Vehicle meta — ano · km · preço (concorrentes seguem esse padrão) */}
-            <p className="text-white/85 text-sm sm:text-base font-light tracking-wide mb-8 sm:mb-10
+            {/* Poetic tagline — gives meta line room to breathe (Avantgarde pattern). */}
+            <p className="text-white/70 italic font-light text-base sm:text-lg
+                          tracking-wide max-w-md mb-7 sm:mb-9">
+              {taglineFor(activeVehicle.brand)}
+            </p>
+
+            {/* Meta line — ano · km · preço */}
+            <p className="text-white/85 text-sm sm:text-base font-light tracking-[0.05em] mb-10 sm:mb-12
                           flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
               <span>{activeVehicle.year_model}</span>
-              <span aria-hidden className="text-white/30">·</span>
+              <span aria-hidden className="text-white/30">|</span>
               <span>
                 {activeVehicle.mileage === 0 ? '0 km' : formatMileage(activeVehicle.mileage)}
               </span>
               {activeVehicle.price > 0 && (
                 <>
-                  <span aria-hidden className="text-white/30">·</span>
+                  <span aria-hidden className="text-white/30">|</span>
                   <span className="font-medium">{formatPrice(activeVehicle.price)}</span>
                 </>
               )}
             </p>
 
-            {/* Contextual link to the active vehicle — discreet on purpose,
-                so the WhatsApp/Estoque CTAs at the bottom carry the main weight. */}
+            {/* Single primary CTA — ghost outline, premium-confident.
+                "Falar com especialista" responde ao requisito do dono
+                (CTA convidativo, palavra-chave que eleva, não diminui). */}
+            <a
+              href={getWhatsAppUrl(whatsappMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center justify-center gap-2.5
+                         border border-white/50 hover:border-white text-white
+                         text-sm sm:text-base font-light tracking-[0.18em] uppercase
+                         px-10 sm:px-14 py-4 sm:py-[18px] rounded-sm
+                         backdrop-blur-sm hover:bg-white/[0.06]
+                         transition-all duration-300"
+            >
+              <MessageCircle className="w-4 h-4 sm:w-[18px] sm:h-[18px] opacity-80
+                                       group-hover:opacity-100 transition-opacity" />
+              Falar com especialista
+            </a>
+
+            {/* Contextual link to vehicle detail — discreet, doesn't compete. */}
             <Link
               href={`/veiculo/${activeVehicle.slug}`}
-              className="inline-flex items-center gap-1.5 text-white/90 hover:text-white
-                         text-sm font-medium border-b border-white/30 hover:border-white
-                         pb-1 transition-colors"
+              className="mt-6 inline-flex items-center gap-1.5 text-white/60 hover:text-white/95
+                         text-xs sm:text-sm font-light transition-colors"
             >
-              Conheça este veículo
-              <ArrowRight className="w-4 h-4" />
+              Conheça este {activeVehicle.brand} {activeVehicle.model}
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </>
         ) : (
-          // Fallback when stock is empty — institutional fallback
+          // Fallback when stock is empty
           <>
-            <p className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-4 sm:mb-6">
+            <p className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-5">
               Attra Veículos · Desde 2009
             </p>
-            <h1 className="text-white font-light tracking-tight leading-[1.05] mb-8
+            <h1 className="text-white font-light tracking-tight leading-[1.05] mb-9
                            text-[clamp(2rem,5vw,4rem)]">
               <span className="block">Curadoria nacional em</span>
-              <span className="block font-normal">supercarros e premium</span>
+              <span className="block italic">supercarros e premium</span>
             </h1>
             <Link
               href="/veiculos"
-              className="inline-flex items-center gap-2 border border-white/40 hover:border-white
-                         text-white text-sm sm:text-base font-medium px-7 py-3.5 rounded-sm transition-colors"
+              className="inline-flex items-center gap-2.5 border border-white/50 hover:border-white
+                         text-white text-sm font-light tracking-[0.18em] uppercase px-12 py-4
+                         rounded-sm transition-colors"
             >
-              Ver acervo completo
+              Ver acervo
               <ArrowRight className="w-4 h-4" />
             </Link>
           </>
         )}
       </div>
 
-      {/* Slide indicators — bottom-center, discreet */}
+      {/* Slide indicators — bottom-center, subtle. Now that there's no action
+          bar competing, they have visual autonomy. */}
       {slides.length > 1 && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-24 sm:bottom-28 z-10 flex items-center gap-2.5">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-12 sm:bottom-14 z-10
+                        flex items-center gap-2.5">
           {slides.map((_, i) => (
             <button
               key={i}
@@ -178,7 +232,7 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
               <span
                 className={`block h-[2px] transition-all duration-500 ${
                   i === safeIndex
-                    ? 'w-10 bg-white'
+                    ? 'w-12 bg-white'
                     : 'w-6 bg-white/40 group-hover:bg-white/70'
                 }`}
               />
@@ -187,47 +241,13 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
         </div>
       )}
 
-      {/* Persistent action bar — convidativa.
-          Pedido explícito do dono (Thiago/Attra): CTAs precisam convidar
-          ao clique, não ficar discretos. Cores fortes + sombra + tamanho
-          generoso, mas separados do bloco editorial central pra não virar
-          layout LP. */}
-      <div className="absolute inset-x-0 bottom-0 z-10
-                      bg-gradient-to-t from-black/85 via-black/50 to-transparent
-                      px-6 sm:px-10 pt-12 sm:pt-16 pb-7 sm:pb-9">
-        <div className="mx-auto max-w-3xl flex flex-col sm:flex-row items-stretch sm:items-center
-                        justify-center gap-3 sm:gap-4">
-          <a
-            href={getWhatsAppUrl(whatsappMessage)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group inline-flex items-center justify-center gap-2.5
-                       bg-[#25D366] hover:bg-[#1ea952] text-white
-                       font-semibold text-base sm:text-[17px]
-                       px-8 sm:px-10 py-4 sm:py-[18px] rounded-md
-                       shadow-[0_8px_24px_rgba(37,211,102,0.35)]
-                       hover:shadow-[0_10px_30px_rgba(37,211,102,0.5)]
-                       transition-all duration-200"
-          >
-            <MessageCircle className="w-5 h-5" />
-            Falar com especialista
-            <ArrowRight className="w-4 h-4 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-          </a>
-          <Link
-            href="/veiculos"
-            className="group inline-flex items-center justify-center gap-2.5
-                       bg-white hover:bg-white/90 text-black
-                       font-semibold text-base sm:text-[17px]
-                       px-8 sm:px-10 py-4 sm:py-[18px] rounded-md
-                       shadow-[0_8px_24px_rgba(255,255,255,0.15)]
-                       hover:shadow-[0_10px_30px_rgba(255,255,255,0.25)]
-                       transition-all duration-200"
-          >
-            Ver estoque completo
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
+      {/* Slide counter — minimal, Ferrari.com pattern. Only when multi-slide. */}
+      {slides.length > 1 && (
+        <div className="absolute bottom-12 sm:bottom-14 right-8 sm:right-12 z-10
+                        text-white/55 text-[11px] tracking-[0.2em] font-light">
+          {String(safeIndex + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
         </div>
-      </div>
+      )}
     </section>
   )
 }
