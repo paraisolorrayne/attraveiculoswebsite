@@ -24,21 +24,57 @@ const ROTATION_INTERVAL_MS = 8000
 export function HomeHero({ vehicles = [] }: HomeHeroProps) {
   const slides = vehicles.filter(v => v.photos?.[0]).slice(0, 3)
   const [activeIndex, setActiveIndex] = useState(0)
+  // Bumped on manual indicator click so the rotation effect restarts the
+  // interval from zero — avoids the jarring "auto-advance fires right after
+  // a user click" behaviour.
+  const [restartTick, setRestartTick] = useState(0)
 
-  // Auto-rotate the background image. Pauses if user reduced motion.
+  // Note on stale activeIndex: if `vehicles` shrinks at runtime, the modulo
+  // clamp on `safeIndex` below keeps render correct without needing a reset
+  // effect. The next auto-tick or manual click realigns the state itself.
+
+  // Auto-rotate the background image. Respects prefers-reduced-motion live —
+  // if the user toggles the OS preference at runtime, the interval stops/resumes
+  // accordingly (mq.addEventListener('change')).
   useEffect(() => {
     if (slides.length <= 1) return
-    const prefersReduced = typeof window !== 'undefined'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (prefersReduced) return
+    if (typeof window === 'undefined') return
 
-    const id = setInterval(() => {
-      setActiveIndex(prev => (prev + 1) % slides.length)
-    }, ROTATION_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [slides.length])
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let intervalId: ReturnType<typeof setInterval> | undefined
 
-  const activeVehicle = slides[activeIndex] ?? null
+    const start = () => {
+      if (mq.matches) return
+      intervalId = setInterval(() => {
+        setActiveIndex(prev => (prev + 1) % slides.length)
+      }, ROTATION_INTERVAL_MS)
+    }
+    const stop = () => {
+      if (intervalId) clearInterval(intervalId)
+      intervalId = undefined
+    }
+    const onChange = () => {
+      stop()
+      start()
+    }
+
+    start()
+    mq.addEventListener('change', onChange)
+    return () => {
+      stop()
+      mq.removeEventListener('change', onChange)
+    }
+  }, [slides.length, restartTick])
+
+  // Clamp index for render — defensive in case a fast prop change leaves the
+  // state stale before the effect above runs.
+  const safeIndex = slides.length > 0 ? activeIndex % slides.length : 0
+  const activeVehicle = slides[safeIndex] ?? null
+
+  const handleSelectSlide = (i: number) => {
+    setActiveIndex(i)
+    setRestartTick(t => t + 1)
+  }
 
   return (
     <section
@@ -52,8 +88,8 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
             <div
               key={vehicle.id}
               className="absolute inset-0 transition-opacity duration-[1500ms] ease-in-out"
-              style={{ opacity: i === activeIndex ? 1 : 0 }}
-              aria-hidden={i !== activeIndex}
+              style={{ opacity: i === safeIndex ? 1 : 0 }}
+              aria-hidden={i !== safeIndex}
             >
               <Image
                 src={vehicle.photos[0]}
@@ -135,14 +171,14 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
           {slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => handleSelectSlide(i)}
               aria-label={`Ver veículo ${i + 1} de ${slides.length}`}
-              aria-current={i === activeIndex}
+              aria-current={i === safeIndex}
               className="group p-2 -m-2"
             >
               <span
                 className={`block h-[2px] transition-all duration-500 ${
-                  i === activeIndex
+                  i === safeIndex
                     ? 'w-10 bg-white'
                     : 'w-6 bg-white/40 group-hover:bg-white/70'
                 }`}
@@ -152,11 +188,14 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
         </div>
       )}
 
-      {/* Click-through layer — clicking the background goes to the active vehicle */}
+      {/* Click-through layer — clicking the background goes to the active vehicle.
+          tabIndex={-1} so keyboard navigation focuses the visible CTAs (which
+          cover the same destinations) instead of an invisible full-section link. */}
       {activeVehicle && (
         <Link
           href={`/veiculo/${activeVehicle.slug}`}
           aria-label={`Conhecer ${activeVehicle.brand} ${activeVehicle.model}`}
+          tabIndex={-1}
           className="absolute inset-0 z-[1]"
         />
       )}
