@@ -5,6 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Vehicle } from '@/types'
+import { getWhatsAppUrl } from '@/lib/constants'
+
+const consultantWhatsAppMessage =
+  'Olá, Attra. Gostaria de falar com um consultor sobre os veículos do acervo.'
 
 interface HomeHeroProps {
   /**
@@ -182,11 +186,14 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
           ))}
         </h1>
 
-        {/* Subhead — sans, neutro, lista das marcas + procedência */}
+        {/* Subhead — sans, neutro, lista das marcas + procedência.
+            Sem hífens nem em-dash no corpo do texto. "Mercedes AMG" sem hifen
+            (a marca oficial usa hifen, mas a regra editorial Attra é remover
+            hifens de textos do site). */}
         <p className="text-white/85 font-light text-sm sm:text-[15px] tracking-wide
                       max-w-xl leading-relaxed mb-9 sm:mb-11
                       [text-shadow:_0_1px_6px_rgba(0,0,0,0.5)]">
-          Ferrari, Porsche, Mercedes-AMG, Land Rover, BMW, Audi — selecionados em
+          Ferrari, Porsche, Mercedes AMG, Land Rover, BMW e Audi. Selecionados em
           Uberlândia, entregues em todo o Brasil.
         </p>
 
@@ -204,30 +211,32 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
             Explorar Estoque
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
-          <Link
-            href="/compramos-seu-carro"
+          <a
+            href={getWhatsAppUrl(consultantWhatsAppMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
             className="group inline-flex items-center text-white/80 hover:text-white
                        text-xs sm:text-sm font-light tracking-[0.18em] uppercase
                        transition-colors"
           >
             <span className="border-b border-white/30 group-hover:border-white pb-1 transition-colors">
-              Consignar meu carro
+              Falar com consultor
             </span>
-          </Link>
+          </a>
         </div>
       </div>
 
       {/* Vehicle caption — bottom-right, sobre a zona escurecida pelo gradient
           inferior. "Etiqueta da obra" estilo galeria de arte. Posicionada do
-          lado do carro, não do texto. */}
+          lado do carro, não do texto.
+          O eyebrow "EM DESTAQUE" usa branco com text-shadow forte (não champagne)
+          pra garantir contraste em fundos claros — chão de cimento do showroom
+          ou paredes claras. Champagne só fica na linha decorativa. */}
       {activeVehicle && (
         <div className="absolute bottom-28 sm:bottom-32 right-8 sm:right-12 lg:right-16 z-10 text-right
-                        [text-shadow:_0_2px_8px_rgba(0,0,0,0.7)]">
+                        [text-shadow:_0_2px_10px_rgba(0,0,0,0.85)]">
           <div className="flex items-center justify-end gap-3 mb-2">
-            <span
-              className="text-[10px] uppercase tracking-[0.3em] font-medium"
-              style={{ color: CHAMPAGNE }}
-            >
+            <span className="text-white text-[10px] uppercase tracking-[0.3em] font-semibold">
               Em destaque
             </span>
             <span
@@ -239,7 +248,7 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
           <p className="text-white text-base sm:text-lg font-light tracking-wide">
             {activeVehicle.brand} {activeVehicle.model}
           </p>
-          <p className="text-white/65 text-xs font-light tracking-[0.15em] uppercase mt-1">
+          <p className="text-white/85 text-xs font-light tracking-[0.15em] uppercase mt-1">
             {activeVehicle.year_model}
           </p>
         </div>
