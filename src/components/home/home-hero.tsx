@@ -28,26 +28,36 @@ const ROTATION_INTERVAL_MS = 8000
  * Falls back to a generic line if brand isn't mapped.
  */
 const TAGLINES_BY_BRAND: Record<string, string> = {
-  Ferrari: 'A engenharia italiana em estado bruto.',
-  Lamborghini: 'Sem desculpas. Sem comparações.',
-  Porsche: 'A precisão alemã em forma de esporte.',
-  McLaren: 'Fórmula 1 nas ruas.',
-  'Aston Martin': 'O silêncio antes da emoção.',
-  Bentley: 'Luxo construído para durar gerações.',
-  'Rolls-Royce': 'Mais que um carro — uma declaração.',
-  'Mercedes-Benz': 'O melhor ou nada.',
-  BMW: 'Performance que conversa com o piloto.',
-  Audi: 'Tecnologia que define o passo.',
-  'Land Rover': 'Onde o asfalto termina.',
-  Maserati: 'Caráter italiano em cada detalhe.',
-  Maybach: 'O extraordinário ao alcance.',
-  Chevrolet: 'Performance americana indomável.',
-  Dodge: 'Potência sem máscara.',
-  Ford: 'Tradição e potência.',
+  ferrari: 'A engenharia italiana em estado bruto.',
+  lamborghini: 'Sem desculpas. Sem comparações.',
+  porsche: 'A precisão alemã em forma de esporte.',
+  mclaren: 'Fórmula 1 nas ruas.',
+  'aston martin': 'O silêncio antes da emoção.',
+  bentley: 'Luxo construído para durar gerações.',
+  'rolls-royce': 'Mais que um carro — uma declaração.',
+  'mercedes-benz': 'O melhor ou nada.',
+  mercedes: 'O melhor ou nada.',
+  bmw: 'Performance que conversa com o piloto.',
+  audi: 'Tecnologia que define o passo.',
+  'land rover': 'Onde o asfalto termina.',
+  maserati: 'Caráter italiano em cada detalhe.',
+  maybach: 'O extraordinário ao alcance.',
+  chevrolet: 'Performance americana indomável.',
+  dodge: 'Potência sem máscara.',
+  ford: 'Tradição e potência.',
 }
 
 function taglineFor(brand: string): string {
-  return TAGLINES_BY_BRAND[brand] ?? 'Curadoria nacional desde 2009.'
+  // AutoConf returns brand in many shapes — "Mercedes", "Mercedes-Benz",
+  // "MERCEDES-AMG", "Land Rover", etc. We do exact-match first, then fall
+  // back to startsWith so "Mercedes-AMG GT" still gets the Mercedes tagline.
+  const key = brand.toLowerCase().trim()
+  if (TAGLINES_BY_BRAND[key]) return TAGLINES_BY_BRAND[key]
+
+  for (const mappedKey of Object.keys(TAGLINES_BY_BRAND)) {
+    if (key.startsWith(mappedKey)) return TAGLINES_BY_BRAND[mappedKey]
+  }
+  return 'Curadoria nacional desde 2009.'
 }
 
 export function HomeHero({ vehicles = [] }: HomeHeroProps) {
@@ -123,15 +133,22 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
 
         {/* Single gradient — let the photo breathe (Avantgarde pattern). */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
+
+        {/* Soft spotlight behind the centered text — mais escuro no centro
+            pra texto ler em qualquer foto (badges PPF brancos, céu claro, etc). */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(0,0,0,0.4)_0%,transparent_70%)]" />
       </div>
 
       {/* Centered editorial copy — the only element competing for attention.
           No bottom action bar (PM decision: action bar destroys luxury).
-          The global WhatsAppButton (layout.tsx) handles persistent CTA via FAB. */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
+          The global WhatsAppButton (layout.tsx) handles persistent CTA via FAB.
+          text-shadow garante legibilidade quando a foto tem áreas claras
+          (badges PPF brancos, céu, paint de cor clara). */}
+      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center
+                      [text-shadow:_0_2px_8px_rgba(0,0,0,0.55)]">
         {activeVehicle ? (
           <>
-            <p className="text-white/55 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-5 sm:mb-7">
+            <p className="text-white/65 text-[10px] sm:text-xs uppercase tracking-[0.32em] font-medium mb-5 sm:mb-7">
               Acervo Attra
             </p>
 
@@ -142,22 +159,22 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
             </h1>
 
             {/* Poetic tagline — gives meta line room to breathe (Avantgarde pattern). */}
-            <p className="text-white/70 italic font-light text-base sm:text-lg
+            <p className="text-white/85 italic font-light text-base sm:text-lg
                           tracking-wide max-w-md mb-7 sm:mb-9">
               {taglineFor(activeVehicle.brand)}
             </p>
 
             {/* Meta line — ano · km · preço */}
-            <p className="text-white/85 text-sm sm:text-base font-light tracking-[0.05em] mb-10 sm:mb-12
+            <p className="text-white/95 text-sm sm:text-base font-light tracking-[0.05em] mb-10 sm:mb-12
                           flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
               <span>{activeVehicle.year_model}</span>
-              <span aria-hidden className="text-white/30">|</span>
+              <span aria-hidden className="text-white/40">|</span>
               <span>
                 {activeVehicle.mileage === 0 ? '0 km' : formatMileage(activeVehicle.mileage)}
               </span>
               {activeVehicle.price > 0 && (
                 <>
-                  <span aria-hidden className="text-white/30">|</span>
+                  <span aria-hidden className="text-white/40">|</span>
                   <span className="font-medium">{formatPrice(activeVehicle.price)}</span>
                 </>
               )}
