@@ -88,13 +88,28 @@ export function HomeHero({ vehicles = [] }: HomeHeroProps) {
               style={{ opacity: i === safeIndex ? 1 : 0 }}
               aria-hidden={i !== safeIndex}
             >
+              {/* Mobile: contain — carro inteiro visível centralizado.
+                  Next.js Image aplica object-fit/position via style inline,
+                  então classes condicionais não funcionam. Solução: dois
+                  Image components com display toggle (Next otimiza ambos). */}
               <Image
                 src={vehicle.photos[0]}
                 alt={`${vehicle.brand} ${vehicle.model}`}
                 fill
                 priority={i === 0}
-                className="object-cover"
-                style={{ objectPosition: '85% center' }}
+                className="lg:hidden"
+                style={{ objectFit: 'contain', objectPosition: 'center' }}
+                sizes="100vw"
+              />
+              {/* Desktop: cover com objectPosition 40% — privilegia o lado
+                  esquerdo da foto (frente do carro em composições 3/4). */}
+              <Image
+                src={vehicle.photos[0]}
+                alt={`${vehicle.brand} ${vehicle.model}`}
+                fill
+                priority={i === 0}
+                className="hidden lg:block"
+                style={{ objectFit: 'cover', objectPosition: '40% center' }}
                 sizes="100vw"
               />
             </div>

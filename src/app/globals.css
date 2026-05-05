@@ -29,6 +29,23 @@
   --font-editorial: var(--font-editorial);
 }
 
+/* HomeHero background image — responsive object-fit/position.
+   Tailwind v4 às vezes engole arbitrary values com `_` em object-position;
+   classe custom é mais previsível. */
+.hero-bg-image {
+  object-fit: contain;
+  object-position: center;
+}
+@media (min-width: 1024px) {
+  .hero-bg-image {
+    object-fit: cover;
+    /* 40% center: mostra mais o lado esquerdo da foto onde está a frente
+       do carro em composições 3/4 padrão. Carro fica posicionado mais à
+       direita do frame, com o gradient escuro à esquerda cobrindo o resto. */
+    object-position: 40% center;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
