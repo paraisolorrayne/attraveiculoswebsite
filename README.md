@@ -71,16 +71,25 @@ GEMINI_API_KEY=sua_api_key_gemini
 # Site Configuration (obrigatório)
 NEXT_PUBLIC_SITE_URL=https://seudominio.com.br
 
-# N8N Webhook Configuration (opcional)
-NEXT_PUBLIC_LEADSTER_SDR_WEBHOOK_URL=https://seu-webhook-url
+# N8N Webhook para SDR / notificação de clique no botão WhatsApp (opcional).
+# Quando ausente, o redirect pro WhatsApp segue funcionando — só não dispara
+# a notificação interna pra equipe.
+NEXT_PUBLIC_SDR_WEBHOOK_URL=https://seu-webhook-url
 
 # Resend Email Configuration (obrigatório para notificações por email)
 RESEND_API_KEY=sua_api_key_resend
 NOTIFICATION_EMAIL=faleconosco@attraveiculos.com.br
 
-# WhatsApp Notification Webhook (opcional - usa N8N webhook como fallback)
+# Notificação de leads via WhatsApp por webhook N8N (opcional — Avisa API
+# já cobre o canal WhatsApp e é o caminho principal de notificação).
 WHATSAPP_NOTIFICATION_WEBHOOK_URL=https://seu-webhook-url
 WEBHOOK_SECRET=seu_webhook_secret
+
+# Avisa API — envio direto de WhatsApp para a(s) loja(s) com todos os dados
+# do lead capturado pelo formulário. Canal principal de notificação interna.
+AVISA_API_TOKEN=token_da_instancia_de_envio
+AVISA_API_URL=https://www.avisaapi.com.br/api
+AVISA_TARGET_PHONES=5534999999999,5534988888888
 ```
 
 ---

@@ -8,15 +8,10 @@ import {
   getIdentifiedContact,
 } from '@/lib/visitor-tracking'
 
-// N8N Webhook URL (environment variable with fallback)
-const WEBHOOK_URL = process.env.NEXT_PUBLIC_LEADSTER_SDR_WEBHOOK_URL ||
-  'https://webhook.dexidigital.com.br/webhook/leadster_sdr_attra'
-
-// Leadster Webhook URLs
-const LEADSTER_WEBHOOK_URL = process.env.NEXT_PUBLIC_LEADSTER_WEBHOOK_URL ||
-  'https://webhook.dexidigital.com.br/webhook/leadster_attra'
-const LEADSTER_AI_WEBHOOK_URL = process.env.NEXT_PUBLIC_LEADSTER_AI_WEBHOOK_URL ||
-  'https://webhook.dexidigital.com.br/webhook/leadster_ia_attra'
+// Webhook N8N para SDR / notificação interna de leads do site.
+// Definir via env; sem fallback hardcoded (clique não dispara webhook
+// quando não configurado — o redirect pro WhatsApp acontece normalmente).
+const SDR_WEBHOOK_URL = process.env.NEXT_PUBLIC_SDR_WEBHOOK_URL || ''
 
 // Cache for geolocation to avoid multiple API calls
 let cachedGeoLocation: GeoLocation | null = null
@@ -107,6 +102,12 @@ export async function sendWhatsAppWebhook(
   payload: Omit<WhatsAppWebhookPayload, 'timestamp' | 'sessionId' | 'pageUrl' | 'userAgent' | 'localTimestamp' | 'geoLocation'>,
   geoLocation?: GeoLocation | null
 ): Promise<WebhookResponse> {
+  // Sem URL configurada → noop silencioso (o clique no botão continua
+  // funcionando porque o redirect wa.me é independente do webhook).
+  if (!SDR_WEBHOOK_URL) {
+    return { success: false, message: 'SDR webhook URL not configured' }
+  }
+
   try {
     const sessionId = getSessionId()
     const now = new Date()
@@ -172,7 +173,7 @@ export async function sendWhatsAppWebhook(
     console.log('[Webhook] Message:', formattedMessage)
     console.log('[Webhook] GeoLocation:', geoLocation?.city, geoLocation?.region)
 
-    const response = await fetch(WEBHOOK_URL, {
+    const response = await fetch(SDR_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -215,200 +216,6 @@ function getSessionId(): string {
   }
   return sessionId
 }
-
-/**
- * Sends lead data to Leadster WITHOUT AI processing
- * Used for estoque page - redirects to WhatsApp after
- */
-export async function sendToLeadsterWithoutAI(
-  payload: Omit<WhatsAppWebhookPayload, 'timestamp' | 'sessionId' | 'pageUrl' | 'userAgent' | 'localTimestamp'>
-): Promise<WebhookResponse> {
-  try {
-    const sessionId = getSessionId()
-    const now = new Date()
-
-    const enhancedPayload: WhatsAppWebhookPayload = {
-      ...payload,
-      sessionId,
-      timestamp: now.toISOString(),
-      localTimestamp: now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : '',
-    }
-
-    console.log('[Leadster] Sending to Leadster (no AI):', enhancedPayload.eventType, enhancedPayload.sourcePage)
-
-    const response = await fetch(LEADSTER_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(enhancedPayload),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
-      console.error('[Leadster] Response error:', response.status, errorText)
-      throw new Error(`Leadster webhook failed: ${response.status}`)
-    }
-
-    console.log('[Leadster] Successfully sent (no AI)')
-
-    return {
-      success: true,
-      message: 'Conectando você ao WhatsApp...',
-    }
-  } catch (error) {
-    console.error('[Leadster] Error sending (no AI):', error)
-
-    return {
-      success: false,
-      message: 'Erro ao conectar. Redirecionando para WhatsApp...',
-    }
-  }
-}
-
-/**
- * Sends lead data to Leadster WITH AI processing
- * Used for general pages - opens chat widget on site
- */
-export async function sendToLeadsterWithAI(
-  payload: Omit<WhatsAppWebhookPayload, 'timestamp' | 'sessionId' | 'pageUrl' | 'userAgent' | 'localTimestamp'>
-): Promise<WebhookResponse> {
-  try {
-    const sessionId = getSessionId()
-    const now = new Date()
-
-    const enhancedPayload: WhatsAppWebhookPayload = {
-      ...payload,
-      sessionId,
-      timestamp: now.toISOString(),
-      localTimestamp: now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : '',
-    }
-
-    console.log('[Leadster AI] Sending to Leadster with AI:', enhancedPayload.eventType, enhancedPayload.sourcePage)
-
-    const response = await fetch(LEADSTER_AI_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(enhancedPayload),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
-      console.error('[Leadster AI] Response error:', response.status, errorText)
-      throw new Error(`Leadster AI webhook failed: ${response.status}`)
-    }
-
-    console.log('[Leadster AI] Successfully sent with AI')
-
-    return {
-      success: true,
-      message: 'Chat iniciado! Como posso ajudar?',
-    }
-  } catch (error) {
-    console.error('[Leadster AI] Error sending:', error)
-
-    return {
-      success: false,
-      message: 'Erro ao iniciar chat. Por favor, tente novamente.',
-    }
-  }
-}
-
-/**
- * Chat message type for conversation history
- */
-export interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-/**
- * Chat response from AI
- */
-export interface ChatResponse {
-  success: boolean
-  response: string
-  fallback?: boolean
-  error?: boolean
-}
-
-/**
- * Sends a chat message and gets AI response
- * Uses internal API route to avoid CORS issues
- */
-export async function sendChatMessage(
-  message: string,
-  history: ChatMessage[] = [],
-  context?: { sourcePage?: string; vehicleInfo?: string }
-): Promise<ChatResponse> {
-  try {
-    const sessionId = getSessionId()
-
-    console.log('[Chat] Sending message:', message.substring(0, 50))
-
-    // Anexa atribuição de mídia (UTM + click IDs) ao contexto do chat
-    // para o N8N correlacionar o lead com a campanha de origem
-    const traffic = {
-      ...collectUTMParams(),
-      ...collectClickIds(),
-      referrer: typeof document !== 'undefined' ? document.referrer || null : null,
-      landingPage: typeof window !== 'undefined' ? window.location.href : null,
-    }
-
-    // Se o visitante já foi identificado por algum formulário na sessão,
-    // reaproveitamos nome/email/telefone para o agente IA não precisar
-    // perguntar de novo (e garantir telefone no lead final).
-    const identifiedContact = getIdentifiedContact()
-
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message,
-        sessionId,
-        history,
-        context: {
-          ...context,
-          traffic,
-          user: identifiedContact || undefined,
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Chat API failed: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    console.log('[Chat] Response received:', data.response?.substring(0, 50))
-
-    return {
-      success: true,
-      response: data.response || 'Como posso ajudar?',
-      fallback: data.fallback,
-      error: data.error,
-    }
-  } catch (error) {
-    console.error('[Chat] Error:', error)
-
-    return {
-      success: false,
-      response: 'Desculpe, ocorreu um erro. Por favor, tente novamente.',
-      error: true,
-    }
-  }
-}
-
-
 
 /**
  * Sends abandoned lead data to the server-side API route using sendBeacon.

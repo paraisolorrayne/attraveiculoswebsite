@@ -3,9 +3,52 @@
 import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, BookOpen } from 'lucide-react'
+import { ArrowRight, BookOpen, Newspaper } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
+
+const WINE = '#A8302E'
+
+/**
+ * Imagem editorial com fallback resiliente. Quando o src original 404'a
+ * (caso típico em ambientes onde os assets ainda não foram subidos), o
+ * Next/Image dispara onError e renderizamos um placeholder branded em
+ * vez do ícone padrão de imagem quebrada do navegador.
+ */
+function ArticleImage({ src, alt, category }: { src: string; alt: string; category: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center
+                   bg-gradient-to-br from-[#1a1a1a] via-[#0f0f0f] to-[#000]"
+        aria-hidden
+      >
+        <Newspaper className="w-10 h-10 mb-3" style={{ color: WINE }} />
+        <span
+          className="text-[10px] uppercase tracking-[0.32em] font-medium"
+          style={{ color: WINE }}
+        >
+          {category}
+        </span>
+        <span className="text-white/30 text-xs mt-2 font-light tracking-[0.2em] uppercase">
+          Attra Editorial
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 const featuredArticles = [
   {
@@ -100,11 +143,10 @@ export function FeaturedEditorial() {
             >
               {/* Image Container */}
               <div className="relative w-full h-48 lg:h-56 overflow-hidden bg-background-soft">
-                <Image
+                <ArticleImage
                   src={article.image}
                   alt={article.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  category={article.category}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>

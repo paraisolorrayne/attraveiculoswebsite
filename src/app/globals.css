@@ -27,6 +27,7 @@
   /* Editorial serif — used in luxury headlines (e.g. HomeHero manifesto).
      Backed by Cormorant Garamond (Google Fonts). */
   --font-editorial: var(--font-editorial);
+  --font-montserrat: var(--font-montserrat);
 }
 
 /* HomeHero background image — responsive object-fit/position.

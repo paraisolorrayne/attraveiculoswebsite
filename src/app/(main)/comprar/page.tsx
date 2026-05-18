@@ -10,7 +10,7 @@ import { ArrowRight, Shield, Globe, Truck, Search } from 'lucide-react'
 
 export const metadata: Metadata = {
 	title: 'Comprar Carros de Luxo e Supercarros no Brasil',
-	description: 'Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos — desde 2009.',
+	description: 'Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos — desde 2008.',
 	keywords: [
 		'comprar carro de luxo brasil', 'comprar supercarro brasil',
 		'carros de luxo à venda brasil', 'carros importados premium brasil',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 const TRUST_SIGNALS = [
 	{ icon: Shield, title: 'Procedência Verificada', description: 'Curadoria rigorosa com inspeção completa de cada veículo' },
 	{ icon: Globe, title: 'Entrega Nacional', description: 'Logística especializada para todo o Brasil com seguro completo' },
-	{ icon: Truck, title: 'Desde 2009', description: 'Mais de 15 anos de excelência no mercado premium brasileiro' },
+	{ icon: Truck, title: 'Desde 2008', description: 'Mais de 17 anos de excelência no mercado premium brasileiro' },
 	{ icon: Search, title: 'Curadoria Premium', description: 'Seleção criteriosa dos melhores exemplares do mercado' },
 ]
 

@@ -30,7 +30,7 @@ function SobreSchema() {
     },
     telephone: '+55-34-3014-3232',
     url: 'https://attraveiculos.com.br',
-    foundingDate: '2009',
+    foundingDate: '2008',
     areaServed: { '@type': 'Country', name: 'Brasil' },
     priceRange: '$$$$$',
   }
@@ -39,7 +39,7 @@ function SobreSchema() {
 
 const timeline = [
   {
-    year: 2010,
+    year: 2008,
     title: 'Fundação em Uberlândia',
     description: 'A Attra Veículos nasce em Uberlândia com a missão de oferecer veículos premium com atendimento diferenciado. Desde o início, o foco foi a curadoria rigorosa e o relacionamento duradouro com cada cliente.',
   },
@@ -93,7 +93,7 @@ const differentials = [
   { icon: Globe, title: 'Atendimento Nacional', description: 'Logística especializada com seguro premium e rastreamento em tempo real para qualquer cidade do Brasil.' },
   { icon: Shield, title: 'Procedência Verificada', description: 'Cada veículo passa por inspeção rigorosa e verificação completa de histórico antes de entrar no showroom.' },
   { icon: Users, title: 'Equipe Especializada', description: 'Consultores com experiência em cada marca, oferecendo atendimento consultivo e personalizado.' },
-  { icon: Car, title: '+500 Veículos/Ano', description: 'Mais de 500 veículos comercializados anualmente — resultado de confiança construída ao longo de 16+ anos.' },
+  { icon: Car, title: '+500 Veículos/Ano', description: 'Mais de 500 veículos comercializados anualmente — resultado de confiança construída ao longo de 18+ anos.' },
   { icon: Building2, title: '5.000m² de Estrutura', description: 'Showroom climatizado com iluminação profissional projetado para exibir cada veículo como patrimônio.' },
 ]
 
@@ -112,7 +112,7 @@ const historyEras: HistoryEra[] = [
       { image: '/about/attra-showroom-iluminacao-noturna.jpg', year: '2024', caption: 'Iluminação profissional — cada carro como obra de arte', alt: 'Showroom Attra Veículos com iluminação noturna' },
       { image: '/about/attra-operacao-nacional-logistica.jpg', year: '2023', caption: 'Operação nacional com logística especializada', alt: 'Logística e operação nacional Attra Veículos' },
       { image: '/about/attra-estrutura-5000m-uberlandia.jpg', year: '2023', caption: 'Estrutura completa de 5.000m² consolidada', alt: 'Estrutura de 5000m² Attra Veículos Uberlândia' },
-      { image: '/about/attra-inicio-uberlandia.jpg', year: '2022', caption: 'As primeiras mudanças', alt: 'Início da Attra em Uberlândia 2009' },
+      { image: '/about/attra-inicio-uberlandia.jpg', year: '2022', caption: 'As primeiras mudanças', alt: 'Início da Attra em Uberlândia 2008' },
     ],
   },
   {
@@ -211,7 +211,7 @@ export default function SobrePage() {
               </h2>
               <div className="space-y-4 text-lg text-foreground-secondary leading-relaxed">
                 <p>
-                  A <strong className="text-foreground">Attra Veículos</strong> nasceu em 2009 da percepção de que o mercado
+                  A <strong className="text-foreground">Attra Veículos</strong> nasceu em 2008 da percepção de que o mercado
                   de veículos de alto padrão oferecia grandes carros, mas raramente a mesma qualidade em curadoria,
                   transparência e relacionamento. A empresa foi fundada como um negócio familiar em Uberlândia,
                   com a convicção de que era possível fazer diferente.
@@ -224,7 +224,7 @@ export default function SobrePage() {
                 <p>
                   O <strong className="text-foreground">atendimento nacional</strong> permite que clientes de qualquer
                   cidade do Brasil tenham acesso aos melhores veículos premium, com toda a segurança
-                  da logística especializada e a confiança construída em 16+ anos de operação.
+                  da logística especializada e a confiança construída em 18+ anos de operação.
                 </p>
               </div>
             </div>

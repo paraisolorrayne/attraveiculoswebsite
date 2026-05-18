@@ -70,7 +70,7 @@ export default function GuiaSupercarroPage() {
               </h1>
               
               <p className="text-lg text-foreground-secondary mb-8 leading-relaxed">
-                Mais de <strong className="text-foreground">16 anos de experiência</strong> no mercado de veículos premium
+                Mais de <strong className="text-foreground">18 anos de experiência</strong> no mercado de veículos premium
                 condensados em um guia prático de 8 páginas. Aprenda a evitar golpes, verificar procedência 
                 e fazer o melhor negócio.
               </p>

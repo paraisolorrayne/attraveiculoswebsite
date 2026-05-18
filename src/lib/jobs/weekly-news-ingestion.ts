@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
 import { validateArticleWithAI } from '@/lib/news-guardrails'
 import { generateNewsSlug } from '@/lib/utils'
 
@@ -395,6 +396,19 @@ export async function runWeeklyNewsIngestion(): Promise<{
       .eq('id', newCycle.id)
 
     console.log(`[NewsIngestion] Activated cycle ${newCycle.id}`)
+
+    // Force Next.js to regenerate the static HTML of the news pages immediately,
+    // otherwise the ISR cache (revalidate=3600) could serve the previous cycle's
+    // articles together with the new cycle label for up to 1h.
+    try {
+      revalidatePath('/news')
+      revalidatePath('/news/[slug]', 'page')
+      console.log('[NewsIngestion] Revalidated /news and /news/[slug]')
+    } catch (revalErr) {
+      // Non-fatal: ISR fallback (revalidate seconds) will still pick up changes.
+      errors.push(`revalidatePath failed: ${String(revalErr)}`)
+      console.warn('[NewsIngestion] revalidatePath failed (non-fatal):', revalErr)
+    }
 
     return {
       success: true,

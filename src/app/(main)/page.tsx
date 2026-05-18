@@ -16,6 +16,29 @@ import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
 import { Vehicle } from '@/types'
 
+// Pool mínimo de R$500k. Veículos abaixo disso nunca entram no hero,
+// independentemente de outros critérios.
+const HERO_MIN_PRICE = 500_000
+
+// Janela de rotação: 15 dias. A quinzena N exibe um slice diferente do pool,
+// garantindo que os veículos da quinzena N-1 não reapareçam (desde que o pool
+// tenha >= 6 itens elegíveis — caso contrário, a repetição é inevitável).
+const BIWEEKLY_MS = 15 * 24 * 60 * 60 * 1000
+// Epoch fixo: âncora a paridade das quinzenas. Mudar este valor desloca todo
+// o calendário de rotação, então não altere após produção.
+const ROTATION_EPOCH_MS = Date.UTC(2026, 0, 1)
+
+function getCurrentBiweekIndex(now = Date.now()): number {
+  return Math.floor((now - ROTATION_EPOCH_MS) / BIWEEKLY_MS)
+}
+
+function selectBiweeklyHeroSlice(pool: Vehicle[], count: number): Vehicle[] {
+  if (pool.length === 0) return []
+  if (pool.length <= count) return pool.slice(0, count)
+  const startIdx = (getCurrentBiweekIndex() * count) % pool.length
+  return Array.from({ length: count }, (_, i) => pool[(startIdx + i) % pool.length])
+}
+
 export const metadata: Metadata = {
   title: 'Comprar Carros de Luxo e Supercarros no Brasil',
   description:
@@ -48,20 +71,34 @@ export default async function Home() {
   try {
     const result = await getVehicles({
       tipo: 'carros',
-      registros_por_pagina: 20,
+      registros_por_pagina: 50,
       ordenar: 'preco',
       ordem: 'desc',
-      preco_de: 500000,
+      preco_de: HERO_MIN_PRICE,
     })
-    const premium = result.vehicles.filter((v) => v.price >= 500000)
+    const premium = result.vehicles.filter((v) => v.price >= HERO_MIN_PRICE)
     const sorted = [...premium].sort((a, b) => b.price - a.price)
 
     if (sorted.length > 0) {
-      // Hero rotates between the top 3 most expensive vehicles in stock
-      // (cinematic background swap, see HomeHero). Same source as the
-      // Editorial Selection below — they intentionally share the lineup.
-      heroVehicles = sorted.slice(0, 3)
-      editorialVehicles = sorted.slice(0, 3)
+      // Hierarquia: BANNER usa o top da curadoria; EDITORIAL pega os
+      // imediatamente abaixo. Garantia matemática (sort decrescente):
+      // qualquer veículo no hero é mais caro que qualquer veículo na
+      // editorial — banner e curadoria nunca compartilham, e o banner
+      // sempre carrega o ticket mais alto.
+      //
+      //   Hero pool      = top 6 mais caros (rotaciona 3 por quinzena)
+      //   Editorial pool = posições 7-9 (próximos 3 abaixo do hero pool)
+      const heroPool = sorted.slice(0, 6)
+      const editorialPool = sorted.slice(6, 9)
+
+      heroVehicles = heroPool.length >= 3
+        ? selectBiweeklyHeroSlice(heroPool, 3)
+        : heroPool
+      // Se não houver 9+ veículos elegíveis, a editorial degrada
+      // graciosamente para o que sobrar abaixo do hero pool.
+      editorialVehicles = editorialPool.length > 0
+        ? editorialPool
+        : sorted.slice(heroVehicles.length, heroVehicles.length + 3)
     }
   } catch (error) {
     console.error('Failed to fetch featured vehicles:', error)
@@ -72,18 +109,20 @@ export default async function Home() {
       {/* 1. Hero — fullscreen cinematic with rotation between top 3 */}
       <HomeHero vehicles={heroVehicles} />
 
-      {/* 2. Captação imediata — formulário curto + fallback WhatsApp */}
-      <LeadCaptureSection />
-
-      {/* 3. Prova de confiança compacta */}
+      {/* 2. Prova de confiança — antes da curadoria para reforçar a marca
+             antes de pedir os dados do visitante. */}
       <TrustStrip />
 
-      {/* 4. Seleção editorial curada — substitui a antiga grade "Destaques" */}
+      {/* 3. Seleção editorial curada — substitui a antiga grade "Destaques" */}
       <EditorialSelection vehicles={editorialVehicles} />
 
-      {/* 5. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
+      {/* 4. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
              Também carrega os números de autoridade (16+ / 500 / 27 / 5.0). */}
       <AboutSectionExpanded />
+
+      {/* 5. Captação consultiva — form imediatamente antes da Operação,
+             quando o visitante já consumiu prova social + curadoria + marca. */}
+      <LeadCaptureSection />
 
       {/* 6. Diferenciais da operação */}
       <ExperienceSection />

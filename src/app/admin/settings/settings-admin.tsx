@@ -12,11 +12,9 @@ import {
   RefreshCw,
   LogOut,
   AlertCircle,
-  MessageCircle,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
-import { PageChannelsAdmin } from './page-channels-admin'
 
 interface SiteSettings {
   listen_to_content_enabled: boolean
@@ -277,21 +275,6 @@ export function SettingsAdmin() {
           </div>
         )}
 
-        {/* Page Channel Settings Section */}
-        <div className="mt-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-500/10">
-              <MessageCircle className="w-5 h-5 text-green-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Canais de Atendimento por Página</h2>
-              <p className="text-xs text-foreground-secondary">Configure o comportamento do Leadster/WhatsApp em cada página</p>
-            </div>
-          </div>
-
-          <PageChannelsAdmin />
-        </div>
-
         {/* Info Box */}
         <div className="mt-8 p-6 bg-primary/5 border border-primary/20 rounded-xl">
           <h4 className="font-semibold text-foreground mb-2">💡 Informações</h4>
@@ -299,7 +282,6 @@ export function SettingsAdmin() {
             <li>• As alterações são aplicadas imediatamente em todo o site.</li>
             <li>• Quando uma funcionalidade está desabilitada, o componente não é renderizado.</li>
             <li>• Apenas usuários com role <code className="px-1.5 py-0.5 bg-background-soft rounded text-xs font-mono">admin</code> podem alterar estas configurações.</li>
-            <li>• Os canais de atendimento controlam se o botão flutuante abre o chat Leadster ou redireciona para WhatsApp.</li>
           </ul>
         </div>
       </main>

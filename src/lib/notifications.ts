@@ -18,10 +18,10 @@ function getResendClient(): Resend {
 // Notification email destination
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'faleconosco@attraveiculos.com.br'
 
-// N8N Webhook URL for WhatsApp notifications
-const WHATSAPP_NOTIFICATION_WEBHOOK_URL = process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL ||
-  process.env.NEXT_PUBLIC_LEADSTER_SDR_WEBHOOK_URL ||
-  'https://webhook.dexidigital.com.br/webhook/leadster_sdr_attra'
+// N8N Webhook URL for WhatsApp notifications.
+// Sem fallback hardcoded; quando ausente o canal N8N vira noop e a
+// captura do lead segue pelos canais Email (Resend) + Avisa (WhatsApp).
+const WHATSAPP_NOTIFICATION_WEBHOOK_URL = process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL || ''
 
 // Lista de destinos para notificação de novos leads via WhatsApp.
 // Configurável via env ADMIN_WHATSAPP_NUMBERS (csv, somente dígitos com DDI).
@@ -74,6 +74,7 @@ export interface WhatsAppNotificationResult {
 export interface NotificationResult {
   email: EmailResult
   whatsapp: WhatsAppNotificationResult
+  avisa: WhatsAppNotificationResult
 }
 
 /**
@@ -268,6 +269,12 @@ export async function sendEmailNotification(data: NotificationData): Promise<Ema
  * Sends WhatsApp notification via N8N webhook
  */
 export async function sendWhatsAppNotification(data: NotificationData): Promise<WhatsAppNotificationResult> {
+  // Sem URL configurada → noop. Avisa API ainda cobre o canal WhatsApp.
+  if (!WHATSAPP_NOTIFICATION_WEBHOOK_URL) {
+    console.warn('[WhatsApp] WHATSAPP_NOTIFICATION_WEBHOOK_URL not configured, skipping N8N webhook')
+    return { success: false, error: 'WHATSAPP_NOTIFICATION_WEBHOOK_URL not configured' }
+  }
+
   try {
     const timestamp = data.timestamp || new Date().toISOString()
     const localTimestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -345,8 +352,128 @@ export async function sendWhatsAppNotification(data: NotificationData): Promise<
 }
 
 /**
- * Sends both email and WhatsApp notifications
- * WhatsApp is triggered after successful email delivery
+ * Sends WhatsApp notification via Avisa API directly to the store's
+ * WhatsApp number(s). Independent canal — não depende de Resend, N8N
+ * nem CRM externo. Garantia mínima de captura quando os outros canais
+ * falham silenciosamente (auth, rate limit, downtime do webhook).
+ *
+ * Configuração (envs no .env.production):
+ *   AVISA_API_TOKEN     — token Bearer da instância de ENVIO (ex: Lorrayne)
+ *   AVISA_API_URL       — base URL (default: https://www.avisaapi.com.br/api)
+ *   AVISA_TARGET_PHONES — números destinatários csv com DDI
+ *                         (ex: "5534999999999,5534988888888" — número do
+ *                         WhatsApp que está conectado à instância Attra-SDR
+ *                         + outros responsáveis)
+ *
+ * Endpoint: POST {AVISA_API_URL}/actions/sendMessage
+ * Body: { number, message }
+ * Doc: https://www.avisaapi.com.br/
+ */
+const AVISA_API_URL = process.env.AVISA_API_URL || 'https://www.avisaapi.com.br/api'
+
+const AVISA_TARGET_PHONES: string[] = (() => {
+  const envList = process.env.AVISA_TARGET_PHONES
+  if (envList) {
+    return envList.split(',').map(n => n.trim()).filter(Boolean)
+  }
+  // Sem envs configuradas: usa o mesmo destino de ADMIN_WHATSAPP_NUMBERS
+  return ADMIN_WHATSAPP_NUMBERS
+})()
+
+function buildAvisaMessage(data: NotificationData): string {
+  const localTimestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  const typeLabels: Record<NotificationType, string> = {
+    contact_form: 'Formulário de Contato',
+    lead_magnet: 'Download de Material',
+    vehicle_alert: 'Alerta de Veículos',
+    vehicle_inquiry: 'Interesse em Veículo',
+    financing_inquiry: 'Consulta de Financiamento',
+    trade_in_inquiry: 'Avaliação de Troca',
+    general_inquiry: 'Consulta Geral',
+  }
+
+  const lines: string[] = []
+  lines.push(`*Novo lead — ${typeLabels[data.type] || data.type}*`)
+  lines.push('')
+  lines.push(`👤 *Nome:* ${data.senderName}`)
+  if (data.senderPhone) lines.push(`📱 *WhatsApp:* ${data.senderPhone}`)
+  if (data.senderEmail) lines.push(`✉️ *Email:* ${data.senderEmail}`)
+  if (data.subject) lines.push(`📌 *Assunto:* ${data.subject}`)
+  if (data.message) lines.push(`💬 *Mensagem:* ${data.message}`)
+
+  if (data.metadata && Object.keys(data.metadata).length > 0) {
+    lines.push('')
+    lines.push('*Informações adicionais:*')
+    for (const [key, value] of Object.entries(data.metadata)) {
+      lines.push(`• ${formatMetadataKey(key)}: ${value}`)
+    }
+  }
+
+  lines.push('')
+  if (data.sourcePage) lines.push(`🔗 Origem: ${data.sourcePage}`)
+  lines.push(`🕒 ${localTimestamp}`)
+  return lines.join('\n')
+}
+
+export async function sendAvisaWhatsApp(data: NotificationData): Promise<WhatsAppNotificationResult> {
+  try {
+    const token = process.env.AVISA_API_TOKEN
+    if (!token) {
+      console.warn('[Avisa] AVISA_API_TOKEN not configured, skipping')
+      return { success: false, error: 'AVISA_API_TOKEN not configured' }
+    }
+
+    const message = buildAvisaMessage(data)
+    const endpoint = `${AVISA_API_URL.replace(/\/$/, '')}/actions/sendMessage`
+
+    console.log(`[Avisa] Sending lead notification to ${AVISA_TARGET_PHONES.length} number(s)`)
+
+    // Dispara em paralelo para todos os números configurados. Considera
+    // sucesso se ao menos um POST chegou ao destino.
+    const results = await Promise.all(
+      AVISA_TARGET_PHONES.map(async (number) => {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ number, message }),
+          })
+
+          if (!response.ok) {
+            const text = await response.text().catch(() => '')
+            console.error(`[Avisa] HTTP ${response.status} for ${number}: ${text.slice(0, 200)}`)
+            return false
+          }
+          return true
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.error(`[Avisa] fetch failed for ${number}: ${msg}`)
+          return false
+        }
+      })
+    )
+
+    const anySuccess = results.some(Boolean)
+    if (!anySuccess) {
+      return { success: false, error: 'All Avisa endpoints failed' }
+    }
+
+    console.log('[Avisa] Notification dispatched. Results:', results)
+    return { success: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[Avisa] Error sending notification:', errorMessage)
+    return { success: false, error: errorMessage }
+  }
+}
+
+/**
+ * Sends email and WhatsApp notifications (Resend + N8N webhook + Avisa).
+ * Os 3 canais disparam em paralelo. Avisa é a "linha-base garantida" que
+ * leva o lead direto pro WhatsApp da loja, mesmo que email/N8N falhem.
  */
 export async function sendNotification(data: NotificationData): Promise<NotificationResult> {
   // Add timestamp if not present
@@ -355,18 +482,21 @@ export async function sendNotification(data: NotificationData): Promise<Notifica
     timestamp: data.timestamp || new Date().toISOString(),
   }
 
-  // Send email first
-  const emailResult = await sendEmailNotification(notificationData)
+  // Dispara os 3 canais em paralelo — falha em um não bloqueia os outros.
+  const [emailResult, whatsappResult, avisaResult] = await Promise.all([
+    sendEmailNotification(notificationData),
+    sendWhatsAppNotification(notificationData),
+    sendAvisaWhatsApp(notificationData),
+  ])
 
-  // Send WhatsApp notification after email (regardless of email success for redundancy)
-  const whatsappResult = await sendWhatsAppNotification(notificationData)
-
-  // Log combined result
-  console.log(`[Notification] Complete - Email: ${emailResult.success}, WhatsApp: ${whatsappResult.success}`)
+  console.log(
+    `[Notification] Complete — Email: ${emailResult.success}, WhatsApp: ${whatsappResult.success}, Avisa: ${avisaResult.success}`
+  )
 
   return {
     email: emailResult,
     whatsapp: whatsappResult,
+    avisa: avisaResult,
   }
 }
 

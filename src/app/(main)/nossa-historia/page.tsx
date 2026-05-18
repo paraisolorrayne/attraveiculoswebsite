@@ -54,7 +54,7 @@ export default function NossaHistoriaPage() {
               Galeria em preparação
             </h2>
             <p className="text-lg text-foreground-secondary leading-relaxed mb-8">
-              Estamos reunindo imagens, vídeos e registros que contam a trajetória da Attra desde 2009.
+              Estamos reunindo imagens, vídeos e registros que contam a trajetória da Attra desde 2008.
               Em breve, você poderá navegar por cada capítulo dessa história.
             </p>
             <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6">

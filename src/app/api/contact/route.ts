@@ -130,10 +130,16 @@ export async function POST(request: NextRequest) {
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     })
 
-    // Log notification event for monitoring
-    logNotificationEvent(notificationType, notificationResult.email.success || notificationResult.whatsapp.success, {
+    // Log notification event for monitoring. Considera o lead capturado
+    // se ao menos UM dos 3 canais funcionou (email, n8n whatsapp, avisa).
+    const anyChannelSuccess =
+      notificationResult.email.success ||
+      notificationResult.whatsapp.success ||
+      notificationResult.avisa.success
+    logNotificationEvent(notificationType, anyChannelSuccess, {
       email: notificationResult.email,
       whatsapp: notificationResult.whatsapp,
+      avisa: notificationResult.avisa,
       senderEmail: data.email,
       sourcePage: data.sourcePage,
     })
@@ -177,6 +183,7 @@ export async function POST(request: NextRequest) {
       notifications: {
         email: notificationResult.email.success,
         whatsapp: notificationResult.whatsapp.success,
+        avisa: notificationResult.avisa.success,
       }
     })
   } catch (error) {

@@ -70,8 +70,9 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
           </p>
         </div>
 
-        {/* Asymmetric layout */}
-        <div className="grid gap-6 md:gap-8 lg:grid-cols-12">
+        {/* Asymmetric layout — items-stretch garante que a coluna direita
+            (2 cards empilhados) preencha toda a altura do principal. */}
+        <div className="grid gap-6 md:gap-8 lg:grid-cols-12 lg:items-stretch">
           {/* Main — large */}
           <article className="lg:col-span-7 group">
             <Link
@@ -181,44 +182,44 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
 
 function SecondaryPick({ vehicle }: { vehicle: Vehicle }) {
   return (
-    <article className="group grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 sm:gap-5 rounded-2xl border border-border bg-background-card overflow-hidden hover:border-primary/30 transition-colors">
+    <article className="group relative flex-1 min-h-[260px] rounded-2xl overflow-hidden bg-background-card border border-border hover:border-primary/30 transition-colors">
       <Link
         href={`/veiculo/${vehicle.slug}`}
-        className="relative aspect-square sm:aspect-[4/5] overflow-hidden"
+        className="block h-full"
       >
-        <VehicleImage
-          src={vehicle.photos?.[0]}
-          alt={`${vehicle.brand} ${vehicle.model}`}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-          sizes="(max-width: 640px) 140px, 180px"
-        />
-      </Link>
+        {/* Imagem dominante — preenche o card todo. Info reduzida ao
+            essencial (marca + modelo + preço) sobreposta no rodapé sobre
+            gradient escuro, igual ao card principal. Foco visual fica
+            100% na foto do veículo. */}
+        <div className="relative h-full overflow-hidden">
+          <VehicleImage
+            src={vehicle.photos?.[0]}
+            alt={`${vehicle.brand} ${vehicle.model}`}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+            sizes="(max-width: 1024px) 100vw, 42vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-      <div className="py-4 pr-4 sm:py-5 sm:pr-5 flex flex-col">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-primary font-semibold mb-1">
-          {vehicle.brand}
-        </p>
-        <Link href={`/veiculo/${vehicle.slug}`}>
-          <h3 className="text-base sm:text-lg font-bold text-foreground leading-tight group-hover:text-primary transition-colors">
-            {vehicle.model}
-          </h3>
-        </Link>
-
-        <p className="mt-1.5 text-[12px] sm:text-sm text-foreground-secondary leading-snug line-clamp-2">
-          {curationReason(vehicle)}.
-        </p>
-
-        <div className="mt-auto pt-3 flex items-center gap-3">
-          <span className="text-foreground font-semibold text-sm tabular-nums">
-            {formatPrice(vehicle.price)}
-          </span>
-          <span className="ml-auto inline-flex items-center gap-1 text-[12px] font-medium text-primary group-hover:gap-2 transition-all">
-            Ver
-            <ArrowRight className="w-3.5 h-3.5" />
-          </span>
+          <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
+            <p className="text-white/70 text-[10px] uppercase tracking-[0.22em] font-semibold mb-1.5">
+              {vehicle.brand}
+            </p>
+            <h3 className="text-xl md:text-2xl font-bold text-white leading-tight mb-3">
+              {vehicle.model}
+            </h3>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-white font-semibold text-base md:text-lg tabular-nums">
+                {formatPrice(vehicle.price)}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[12px] font-medium text-white/90 group-hover:gap-2 transition-all">
+                Ver
+                <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      </Link>
     </article>
   )
 }

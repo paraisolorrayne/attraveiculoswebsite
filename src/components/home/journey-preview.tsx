@@ -111,7 +111,7 @@ export function JourneyPreview() {
             </Link>
           </Button>
           <p className="text-foreground-secondary text-sm mt-4">
-            Explore cada etapa em detalhes, históricos de clientes e nossa trajetória de 16+ anos
+            Explore cada etapa em detalhes, históricos de clientes e nossa trajetória de 18+ anos
           </p>
         </div>
       </Container>

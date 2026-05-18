@@ -17,7 +17,7 @@ export const CONFIANCA_PAGES: ConfiancaPage[] = [
 		keywords: ['por que comprar na attra', 'attra veículos diferenciais', 'comprar carro luxo seguro', 'loja veículos premium confiável'],
 		sections: [
 			{ heading: 'Curadoria rigorosa de estoque', content: 'Cada veículo que entra no estoque da Attra passa por avaliação detalhada. Verificamos procedência, histórico de manutenção, condição real de pintura e mecânica, e documentação completa. Rejeitamos veículos que não atendem nossos critérios, independente do potencial de lucro.' },
-			{ heading: 'Mais de 15 anos de mercado', content: 'A Attra Veículos opera desde 2009 em Uberlândia, Minas Gerais. São mais de 15 anos construindo reputação com transações transparentes e clientes satisfeitos em todo o Brasil.' },
+			{ heading: 'Mais de 17 anos de mercado', content: 'A Attra Veículos opera desde 2008 em Uberlândia, Minas Gerais. São mais de 17 anos construindo reputação com transações transparentes e clientes satisfeitos em todo o Brasil.' },
 			{ heading: 'Processo transparente de compra', content: 'Da escolha do veículo ao recebimento na sua porta, cada etapa é comunicada com clareza. Sem surpresas, sem custos ocultos e sem pressão de venda. Você decide no seu tempo com todas as informações disponíveis.' },
 			{ heading: 'Suporte pós-venda', content: 'A relação não termina na entrega. Oferecemos suporte para questões de documentação, indicação de oficinas especializadas e acompanhamento do veículo após a compra.' },
 			{ heading: 'Entrega nacional especializada', content: 'Entregamos em todo o Brasil com caminhão fechado, seguro completo e rastreamento em tempo real. O veículo sai do nosso estoque e chega à sua porta com a mesma condição.' },

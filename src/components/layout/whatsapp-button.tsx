@@ -1,15 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
-import { MessageCircle, X, Car, Wrench, HelpCircle, Loader2, Bot } from 'lucide-react'
+import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { sendWhatsAppWebhook, sendToLeadsterWithoutAI, sendToLeadsterWithAI, sendChatMessage, getGeoLocation, generateVehicleMessage, ChatMessage } from '@/lib/webhook'
-import { useToast } from '@/components/ui/toast'
+import { getGeoLocation, generateVehicleMessage } from '@/lib/webhook'
 import { WHATSAPP_NUMBER, isSeoPage } from '@/lib/constants'
-import { GeoLocation } from '@/types'
+import { GeoLocation, WhatsAppWebhookPayload } from '@/types'
 import { useVehicleContext } from '@/contexts/vehicle-context'
-import { usePageChannel, mapChannelToBehavior, type PageBehavior } from '@/hooks/use-page-channel'
 import { useAnalytics } from '@/hooks/use-analytics'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
@@ -23,84 +21,67 @@ const getSeoPageLabel = (path: string): string => {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-// Context-aware messages based on page and behavior
-const getContextMessage = (sourcePage: string, pageBehavior: PageBehavior, vehicleBrand?: string, vehicleModel?: string) => {
+// Context-aware title/subtitle/message based on page and vehicle context
+function getContextMessage(sourcePage: string, vehicleBrand?: string, vehicleModel?: string) {
   if (vehicleBrand && vehicleModel) {
     return {
       title: `Interesse no ${vehicleBrand} ${vehicleModel}?`,
       subtitle: 'Fale com um consultor especializado',
       message: `Olá! Tenho interesse no ${vehicleBrand} ${vehicleModel}. Gostaria de mais informações.`,
-      icon: Car,
       buttonText: 'Tenho interesse',
-      behavior: 'vehicle' as PageBehavior,
     }
   }
 
-  // SEO content pages: WhatsApp direct with page-source tracking
   if (isSeoPage(sourcePage)) {
     const label = getSeoPageLabel(sourcePage)
     return {
       title: 'Falar com especialista',
       subtitle: 'Atendimento direto via WhatsApp',
       message: `Olá! Vim da página "${label}" e gostaria de mais informações. [ref: ${sourcePage}]`,
-      icon: Car,
       buttonText: 'Abrir WhatsApp',
-      behavior: 'vehicle' as PageBehavior,
-    }
-  }
-
-  if (pageBehavior === 'estoque') {
-    return {
-      title: 'Procurando algo específico?',
-      subtitle: 'Fale diretamente no WhatsApp',
-      message: 'Olá! Estou navegando pelos veículos e gostaria de ajuda para encontrar o modelo ideal.',
-      icon: Car,
-      buttonText: 'Abrir WhatsApp',
-      behavior: 'estoque' as PageBehavior,
-    }
-  }
-
-  if (pageBehavior === 'vehicle') {
-    return {
-      title: 'Precisa de ajuda?',
-      subtitle: 'Fale pelo WhatsApp',
-      message: 'Olá! Gostaria de mais informações sobre este veículo.',
-      icon: Car,
-      buttonText: 'Abrir WhatsApp',
-      behavior: 'vehicle' as PageBehavior,
-    }
-  }
-
-  if (sourcePage.includes('financiamento') || sourcePage.includes('servico')) {
-    return {
-      title: 'Dúvidas sobre serviços?',
-      subtitle: 'Tire suas dúvidas agora',
-      message: 'Olá! Gostaria de informações sobre os serviços da Attra.',
-      icon: Wrench,
-      buttonText: 'Iniciar chat',
-      behavior: 'general' as PageBehavior,
-    }
-  }
-
-  if (sourcePage.includes('jornada')) {
-    return {
-      title: 'Quer agendar uma visita?',
-      subtitle: 'Agende agora mesmo',
-      message: 'Olá! Gostaria de agendar uma visita ao showroom da Attra.',
-      icon: Car,
-      buttonText: 'Iniciar chat',
-      behavior: 'general' as PageBehavior,
     }
   }
 
   return {
-    title: 'Fale conosco!',
-    subtitle: '',
-    message: 'Olá! Gostaria de mais informações sobre a Attra Veículos.',
-    icon: Bot,
-    buttonText: 'Iniciar chat',
-    behavior: 'general' as PageBehavior,
+    title: 'Fale conosco',
+    subtitle: 'Atendimento direto via WhatsApp',
+    message: 'Olá! Gostaria de mais informações sobre os veículos disponíveis.',
+    buttonText: 'Abrir WhatsApp',
   }
+}
+
+// Detecta se estamos em viewport mobile (md breakpoint do Tailwind = 768px)
+function isMobileViewport(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(max-width: 767px)').matches
+}
+
+// Detecta se há campo de input em foco — evita interromper o usuário
+function isTypingInForm(): boolean {
+  if (typeof document === 'undefined') return false
+  const el = document.activeElement as HTMLElement | null
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+}
+
+// Dispara o webhook sem bloquear o redirect. Usa sendBeacon quando
+// possível (sobrevive à navegação no mesmo tab); senão, fetch keepalive.
+// Importante: o endpoint final está em sendWhatsAppWebhook, mas como ele
+// é async/await e quebra o user-gesture, replicamos um POST fire-and-forget
+// direto pra rota que o N8N já consome — porém aqui, como o webhook é
+// chamado client-side direto (NEXT_PUBLIC_SDR_WEBHOOK_URL), basta enviar
+// um fetch keepalive enriquecido com o mesmo payload.
+function fireAndForgetWebhook(
+  payload: Omit<WhatsAppWebhookPayload, 'timestamp' | 'sessionId' | 'pageUrl' | 'userAgent' | 'localTimestamp' | 'geoLocation'>,
+  geoLocation: GeoLocation | null,
+) {
+  // Import dinâmico apenas pra delegar o trabalho de montar o payload
+  // enriquecido ao módulo já existente. Não aguardamos a promise — o
+  // redirect acontece em paralelo via anchor.
+  import('@/lib/webhook')
+    .then(({ sendWhatsAppWebhook }) => sendWhatsAppWebhook(payload, geoLocation))
+    .catch(() => null)
 }
 
 export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
@@ -111,58 +92,27 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
-  const [isSendingMessage, setIsSendingMessage] = useState(false)
-  const [inputValue, setInputValue] = useState('')
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
-  const { showToast, hideToast } = useToast()
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLAnchorElement | null>(null)
 
-  // Get vehicle data from context (set by VehicleContextSetter on vehicle pages)
   const vehicleId = vehicle?.vehicleId
   const vehicleBrand = vehicle?.vehicleBrand
   const vehicleModel = vehicle?.vehicleModel
   const vehicleYear = vehicle?.vehicleYear
 
-  // Use pathname for auto-detection, or fallback to sourcePage prop
   const currentPage = sourcePage && sourcePage !== 'global' ? sourcePage : pathname
 
-  // Fetch page channel settings from database
-  const {
-    channelBehavior,
-    customGreeting,
-    isLoading: isLoadingChannel,
-    isEnabled: isChannelEnabled
-  } = usePageChannel(currentPage)
+  const context = getContextMessage(currentPage, vehicleBrand, vehicleModel)
 
-  // Determine page behavior: use DB settings or fallback to default
-  const hasVehicle = Boolean(vehicleId || (vehicleBrand && vehicleModel))
-  const pageBehavior = mapChannelToBehavior(channelBehavior, currentPage, hasVehicle)
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
-    }
-  }, [chatMessages, isSendingMessage])
-
-  const context = getContextMessage(currentPage, pageBehavior, vehicleBrand, vehicleModel)
-  const IconComponent = context.icon
-
-  // Fetch geolocation on mount (only once)
   useEffect(() => {
     const fetchGeoLocation = async () => {
       const location = await getGeoLocation()
-      if (location) {
-        setGeoLocation(location)
-      }
+      if (location) setGeoLocation(location)
     }
     fetchGeoLocation()
   }, [])
 
-  // Track scroll progress
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY
@@ -170,257 +120,188 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0
       setScrollProgress(progress)
     }
-
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Auto-show tooltip after 10 seconds if user hasn't interacted
+  // Auto-open tooltip: apenas desktop (>=md), 15s, e só se o usuário não
+  // estiver digitando em um formulário. Em mobile o tooltip ocupa muito
+  // espaço e atrapalha, então não há auto-open.
   useEffect(() => {
-    if (!hasInteracted && !isChatOpen) {
-      const timer = setTimeout(() => {
-        setIsOpen(true)
-      }, 10000)
-      return () => clearTimeout(timer)
+    if (hasInteracted) return
+    if (isMobileViewport()) return
+
+    const timer = window.setTimeout(() => {
+      if (!isTypingInForm()) setIsOpen(true)
+    }, 15000)
+    return () => window.clearTimeout(timer)
+  }, [hasInteracted])
+
+  // Fecha tooltip ao tocar/clicar fora (mobile-safe, já que onMouseLeave
+  // não dispara em touch).
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handlePointerDown = (e: Event) => {
+      const target = e.target as Node
+      if (
+        tooltipRef.current?.contains(target) ||
+        buttonRef.current?.contains(target)
+      ) {
+        return
+      }
+      setIsOpen(false)
     }
-  }, [hasInteracted, isChatOpen])
 
-  // Generate WhatsApp redirect URL with formatted message including location and year
-  const getWhatsAppRedirectUrl = () => {
-    // SEO pages: use tracked message with page source reference
-    if (isSeoPage(currentPage) && !vehicleBrand) {
-      return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(context.message)}`
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true)
+  }, [isOpen])
+
+  // Fecha tooltip ao pressionar ESC (acessibilidade desktop)
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false)
     }
-    const formattedMessage = generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(formattedMessage)}`
-  }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [isOpen])
 
-  const handleClick = async () => {
-    if (isLoading) return
+  // URL wa.me memoizada — calculada de forma síncrona pra ser usada como
+  // href do anchor (preserva o user-gesture do clique).
+  const whatsAppUrl = useMemo(() => {
+    const message =
+      isSeoPage(currentPage) && !vehicleBrand
+        ? context.message
+        : generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+  }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message])
 
+  const IconComponent = vehicleBrand && vehicleModel ? Car : MessageCircle
+
+  // Disparado pelo clique no anchor — fire-and-forget de analytics e
+  // webhook. Nada aqui pode aguardar promise, senão o navegador descarta
+  // o user-gesture e o popup blocker entra.
+  const handleAnchorClick = () => {
     setHasInteracted(true)
     setIsOpen(false)
-    setIsLoading(true)
 
-    // Track WhatsApp click in analytics with visitor context (includes geolocation)
     const visitorContext = getVisitorContext()
-    trackWhatsAppClick(currentPage, vehicleId ? {
-      id: vehicleId,
-      name: `${vehicleBrand} ${vehicleModel}`,
-      brand: vehicleBrand || '',
-      price: 0, // Price not available in context
-    } : undefined, visitorContext)
 
-    // Rastreia também no banco interno (visitor_page_views.whatsapp_clicked)
-    // já que o redirect é feito via window.open e não por âncora
+    // Analytics — síncrono (gtag/dataLayer push)
+    trackWhatsAppClick(
+      currentPage,
+      vehicleId
+        ? {
+            id: vehicleId,
+            name: `${vehicleBrand} ${vehicleModel}`,
+            brand: vehicleBrand || '',
+            price: 0,
+          }
+        : undefined,
+      visitorContext,
+    )
+
+    // Marcação interna (visitor_page_views.whatsapp_clicked)
     trackInteraction('whatsapp_click', {
       page_path: currentPage,
       vehicle_id: vehicleId,
       vehicle_brand: vehicleBrand,
       vehicle_model: vehicleModel,
-      page_behavior: pageBehavior,
     })
 
-    const basePayload = {
-      eventType: vehicleId ? 'vehicle_inquiry' : 'chat_request' as const,
-      sourcePage: currentPage,
-      context: {
-        vehicleId,
-        vehicleBrand,
-        vehicleModel,
-        vehicleYear,
-        scrollProgress: Math.round(scrollProgress),
-        timeOnPage: Math.round(performance.now() / 1000),
-        userMessage: context.message,
+    // Webhook N8N fire-and-forget (não bloqueia o redirect)
+    fireAndForgetWebhook(
+      {
+        eventType: vehicleId ? 'vehicle_inquiry' : 'chat_request',
+        sourcePage: currentPage,
+        context: {
+          vehicleId,
+          vehicleBrand,
+          vehicleModel,
+          vehicleYear,
+          scrollProgress: Math.round(scrollProgress),
+          timeOnPage: Math.round(performance.now() / 1000),
+          userMessage: context.message,
+        },
       },
-    }
+      geoLocation,
+    )
 
-    // BEHAVIOR 1: Vehicle page - N8N webhook + redirect to WhatsApp
-    if (pageBehavior === 'vehicle') {
-      const loadingId = showToast('loading', 'Conectando ao WhatsApp...')
-
-      // Send to N8N webhook with geolocation
-      await sendWhatsAppWebhook(basePayload, geoLocation)
-
-      hideToast(loadingId)
-      setIsLoading(false)
-
-      // Redirect to WhatsApp with formatted message
-      showToast('success', 'Abrindo WhatsApp...')
-
-      setTimeout(() => {
-        window.open(getWhatsAppRedirectUrl(), '_blank')
-      }, 300)
-      return
-    }
-
-    // BEHAVIOR 2: Estoque page - Leadster sem IA + chat widget estático
-    if (pageBehavior === 'estoque') {
-      const loadingId = showToast('loading', 'Iniciando atendimento...')
-
-      // Send to Leadster (no AI)
-      await sendToLeadsterWithoutAI(basePayload)
-
-      hideToast(loadingId)
-      setIsLoading(false)
-
-      // Open static chat widget (no AI) - use custom greeting if available
-      const greeting = customGreeting || 'Olá! Bem-vindo ao atendimento da Attra Veículos. Em que posso ajudar?'
-      setChatMessages([
-        { role: 'assistant', content: greeting },
-        { role: 'assistant', content: 'Um consultor especializado irá responder sua mensagem em breve. Enquanto isso, pode me contar o que está procurando!' }
-      ])
-      setIsChatOpen(true)
-      return
-    }
-
-    // BEHAVIOR 3: General pages - Leadster com IA + chat widget
-    const loadingId = showToast('loading', 'Iniciando chat...')
-
-    const result = await sendToLeadsterWithAI(basePayload)
-
-    hideToast(loadingId)
-    setIsLoading(false)
-
-    if (result.success) {
-      // Open chat widget with initial message - use custom greeting if available
-      const greeting = customGreeting || 'Olá! Sou o assistente virtual da Attra Veículos. Como posso ajudar você hoje?'
-      setChatMessages([
-        { role: 'assistant', content: greeting }
-      ])
-      setIsChatOpen(true)
-    } else {
-      // Silently fallback to WhatsApp on error - no error message to user
-      console.warn('[WhatsApp] AI chat error, falling back to WhatsApp:', result.message)
-      window.open(getWhatsAppRedirectUrl(), '_blank')
-    }
+    // O navegador segue com a navegação nativa do <a target="_blank">
   }
 
-  // Close chat widget
-  const handleCloseChat = () => {
-    setIsChatOpen(false)
-  }
-
-  // Send message to AI and get response
-  const handleSendMessage = async () => {
-    const message = inputValue.trim()
-    if (!message || isSendingMessage) return
-
-    // Add user message immediately
-    const userMessage: ChatMessage = { role: 'user', content: message }
-    setChatMessages(prev => [...prev, userMessage])
-    setInputValue('')
-    setIsSendingMessage(true)
-
-    // For estoque behavior, just show static response
-    if (pageBehavior === 'estoque') {
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Mensagem recebida! Um consultor especializado entrará em contato em breve. Obrigado!'
-      }])
-      setIsSendingMessage(false)
-      return
-    }
-
-    // Send to AI for general pages
-    try {
-      const result = await sendChatMessage(
-        message,
-        chatMessages,
-        {
-          sourcePage: currentPage,
-          vehicleInfo: vehicleBrand && vehicleModel ? `${vehicleBrand} ${vehicleModel}` : undefined,
-        }
-      )
-
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: result.response
-      }])
-    } catch (error) {
-      console.error('[Chat] Error:', error)
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Desculpe, ocorreu um erro. Um consultor entrará em contato em breve.'
-      }])
-    } finally {
-      setIsSendingMessage(false)
-    }
-  }
-
-  // Get loading text based on behavior
-  const getLoadingText = () => {
-    switch (pageBehavior) {
-      case 'vehicle': return 'Enviando...'
-      case 'estoque': return 'Abrindo WhatsApp...'
-      case 'general': return 'Iniciando chat...'
-    }
-  }
-
-  // Get subtitle text based on behavior (removed from tooltip footer)
-  const getSubtitleText = () => {
-    switch (pageBehavior) {
-      case 'vehicle': return 'Nossa equipe entrará em contato'
-      case 'estoque': return 'Atendimento direto no WhatsApp'
-      case 'general': return '' // Removed "Atendimento inteligente 24h"
-    }
-  }
-
-  // Don't render if channel is disabled for this page or still loading settings
-  if (!isChannelEnabled || isLoadingChannel) {
-    return null
-  }
-
+  // Posicionamento responsivo:
+  // - bottom respeita safe-area-inset (notch / home indicator iOS)
+  // - mobile: tooltip ocupa quase a largura inteira da tela com folga
+  // - desktop (sm+): largura fixa 18rem (w-72)
   return (
     <>
-      {/* Floating button with pulse animation */}
-      <button
-        onClick={isChatOpen ? handleCloseChat : handleClick}
-        onMouseEnter={() => { if (!isLoading && !isChatOpen) { setIsOpen(true); setHasInteracted(true) } }}
-        disabled={isLoading}
+      {/* Floating button (anchor — preserva user-gesture do clique) */}
+      <a
+        ref={buttonRef}
+        href={whatsAppUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleAnchorClick}
+        onMouseEnter={() => {
+          setIsOpen(true)
+          setHasInteracted(true)
+        }}
+        style={{
+          bottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+        }}
         className={cn(
-          'fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full text-white shadow-lg transition-all duration-300 hover:scale-110',
-          pageBehavior === 'general' ? 'bg-primary hover:bg-primary-hover' : 'bg-green-500 hover:bg-green-600',
-          !hasInteracted && !isLoading && !isChatOpen && 'animate-pulse-glow',
-          isLoading && 'opacity-80 cursor-wait'
+          'fixed right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg transition-all duration-300 hover:scale-110',
+          // Pulse-glow limitado a ~4 ciclos (8s) pra não drenar bateria
+          !hasInteracted && 'animate-pulse-glow [animation-iteration-count:4]',
         )}
-        aria-label={isChatOpen ? 'Fechar chat' : 'Iniciar conversa'}
+        aria-label="Falar pelo WhatsApp"
       >
-        {isLoading ? (
-          <Loader2 className="w-6 h-6 animate-spin" />
-        ) : isChatOpen ? (
-          <X className="w-6 h-6" />
-        ) : pageBehavior === 'general' ? (
-          <Bot className="w-6 h-6" />
-        ) : (
-          <MessageCircle className="w-6 h-6" />
-        )}
-      </button>
+        <MessageCircle className="w-6 h-6" />
+      </a>
+
+      {/* Backdrop tocável em mobile pra fechar o tooltip */}
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Fechar tooltip"
+          onClick={() => setIsOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-transparent"
+        />
+      )}
 
       {/* Context-aware tooltip */}
       <div
+        ref={tooltipRef}
+        role="dialog"
+        aria-label={context.title}
+        style={{
+          bottom: 'calc(6rem + env(safe-area-inset-bottom))',
+        }}
         className={cn(
-          'fixed bottom-24 right-6 z-50 bg-background-card border border-border rounded-2xl shadow-2xl p-5 w-72 transition-all duration-300',
-          isOpen && !isLoading && !isChatOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          'fixed right-6 z-50 bg-background-card border border-border rounded-2xl shadow-2xl p-5 transition-all duration-300',
+          // Mobile: largura adaptativa (viewport - 3rem), max 20rem
+          // Desktop (sm+): largura fixa 18rem
+          'w-[calc(100vw-3rem)] max-w-xs sm:w-72',
+          isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
         )}
         onMouseLeave={() => setIsOpen(false)}
       >
         <button
-          onClick={() => { setIsOpen(false); setHasInteracted(true) }}
+          onClick={() => {
+            setIsOpen(false)
+            setHasInteracted(true)
+          }}
           className="absolute top-3 right-3 p-1 text-foreground-secondary hover:text-foreground transition-colors"
+          aria-label="Fechar"
         >
           <X className="w-4 h-4" />
         </button>
 
         <div className="flex items-start gap-3 mb-4">
-          <div className={cn(
-            'p-2 rounded-xl shrink-0',
-            pageBehavior === 'general' ? 'bg-primary/10' : 'bg-green-500/10'
-          )}>
-            <IconComponent className={cn(
-              'w-5 h-5',
-              pageBehavior === 'general' ? 'text-primary' : 'text-green-500'
-            )} />
+          <div className="p-2 rounded-xl shrink-0 bg-green-500/10">
+            <IconComponent className="w-5 h-5 text-green-500" />
           </div>
           <div>
             <p className="text-foreground font-semibold">{context.title}</p>
@@ -430,120 +311,22 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
           </div>
         </div>
 
-        <button
-          onClick={handleClick}
-          disabled={isLoading}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 text-white rounded-xl py-3 px-4 font-medium transition-colors btn-press',
-            pageBehavior === 'general' ? 'bg-primary hover:bg-primary-hover' : 'bg-green-500 hover:bg-green-600',
-            isLoading && 'opacity-80 cursor-wait'
-          )}
+        {/* CTA do tooltip — anchor direto (sem await) */}
+        <a
+          href={whatsAppUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={handleAnchorClick}
+          className="w-full flex items-center justify-center gap-2 text-white rounded-xl py-3 px-4 font-medium transition-colors btn-press bg-green-500 hover:bg-green-600"
         >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : pageBehavior === 'general' ? (
-            <Bot className="w-5 h-5" />
-          ) : (
-            <MessageCircle className="w-5 h-5" />
-          )}
-          {isLoading ? getLoadingText() : context.buttonText}
-        </button>
+          <MessageCircle className="w-5 h-5" />
+          {context.buttonText}
+        </a>
 
-        {getSubtitleText() && (
-          <p className="text-xs text-foreground-secondary text-center mt-3">
-            {getSubtitleText()}
-          </p>
-        )}
+        <p className="text-xs text-foreground-secondary text-center mt-3">
+          Nossa equipe responde no horário comercial
+        </p>
       </div>
-
-      {/* Chat Widget - appears for both estoque (static) and general (AI) pages */}
-      {isChatOpen && (pageBehavior === 'general' || pageBehavior === 'estoque') && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 h-[500px] max-h-[70vh] bg-background-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-up">
-          {/* Chat Header */}
-          <div className={cn(
-            "flex items-center justify-between p-4 border-b border-border text-white rounded-t-2xl",
-            pageBehavior === 'estoque' ? 'bg-secondary' : 'bg-primary'
-          )}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                {pageBehavior === 'estoque' ? <MessageCircle className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-              </div>
-              <div>
-                <p className="font-semibold">{pageBehavior === 'estoque' ? 'Atendimento Attra' : 'Assistente Attra'}</p>
-                <p className="text-xs text-white/80">{pageBehavior === 'estoque' ? 'Aguardando consultor' : 'Online agora'}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleCloseChat}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Chat Messages */}
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-            {chatMessages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={cn(
-                  'max-w-[80%] p-3 rounded-2xl',
-                  msg.role === 'assistant'
-                    ? 'bg-background border border-border rounded-bl-sm'
-                    : 'bg-primary text-white ml-auto rounded-br-sm'
-                )}
-              >
-                <p className="text-sm">{msg.content}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Loading indicator for AI typing */}
-          {isSendingMessage && (
-            <div className="px-4 pb-2">
-              <div className="flex items-center gap-2 text-foreground-secondary">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-xs">Digitando...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Chat Input */}
-          <div className="p-4 border-t border-border">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={isSendingMessage ? 'Aguarde...' : 'Digite sua mensagem...'}
-                disabled={isSendingMessage}
-                className="flex-1 px-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
-                }}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={isSendingMessage || !inputValue.trim()}
-                className="px-4 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSendingMessage ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <MessageCircle className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            <p className="text-xs text-foreground-secondary text-center mt-2">
-              {pageBehavior === 'estoque' ? 'Atendimento humano' : 'Attra Veículos'}
-            </p>
-          </div>
-        </div>
-      )}
     </>
   )
 }
-
