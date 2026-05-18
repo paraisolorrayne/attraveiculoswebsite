@@ -7,7 +7,8 @@ import { Calendar, Newspaper, Trophy, Car, BookOpen, Search } from 'lucide-react
 import { EDITORIAL_SECTION } from '@/lib/constants'
 import { createClient } from '@supabase/supabase-js'
 
-// Revalidate every hour so new weekly articles appear within 1h of the cron job running
+// Primary refresh comes from revalidatePath('/news') inside the weekly ingestion job;
+// this 1h ISR window is just a safety net in case the cron-triggered revalidate fails.
 export const revalidate = 3600
 
 export const metadata: Metadata = {
@@ -117,17 +118,8 @@ function formatDate(dateString: string | Date): string {
   })
 }
 
-function getCurrentWeekRange(): string {
-  const now = new Date()
-  // Adjust to previous Sunday if today is not Sunday
-  const dayOfWeek = now.getDay()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - dayOfWeek)
-
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 6)
-
-  return `${formatDate(weekStart)} - ${formatDate(weekEnd)}`
+function formatWeekRange(start: string, end: string): string {
+  return `${formatDate(start)} - ${formatDate(end)}`
 }
 
 function NewsCard({ article, featured = false }: { article: NewsArticle; featured?: boolean }) {
@@ -276,7 +268,7 @@ export default async function NewsPage() {
                 <SectionHeader
                   icon={Newspaper}
                   title="Destaques da Semana"
-                  subtitle={getCurrentWeekRange()}
+                  subtitle={news.cycle ? formatWeekRange(news.cycle.week_start, news.cycle.week_end) : undefined}
                 />
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {news.featured.map((article) => (
