@@ -61,7 +61,7 @@ const benefits = [
   {
     icon: Award,
     title: 'Especialistas em Premium',
-    description: 'Expertise de 16+ anos no mercado de veículos de luxo, importados e superesportivos.'
+    description: 'Expertise de 18+ anos no mercado de veículos de luxo, importados e superesportivos.'
   },
   {
     icon: Users,
@@ -132,7 +132,7 @@ function CarBuyingServiceSchema() {
       telephone: '+55-34-3014-3232',
       url: 'https://attraveiculos.com.br'
     },
-    description: 'A Attra Veículos compra seu carro premium com avaliação profissional e processo transparente. Especialistas em veículos de luxo há 16+ anos.',
+    description: 'A Attra Veículos compra seu carro premium com avaliação profissional e processo transparente. Especialistas em veículos de luxo há 18+ anos.',
     areaServed: 'BR',
     serviceType: 'Compra de Veículos Premium'
   }
@@ -190,7 +190,7 @@ export default function CompramosSeuCarroPage() {
             <p className="text-lg lg:text-xl text-foreground-secondary mb-8 max-w-3xl mx-auto leading-relaxed">
               A Attra Veículos compra seu veículo de luxo com <strong>avaliação profissional</strong> e
               <strong> processo transparente</strong>.
-              Especialistas em veículos premium há 16+ anos.
+              Especialistas em veículos premium há 18+ anos.
             </p>
 
             {/* Stats */}

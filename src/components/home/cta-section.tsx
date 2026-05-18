@@ -7,7 +7,7 @@ const ctaItems = [
   {
     icon: Globe,
     title: 'Importação Exclusiva',
-    description: 'Desde 2009 trazendo Ferrari, Lamborghini, Porsche, McLaren e outros supercarros para o Brasil com segurança e procedência.',
+    description: 'Desde 2008 trazendo Ferrari, Lamborghini, Porsche, McLaren e outros supercarros para o Brasil com segurança e procedência.',
     href: '/servicos#importacao',
     cta: 'Quero importar um supercarro',
     featured: true,

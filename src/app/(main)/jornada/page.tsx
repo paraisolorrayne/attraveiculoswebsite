@@ -120,7 +120,7 @@ const testimonials = [
 
 const achievements = [
   {
-    year: 2009,
+    year: 2008,
     title: 'Fundação',
     description:
       'A Attra Veículos nasceu com o propósito de oferecer uma experiência diferenciada na compra e venda de veículos, unindo transparência, credibilidade e atendimento personalizado. Fundada como uma empresa familiar, a Attra foi construída sobre valores sólidos, com foco em profissionalização, respeito aos processos e compromisso com o cliente.',
@@ -493,10 +493,10 @@ export default function JornadaPage() {
             ))}
           </div>
 
-          {/* Editorial claim — based on cumulative inventory since 2009 */}
+          {/* Editorial claim — based on cumulative inventory since 2008 */}
           <div className="text-center mt-12">
             <p className="text-foreground-secondary text-sm">
-              Mais de <strong className="text-foreground">500 supercarros</strong> já passaram pela Attra desde 2009.
+              Mais de <strong className="text-foreground">500 supercarros</strong> já passaram pela Attra desde 2008.
               Acima estão alguns dos destaques mais recentes.
             </p>
           </div>
@@ -526,6 +526,36 @@ export default function JornadaPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* Bridge — convite para conhecer a Attra (página /sobre) antes do
+          CTA final. Curto e narrativo, com botão outline pra não competir
+          com os CTAs principais (visita VIP / curadoria à distância). */}
+      <section className="py-16 lg:py-20 bg-background border-y border-border">
+        <Container>
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Users className="w-6 h-6 text-primary" />
+              <span className="text-primary font-medium uppercase tracking-wider text-sm">
+                Quem está por trás
+              </span>
+            </div>
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
+              Conheça a Attra
+            </h2>
+            <p className="text-foreground-secondary text-base lg:text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
+              18+ anos curando veículos premium, uma operação própria e uma
+              equipe dedicada a transformar cada compra em experiência. Saiba
+              mais sobre a história, o time e os valores por trás da curadoria.
+            </p>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/sobre" className="inline-flex items-center gap-2">
+                Conhecer a Attra
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
           </div>
         </Container>
       </section>

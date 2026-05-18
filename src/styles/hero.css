@@ -221,3 +221,110 @@
   }
 }
 
+/* HomeHero canvas + overlays — adaptativos light/dark.
+
+   Light mode usa um off-white luminoso (#ecebea) inspirado em showrooms
+   premium tipo Avantgarde — claro como branco mas com leve calor neutro,
+   evitando o branco clínico #FFFFFF. Harmoniza com o wine (#A8302E) da
+   identidade Attra.
+
+   Dark mode usa #0C0D0E — composição visual do bg-background-card/40
+   sobre --background, que é a cor de fundo da seção TrustStrip
+   ("Por que confiar na Attra"). Mantém continuidade visual entre
+   o hero e a seção que vem logo abaixo. */
+
+/* Cor base da <section> — substitui bg-background do Tailwind no hero */
+:root .home-hero-canvas {
+  background-color: #ecebea;
+}
+.dark .home-hero-canvas {
+  background-color: #0C0D0E;
+}
+
+/* Mobile vertical overlay — RGBA do canvas correspondente */
+:root .home-hero-overlay-mobile {
+  background: linear-gradient(
+    to bottom,
+    rgba(236, 235, 234, 0.92) 0%,
+    rgba(236, 235, 234, 0.55) 35%,
+    rgba(236, 235, 234, 0.45) 60%,
+    rgba(236, 235, 234, 0.85) 100%
+  );
+}
+.dark .home-hero-overlay-mobile {
+  background: linear-gradient(
+    to bottom,
+    rgba(12, 13, 14, 0.92) 0%,
+    rgba(12, 13, 14, 0.55) 35%,
+    rgba(12, 13, 14, 0.45) 60%,
+    rgba(12, 13, 14, 0.85) 100%
+  );
+}
+
+/* Desktop diagonal overlay — cria a "zona do headline" à esquerda */
+:root .home-hero-overlay-desktop {
+  background: linear-gradient(
+    125deg,
+    #ecebea 0%,
+    #ecebea 15%,
+    rgba(236, 235, 234, 0.9) 28%,
+    rgba(236, 235, 234, 0.7) 38%,
+    rgba(236, 235, 234, 0.45) 48%,
+    rgba(236, 235, 234, 0.22) 58%,
+    rgba(236, 235, 234, 0.08) 68%,
+    transparent 78%
+  );
+}
+.dark .home-hero-overlay-desktop {
+  background: linear-gradient(
+    125deg,
+    #060708 0%,
+    #060708 15%,
+    rgba(12, 13, 14, 0.9) 28%,
+    rgba(12, 13, 14, 0.7) 38%,
+    rgba(12, 13, 14, 0.45) 48%,
+    rgba(12, 13, 14, 0.22) 58%,
+    rgba(12, 13, 14, 0.08) 68%,
+    transparent 78%
+  );
+}
+
+/* Bottom darkening — sutil em ambos os temas, só reforça leitura da
+   progress bar e do bottom-stats */
+:root .home-hero-bottom-fade {
+  background: linear-gradient(to top, rgba(236, 235, 234, 0.6), transparent);
+}
+.dark .home-hero-bottom-fade {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+}
+
+/* Texture layer — quebra a chapação da zona do headline com radial
+   gradients sutis que criam halo/vinheta. Em light mode adiciona
+   sombra suave (sensação de profundidade); em dark adiciona um halo
+   leve no centro do bloco e vinheta nas bordas. Opacidades baixas
+   (≤8%) garantem que a leitura do texto não é prejudicada. */
+:root .home-hero-texture {
+  background:
+    radial-gradient(ellipse 45% 55% at 18% 50%, rgba(0, 0, 0, 0.06), transparent 70%),
+    radial-gradient(ellipse 80% 90% at -5% 110%, rgba(0, 0, 0, 0.05), transparent 65%);
+}
+.dark .home-hero-texture {
+  background:
+    radial-gradient(ellipse 50% 60% at 20% 45%, rgba(255, 255, 255, 0.028), transparent 72%),
+    radial-gradient(ellipse 60% 80% at 0% 100%, rgba(0, 0, 0, 0.45), transparent 65%),
+    radial-gradient(ellipse 45% 60% at 0% 0%, rgba(0, 0, 0, 0.35), transparent 60%);
+}
+
+/* HomeHero CTA primário — toque sutil wine. Hover preenche o botão com
+   wine sólido e mantém o texto branco (vermelho/branco lê melhor que
+   vermelho/preto), dando o ápice de chamada de atenção alinhado ao
+   primary Attra (#9A1C1C). */
+.hero-cta-primary:hover {
+  background-color: #A8302E !important;
+  color: #FFFFFF !important;
+  border-color: #A8302E !important;
+}
+.hero-cta-primary:hover svg {
+  color: #FFFFFF;
+}
+

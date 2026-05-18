@@ -9,7 +9,7 @@ const pillars = [
   {
     icon: Repeat,
     title: 'Confiança',
-    subtitle: 'Desde 2009',
+    subtitle: 'Desde 2008',
     description: 'Cada negociação bem conduzida e cada indicação espontânea ajudaram a formar uma rede sólida de clientes e parceiros.',
   },
   {
@@ -75,7 +75,7 @@ export function ProofOfSolidity() {
             Construindo reputação, carro a carro
           </SectionHeading>
           <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
-            Desde 2009, a Attra cresceu de forma orgânica, baseada em algo que não pode ser comprado
+            Desde 2008, a Attra cresceu de forma orgânica, baseada em algo que não pode ser comprado
             nem acelerado: a confiança. Cada negociação bem conduzida, cada indicação espontânea e cada
             parceria consolidada ajudaram a formar uma rede sólida de clientes, parceiros e instituições financeiras.
           </p>

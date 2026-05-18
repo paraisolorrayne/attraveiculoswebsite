@@ -7,7 +7,7 @@ const features = [
   {
     icon: Award,
     title: 'Referência em MG',
-    description: 'Há 16+ anos sendo referência no mercado de veículos premium em Minas Gerais.',
+    description: 'Há 18+ anos sendo referência no mercado de veículos premium em Minas Gerais.',
   },
   {
     icon: MapPin,
@@ -35,7 +35,7 @@ export function AboutSummary() {
           <div>
             <span className="text-primary font-medium mb-2 block">Sobre a Attra Veículos</span>
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Excelência em veículos premium desde 2009
+              Excelência em veículos premium desde 2008
             </h2>
             <p className="text-foreground-secondary mb-6">
               A Attra Veículos é referência no segmento de veículos nacionais, importados, 
