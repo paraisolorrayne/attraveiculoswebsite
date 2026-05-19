@@ -119,23 +119,24 @@ export function getFallbackVehicleSections(vehicle: Vehicle): VehicleSections {
  * Constraints reforçados:
  *   - Use APENAS dados fornecidos
  *   - Tom técnico/factual
- *   - 2-3 frases curtas
+ *   - 2 frases curtas e COMPLETAS
  *   - Sem aspas/títulos/markdown
+ *   - Output AUTÔNOMO — termine sempre com ponto final
  */
 function buildSectionPrompt(vehicle: Vehicle, section: SectionKind): string {
   const sectionInstructions = {
-    overview: 'Resumo geral do veículo. Mencione marca, modelo, ano e quilometragem. Indique o segmento (esportivo, SUV, sedã etc.) e se aplica, a procedência ou destaque técnico mais relevante.',
-    exterior: 'Foco no design exterior: linhas da carroceria, cor, tipo de carroceria, rodas (se a potência ou esportividade sugerir destaque). Descrição visual factual baseada na cor e tipo.',
-    interior: 'Foco no interior: tipo de câmbio, conforto, acabamento típico da categoria. Use cor da carroceria como referência indireta se relevante. Não invente detalhes do interior (materiais específicos, cor de banco etc.) — limite-se ao que é genérico do modelo.',
+    overview: 'Apresente o veículo em sua essência: marca, modelo, ano, quilometragem e segmento (esportivo, SUV, sedã, conversível etc.). Conecte as informações em frases fluidas, não enumere.',
+    exterior: 'Descreva o design exterior usando carroceria e cor. Conecte os elementos em uma observação visual coerente. Mencione potência apenas se >= 400 cv (indica esportividade visual). Não cite materiais ou detalhes que não estejam nos dados.',
+    interior: 'Descreva o interior usando apenas câmbio, motorização (não invente bancos, painel ou materiais). Use linguagem genérica do segmento — ex: "interior orientado a performance" pra esportivos, "interior espaçoso" pra SUVs.',
   }
 
   const km = vehicle.mileage === 0
-    ? '0 km (zero km)'
+    ? '0 km (zero quilômetro)'
     : `${vehicle.mileage.toLocaleString('pt-BR')} km`
   const potencia = vehicle.horsepower ? `${vehicle.horsepower} cv` : 'não informada'
   const version = vehicle.version ? ` ${vehicle.version}` : ''
 
-  return `Escreva 2-3 frases factuais para a seção "${section.toUpperCase()}" da página de um veículo premium.
+  return `Escreva exatamente 2 frases factuais e COMPLETAS para a seção "${section.toUpperCase()}" da página de um veículo premium.
 
 ${sectionInstructions[section]}
 
@@ -152,15 +153,17 @@ DADOS DO VEÍCULO (use APENAS estes):
 - Potência: ${potencia}
 - Categoria: ${vehicle.category ?? 'Premium'}
 
-REGRAS:
-1. Português do Brasil.
-2. Máximo 3 frases curtas. Total entre 30 e 60 palavras.
-3. Tom técnico e objetivo. Proibido: "impressionante", "magnífico", "deslumbrante", "marcante", "deslumbra", "extraordinário", "luxuoso", "imponente" e clichês similares.
-4. Use APENAS os dados acima. NÃO INVENTE: opcionais não listados, materiais do interior, cor de banco, detalhes de acabamento, equipamentos não mencionados.
-5. Se um dado relevante para a seção não existir, evite a área (não diga "informação não disponível"; apenas omita).
-6. Não use o nome completo "marca modelo" mais de uma vez no parágrafo.
+REGRAS CRÍTICAS:
+1. EXATAMENTE 2 frases. Ambas COMPLETAS, terminando com ponto final.
+2. Total entre 25 e 45 palavras.
+3. Português do Brasil.
+4. Texto COESO: as 2 frases devem se conectar logicamente. Não enumere ("Tem X. Tem Y."); descreva ("Conta com X, complementado por Y.").
+5. Tom técnico e objetivo. Proibido: "impressionante", "magnífico", "deslumbrante", "marcante", "extraordinário", "luxuoso", "imponente" e clichês similares.
+6. Use APENAS os dados acima. NÃO INVENTE: opcionais não listados, materiais do interior, cor de banco, equipamentos não mencionados.
+7. Se um dado não existir, omita (não escreva "informação não disponível").
+8. Mencione o nome completo "marca modelo" no máximo UMA vez.
 
-Entregue APENAS o parágrafo. Sem título, sem aspas, sem listas, sem markdown.`
+Entregue APENAS o parágrafo. Sem título, sem aspas, sem listas, sem markdown. Ambas as frases COMPLETAS.`
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
@@ -201,7 +204,10 @@ async function generateSectionCopy(
             temperature: 0.5,
             topK: 32,
             topP: 0.9,
-            maxOutputTokens: 280,
+            // 600 tokens = ~450 palavras. 2 frases curtas (25-45 palavras)
+            // cabem com folga >10x. Margem grande pra evitar truncamento
+            // quando Gemini decide ser verbose.
+            maxOutputTokens: 600,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -219,13 +225,44 @@ async function generateSectionCopy(
     }
 
     const data = await response.json()
-    const generated = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!generated || typeof generated !== 'string' || generated.trim().length === 0) {
+    const candidate = data.candidates?.[0]
+    // Gemini pode retornar múltiplos parts (especialmente com thinking
+    // habilitado ou outputs longos). Concatenar TODOS pra não perder
+    // o final do texto.
+    const parts: Array<{ text?: string }> = candidate?.content?.parts ?? []
+    const generated = parts
+      .map((p) => (typeof p?.text === 'string' ? p.text : ''))
+      .join('')
+
+    if (!generated || generated.trim().length === 0) {
       console.error(`[vehicle-sections] Gemini ${section} retornou texto vazio`)
       return null
     }
 
-    return sanitizeCopy(generated)
+    // Detecta truncamento por limite de tokens. Quando MAX_TOKENS, descarta
+    // a saída (a frase ficou cortada) — o caller persiste null e o
+    // componente cai pro fallback estático. Próxima execução do
+    // preprocess vai tentar de novo (idempotente).
+    const finishReason = candidate?.finishReason
+    if (finishReason === 'MAX_TOKENS') {
+      console.warn(
+        `[vehicle-sections] Gemini ${section} truncado (MAX_TOKENS). Descartando — fallback estático será usado.`,
+      )
+      return null
+    }
+
+    const sanitized = sanitizeCopy(generated)
+
+    // Heurística adicional: se não termina com pontuação, provavelmente
+    // foi cortado em algum ponto. Loga warning mas usa mesmo assim
+    // (sanitize pode ter removido pontuação por engano).
+    if (!/[.!?]$/.test(sanitized)) {
+      console.warn(
+        `[vehicle-sections] Gemini ${section} não termina com pontuação (finishReason=${finishReason}). Texto: "${sanitized.substring(0, 100)}..."`,
+      )
+    }
+
+    return sanitized
   } catch (error) {
     console.error(`[vehicle-sections] Gemini ${section} falhou:`, error instanceof Error ? error.message : error)
     return null
