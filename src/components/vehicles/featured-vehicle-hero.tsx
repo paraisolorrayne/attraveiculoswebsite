@@ -34,31 +34,32 @@ export function FeaturedVehicleHero({ vehicle, noBgPhotoUrl }: FeaturedVehicleHe
           </div>
 
           {/* Center: Vehicle image.
-              - Com remove-bg (PNG transparente): carro flutuante sobre o
-                background do hero — sem container/card/shadow/border.
-                object-contain mantém proporção, object-position center.
-              - Sem remove-bg (cache miss): cai pra foto original dentro
-                de um card com bordas, igual o layout anterior. */}
-          <div className="relative z-10 lg:w-2/5 lg:order-2 flex justify-center w-2/5 lg:w-2/5 shrink-0">
+              Aumentei a coluna de lg:w-2/5 → lg:w-1/2 e o max-width da
+              foto de lg:max-w-lg (512px) → lg:max-w-2xl (672px) pra dar
+              mais destaque ao carro destacado. As outras colunas se ajustam
+              proporcionalmente abaixo.
+              - Com remove-bg (PNG transparente): carro flutuante sem card.
+              - Sem remove-bg (cache miss): cai pro layout com border/shadow. */}
+          <div className="relative z-10 lg:w-1/2 lg:order-2 flex justify-center w-2/5 shrink-0">
             {useTransparent ? (
-              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-md lg:max-w-lg">
+              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-lg lg:max-w-2xl">
                 <Image
                   src={noBgPhotoUrl!}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   fill
                   className="object-contain drop-shadow-2xl"
-                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 40vw"
+                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 50vw"
                   priority
                 />
               </div>
             ) : (
-              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-md lg:max-w-lg rounded-lg sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-xl shadow-black/15 border border-border/50">
+              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-lg lg:max-w-2xl rounded-lg sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-xl shadow-black/15 border border-border/50">
                 <VehicleImage
                   src={vehicle.photos?.[0]}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   fill
                   className="object-cover drop-shadow-2xl mix-blend-lighten"
-                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 40vw"
+                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 50vw"
                   priority
                 />
               </div>
@@ -66,8 +67,10 @@ export function FeaturedVehicleHero({ vehicle, noBgPhotoUrl }: FeaturedVehicleHe
           </div>
 
           {/* Right (mobile): Brand + Model + specs inline.
-              Left (desktop): Brand + Model info large. */}
-          <div className="relative z-10 lg:w-2/5 lg:order-1 flex-1 text-left lg:text-left space-y-1 sm:space-y-3 lg:space-y-4 min-w-0">
+              Left (desktop): Brand + Model info large.
+              Coluna reduzida pra lg:w-[30%] (era 2/5=40%) — sobra do espaço
+              foi pra coluna da imagem. */}
+          <div className="relative z-10 lg:w-[30%] lg:order-1 flex-1 text-left lg:text-left space-y-1 sm:space-y-3 lg:space-y-4 min-w-0">
             <p className="text-primary text-[9px] sm:text-xs font-bold uppercase tracking-[0.2em]">
               {vehicle.brand}
             </p>
@@ -95,9 +98,9 @@ export function FeaturedVehicleHero({ vehicle, noBgPhotoUrl }: FeaturedVehicleHe
           </div>
 
           {/* Right (desktop only): Specs card.
-              lg:-ml-8 puxa o card pra esquerda em desktop, deixando ele
-              colado no veículo (em vez de afastado no canto direito). */}
-          <div className="hidden sm:flex relative z-10 lg:w-1/5 lg:order-3 lg:-ml-8 justify-center lg:justify-end w-full sm:w-auto">
+              Coluna lg:w-[20%] (era 1/5=20%, mantido) + lg:-ml-8 pra puxar
+              pra esquerda e ficar colado no veículo. Total: 30% + 50% + 20% = 100%. */}
+          <div className="hidden sm:flex relative z-10 lg:w-[20%] lg:order-3 lg:-ml-8 justify-center lg:justify-end w-full sm:w-auto">
             <div className="bg-background-card border border-border rounded-xl p-3 sm:p-5 shadow-lg min-w-[180px] w-full sm:w-auto">
               <div className="flex sm:block gap-4 sm:gap-0 justify-between sm:space-y-4">
                 <div className="flex-1 sm:flex-none">
