@@ -260,9 +260,32 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
           ============================================================ */}
       <div className="hidden lg:grid grid-cols-[45fr_55fr] relative w-full h-[100svh] min-h-[640px] max-h-[920px] overflow-hidden">
 
-        {/* COLUNA ESQUERDA — Editorial copy (texto + CTAs) */}
+        {/* BACKGROUND fixo do showroom — cobre o hero inteiro. Carro PNG
+            transparente é renderizado por cima, alinhado à base do chão
+            do showroom (ver objectPosition na coluna direita). */}
+        <Image
+          src="/images/hero-showroom-bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
+          className="absolute inset-0 z-0 select-none pointer-events-none"
+        />
+
+        {/* Overlay sutil à esquerda — garante contraste do texto sobre
+            qualquer reflexo/cor do showroom. Gradient horizontal forte
+            à esquerda (zona do texto) e transparente à direita (zona
+            do carro). Adapta light/dark via classe. */}
+        <div
+          aria-hidden="true"
+          className="home-hero-overlay-desktop absolute inset-0 z-[1] pointer-events-none"
+        />
+
+        {/* COLUNA ESQUERDA — Editorial copy (texto + CTAs).
+            pl-[14%] empurra o bloco levemente pro centro (era pl-[10%]). */}
         <div className="relative z-10 flex flex-col justify-center items-start text-left
-                        pl-[10%] pr-8 pt-24 pb-32">
+                        pl-[14%] pr-8 pt-24 pb-32">
 
           {/* Eyebrow */}
           <div className="flex items-center gap-4 mb-9">
@@ -334,87 +357,23 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
           </div>
         </div>
 
-        {/* COLUNA DIREITA — Foto do veículo com WATERMARK do modelo atrás
-            + SOMBRA elíptica embaixo simulando chão. Estrutura em camadas
-            (do fundo pro frente):
-              1. Watermark gigante do modelo (texto)
-              2. Brand sutil acima do watermark
-              3. Sombra elíptica embaixo (chão)
-              4. Carro PNG transparente (z-10)
+        {/* COLUNA DIREITA — Carro PNG transparente alinhado à base do
+            showroom (object-position center 88%). O background do showroom
+            já provê todo o cenário (parede de vidro, plantas, chão), então
+            o carro só precisa ser sobreposto no "chão" da imagem.
             Quando o cache de remove-bg está em miss, cai pra foto original
-            com mask radial — nesse caso o watermark fica mais visível
-            mas ainda atrás (efeito intencional). */}
-        <div className="relative h-full overflow-hidden">
-
-          {/* Watermark do modelo do veículo ativo — texto gigante atrás
-              do carro. Estilo showroom premium (Lambo, McLaren, Ferrari).
-              Opacidade baixa em ambos os temas pra não competir com o
-              carro mas dar identidade visual ao bloco. */}
-          {activeVehicle && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none"
-            >
-              {/* Brand pequeno acima do watermark */}
-              <p
-                className="text-[10px] sm:text-xs uppercase tracking-[0.4em] font-semibold mb-3 opacity-70"
-                style={{ color: WINE }}
-              >
-                {activeVehicle.brand}
-              </p>
-              {/* Modelo gigante — clamp pra crescer com viewport */}
-              <span
-                className="block font-black uppercase text-foreground/[0.08] tracking-tighter leading-none whitespace-nowrap"
-                style={{
-                  fontFamily: 'var(--font-montserrat)',
-                  fontSize: 'clamp(6rem, 14vw, 13rem)',
-                  letterSpacing: '-0.04em',
-                }}
-              >
-                {activeVehicle.model}
-              </span>
-            </div>
-          )}
-
-          {/* Sombra elíptica embaixo do carro — simula chão / dá
-              profundidade pro carro "flutuando". Posicionada absolutamente
-              no fundo, suavemente esmaecendo dos lados. */}
-          {activeVehicle && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-[10%] bottom-[8%] h-[8%] pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse 50% 100% at 50% 50%, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.25) 40%, transparent 75%)',
-                filter: 'blur(4px)',
-              }}
-            />
-          )}
-
-          {/* Slides — fotos do veículo (PNG transparente quando processado).
-              z-10 garante que ficam ACIMA do watermark e da sombra. */}
+            sem mask (vai aparecer com fundo próprio, look mais cru — caso
+            raro depois do preprocess). */}
+        <div className="relative h-full z-10">
           {slides.length > 0 ? (
             slides.map((vehicle, i) => {
               const noBgUrl = noBgPhotoMap[vehicle.id]
               const photoUrl = noBgUrl ?? vehicle.photos[0]
-              const isTransparent = !!noBgUrl
               return (
                 <div
                   key={vehicle.id}
-                  className="absolute inset-0 z-10 transition-opacity duration-[1500ms] ease-in-out"
-                  style={{
-                    opacity: i === safeIndex ? 1 : 0,
-                    // Mask só na foto original (sem alpha). PNG transparente
-                    // já tem alpha channel resolvendo a transição natural.
-                    ...(isTransparent
-                      ? {}
-                      : {
-                          WebkitMaskImage:
-                            'radial-gradient(ellipse 95% 100% at 65% 50%, black 50%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.4) 85%, transparent 100%)',
-                          maskImage:
-                            'radial-gradient(ellipse 95% 100% at 65% 50%, black 50%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.4) 85%, transparent 100%)',
-                        }),
-                  }}
+                  className="absolute inset-0 transition-opacity duration-[1500ms] ease-in-out"
+                  style={{ opacity: i === safeIndex ? 1 : 0 }}
                   aria-hidden={i !== safeIndex}
                 >
                   <Image
@@ -422,15 +381,17 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
                     alt={`${vehicle.brand} ${vehicle.model}`}
                     fill
                     priority={i === 0}
-                    style={{ objectFit: 'contain', objectPosition: 'center center' }}
+                    // object-position '50% 88%' empurra o carro pra parte
+                    // inferior da coluna, alinhando a base com o chão do
+                    // showroom no background. Ajustar entre 80-92% se
+                    // precisar fine-tune.
+                    style={{ objectFit: 'contain', objectPosition: '50% 88%' }}
                     sizes="55vw"
                   />
                 </div>
               )
             })
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0f0f0f] to-[#000]" />
-          )}
+          ) : null}
         </div>
 
         {/* Vehicle caption — bottom-left (sobre a coluna do texto) */}
