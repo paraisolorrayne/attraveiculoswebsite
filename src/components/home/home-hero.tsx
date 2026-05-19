@@ -334,13 +334,65 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
           </div>
         </div>
 
-        {/* COLUNA DIREITA — Foto do veículo. Quando temos a versão sem
-            background (PNG transparente do bucket vehicle-hero-assets), o
-            carro aparece "flutuando" sobre o fundo do hero — sem mask, sem
-            moldura, sem fade artificial. Quando o cache ainda não foi
-            gerado (cache miss = primeira visita), cai pra foto original
-            com mask radial pra suavizar o quadrado. */}
-        <div className="relative h-full">
+        {/* COLUNA DIREITA — Foto do veículo com WATERMARK do modelo atrás
+            + SOMBRA elíptica embaixo simulando chão. Estrutura em camadas
+            (do fundo pro frente):
+              1. Watermark gigante do modelo (texto)
+              2. Brand sutil acima do watermark
+              3. Sombra elíptica embaixo (chão)
+              4. Carro PNG transparente (z-10)
+            Quando o cache de remove-bg está em miss, cai pra foto original
+            com mask radial — nesse caso o watermark fica mais visível
+            mas ainda atrás (efeito intencional). */}
+        <div className="relative h-full overflow-hidden">
+
+          {/* Watermark do modelo do veículo ativo — texto gigante atrás
+              do carro. Estilo showroom premium (Lambo, McLaren, Ferrari).
+              Opacidade baixa em ambos os temas pra não competir com o
+              carro mas dar identidade visual ao bloco. */}
+          {activeVehicle && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none"
+            >
+              {/* Brand pequeno acima do watermark */}
+              <p
+                className="text-[10px] sm:text-xs uppercase tracking-[0.4em] font-semibold mb-3 opacity-70"
+                style={{ color: WINE }}
+              >
+                {activeVehicle.brand}
+              </p>
+              {/* Modelo gigante — clamp pra crescer com viewport */}
+              <span
+                className="block font-black uppercase text-foreground/[0.08] tracking-tighter leading-none whitespace-nowrap"
+                style={{
+                  fontFamily: 'var(--font-montserrat)',
+                  fontSize: 'clamp(6rem, 14vw, 13rem)',
+                  letterSpacing: '-0.04em',
+                }}
+              >
+                {activeVehicle.model}
+              </span>
+            </div>
+          )}
+
+          {/* Sombra elíptica embaixo do carro — simula chão / dá
+              profundidade pro carro "flutuando". Posicionada absolutamente
+              no fundo, suavemente esmaecendo dos lados. */}
+          {activeVehicle && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-[10%] bottom-[8%] h-[8%] pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(ellipse 50% 100% at 50% 50%, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.25) 40%, transparent 75%)',
+                filter: 'blur(4px)',
+              }}
+            />
+          )}
+
+          {/* Slides — fotos do veículo (PNG transparente quando processado).
+              z-10 garante que ficam ACIMA do watermark e da sombra. */}
           {slides.length > 0 ? (
             slides.map((vehicle, i) => {
               const noBgUrl = noBgPhotoMap[vehicle.id]
@@ -349,7 +401,7 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
               return (
                 <div
                   key={vehicle.id}
-                  className="absolute inset-0 transition-opacity duration-[1500ms] ease-in-out"
+                  className="absolute inset-0 z-10 transition-opacity duration-[1500ms] ease-in-out"
                   style={{
                     opacity: i === safeIndex ? 1 : 0,
                     // Mask só na foto original (sem alpha). PNG transparente
