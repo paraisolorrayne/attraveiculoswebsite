@@ -18,11 +18,16 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const REPLICATE_API_URL = 'https://api.replicate.com/v1/predictions'
-// "851-labs/background-remover" é uma das versões mais robustas de rembg
-// para fotos de produto (incluindo carros). Atualize o hash quando sair
-// versão melhor — o modelo aceita um simples { image: <url> }.
-const REPLICATE_MODEL_VERSION = 'a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc'
+// Modelo: BRIA RMBG-2.0 (`bria/remove-background`). Especializado em fotos
+// de produto comercial — bordas mais precisas em rodas vazadas, vidros,
+// espelhos e reflexos no piso. Custo ~$0.011/img (vs $0.005 do 851-labs
+// anterior). Pra fotos de carros premium da Attra, vale a precisão extra.
+//
+// Usamos o endpoint path-based (`/v1/models/{owner}/{name}/predictions`)
+// que aceita automaticamente a última versão estável do modelo — não
+// precisamos atualizar version hashes manualmente.
+const REPLICATE_MODEL = 'bria/remove-background'
+const REPLICATE_API_URL = `https://api.replicate.com/v1/models/${REPLICATE_MODEL}/predictions`
 
 const REPLICATE_POLL_INTERVAL_MS = 2000
 const REPLICATE_TIMEOUT_MS = 60_000
@@ -94,8 +99,9 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
         'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
       },
+      // Endpoint path-based (`/v1/models/.../predictions`) não precisa de
+      // `version` — usa automaticamente a versão estável mais recente.
       body: JSON.stringify({
-        version: REPLICATE_MODEL_VERSION,
         input: { image: imageUrl },
       }),
     })
@@ -131,11 +137,26 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
       const status = pollData.status
 
       if (status === 'succeeded') {
-        // output é geralmente uma string com a URL do PNG
+        // Diferentes modelos rembg retornam output em formatos distintos:
+        //   - string: "https://replicate.delivery/..."
+        //   - array: ["https://..."]
+        //   - objeto: { image: "https://..." } ou { url: "https://..." }
+        // Cobrimos os 3 casos defensivamente — se algum modelo novo aparecer
+        // com formato diferente, vai logar e retornar null pra fallback.
         const output = pollData.output
-        const outputUrl = typeof output === 'string' ? output : Array.isArray(output) ? output[0] : null
+        let outputUrl: string | null = null
+        if (typeof output === 'string') {
+          outputUrl = output
+        } else if (Array.isArray(output) && typeof output[0] === 'string') {
+          outputUrl = output[0]
+        } else if (output && typeof output === 'object') {
+          outputUrl = output.image ?? output.url ?? output.output ?? null
+        }
         if (!outputUrl) {
-          console.error('[vehicle-hero-asset] Replicate succeeded mas output inesperado:', JSON.stringify(output).substring(0, 200))
+          console.error(
+            '[vehicle-hero-asset] Replicate succeeded mas output inesperado:',
+            JSON.stringify(output).substring(0, 200),
+          )
           return null
         }
         return outputUrl
