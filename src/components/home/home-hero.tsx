@@ -357,18 +357,20 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
           </div>
         </div>
 
-        {/* COLUNA DIREITA — Carro PNG transparente alinhado à base do
-            showroom (object-position center 88%). O background do showroom
-            já provê todo o cenário (parede de vidro, plantas, chão), então
-            o carro só precisa ser sobreposto no "chão" da imagem.
-            Quando o cache de remove-bg está em miss, cai pra foto original
-            sem mask (vai aparecer com fundo próprio, look mais cru — caso
-            raro depois do preprocess). */}
+        {/* COLUNA DIREITA — comportamento adaptativo:
+            1. Se URL for composite (gerada por Flux Fill com bg integrado):
+               renderiza full-coverage da coluna, sem alinhamento ao chão
+               (o bg já está embutido na imagem).
+            2. Se URL for no_bg (PNG transparente): carro flutuante alinhado
+               ao chão do showroom fixo (object-position 50% 88%).
+            3. Se nada: foto original como fallback.
+            Detecta pelo path: `/composite/...` vs `/hero/...`. */}
         <div className="relative h-full z-10">
           {slides.length > 0 ? (
             slides.map((vehicle, i) => {
-              const noBgUrl = noBgPhotoMap[vehicle.id]
-              const photoUrl = noBgUrl ?? vehicle.photos[0]
+              const cachedUrl = noBgPhotoMap[vehicle.id]
+              const photoUrl = cachedUrl ?? vehicle.photos[0]
+              const isComposite = !!cachedUrl && cachedUrl.includes('/composite/')
               return (
                 <div
                   key={vehicle.id}
@@ -381,11 +383,14 @@ export function HomeHero({ vehicles = [], noBgPhotoMap = {} }: HomeHeroProps) {
                     alt={`${vehicle.brand} ${vehicle.model}`}
                     fill
                     priority={i === 0}
-                    // object-position '50% 88%' empurra o carro pra parte
-                    // inferior da coluna, alinhando a base com o chão do
-                    // showroom no background. Ajustar entre 80-92% se
-                    // precisar fine-tune.
-                    style={{ objectFit: 'contain', objectPosition: '50% 88%' }}
+                    // Composite tem bg embutido → cover preenche e centraliza.
+                    // PNG transparente precisa contain + alinhamento ao chão
+                    // (50% 88%) pra casar com o showroom fixo do hero.
+                    style={
+                      isComposite
+                        ? { objectFit: 'cover', objectPosition: 'center center' }
+                        : { objectFit: 'contain', objectPosition: '50% 88%' }
+                    }
                     sizes="55vw"
                   />
                 </div>

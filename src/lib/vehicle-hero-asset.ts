@@ -17,28 +17,56 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import sharp from 'sharp'
 
-// Modelo: BRIA RMBG-2.0 (`bria/remove-background`). Especializado em fotos
-// de produto comercial — bordas mais precisas em rodas vazadas, vidros,
-// espelhos e reflexos no piso. Custo ~$0.011/img (vs $0.005 do 851-labs
-// anterior). Pra fotos de carros premium da Attra, vale a precisão extra.
+// Modelo rembg: BRIA RMBG-2.0 (`bria/remove-background`). Especializado em
+// fotos de produto comercial — bordas mais precisas em rodas vazadas,
+// vidros, espelhos e reflexos no piso. Custo ~$0.011/img.
 //
-// Usamos o endpoint path-based (`/v1/models/{owner}/{name}/predictions`)
-// que aceita automaticamente a última versão estável do modelo — não
-// precisamos atualizar version hashes manualmente.
-const REPLICATE_MODEL = 'bria/remove-background'
-const REPLICATE_API_URL = `https://api.replicate.com/v1/models/${REPLICATE_MODEL}/predictions`
+// Modelo inpainting: Flux Fill Pro (`black-forest-labs/flux-fill-pro`).
+// Recebe a foto + máscara invertida → preenche apenas a área da máscara
+// (background) mantendo o carro pixel-perfect. Custo ~$0.05/img.
+//
+// Usamos endpoint path-based (`/v1/models/{owner}/{name}/predictions`)
+// que aceita automaticamente a última versão estável do modelo.
+const REPLICATE_REMBG_MODEL = 'bria/remove-background'
+const REPLICATE_FLUX_FILL_MODEL = 'black-forest-labs/flux-fill-pro'
+
+const REPLICATE_REMBG_URL = `https://api.replicate.com/v1/models/${REPLICATE_REMBG_MODEL}/predictions`
+const REPLICATE_FLUX_FILL_URL = `https://api.replicate.com/v1/models/${REPLICATE_FLUX_FILL_MODEL}/predictions`
 
 const REPLICATE_POLL_INTERVAL_MS = 2000
-const REPLICATE_TIMEOUT_MS = 60_000
+const REPLICATE_TIMEOUT_MS = 90_000 // 90s — inpainting pode demorar mais que rembg
 
 const STORAGE_BUCKET = 'vehicle-hero-assets'
+
+// Prompt do Flux Fill Pro — descrição do ambiente onde o carro será
+// integrado. Mantém identidade Attra (showroom real) mas com variações
+// sutis por veículo (Flux gera aleatório dentro da descrição).
+const COMPOSITE_PROMPT = [
+  'Premium luxury car showroom interior, sophisticated automotive dealership.',
+  'Polished dark concrete floor with subtle reflections under the vehicle.',
+  'Modern minimalist architecture with floor-to-ceiling glass walls revealing soft natural light.',
+  'Subtle indoor plants and architectural elements in the periphery.',
+  'Cinematic ambient lighting with soft shadows.',
+  'Professional automotive editorial photography style, magazine-quality.',
+  'The vehicle in the image remains exactly as photographed — only generate the surrounding environment around it.',
+  'No people, no other vehicles, no text or logos. Empty refined showroom.',
+  'Wide 16:9 cinematic composition, dramatic, sophisticated, high-end.',
+].join(' ')
 
 export interface HeroAsset {
   vehicle_id: number
   source_photo_url: string
   no_bg_storage_path: string
   no_bg_public_url: string
+  /**
+   * URL pública do composite final (carro + background integrado via
+   * Flux Fill Pro). Null se inpainting ainda não foi processado ou falhou
+   * — nesse caso o hero cai pro fallback (no_bg + bg fixo).
+   */
+  composite_storage_path?: string | null
+  composite_public_url?: string | null
 }
 
 function vehicleIdToNumber(id: string): number {
@@ -72,6 +100,8 @@ export async function getCachedHeroAsset(
       source_photo_url: data.source_photo_url,
       no_bg_storage_path: data.no_bg_storage_path,
       no_bg_public_url: data.no_bg_public_url,
+      composite_storage_path: data.composite_storage_path ?? null,
+      composite_public_url: data.composite_public_url ?? null,
     }
   } catch (error) {
     console.error('[vehicle-hero-asset] cache read failed:', error)
@@ -93,7 +123,7 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
 
   try {
     // 1. Inicia prediction
-    const startResp = await fetch(REPLICATE_API_URL, {
+    const startResp = await fetch(REPLICATE_REMBG_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiToken}`,
@@ -267,11 +297,219 @@ export async function generateAndCacheHeroAsset(
     return null
   }
 
-  return {
+  const noBgAsset: HeroAsset = {
     vehicle_id: numericId,
     source_photo_url: sourcePhotoUrl,
     no_bg_storage_path: stored.storagePath,
     no_bg_public_url: stored.publicUrl,
+  }
+
+  // 4. Pipeline de inpainting (Flux Fill Pro) — gera background integrado
+  //    mantendo o carro pixel-perfect. Roda em sequência depois do rembg
+  //    porque depende do PNG transparente. Se falhar, retorna apenas o
+  //    no_bg asset (componente cai pro fallback bg fixo + PNG transparente).
+  const composite = await generateComposite(numericId, stored.publicUrl)
+  if (composite) {
+    noBgAsset.composite_storage_path = composite.storagePath
+    noBgAsset.composite_public_url = composite.publicUrl
+  }
+
+  return noBgAsset
+}
+
+/**
+ * Cria a máscara de inpainting a partir do PNG transparente do carro.
+ *
+ * Convenção da máscara (Flux Fill Pro / SDXL inpaint):
+ *   - Branco (alpha=255) = AREA A PREENCHER (background)
+ *   - Preto  (alpha=0)   = AREA A PRESERVAR (carro)
+ *
+ * Como o PNG vem com `alpha=255` no carro e `alpha=0` no fundo, basta
+ * INVERTER o alpha pra obter a máscara correta. Usa `sharp` (já está
+ * nas deps do projeto).
+ */
+async function createInpaintMask(noBgPngUrl: string): Promise<Buffer | null> {
+  try {
+    const resp = await fetch(noBgPngUrl)
+    if (!resp.ok) {
+      console.error('[vehicle-hero-asset] download no_bg pra mask HTTP', resp.status)
+      return null
+    }
+    const buffer = Buffer.from(await resp.arrayBuffer())
+
+    return await sharp(buffer)
+      .ensureAlpha()
+      .extractChannel('alpha') // canal alpha como grayscale
+      .negate()                // inverte: carro vira preto, fundo vira branco
+      .png()
+      .toBuffer()
+  } catch (error) {
+    console.error('[vehicle-hero-asset] createInpaintMask failed:', error)
+    return null
+  }
+}
+
+/**
+ * Chama Flux Fill Pro no Replicate. Recebe URL da foto + buffer da máscara,
+ * retorna URL do PNG gerado (temporário em Replicate delivery).
+ *
+ * Mask é enviada como data URI (base64) pra evitar round-trip de upload
+ * temporário no Supabase Storage.
+ */
+async function callFluxFillPro(
+  imageUrl: string,
+  maskBuffer: Buffer,
+): Promise<string | null> {
+  const apiToken = process.env.REPLICATE_API_TOKEN
+  if (!apiToken) {
+    console.warn('[vehicle-hero-asset] REPLICATE_API_TOKEN não configurada (Flux Fill)')
+    return null
+  }
+
+  const maskDataUri = `data:image/png;base64,${maskBuffer.toString('base64')}`
+
+  try {
+    const startResp = await fetch(REPLICATE_FLUX_FILL_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: {
+          image: imageUrl,
+          mask: maskDataUri,
+          prompt: COMPOSITE_PROMPT,
+          steps: 28,
+          guidance: 30,
+          output_format: 'png',
+          safety_tolerance: 2,
+        },
+      }),
+    })
+
+    if (!startResp.ok) {
+      const errText = await startResp.text().catch(() => '')
+      console.error(`[vehicle-hero-asset] Flux Fill start HTTP ${startResp.status}:`, errText.substring(0, 300))
+      return null
+    }
+
+    const startData = await startResp.json()
+    const predictionUrl = startData.urls?.get
+    if (!predictionUrl) {
+      console.error('[vehicle-hero-asset] Flux Fill response missing get URL')
+      return null
+    }
+
+    // Poll até completar — Flux Fill geralmente demora 20-60s
+    const startedAt = Date.now()
+    while (Date.now() - startedAt < REPLICATE_TIMEOUT_MS) {
+      await new Promise((r) => setTimeout(r, REPLICATE_POLL_INTERVAL_MS))
+
+      const pollResp = await fetch(predictionUrl, {
+        headers: { 'Authorization': `Bearer ${apiToken}` },
+      })
+
+      if (!pollResp.ok) {
+        console.error(`[vehicle-hero-asset] Flux Fill poll HTTP ${pollResp.status}`)
+        return null
+      }
+
+      const pollData = await pollResp.json()
+      const status = pollData.status
+
+      if (status === 'succeeded') {
+        const output = pollData.output
+        const outputUrl =
+          typeof output === 'string'
+            ? output
+            : Array.isArray(output) && typeof output[0] === 'string'
+              ? output[0]
+              : output && typeof output === 'object'
+                ? (output.image ?? output.url ?? null)
+                : null
+        if (!outputUrl) {
+          console.error('[vehicle-hero-asset] Flux Fill output inesperado:', JSON.stringify(output).substring(0, 200))
+          return null
+        }
+        return outputUrl
+      }
+
+      if (status === 'failed' || status === 'canceled') {
+        console.error(`[vehicle-hero-asset] Flux Fill ${status}:`, pollData.error)
+        return null
+      }
+    }
+
+    console.error('[vehicle-hero-asset] Flux Fill timeout após', REPLICATE_TIMEOUT_MS, 'ms')
+    return null
+  } catch (error) {
+    console.error('[vehicle-hero-asset] Flux Fill fetch failed:', error)
+    return null
+  }
+}
+
+/**
+ * Pipeline composite: gera mask invertida → chama Flux Fill Pro →
+ * upload no Storage → upsert no DB. Retorna { storagePath, publicUrl }
+ * ou null em qualquer falha.
+ */
+async function generateComposite(
+  vehicleId: number,
+  noBgPublicUrl: string,
+): Promise<{ storagePath: string; publicUrl: string } | null> {
+  // 1. Gera mask a partir do PNG transparente
+  const mask = await createInpaintMask(noBgPublicUrl)
+  if (!mask) return null
+
+  // 2. Chama Flux Fill Pro
+  const fluxUrl = await callFluxFillPro(noBgPublicUrl, mask)
+  if (!fluxUrl) return null
+
+  // 3. Baixa resultado e upload no Storage
+  try {
+    const imageResp = await fetch(fluxUrl)
+    if (!imageResp.ok) {
+      console.error('[vehicle-hero-asset] download Flux Fill output HTTP', imageResp.status)
+      return null
+    }
+    const buffer = await imageResp.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+
+    const supabase = createAdminClient()
+    const storagePath = `composite/${vehicleId}-${Date.now()}.png`
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, bytes, {
+        contentType: 'image/png',
+        cacheControl: '31536000',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      console.error('[vehicle-hero-asset] Composite upload failed:', uploadError.message)
+      return null
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(storagePath)
+
+    // 4. Update DB com composite_*
+    await supabase
+      .from('vehicle_hero_asset')
+      .update({
+        composite_storage_path: storagePath,
+        composite_public_url: urlData.publicUrl,
+        composite_generated_at: new Date().toISOString(),
+      })
+      .eq('vehicle_id', vehicleId)
+
+    return { storagePath, publicUrl: urlData.publicUrl }
+  } catch (error) {
+    console.error('[vehicle-hero-asset] generateComposite failed:', error)
+    return null
   }
 }
 
@@ -300,7 +538,10 @@ export async function getCachedHeroAssets(
         return
       }
       const cached = await getCachedHeroAsset(vehicle.id, sourceUrl)
-      results[vehicle.id] = cached?.no_bg_public_url ?? null
+      // Prefere composite (carro + bg integrado pelo Flux Fill).
+      // Fallback pra no_bg (carro PNG transparente sobre bg fixo CSS).
+      results[vehicle.id] =
+        cached?.composite_public_url ?? cached?.no_bg_public_url ?? null
     }),
   )
 
