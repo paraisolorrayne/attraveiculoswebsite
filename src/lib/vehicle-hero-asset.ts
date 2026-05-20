@@ -40,19 +40,29 @@ const REPLICATE_TIMEOUT_MS = 90_000 // 90s — inpainting pode demorar mais que 
 
 const STORAGE_BUCKET = 'vehicle-hero-assets'
 
-// Prompt do Flux Fill Pro — descrição do ambiente onde o carro será
-// integrado. Mantém identidade Attra (showroom real) mas com variações
-// sutis por veículo (Flux gera aleatório dentro da descrição).
+// Dimensões do canvas final 16:9 — proporção nativa do hero da home.
+// O carro é posicionado à DIREITA (~55-95% horizontal) deixando a
+// metade esquerda pro texto do manifesto. Pre-processamento via sharp
+// ANTES de chamar Flux Fill garante esses dois aspectos.
+const COMPOSITE_CANVAS_WIDTH = 1920
+const COMPOSITE_CANVAS_HEIGHT = 1080
+
+// Prompt do Flux Fill Pro. Reforça:
+// 1. Carro à direita (geração coerente com o pre-positioning)
+// 2. Metade esquerda dramática/escura (espaço pro texto branco do manifesto)
+// 3. Sem texto, logos ou pessoas
 const COMPOSITE_PROMPT = [
   'Premium luxury car showroom interior, sophisticated automotive dealership.',
-  'Polished dark concrete floor with subtle reflections under the vehicle.',
-  'Modern minimalist architecture with floor-to-ceiling glass walls revealing soft natural light.',
-  'Subtle indoor plants and architectural elements in the periphery.',
-  'Cinematic ambient lighting with soft shadows.',
+  'The vehicle is positioned on the RIGHT half of the frame.',
+  'The LEFT half of the image should be a deep, dramatic, subtly out-of-focus background — dark tones with low contrast, soft shadows — designed to accommodate elegant overlaid text in light typography.',
+  'Polished dark concrete floor with subtle reflections under the vehicle on the right.',
+  'Modern minimalist architecture with floor-to-ceiling glass walls revealing soft natural light, primarily on the right side framing the vehicle.',
+  'Subtle indoor plants and architectural elements in the periphery, fading into shadow toward the left.',
+  'Cinematic gradient lighting flowing from bright right to dark left.',
   'Professional automotive editorial photography style, magazine-quality.',
   'The vehicle in the image remains exactly as photographed — only generate the surrounding environment around it.',
-  'No people, no other vehicles, no text or logos. Empty refined showroom.',
-  'Wide 16:9 cinematic composition, dramatic, sophisticated, high-end.',
+  'No people, no other vehicles, no text, no logos, no signs, no writing of any kind. Empty refined showroom.',
+  'Wide 16:9 cinematic composition, dramatic, sophisticated, high-end editorial.',
 ].join(' ')
 
 export interface HeroAsset {
@@ -318,46 +328,101 @@ export async function generateAndCacheHeroAsset(
 }
 
 /**
- * Cria a máscara de inpainting a partir do PNG transparente do carro.
+ * Pre-processa o PNG transparente do carro pra um canvas 16:9 widescreen
+ * com o carro posicionado à direita, e gera a máscara correspondente.
  *
- * Convenção da máscara (Flux Fill Pro / SDXL inpaint):
- *   - Branco (alpha=255) = AREA A PREENCHER (background)
- *   - Preto  (alpha=0)   = AREA A PRESERVAR (carro)
+ * Convenções:
+ *   - IMAGE: canvas 1920×1080 PNG, carro à direita (~55-95% horizontal),
+ *     resto transparente. Vira o `image` input do Flux Fill.
+ *   - MASK: canvas 1920×1080 PNG grayscale. Carro=preto (preservar),
+ *     resto=branco (preencher com bg gerado).
  *
- * Como o PNG vem com `alpha=255` no carro e `alpha=0` no fundo, basta
- * INVERTER o alpha pra obter a máscara correta. Usa `sharp` (já está
- * nas deps do projeto).
+ * Garante:
+ *   ✅ Aspect ratio 16:9 nativo do hero (sem object-cover cortando)
+ *   ✅ Espaço esquerdo livre pro texto do manifesto
+ *   ✅ Carro proporcional, não esticado nem cortado
  */
-async function createInpaintMask(noBgPngUrl: string): Promise<Buffer | null> {
+async function buildCompositeInputs(
+  noBgPngUrl: string,
+): Promise<{ image: Buffer; mask: Buffer } | null> {
   try {
     const resp = await fetch(noBgPngUrl)
     if (!resp.ok) {
-      console.error('[vehicle-hero-asset] download no_bg pra mask HTTP', resp.status)
+      console.error('[vehicle-hero-asset] download no_bg pra composite HTTP', resp.status)
       return null
     }
-    const buffer = Buffer.from(await resp.arrayBuffer())
+    const sourceBuffer = Buffer.from(await resp.arrayBuffer())
 
-    return await sharp(buffer)
+    const metadata = await sharp(sourceBuffer).metadata()
+    const origWidth = metadata.width ?? 1500
+    const origHeight = metadata.height ?? 1100
+
+    // Carro ocupa no máximo:
+    //   - 50% da largura do canvas (deixa 50% pro texto à esquerda)
+    //   - 85% da altura do canvas (margem 7.5% top/bottom)
+    // Usa o menor scale pra manter proporção.
+    const maxCarWidth = COMPOSITE_CANVAS_WIDTH * 0.5
+    const maxCarHeight = COMPOSITE_CANVAS_HEIGHT * 0.85
+    const carScale = Math.min(maxCarWidth / origWidth, maxCarHeight / origHeight)
+    const carWidth = Math.round(origWidth * carScale)
+    const carHeight = Math.round(origHeight * carScale)
+
+    // Posicionamento:
+    //   - Horizontal: margem 5% da borda DIREITA do canvas → carro centrado
+    //     em ~75% horizontal (centro visual da metade direita).
+    //   - Vertical: centralizado.
+    const right = Math.round(COMPOSITE_CANVAS_WIDTH * 0.05)
+    const left = COMPOSITE_CANVAS_WIDTH - carWidth - right
+    const top = Math.round((COMPOSITE_CANVAS_HEIGHT - carHeight) / 2)
+    const bottom = COMPOSITE_CANVAS_HEIGHT - top - carHeight
+
+    // Redimensiona o carro mantendo alpha
+    const resizedCar = await sharp(sourceBuffer)
+      .resize(carWidth, carHeight, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
       .ensureAlpha()
-      .extractChannel('alpha') // canal alpha como grayscale
-      .negate()                // inverte: carro vira preto, fundo vira branco
       .png()
       .toBuffer()
+
+    // IMAGE: canvas 16:9 transparente com o carro posicionado.
+    const image = await sharp(resizedCar)
+      .extend({
+        top,
+        bottom,
+        left,
+        right,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer()
+
+    // MASK: extrai alpha do canvas 16:9 (carro=255, resto=0), inverte
+    // (carro=0/preto/preservar, resto=255/branco/preencher).
+    const mask = await sharp(image)
+      .ensureAlpha()
+      .extractChannel('alpha')
+      .negate()
+      .png()
+      .toBuffer()
+
+    return { image, mask }
   } catch (error) {
-    console.error('[vehicle-hero-asset] createInpaintMask failed:', error)
+    console.error('[vehicle-hero-asset] buildCompositeInputs failed:', error)
     return null
   }
 }
 
 /**
- * Chama Flux Fill Pro no Replicate. Recebe URL da foto + buffer da máscara,
- * retorna URL do PNG gerado (temporário em Replicate delivery).
+ * Chama Flux Fill Pro no Replicate. Recebe buffers de imagem (canvas 16:9
+ * com carro à direita) e máscara, retorna URL do PNG gerado.
  *
- * Mask é enviada como data URI (base64) pra evitar round-trip de upload
- * temporário no Supabase Storage.
+ * Ambos enviados como data URIs (base64) — mais simples que upload
+ * temporário e Replicate aceita até ~10MB por input.
  */
 async function callFluxFillPro(
-  imageUrl: string,
+  imageBuffer: Buffer,
   maskBuffer: Buffer,
 ): Promise<string | null> {
   const apiToken = process.env.REPLICATE_API_TOKEN
@@ -366,6 +431,7 @@ async function callFluxFillPro(
     return null
   }
 
+  const imageDataUri = `data:image/png;base64,${imageBuffer.toString('base64')}`
   const maskDataUri = `data:image/png;base64,${maskBuffer.toString('base64')}`
 
   try {
@@ -377,7 +443,7 @@ async function callFluxFillPro(
       },
       body: JSON.stringify({
         input: {
-          image: imageUrl,
+          image: imageDataUri,
           mask: maskDataUri,
           prompt: COMPOSITE_PROMPT,
           steps: 28,
@@ -458,12 +524,12 @@ async function generateComposite(
   vehicleId: number,
   noBgPublicUrl: string,
 ): Promise<{ storagePath: string; publicUrl: string } | null> {
-  // 1. Gera mask a partir do PNG transparente
-  const mask = await createInpaintMask(noBgPublicUrl)
-  if (!mask) return null
+  // 1. Pré-processa: posiciona o carro no canvas 16:9 + gera mask
+  const inputs = await buildCompositeInputs(noBgPublicUrl)
+  if (!inputs) return null
 
-  // 2. Chama Flux Fill Pro
-  const fluxUrl = await callFluxFillPro(noBgPublicUrl, mask)
+  // 2. Chama Flux Fill Pro com image+mask 16:9
+  const fluxUrl = await callFluxFillPro(inputs.image, inputs.mask)
   if (!fluxUrl) return null
 
   // 3. Baixa resultado e upload no Storage
