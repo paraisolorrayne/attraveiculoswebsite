@@ -14,7 +14,7 @@ import {
 import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
-import { getCachedHeroAssets } from '@/lib/vehicle-hero-asset'
+import { getLatestAttraVideo } from '@/lib/youtube-feed'
 import { Vehicle } from '@/types'
 
 // Pool mínimo de R$500k. Veículos abaixo disso nunca entram no hero,
@@ -105,20 +105,13 @@ export default async function Home() {
     console.error('Failed to fetch featured vehicles:', error)
   }
 
-  // Lê o cache da versão sem-bg dos veículos do hero. NÃO dispara geração:
-  // a rotina `scripts/preprocess-hero-assets.ts` (cron na VPS) garante que
-  // os top quinzenais já estejam processados antes de aparecerem aqui.
-  // Cache miss = `null` → componente usa foto original com mask radial.
-  const heroNoBgMap = heroVehicles.length > 0
-    ? await getCachedHeroAssets(
-        heroVehicles.map((v) => ({ id: v.id, photos: v.photos })),
-      )
-    : {}
+  // Hero exibe o vídeo mais recente do canal da Attra (RSS, sem API key).
+  const latestVideo = await getLatestAttraVideo()
 
   return (
     <>
-      {/* 1. Hero — fullscreen cinematic with rotation between top 3 */}
-      <HomeHero vehicles={heroVehicles} noBgPhotoMap={heroNoBgMap} />
+      {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
+      <HomeHero videoId={latestVideo?.videoId ?? null} />
 
       {/* 2. Prova de confiança — antes da curadoria para reforçar a marca
              antes de pedir os dados do visitante. */}
