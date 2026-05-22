@@ -28,10 +28,11 @@ Dados do veículo:
 
 Instruções de estilo:
 - Texto em português do Brasil
-- Máximo de 3 frases, focando exclusividade, performance e estado de conservação
+- Máximo de 3 frases, focando exclusividade e estado de conservação
 - Não repita exatamente o nome completo do modelo mais de uma vez
 - Evite termos genéricos como "carro impecável"; seja específico no que torna o veículo especial
 - Não invente opcionais ou dados que não estão na lista
+- PROIBIDO inventar especificações técnicas não fornecidas. NUNCA mencione: número de cilindros, tipo/configuração de motor (V6, V8, W12, turbo, aspirado, híbrido), cilindrada, tempo 0-100 km/h, velocidade máxima ou tração. Use apenas a potência informada acima, se houver.
 
 Entregue APENAS o parágrafo, sem título, sem bullet points, sem aspas.`
 

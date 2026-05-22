@@ -1,6 +1,6 @@
 import {
 	Gauge, Zap, RotateCw, Fuel, Weight, Ruler,
-	Car, Shield, ArrowUpRight, Cog, CircleGauge,
+	Car, Shield, ArrowUpRight, Cog,
 	BookOpen, Star,
 } from 'lucide-react'
 import type { VehicleDatasheet } from '@/lib/vehicle-datasheet'
@@ -19,19 +19,17 @@ interface SpecItem {
 
 export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheetSectionProps) {
 	const primarySpecs: SpecItem[] = [
-		{ icon: Cog, label: 'Motor', value: vehicle.engine || datasheet.engine },
-		{ icon: CircleGauge, label: 'Cilindrada', value: datasheet.displacement },
-		{ icon: Zap, label: 'Potência', value: vehicle.horsepower ? `${vehicle.horsepower} cv` : datasheet.power },
-		{ icon: RotateCw, label: 'Torque', value: vehicle.torque ? `${vehicle.torque} Nm` : datasheet.torque },
-		{ icon: Gauge, label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : datasheet.acceleration.replace(/\s*\(0\s*[\u2013-]\s*100\s*km\/h\)/, '') },
-		{ icon: ArrowUpRight, label: 'Velocidade máxima', value: vehicle.top_speed ? `${vehicle.top_speed} km/h` : datasheet.topSpeed },
+		{ icon: Cog, label: 'Motor', value: vehicle.engine ?? '' },
+		{ icon: Zap, label: 'Potência', value: vehicle.horsepower ? `${vehicle.horsepower} cv` : '' },
+		{ icon: RotateCw, label: 'Torque', value: vehicle.torque ? `${vehicle.torque} Nm` : '' },
+		{ icon: Gauge, label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : '' },
+		{ icon: ArrowUpRight, label: 'Velocidade máxima', value: vehicle.top_speed ? `${vehicle.top_speed} km/h` : '' },
 		{ icon: Car, label: 'Transmissão', value: vehicle.transmission || datasheet.transmission },
 		{ icon: Shield, label: 'Tração', value: datasheet.drivetrain },
 	].filter(s => s.value)
 
 	const secondarySpecs: SpecItem[] = [
 		{ icon: Weight, label: 'Peso', value: datasheet.weight },
-		{ icon: Fuel, label: 'Consumo', value: datasheet.fuelConsumption || '' },
 		{ icon: Fuel, label: 'Tanque', value: datasheet.fuelTankCapacity || '' },
 		{ icon: Ruler, label: 'Comprimento', value: datasheet.length || '' },
 		{ icon: Ruler, label: 'Largura', value: datasheet.width || '' },
@@ -39,9 +37,9 @@ export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheet
 		{ icon: Ruler, label: 'Entre-eixos', value: datasheet.wheelbase || '' },
 	].filter(s => s.value)
 
+	// Porta-malas e lugares são invariáveis. Freios e pneus removidos —
+	// variam por trim (carbono-cerâmico vs aço, rodas opcionais).
 	const chassisSpecs: SpecItem[] = [
-		{ icon: Car, label: 'Pneus', value: datasheet.tires || '' },
-		{ icon: Shield, label: 'Freios', value: datasheet.brakes || '' },
 		{ icon: Car, label: 'Porta-malas', value: datasheet.trunkCapacity || '' },
 		{ icon: Car, label: 'Lugares', value: datasheet.seatingCapacity || '' },
 	].filter(s => s.value)
@@ -58,13 +56,14 @@ export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheet
 							Ficha Técnica Completa
 						</h2>
 						<p className="text-sm text-foreground-secondary">
-							{datasheet.brand} {datasheet.model} — dados oficiais do fabricante
+							{datasheet.brand} {datasheet.model} — especificações de referência
 						</p>
 					</div>
 				</div>
 			</div>
 
-			{/* Performance & Powertrain */}
+			{/* Performance & Powertrain — só renderiza se houver specs reais */}
+			{primarySpecs.length > 0 && (
 			<div className="p-6 border-b border-border">
 				<h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
 					Motor e Performance
@@ -81,12 +80,13 @@ export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheet
 					))}
 				</div>
 			</div>
+				)}
 
 			{/* Dimensions & Weight */}
 			{secondarySpecs.length > 0 && (
 				<div className="p-6 border-b border-border">
 					<h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-						Dimensões e Consumo
+						Dimensões
 					</h3>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 						{secondarySpecs.map((spec) => (
@@ -106,7 +106,7 @@ export function VehicleDatasheetSection({ datasheet, vehicle }: VehicleDatasheet
 			{chassisSpecs.length > 0 && (
 				<div className="p-6 border-b border-border">
 					<h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-						Chassis e Rodagem
+						Capacidade
 					</h3>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 						{chassisSpecs.map((spec) => (
