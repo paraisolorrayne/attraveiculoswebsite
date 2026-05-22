@@ -324,15 +324,11 @@ export async function generateAndCacheHeroAsset(
     }
   }
 
-  // Pipeline de inpainting (Flux Fill Pro) — só roda se composite ainda
-  // não existe. Reaproveita o no_bg (cacheado ou recém-gerado).
-  if (!noBgAsset.composite_public_url) {
-    const composite = await generateComposite(numericId, noBgAsset.no_bg_public_url)
-    if (composite) {
-      noBgAsset.composite_storage_path = composite.storagePath
-      noBgAsset.composite_public_url = composite.publicUrl
-    }
-  }
+  // NOTA: a geração de composite (inpainting Flux Fill Pro) foi REMOVIDA.
+  // O modelo alucinava texto e distorcia a foto premium do veículo —
+  // inaceitável pra marca. O hero da home agora usa vídeo do YouTube.
+  // Mantemos só o no_bg (BRIA rembg), ainda usado no FeaturedVehicleHero
+  // da página /veiculos (carro flutuante sobre o card).
 
   return noBgAsset
 }
