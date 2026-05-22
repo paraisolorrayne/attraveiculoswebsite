@@ -110,8 +110,8 @@ export default async function Home() {
 
   return (
     <>
-      {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
-      <HomeHero videoId={latestVideo?.videoId ?? null} />
+      {/* 1. Hero — mobile: card do veículo (intacto); desktop: texto + vídeo */}
+      <HomeHero vehicles={heroVehicles} videoId={latestVideo?.videoId ?? null} />
 
       {/* 2. Prova de confiança — antes da curadoria para reforçar a marca
              antes de pedir os dados do visitante. */}

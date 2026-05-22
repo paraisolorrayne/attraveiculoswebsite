@@ -1,29 +1,37 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
+import { Vehicle } from '@/types'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { formatPrice, formatMileage } from '@/lib/utils'
 
 const consultantWhatsAppMessage =
   'Olá, Attra. Gostaria de falar com um consultor sobre os veículos do acervo.'
 
 interface HomeHeroProps {
   /**
+   * Top veículos pro card MOBILE (rotaciona 9s, fade). Usa a foto original
+   * (photos[0]) — sem remove-bg, sem composite IA. Mobile sempre foi assim
+   * e o cliente aprovou; não mexer.
+   */
+  vehicles?: Vehicle[]
+  /**
    * ID do vídeo mais recente do canal da Attra (via youtube-feed RSS).
-   * Quando presente, exibido em autoplay mudo/loop na coluna direita.
-   * Quando ausente (feed indisponível), a coluna de vídeo é omitida e o
-   * texto ocupa o hero inteiro — sem layout quebrado.
+   * Usado APENAS no DESKTOP, em autoplay mudo/loop na coluna direita.
+   * Quando ausente (feed indisponível), o texto ocupa o hero — sem layout
+   * quebrado.
    */
   videoId?: string | null
 }
 
-const MANIFESTO_ROTATION_MS = 7000
+const ROTATION_INTERVAL_MS = 9000
 
 /**
  * Manifesto headline rotation — Attra é a MOLDURA, não o quadro.
- * Frases editoriais que curam, em vez de marca+modelo (que competiria
- * com Ferrari/Lambo).
+ * Usado no texto do DESKTOP e no fallback mobile (sem veículos).
  */
 const MANIFESTO_LINES = [
   'Seleção,\nsem igual.',
@@ -52,24 +60,46 @@ function buildEmbedUrl(videoId: string): string {
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`
 }
 
-export function HomeHero({ videoId }: HomeHeroProps) {
-  const [lineIndex, setLineIndex] = useState(0)
+export function HomeHero({ vehicles = [], videoId }: HomeHeroProps) {
+  const slides = vehicles.filter(v => v.photos?.[0]).slice(0, 3)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [restartTick, setRestartTick] = useState(0)
 
-  // Rotaciona o manifesto (respeitando prefers-reduced-motion).
   useEffect(() => {
+    if (slides.length <= 1) return
     if (typeof window === 'undefined') return
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) return
-    const interval = setInterval(() => {
-      setLineIndex((prev) => (prev + 1) % MANIFESTO_LINES.length)
-    }, MANIFESTO_ROTATION_MS)
-    return () => clearInterval(interval)
-  }, [])
+    let intervalId: ReturnType<typeof setInterval> | undefined
+    const start = () => {
+      if (mq.matches) return
+      intervalId = setInterval(() => {
+        setActiveIndex(prev => (prev + 1) % slides.length)
+      }, ROTATION_INTERVAL_MS)
+    }
+    const stop = () => {
+      if (intervalId) clearInterval(intervalId)
+      intervalId = undefined
+    }
+    const onChange = () => { stop(); start() }
+    start()
+    mq.addEventListener('change', onChange)
+    return () => {
+      stop()
+      mq.removeEventListener('change', onChange)
+    }
+  }, [slides.length, restartTick])
 
-  const manifestoLine = MANIFESTO_LINES[lineIndex]
+  const safeIndex = slides.length > 0 ? activeIndex % slides.length : 0
+  const activeVehicle = slides[safeIndex] ?? null
+  const manifestoLine = MANIFESTO_LINES[safeIndex % MANIFESTO_LINES.length]
   const embedUrl = videoId ? buildEmbedUrl(videoId) : null
 
-  // Bloco de texto editorial — reusado em mobile e desktop.
+  const handleSelectSlide = (i: number) => {
+    setActiveIndex(i)
+    setRestartTick(t => t + 1)
+  }
+
+  // Bloco de texto editorial — DESKTOP (esquerda do split).
   const editorialCopy = (
     <>
       {/* Eyebrow */}
@@ -133,7 +163,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
     </>
   )
 
-  // Player do vídeo — autoplay mudo loop, sem controles (look de banner).
+  // Player do vídeo — DESKTOP, autoplay mudo loop, sem controles (banner).
   const videoPlayer = embedUrl ? (
     <div className="relative w-full aspect-video overflow-hidden rounded-2xl shadow-2xl shadow-black/30 border border-border/40 bg-black">
       <iframe
@@ -153,17 +183,171 @@ export function HomeHero({ videoId }: HomeHeroProps) {
       className="home-hero-canvas relative w-full overflow-hidden"
     >
       {/* ============================================================
-          MOBILE LAYOUT (< lg) — texto em cima, vídeo embaixo.
+          MOBILE LAYOUT (< lg) — INTACTO (aprovado pelo cliente): card
+          vertical, foto original do veículo ativo, brand+modelo, specs
+          inline, CTA wine + progress bar. NÃO usa vídeo nem composite IA.
           ============================================================ */}
       <div className="lg:hidden relative w-full bg-background pt-24 pb-12 px-6">
-        <div className="flex flex-col items-start text-left max-w-md mx-auto">
-          {editorialCopy}
-          {videoPlayer && <div className="w-full mt-10">{videoPlayer}</div>}
-        </div>
+        {activeVehicle ? (
+          <div className="flex flex-col items-center text-center max-w-md mx-auto">
+            {/* Eyebrow — linha wine + ATTRA · NN */}
+            <div className="flex items-center gap-3 mb-5">
+              <span
+                aria-hidden
+                className="block h-px w-10"
+                style={{ backgroundColor: WINE }}
+              />
+              <span
+                className="text-[10px] uppercase tracking-[0.32em] font-medium"
+                style={{ color: WINE }}
+              >
+                Attra · {String(safeIndex + 1).padStart(2, '0')}
+              </span>
+            </div>
+
+            {/* Brand — pequeno, watermark visual */}
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.3em] mb-2"
+              style={{ color: WINE }}
+            >
+              {activeVehicle.brand}
+            </p>
+
+            {/* Model — display Montserrat */}
+            <h1
+              className="text-foreground font-bold tracking-tight leading-[0.95]
+                         text-4xl sm:text-5xl mb-6"
+              style={{ fontFamily: 'var(--font-montserrat)' }}
+            >
+              {activeVehicle.model}
+            </h1>
+
+            {/* Photo destacada — aspect ratio fixo, com fade entre slides */}
+            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden mb-6 shadow-xl shadow-black/30 border border-border/40">
+              {slides.map((vehicle, i) => (
+                <Image
+                  key={vehicle.id}
+                  src={vehicle.photos[0]}
+                  alt={`${vehicle.brand} ${vehicle.model}`}
+                  fill
+                  priority={i === 0}
+                  className="object-cover transition-opacity duration-[1500ms] ease-in-out"
+                  style={{ opacity: i === safeIndex ? 1 : 0 }}
+                  sizes="100vw"
+                  aria-hidden={i !== safeIndex}
+                />
+              ))}
+            </div>
+
+            {/* Specs inline — Ano · Km · Valor */}
+            <p className="text-foreground-secondary text-[11px] uppercase tracking-[0.2em] mb-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              <span>{activeVehicle.year_model}</span>
+              <span className="text-foreground/30" aria-hidden>·</span>
+              <span>{activeVehicle.mileage === 0 ? '0 km' : formatMileage(activeVehicle.mileage)}</span>
+              <span className="text-foreground/30" aria-hidden>·</span>
+              <span className="text-foreground font-semibold">{formatPrice(activeVehicle.price)}</span>
+            </p>
+
+            {/* CTA primário — conhecer o veículo ativo (sólido wine) */}
+            <Link
+              href={`/veiculo/${activeVehicle.slug}`}
+              className="w-full inline-flex items-center justify-center gap-3
+                         text-white text-xs font-medium tracking-[0.22em] uppercase
+                         px-8 py-4 mb-3
+                         transition-all duration-300
+                         bg-[#A8302E] hover:bg-[#8A2422]
+                         border border-[#A8302E]"
+            >
+              Conheça
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+
+            {/* CTA secundário — ver todo o acervo (link sublinhado) */}
+            <Link
+              href="/veiculos"
+              className="text-xs font-semibold tracking-[0.18em] uppercase pb-1 border-b mb-7"
+              style={{ color: WINE, borderColor: WINE }}
+            >
+              Ver todo o acervo
+            </Link>
+
+            {/* Progress bar — mesma linguagem do desktop */}
+            {slides.length > 1 && (
+              <div className="w-full">
+                <div className="flex items-center gap-3">
+                  {slides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSelectSlide(i)}
+                      aria-label={`Ver veículo ${i + 1} de ${slides.length}`}
+                      aria-current={i === safeIndex}
+                      className="group flex-1 py-3 -my-3"
+                    >
+                      <span
+                        className={`block h-px transition-all duration-500 ${i !== safeIndex ? 'bg-foreground/20' : ''}`}
+                        style={{
+                          backgroundColor: i === safeIndex ? WINE : undefined,
+                        }}
+                      />
+                    </button>
+                  ))}
+                  <span
+                    className="text-[10px] tracking-[0.25em] font-bold ml-3"
+                    style={{ color: WINE }}
+                  >
+                    {String(safeIndex + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Fallback mobile — sem veículos no slider: manifesto + CTA único */
+          <div className="flex flex-col items-center text-center max-w-md mx-auto min-h-[60vh] justify-center">
+            <div className="flex items-center gap-3 mb-6">
+              <span
+                aria-hidden
+                className="block h-px w-10"
+                style={{ backgroundColor: WINE }}
+              />
+              <span
+                className="text-[10px] uppercase tracking-[0.32em] font-medium"
+                style={{ color: WINE }}
+              >
+                Attra Veículos
+              </span>
+            </div>
+            <h1
+              className="text-foreground font-bold tracking-tight leading-[1.05] text-3xl mb-6"
+              style={{ fontFamily: 'var(--font-montserrat)' }}
+            >
+              {manifestoLine.split('\n').map((line, i) => (
+                <span key={i} className="block">{line}</span>
+              ))}
+            </h1>
+            <p className="text-foreground-secondary text-sm leading-relaxed mb-8">
+              Ferrari, Porsche, Mercedes AMG, Land Rover, BMW e Audi. Selecionados em
+              Uberlândia, entregues em todo o Brasil.
+            </p>
+            <Link
+              href="/veiculos"
+              className="w-full inline-flex items-center justify-center gap-3
+                         text-white text-xs font-medium tracking-[0.22em] uppercase
+                         px-8 py-4
+                         bg-[#A8302E] hover:bg-[#8A2422]
+                         border border-[#A8302E]"
+            >
+              Explorar estoque
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* ============================================================
-          DESKTOP LAYOUT (lg+) — split: texto à esquerda, vídeo à direita.
+          DESKTOP LAYOUT (lg+) — split: texto editorial à esquerda,
+          último vídeo do canal @attraveiculos à direita (autoplay mudo).
+          Substitui o composite IA (removido — alucinava texto/distorcia).
           ============================================================ */}
       <div className="hidden lg:grid grid-cols-[45fr_55fr] items-center gap-12 relative w-full
                       h-[100svh] min-h-[640px] max-h-[920px] overflow-hidden px-[10%]">
