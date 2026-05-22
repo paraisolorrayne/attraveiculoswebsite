@@ -4,8 +4,10 @@
  * Covers: F1, Supercars, Haute Horlogerie, High-End Finance
  */
 
+import { GEMINI_TEXT_MODEL } from './gemini-config'
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_MODEL = GEMINI_TEXT_MODEL
 const API_TIMEOUT = 10000 // 10 seconds
 
 interface ArticleValidation {
@@ -46,6 +48,8 @@ APROVAR (isAutomotive = true) SOMENTE SE:
 - Notícia sobre eventos automotivos — salões, exposições de carros, track days, encontros de supercarros.
 
 REJEITAR (isAutomotive = false) SE:
+- Cinema, séries, filmes, atores, celebridades, carreira artística, premiações, Hollywood — MESMO que a pessoa interprete um piloto ou que o título mencione Ferrari, Senna, F1 ou alguma marca. Ex: "Gabriel Leone ganha espaço em Hollywood", "ator que viveu Senna", "filme Ferrari estreia", "série sobre a F1 na Netflix". O foco da Attra é o VEÍCULO/CORRIDA/PILOTO REAL — não produções audiovisuais nem a carreira de quem os interpreta.
+- Notícia cujo SUJEITO PRINCIPAL é uma pessoa do entretenimento (ator, cantor, influencer, apresentador), ainda que ela seja associada a automobilismo.
 - Colunas sociais, notas de inauguração de lojas, eventos de celebridades (mesmo que mencionem marcas como Rolex, BMW, etc. no contexto social).
 - Artigos genéricos de marketing, opinião ou tendências que apenas MENCIONAM marcas de luxo como exemplo mas NÃO são sobre os produtos em si.
 - Relógios, joias, moda, gastronomia — NÃO são o foco da Attra, mesmo sendo "luxo".
@@ -54,7 +58,7 @@ REJEITAR (isAutomotive = false) SE:
 - Política, escândalos, fofoca.
 - Notícias puramente negativas ou deprimentes.
 
-IMPORTANTE: A Attra é uma CONCESSIONÁRIA DE CARROS. O foco é 100% automotivo. Não aprovar notícias sobre luxo genérico (relógios, joias, moda) a menos que o FOCO PRINCIPAL seja um veículo.
+IMPORTANTE: A Attra é uma CONCESSIONÁRIA DE CARROS. O foco é 100% automotivo (carros, corridas, pilotos reais). Pergunte-se: "o assunto central é um VEÍCULO, uma CORRIDA ou um PILOTO em atividade?". Se o assunto central for uma pessoa famosa, um filme, uma série ou luxo genérico (relógios, joias, moda) — REJEITE, mesmo que marcas automotivas apareçam no texto.
 
 Retorne APENAS um JSON neste formato, sem markdown:
 {

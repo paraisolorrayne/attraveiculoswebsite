@@ -16,8 +16,9 @@ import type {
   BlogPostSEO,
   EducativoFields,
 } from '@/types'
+import { GEMINI_TEXT_MODEL } from '@/lib/gemini-config'
 
-const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_MODEL = GEMINI_TEXT_MODEL
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 const API_TIMEOUT_MS = 60_000 // long-form generation needs more time
 
