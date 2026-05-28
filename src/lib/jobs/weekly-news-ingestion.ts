@@ -186,23 +186,35 @@ async function fetchGNewsArticles(query: string, max: number = 15): Promise<GNew
   return data.articles || []
 }
 
+// Format a Date as YYYY-MM-DD using its local components. Using toISOString()
+// here would shift the date to UTC and, on a server ahead of UTC, roll the
+// Sunday boundary back to Saturday (week_start came out as 05-23 instead of
+// 05-24). Reading local parts keeps the label aligned with the week computed
+// from getDay()/getDate() above.
+function toLocalYmd(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function getWeekRange(): { weekStart: string; weekEnd: string } {
   const now = new Date()
   const dayOfWeek = now.getDay()
-  
+
   // Calculate start of week (Sunday)
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - dayOfWeek)
   weekStart.setHours(0, 0, 0, 0)
-  
+
   // Calculate end of week (Saturday)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
   weekEnd.setHours(23, 59, 59, 999)
 
   return {
-    weekStart: weekStart.toISOString().split('T')[0],
-    weekEnd: weekEnd.toISOString().split('T')[0],
+    weekStart: toLocalYmd(weekStart),
+    weekEnd: toLocalYmd(weekEnd),
   }
 }
 
@@ -385,15 +397,24 @@ export async function runWeeklyNewsIngestion(): Promise<{
     console.log(`[NewsIngestion] Inserted ${articlesInserted} articles`)
 
     // 6. Activate new cycle, deactivate old
-    await supabase
+    const { error: deactivateError } = await supabase
       .from('news_cycles')
       .update({ is_active: false })
       .neq('id', newCycle.id)
+    if (deactivateError) {
+      errors.push(`Failed to deactivate old cycles: ${deactivateError.message}`)
+    }
 
-    await supabase
+    const { error: activateError } = await supabase
       .from('news_cycles')
       .update({ is_active: true })
       .eq('id', newCycle.id)
+    if (activateError) {
+      // Activation is the line between /news showing this cycle and rendering
+      // "No active cycle found". A silent failure here would report success
+      // while the page stays empty — fail loudly instead.
+      throw new Error(`Failed to activate cycle ${newCycle.id}: ${activateError.message}`)
+    }
 
     console.log(`[NewsIngestion] Activated cycle ${newCycle.id}`)
 

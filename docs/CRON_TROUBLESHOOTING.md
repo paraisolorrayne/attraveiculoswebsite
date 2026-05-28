@@ -1,122 +1,130 @@
 # Cron Troubleshooting — Rotinas Automáticas Attra
 
-Diagnóstico para quando o "Insights" / blog AI / news ingestion **não dispara**.
+Diagnóstico para quando o blog AI / news ingestion / hero preprocess **não dispara**.
+
+> **IMPORTANTE — como o agendamento realmente funciona:** as rotinas rodam via
+> **cron nativo do Linux** (`/etc/cron.d/`) na VPS, **não** via Supabase pg_cron.
+> O pg_cron managed *agenda* mas **não executa** (o `net.http_post`/pg_net não
+> dispara de fato — `cron.job_run_details` fica vazio). Os jobs do pg_cron foram
+> desabilitados (`cron.unschedule(...)`) para não confundir. Toda a seção
+> "pg_cron" das versões antigas deste doc está obsoleta.
 
 ## Mapa das rotinas
 
-| Rotina | Arquivo do job | Endpoint | Agendador | Frequência |
-|---|---|---|---|---|
-| Blog AI diário | `src/lib/jobs/daily-blog-ai.ts` | `POST /api/cron/blog-ai` | Supabase pg_cron (migration `20260420_blog_ai_automation.sql`) | 11:00 UTC diário (08:00 BRT) |
-| News ingestion semanal | `src/lib/jobs/weekly-news-ingestion.ts` | `GET /api/cron/news-ingestion` | Supabase pg_cron (migration `20260517_schedule_news_ingestion_cron.sql`) | Domingo 03:00 UTC (00:00 BRT) |
+| Rotina | Job | Endpoint | Wrapper (VPS) | `/etc/cron.d/` | Frequência | Log |
+|---|---|---|---|---|---|---|
+| Blog AI | `src/lib/jobs/daily-blog-ai.ts` | `GET/POST /api/cron/blog-ai` | `/usr/local/bin/attra-blog-ai.sh` | `attra-blog-ai` | `0 4 * * 0` (dom 04:00 UTC) | `/var/log/attra-blog.log` |
+| News ingestion | `src/lib/jobs/weekly-news-ingestion.ts` | `GET/POST /api/cron/news-ingestion` | `/usr/local/bin/attra-news-ingestion.sh` | `attra-news-ingestion` | `0 3 * * 0` (dom 03:00 UTC) | `/var/log/attra-news.log` |
+| Hero preprocess | `scripts/preprocess-hero-assets.ts` | `GET /api/cron/hero-preprocess` | `/usr/local/bin/attra-hero-preprocess.sh` | `attra-hero-preprocess` | `0 */6 * * *` (a cada 6h) | `/var/log/attra-hero.log` |
 
-> **Histórico:** o news-ingestion era disparado pelo `vercel.json`, que foi removido no commit `3a3f143` (migração Vercel → VPS Interlivre + PM2). A migration `20260517` recoloca esse agendamento dentro do pg_cron.
+Cada wrapper segue o mesmo padrão:
+
+```bash
+#!/usr/bin/env bash
+set -e
+cd /var/www/attra
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+set -a; . /var/www/attra/.env.production; set +a
+curl -sS --max-time 300 "http://localhost:3000/api/cron/<job>?secret=$CRON_SECRET"
+```
 
 ## Checklist de validação em produção
 
-### 1. SSH na VPS — conferir env
+### 1. O wrapper existe? (causa nº 1 de "cron não roda")
+
+O `/etc/cron.d/<job>` pode existir e o cron disparar, mas se o **wrapper em
+`/usr/local/bin/` sumir**, falha em silêncio. O sintoma no log é
+`No such file or directory`.
 
 ```bash
-ssh user@vps-interlivre
-cd /caminho/do/projeto
-printenv | grep -E "CRON_SECRET|NEXT_PUBLIC_SITE_URL|SUPABASE"
-# Espere ver:
-#   CRON_SECRET=<algum_valor>
-#   NEXT_PUBLIC_SITE_URL=https://attraveiculos.com.br
-#   NEXT_PUBLIC_SUPABASE_URL=...
-#   SUPABASE_SERVICE_ROLE_KEY=...
+ssh root@<vps>
+ls -la /usr/local/bin/attra-*.sh        # os 3 devem existir e ser executáveis
+cat -A /etc/cron.d/attra-news-ingestion # confira o schedule e o caminho do wrapper
 ```
 
-Se `CRON_SECRET` estiver vazio, o endpoint retorna **401 Unauthorized** e o pg_cron vai falhar silenciosamente.
+> **Histórico:** em mai/2026 o `/news` ficou sem ciclo novo de ~abr até 28/mai
+> porque o wrapper `attra-news-ingestion.sh` havia sumido — o cron disparava
+> todo domingo e morria com `No such file or directory`. Recriado via base64.
 
-### 2. Conferir migrations aplicadas
-
-Via CLI:
+Recriar um wrapper sumido (exemplo news):
 
 ```bash
-npx supabase migration list --linked
+# do seu terminal local; o base64 evita problema de aspas no SSH
+echo '<base64-do-wrapper>' | ssh root@<vps> \
+  'base64 -d > /usr/local/bin/attra-news-ingestion.sh && chmod +x /usr/local/bin/attra-news-ingestion.sh'
 ```
 
-Espere ver tanto `20260420_blog_ai_automation` quanto `20260517_schedule_news_ingestion_cron` na coluna "Remote".
-
-Via SQL Editor do Supabase Dashboard:
-
-```sql
-SELECT version, name FROM supabase_migrations.schema_migrations
-WHERE name LIKE '%blog_ai%' OR name LIKE '%news_ingestion%';
-```
-
-### 3. Conferir jobs no pg_cron
-
-SQL Editor do Supabase Dashboard:
-
-```sql
-SELECT jobid, jobname, schedule, active, command
-FROM cron.job
-WHERE jobname IN ('daily-blog-ai', 'weekly-news-ingestion');
-```
-
-Espere 2 linhas com `active = true`. Se faltar `weekly-news-ingestion`, aplique a migration `20260517`.
-
-### 4. Curl manual no endpoint
-
-Da VPS (ou de qualquer máquina com o `CRON_SECRET` em mãos):
+### 2. O serviço de cron está ativo?
 
 ```bash
-# Blog AI
-curl -X POST https://attraveiculos.com.br/api/cron/blog-ai \
-  -H "Authorization: Bearer $CRON_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{}'
+systemctl is-active cron || systemctl is-active crond   # deve responder "active"
+```
+
+### 3. Conferir env
+
+```bash
+cd /var/www/attra
+grep -E "CRON_SECRET|GEMINI_API_KEY|GNEWS_API_KEY|SUPABASE" .env.production | sed 's/=.*/=.../'
+```
+
+Se `CRON_SECRET` estiver vazio, o endpoint retorna **401 Unauthorized** e o cron
+falha silenciosamente. O wrapper carrega `.env.production` antes do `curl`.
+
+### 4. Ler o log da última execução
+
+```bash
+tail -40 /var/log/attra-news.log
+tail -40 /var/log/attra-blog.log
+```
+
+Cada run imprime marcadores `===== <timestamp> — <job> start/done =====` e o JSON
+de resposta do endpoint. Procure por `failed`, `401`, `error`, ou
+`No such file or directory`.
+
+### 5. Disparar manualmente (rodar agora)
+
+```bash
+cd /var/www/attra
+set -a; . .env.production; set +a
 
 # News ingestion
-curl -X POST https://attraveiculos.com.br/api/cron/news-ingestion \
-  -H "Authorization: Bearer $CRON_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{}'
+curl -sS --max-time 300 "http://localhost:3000/api/cron/news-ingestion?secret=$CRON_SECRET"
+
+# Blog AI (aceita &force=1 para pular a idempotência diária)
+curl -sS --max-time 300 "http://localhost:3000/api/cron/blog-ai?secret=$CRON_SECRET&force=1"
 ```
 
-Respostas esperadas: 200 com JSON `{ message: "..." }`. Se vier 401 → secret errado/vazio. Se vier 500 → falha no job (ver logs do PM2: `pm2 logs`).
+Resposta esperada: `200` com JSON `{ "message": "... completed ..." }`.
+- `401` → secret errado/vazio.
+- `500` → falha no job (o JSON traz `error`/`errors`; cheque `pm2 logs attra`).
 
-### 5. Logs do pg_cron
+### 6. Conferir o estado dos dados (news)
 
-SQL Editor:
-
-```sql
-SELECT jobid, runid, job_pid, status, return_message, start_time, end_time
-FROM cron.job_run_details
-WHERE jobid IN (
-    SELECT jobid FROM cron.job
-    WHERE jobname IN ('daily-blog-ai', 'weekly-news-ingestion')
-)
-ORDER BY start_time DESC
-LIMIT 20;
-```
-
-Se `status = 'failed'`, leia `return_message`. Se vier `401`, secret está errado no comando do cron — re-rode a migration com o secret atual.
-
-### 6. Diagnóstico rápido — script CLI
-
-Da máquina local (apontando para prod) ou da VPS:
+A página `/news` só mostra conteúdo se houver um `news_cycle` com `is_active = true`.
+Consulte direto via REST (service role):
 
 ```bash
-npx tsx scripts/check-cron-status.ts
+cd /var/www/attra; set -a; . .env.production; set +a
+curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/news_cycles?select=id,week_start,week_end,is_active,created_at&order=created_at.desc&limit=6" \
+  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
 ```
 
-Imprime: jobs do pg_cron, últimas 5 runs do blog AI, últimos 3 news_cycles, e env vars críticas (sem expor valores).
+Espere exatamente **uma** linha com `is_active: true` apontando para a semana corrente.
+
+> Atenção a cache: `/api/news` tem `revalidate = 3600` e a página `/news` é ISR.
+> Após uma ingestão manual, o `revalidatePath('/news')` do job atualiza a página,
+> mas o endpoint `/api/news` pode servir resposta cacheada por até 1h.
 
 ### 7. Diagnóstico via endpoint admin
-
-Logado como admin no painel, abra:
 
 ```
 https://attraveiculos.com.br/api/admin/cron-status
 ```
 
-Retorna JSON com o mesmo conteúdo do script CLI.
-
 ## Hipóteses ordenadas por probabilidade
 
-1. **Migration `20260420` não aplicada no banco prod** → checklist passo 2/3.
-2. **`CRON_SECRET` vazio no `.env.production` da VPS** → endpoint 401 → passo 1/4.
-3. **News-ingestion órfão pós-Vercel** → aplique migration `20260517` (passo 2).
-4. **PM2 sem cron próprio** — não é necessário; pg_cron faz HTTP direto.
+1. **Wrapper sumido em `/usr/local/bin/`** → passo 1 (log mostra `No such file or directory`).
+2. **`CRON_SECRET` vazio no `.env.production`** → endpoint 401 → passo 3/5.
+3. **Job falha no meio** (Gemini/GNews/Supabase) → passo 4/5, leia o `errors[]` do JSON.
+4. **Serviço de cron inativo** → passo 2.
+5. **Alguém reativou o pg_cron** → ignore; ele não executa. O agendador real é o `/etc/cron.d`.
