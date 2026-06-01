@@ -13,7 +13,7 @@ Diagnóstico para quando o blog AI / news ingestion / hero preprocess **não dis
 
 | Rotina | Job | Endpoint | Wrapper (VPS) | `/etc/cron.d/` | Frequência | Log |
 |---|---|---|---|---|---|---|
-| Blog AI | `src/lib/jobs/daily-blog-ai.ts` | `GET/POST /api/cron/blog-ai` | `/usr/local/bin/attra-blog-ai.sh` | `attra-blog-ai` | `0 4 * * 0` (dom 04:00 UTC) | `/var/log/attra-blog.log` |
+| Blog AI | `src/lib/jobs/daily-blog-ai.ts` | `GET/POST /api/cron/blog-ai` | `/usr/local/bin/attra-blog-ai.sh` | `attra-blog-ai` | `0 4 * * *` (diário 04:00 UTC) | `/var/log/attra-blog.log` |
 | News ingestion | `src/lib/jobs/weekly-news-ingestion.ts` | `GET/POST /api/cron/news-ingestion` | `/usr/local/bin/attra-news-ingestion.sh` | `attra-news-ingestion` | `0 3 * * 0` (dom 03:00 UTC) | `/var/log/attra-news.log` |
 | Hero preprocess | `scripts/preprocess-hero-assets.ts` | `GET /api/cron/hero-preprocess` | `/usr/local/bin/attra-hero-preprocess.sh` | `attra-hero-preprocess` | `0 */6 * * *` (a cada 6h) | `/var/log/attra-hero.log` |
 
