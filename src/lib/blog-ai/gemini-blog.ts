@@ -243,7 +243,9 @@ LLMO (otimização para LLMs como ChatGPT, Perplexity, Gemini):
 - Estruture FAQs com pergunta literal e resposta autossuficiente — cada
   resposta precisa fazer sentido lida isolada da pergunta.
 - Quando souber dados oficiais públicos da montadora (potência, torque,
-  aceleração) sem precisar inventar, mencione-os com naturalidade.
+  aceleração) sem precisar inventar, mencione-os com naturalidade. Quando NÃO
+  souber um dado técnico, simplesmente OMITA — nunca escreva "sob consulta",
+  "consultar" ou "N/A" para spec técnica (isso vale só para preço/comercial).
 
 REGRA CRÍTICA — PREÇOS PROIBIDOS: nunca, em hipótese alguma, mencione valores
 monetários, preços, faixas de preço, cifras em reais, "R$", "milhões", "mil
@@ -272,6 +274,11 @@ Retorne APENAS JSON válido, sem markdown, sem \`\`\`. Campos obrigatórios:
     "acceleration": "string", "top_speed": "string", "transmission": "string",
     "drivetrain": "string opcional", "weight": "string opcional"
   },
+  // REGRA DA FICHA TÉCNICA (specs): inclua um campo APENAS se souber o dado
+  // técnico OFICIAL real do veículo. Se não souber, OMITA o campo (não envie a
+  // chave, ou envie ""). NUNCA preencha uma spec técnica com "sob consulta",
+  // "consultar", "N/A", "não informado" ou similar — placeholder comercial não
+  // vale para dado técnico; campo desconhecido deve simplesmente sumir.
   "faq": [{"question": "string", "answer": "string"}] (4-6 itens),
   "highlights": [{"text": "string", "category": "performance|design|technology|exclusivity|comfort"}] (4-6 itens),
   "optionals": ["strings"] (5-10 itens quando disponíveis),

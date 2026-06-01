@@ -25,6 +25,20 @@ interface CarReviewTemplateProps {
   post: DualBlogPost
 }
 
+// Valores-placeholder que significam "dado desconhecido". A ficha técnica deve
+// OMITIR o campo nesses casos — nunca exibir "sob consulta"/"consultar"/"N/A"
+// para dado técnico (placeholder só vale para o aspecto comercial/preço).
+const SPEC_PLACEHOLDERS = new Set([
+  '', '-', '—', '–', 'consultar', 'a consultar', 'sob consulta', 'sob consultar',
+  'n/a', 'na', 'nd', 'n/d', 'não informado', 'nao informado', 'não informada',
+  'nao informada', 'não disponível', 'nao disponivel', 'indisponível',
+  'indisponivel', 'desconhecido', 'desconhecida',
+])
+
+function hasSpecValue(value?: string): value is string {
+  return !!value && !SPEC_PLACEHOLDERS.has(value.trim().toLowerCase())
+}
+
 // ============================================================================
 // VEHICLE SPECS TABLE - Ficha técnica consolidada em 2 colunas
 // ============================================================================
@@ -40,7 +54,7 @@ function VehicleSpecsTable({ specs }: {
     { label: 'Torque', value: specs.torque, icon: RotateCcw },
     { label: '0-100 km/h', value: specs.acceleration, icon: Gauge },
     { label: 'Velocidade Máxima', value: specs.top_speed, icon: Gauge },
-  ].filter(item => item.value && item.value !== 'Consultar')
+  ].filter(item => hasSpecValue(item.value))
 
   const configSpecs = [
     { label: 'Transmissão', value: specs.transmission, icon: Settings },
@@ -48,7 +62,7 @@ function VehicleSpecsTable({ specs }: {
     { label: 'Peso', value: specs.weight, icon: Disc },
     { label: 'Pneus', value: specs.tires, icon: Disc },
     { label: 'Freios', value: specs.brakes, icon: Disc },
-  ].filter(item => item.value && item.value !== 'Consultar')
+  ].filter(item => hasSpecValue(item.value))
 
   if (performanceSpecs.length === 0 && configSpecs.length === 0) return null
 
