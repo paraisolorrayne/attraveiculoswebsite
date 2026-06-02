@@ -410,9 +410,9 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
         </div>
       </section>
 
-      {/* Main listing: 80% width on desktop */}
+      {/* Main listing: ~82% width on desktop (sidebar + cards horizontais precisam de espaço) */}
       <section className="pb-20">
-        <div className="w-full lg:w-[64%] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
             <aside className="lg:w-96 xl:w-[26rem] shrink-0">
               <Suspense fallback={<Skeleton className="h-96 w-full" />}>

@@ -166,7 +166,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
           DESKTOP LAYOUT (lg+) — split: texto à esquerda, vídeo à direita.
           ============================================================ */}
       <div className="hidden lg:grid grid-cols-[45fr_55fr] items-center gap-12 relative w-full
-                      h-[100svh] min-h-[640px] max-h-[920px] overflow-hidden px-[10%]">
+                      min-h-[560px] py-16 xl:py-20 overflow-hidden px-[10%]">
         {/* Coluna esquerda — texto */}
         <div className="relative z-10 flex flex-col justify-center items-start text-left">
           {editorialCopy}

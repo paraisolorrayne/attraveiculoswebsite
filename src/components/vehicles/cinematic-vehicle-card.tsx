@@ -108,7 +108,7 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
   return (
     <div className="group bg-background-card border border-border rounded-2xl overflow-hidden flex flex-col md:flex-row transition-all duration-300 hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1">
       {/* Image container - fixed 4:3 aspect + object-cover */}
-      <Link href={`/veiculo/${vehicle.slug}`} className="relative aspect-[4/3] md:w-[55%] shrink-0 overflow-hidden bg-background-soft block">
+      <Link href={`/veiculo/${vehicle.slug}`} className="relative aspect-[4/3] md:w-[46%] shrink-0 overflow-hidden bg-background-soft block">
         <VehicleImage
           src={vehicle.photos?.[0]}
           alt={`${vehicle.brand} ${vehicle.model}`}
@@ -128,7 +128,7 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
       </Link>
 
       {/* Content */}
-      <div className="p-5 md:p-6 flex-1 flex flex-col justify-center">
+      <div className="p-5 md:p-6 flex-1 min-w-0 flex flex-col justify-center">
         <Link href={`/veiculo/${vehicle.slug}`} className="block">
           <p className="text-primary text-xs font-semibold mb-1 uppercase tracking-wider">{vehicle.brand}</p>
           <h3 className="text-xl lg:text-2xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-1">
