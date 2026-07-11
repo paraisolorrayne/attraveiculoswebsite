@@ -6,7 +6,7 @@ import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGeoLocation, generateVehicleMessage } from '@/lib/webhook'
 import { WHATSAPP_NUMBER, isSeoPage } from '@/lib/constants'
-import { GeoLocation, WhatsAppWebhookPayload } from '@/types'
+import { GeoLocation } from '@/types'
 import { useVehicleContext } from '@/contexts/vehicle-context'
 import { useAnalytics } from '@/hooks/use-analytics'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
@@ -63,25 +63,6 @@ function isTypingInForm(): boolean {
   if (!el) return false
   const tag = el.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
-}
-
-// Dispara o webhook sem bloquear o redirect. Usa sendBeacon quando
-// possível (sobrevive à navegação no mesmo tab); senão, fetch keepalive.
-// Importante: o endpoint final está em sendWhatsAppWebhook, mas como ele
-// é async/await e quebra o user-gesture, replicamos um POST fire-and-forget
-// direto pra rota que o N8N já consome — porém aqui, como o webhook é
-// chamado client-side direto (NEXT_PUBLIC_SDR_WEBHOOK_URL), basta enviar
-// um fetch keepalive enriquecido com o mesmo payload.
-function fireAndForgetWebhook(
-  payload: Omit<WhatsAppWebhookPayload, 'timestamp' | 'sessionId' | 'pageUrl' | 'userAgent' | 'localTimestamp' | 'geoLocation'>,
-  geoLocation: GeoLocation | null,
-) {
-  // Import dinâmico apenas pra delegar o trabalho de montar o payload
-  // enriquecido ao módulo já existente. Não aguardamos a promise — o
-  // redirect acontece em paralelo via anchor.
-  import('@/lib/webhook')
-    .then(({ sendWhatsAppWebhook }) => sendWhatsAppWebhook(payload, geoLocation))
-    .catch(() => null)
 }
 
 export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
@@ -209,24 +190,6 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       vehicle_brand: vehicleBrand,
       vehicle_model: vehicleModel,
     })
-
-    // Webhook N8N fire-and-forget (não bloqueia o redirect)
-    fireAndForgetWebhook(
-      {
-        eventType: vehicleId ? 'vehicle_inquiry' : 'chat_request',
-        sourcePage: currentPage,
-        context: {
-          vehicleId,
-          vehicleBrand,
-          vehicleModel,
-          vehicleYear,
-          scrollProgress: Math.round(scrollProgress),
-          timeOnPage: Math.round(performance.now() / 1000),
-          userMessage: context.message,
-        },
-      },
-      geoLocation,
-    )
 
     // O navegador segue com a navegação nativa do <a target="_blank">
   }

@@ -8,7 +8,6 @@ import {
   User,
   Shield,
   Volume2,
-  Users,
   ChevronDown,
   Menu,
   X,
@@ -16,8 +15,8 @@ import {
   Settings,
   Megaphone,
   FileText,
-  Image,
-  MailOpen
+  MailOpen,
+  Palette
 } from 'lucide-react'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
 
@@ -68,12 +67,6 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
       allowedRoles: ['admin', 'gerente'],
     },
     {
-      label: 'Banners',
-      href: '/admin/banners',
-      icon: <Image className="w-4 h-4" />,
-      allowedRoles: ['admin', 'gerente'],
-    },
-    {
       label: 'Newsletter',
       href: '/admin/newsletter/campaigns',
       icon: <MailOpen className="w-4 h-4" />,
@@ -86,10 +79,10 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
       allowedRoles: ['admin', 'gerente'],
     },
     {
-      label: 'CRM',
-      href: '/admin/crm/leads',
-      icon: <Users className="w-4 h-4" />,
-      allowedRoles: ['admin'],
+      label: 'Criativos',
+      href: '/admin/gerador-criativos',
+      icon: <Palette className="w-4 h-4" />,
+      allowedRoles: ['admin', 'gerente'],
     },
     {
       label: 'Configurações',

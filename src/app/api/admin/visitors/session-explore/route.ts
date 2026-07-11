@@ -125,123 +125,10 @@ export async function GET(request: NextRequest) {
     const firstPageUrl = pageViews?.[0]?.page_url || ''
     const extractedParams = extractUrlParams(firstPageUrl)
 
-    // ── Step 3: Find leads ──
-    // Priority: exact session_id match → ip match → fbclid match → email/phone match → time window
-
+    // ── Step 3: (removido) correlação com leads do CRM ──
+    // O CRM saiu do site (migrou para o Fykos); mantemos o campo
+    // leads_found vazio para compatibilidade com a UI de visitantes.
     const matchedLeads: Array<Record<string, unknown> & { match_type: string }> = []
-    const addLeads = (leads: Record<string, unknown>[] | null, matchType: string) => {
-      leads?.forEach(l => {
-        if (!matchedLeads.find(ml => ml.id === l.id)) {
-          matchedLeads.push({ ...l, match_type: matchType })
-        }
-      })
-    }
-
-    // 3a) Direct session_id match (exact attribution)
-    const { data: sessionLeads } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('criado_em', { ascending: false })
-      .limit(50)
-    addLeads(sessionLeads, 'exact_session')
-
-    // 3b) Match by IP address
-    if (session.ip_address) {
-      const { data: ipLeads } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('ip_address', session.ip_address)
-        .order('criado_em', { ascending: false })
-        .limit(50)
-      addLeads(ipLeads, 'ip_match')
-    }
-
-    // 3c) Match by fbclid
-    const fbclid = session.fbclid || extractedParams.fbclid
-    if (fbclid) {
-      const { data: fbLeads } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('fbclid', fbclid)
-        .order('criado_em', { ascending: false })
-        .limit(50)
-      addLeads(fbLeads, 'fbclid_match')
-    }
-
-    // 3d) Match by gclid
-    const gclid = session.gclid || extractedParams.gclid
-    if (gclid) {
-      const { data: gcLeads } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('gclid', gclid)
-        .order('criado_em', { ascending: false })
-        .limit(50)
-      addLeads(gcLeads, 'gclid_match')
-    }
-
-    // 3e) Match by utm_source
-    if (session.utm_source) {
-      const { data: utmLeads } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('utm_source', session.utm_source)
-        .order('criado_em', { ascending: false })
-        .limit(50)
-      addLeads(utmLeads, 'utm_match')
-    }
-
-    // 3f) Match by email/phone from visitor profile
-    const { data: fingerprint } = await supabase
-      .from('visitor_fingerprints')
-      .select('id, resolved_profile_id')
-      .eq('id', session.fingerprint_id)
-      .single()
-
-    if (fingerprint?.resolved_profile_id) {
-      const { data: profile } = await supabase
-        .from('visitor_profiles')
-        .select('email, phone, full_name')
-        .eq('id', fingerprint.resolved_profile_id)
-        .single()
-
-      if (profile?.email) {
-        const { data: emailLeads } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('email', profile.email)
-          .order('criado_em', { ascending: false })
-          .limit(50)
-        addLeads(emailLeads, 'email_match')
-      }
-
-      if (profile?.phone) {
-        const { data: phoneLeads } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('telefone', profile.phone)
-          .order('criado_em', { ascending: false })
-          .limit(50)
-        addLeads(phoneLeads, 'phone_match')
-      }
-    }
-
-    // 3g) Match leads by time window around session (±10 minutes)
-    if (session.created_at) {
-      const sessionTime = new Date(session.created_at)
-      const windowStart = new Date(sessionTime.getTime() - 10 * 60 * 1000).toISOString()
-      const windowEnd = new Date(sessionTime.getTime() + 10 * 60 * 1000).toISOString()
-
-      const { data: timeLeads } = await supabase
-        .from('leads')
-        .select('*')
-        .gte('criado_em', windowStart)
-        .lte('criado_em', windowEnd)
-        .order('criado_em', { ascending: false })
-        .limit(50)
-      addLeads(timeLeads, 'time_window_match')
-    }
 
     // ── Step 4: Get identity events for this session's fingerprint ──
     const { data: identityEvents } = await supabase
@@ -278,26 +165,7 @@ export async function GET(request: NextRequest) {
       vehicle_price: pv.vehicle_price,
     }))
 
-    const leadsFound = matchedLeads.map(l => ({
-      id: l.id,
-      nome: l.nome,
-      email: l.email,
-      telefone: l.telefone,
-      status: l.status,
-      origem: l.origem,
-      prioridade: l.prioridade,
-      session_id: l.session_id,
-      ip_address: l.ip_address,
-      landing_page: l.landing_page,
-      referrer: l.referrer,
-      utm_source: l.utm_source,
-      utm_medium: l.utm_medium,
-      utm_campaign: l.utm_campaign,
-      fbclid: l.fbclid,
-      gclid: l.gclid,
-      criado_em: l.criado_em,
-      match_type: l.match_type,
-    }))
+    const leadsFound: Record<string, unknown>[] = []
 
     const events = [
       ...(identityEvents || []).map(e => ({

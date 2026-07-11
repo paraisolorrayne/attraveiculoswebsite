@@ -4,10 +4,6 @@ import { createHash } from 'crypto'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 
-// N8N webhook URL and secret for enrichment
-const N8N_ENRICHMENT_WEBHOOK = process.env.N8N_ENRICHMENT_WEBHOOK_URL
-const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET
-
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -168,33 +164,7 @@ export async function POST(request: NextRequest) {
       source,
     })
 
-    // Trigger N8N enrichment webhook if configured
-    if (N8N_ENRICHMENT_WEBHOOK && (email || phone)) {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-
-      // Add authentication header if secret is configured
-      if (N8N_WEBHOOK_SECRET) {
-        headers['Authorization'] = `Bearer ${N8N_WEBHOOK_SECRET}`
-      }
-
-      fetch(N8N_ENRICHMENT_WEBHOOK, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          profile_id: profileId,
-          fingerprint_id: fingerprint_db_id,
-          email,
-          phone,
-          name,
-          source,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(err => console.error('[Tracking] N8N webhook error:', err))
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true, 
       profile_id: profileId,
       was_merged: !!existingProfile,

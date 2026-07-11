@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 3 * * * root /usr/local/bin/attra-cleanup-tracking.sh >> /var/log/attra-cleanup-tracking.log 2>&1

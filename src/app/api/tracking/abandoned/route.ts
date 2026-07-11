@@ -3,13 +3,10 @@ import { supabase } from "@/lib/supabase/tracking-client"
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 
-const N8N_ABANDONED_WEBHOOK = process.env.N8N_ABANDONED_LEAD_WEBHOOK_URL
-const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET
-
 /**
  * API route for abandoned session lead capture.
  * Called from the client via sendBeacon on exit intent or session timeout.
- * Verifies the visitor has identifiable data before forwarding to N8N.
+ * Verifies the visitor has identifiable data and logs the abandonment event.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,12 +23,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       fingerprint_db_id,
-      session_db_id,
       reason,             // 'exit_intent' | 'session_timeout'
       behavioral_signals, // { pageHistory, totalDwellTimeMs, visitCount, productPagesViewed, currentSessionPages }
-      geolocation,        // { city, region, country }
-      utm_params,         // UTM parameters
-      click_ids,          // { gclid, fbclid, ttclid }
     } = body
 
     if (!fingerprint_db_id) {
@@ -69,30 +62,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, reason: 'no_identifiable_data' })
     }
 
-    // Build the N8N webhook payload
-    const abandonedLeadPayload = {
-      profile_id: profileId,
-      fingerprint_id: fingerprint_db_id,
-      session_id: session_db_id,
-      reason,
-      timestamp: new Date().toISOString(),
-      local_timestamp: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      // Visitor data (from profile)
-      visitor: {
-        email: profile.email || null,
-        phone: profile.phone || null,
-        name: profile.full_name || profile.first_name || null,
-        status: profile.status,
-        enrichment_source: profile.enrichment_source || null,
-      },
-      // Behavioral signals
-      behavioral_signals: behavioral_signals || {},
-      // Context
-      geolocation: geolocation || null,
-      utm_params: utm_params || null,
-      click_ids: click_ids || null,
-    }
-
     // Log the abandonment event in identity_events
     await supabase.from('identity_events').insert({
       fingerprint_id: fingerprint_db_id,
@@ -106,26 +75,6 @@ export async function POST(request: NextRequest) {
       },
       source: 'abandonment_detection',
     })
-
-    // Send to N8N webhook if configured
-    if (N8N_ABANDONED_WEBHOOK) {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      if (N8N_WEBHOOK_SECRET) {
-        headers['Authorization'] = `Bearer ${N8N_WEBHOOK_SECRET}`
-      }
-
-      fetch(N8N_ABANDONED_WEBHOOK, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(abandonedLeadPayload),
-      }).catch(err => console.error('[Abandoned] N8N webhook error:', err))
-
-      console.log('[Abandoned] Webhook sent for profile:', profileId, 'reason:', reason)
-    } else {
-      console.warn('[Abandoned] N8N_ABANDONED_LEAD_WEBHOOK_URL not configured')
-    }
 
     return NextResponse.json({
       success: true,

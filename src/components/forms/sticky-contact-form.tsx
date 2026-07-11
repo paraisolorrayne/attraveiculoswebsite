@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Loader2, X, MessageCircle, Car, Search } from 'lucide-react'
-import { sendWhatsAppWebhook, getGeoLocation } from '@/lib/webhook'
 import { cn } from '@/lib/utils'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { useVehicleContext } from '@/contexts/vehicle-context'
@@ -48,7 +47,7 @@ function getPageMode(pathname: string): PageMode {
 export function StickyContactForm() {
   const pathname = usePathname()
   const { vehicle } = useVehicleContext()
-  const { trackInteraction } = useVisitorTracking()
+  const { trackInteraction, getVisitorContext } = useVisitorTracking()
 
   const [isVisible, setIsVisible] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -132,20 +131,26 @@ export function StickyContactForm() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     try {
-      const geoLocation = await getGeoLocation()
-
       const vehicleInfo = pageMode === 'vehicle' && vehicleName
         ? `, Veículo: ${vehicleName}`
         : ''
 
-      await sendWhatsAppWebhook({
-        eventType: pageMode === 'vehicle' ? 'vehicle_inquiry' : 'general_inquiry',
-        sourcePage: `exit_intent_form_${pageMode}`,
-        context: {
-          userMessage: `Nome: ${data.name}, Email: ${data.email}, Interesse: ${data.interestType}${vehicleInfo}`,
-          ...(vehicle?.vehicleSlug && { vehicleSlug: vehicle.vehicleSlug }),
-        },
-      }, geoLocation)
+      const visitorContext = getVisitorContext()
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          message: `Interesse: ${data.interestType}${vehicleInfo}`,
+          formType: pageMode === 'vehicle' ? 'vehicle_inquiry' : 'general',
+          sourcePage: `exit_intent_form_${pageMode}`,
+          brand: vehicle?.vehicleBrand,
+          model: vehicle?.vehicleModel,
+          traffic: visitorContext.traffic,
+          sessionId: visitorContext.sessionId,
+        }),
+      })
 
       // Notify the tracking provider that user converted
       trackInteraction('form_submit', {

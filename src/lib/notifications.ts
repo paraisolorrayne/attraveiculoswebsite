@@ -18,11 +18,6 @@ function getResendClient(): Resend {
 // Notification email destination
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'faleconosco@attraveiculos.com.br'
 
-// N8N Webhook URL for WhatsApp notifications.
-// Sem fallback hardcoded; quando ausente o canal N8N vira noop e a
-// captura do lead segue pelos canais Email (Resend) + Avisa (WhatsApp).
-const WHATSAPP_NOTIFICATION_WEBHOOK_URL = process.env.WHATSAPP_NOTIFICATION_WEBHOOK_URL || ''
-
 // Lista de destinos para notificação de novos leads via WhatsApp.
 // Configurável via env ADMIN_WHATSAPP_NUMBERS (csv, somente dígitos com DDI).
 // Default: número comercial + número pessoal do responsável.
@@ -73,7 +68,6 @@ export interface WhatsAppNotificationResult {
 // Combined notification result
 export interface NotificationResult {
   email: EmailResult
-  whatsapp: WhatsAppNotificationResult
   avisa: WhatsAppNotificationResult
 }
 
@@ -266,96 +260,10 @@ export async function sendEmailNotification(data: NotificationData): Promise<Ema
 }
 
 /**
- * Sends WhatsApp notification via N8N webhook
- */
-export async function sendWhatsAppNotification(data: NotificationData): Promise<WhatsAppNotificationResult> {
-  // Sem URL configurada → noop. Avisa API ainda cobre o canal WhatsApp.
-  if (!WHATSAPP_NOTIFICATION_WEBHOOK_URL) {
-    console.warn('[WhatsApp] WHATSAPP_NOTIFICATION_WEBHOOK_URL not configured, skipping N8N webhook')
-    return { success: false, error: 'WHATSAPP_NOTIFICATION_WEBHOOK_URL not configured' }
-  }
-
-  try {
-    const timestamp = data.timestamp || new Date().toISOString()
-    const localTimestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-
-    const typeLabels: Record<NotificationType, string> = {
-      contact_form: 'Formulário de Contato',
-      lead_magnet: 'Download de Material',
-      vehicle_alert: 'Alerta de Veículos',
-      vehicle_inquiry: 'Interesse em Veículo',
-      financing_inquiry: 'Consulta de Financiamento',
-      trade_in_inquiry: 'Avaliação de Troca',
-      general_inquiry: 'Consulta Geral',
-    }
-
-    const basePayload = {
-      eventType: 'email_notification',
-      notificationType: data.type,
-      notificationLabel: typeLabels[data.type] || data.type,
-      sourcePage: data.sourcePage || 'site',
-      timestamp,
-      localTimestamp,
-      sender: {
-        name: data.senderName,
-        email: data.senderEmail,
-        phone: data.senderPhone,
-      },
-      subject: data.subject,
-      message: data.message,
-      metadata: data.metadata,
-    }
-
-    console.log(`[WhatsApp] Sending notification for ${data.type} to ${ADMIN_WHATSAPP_NUMBERS.length} number(s)`)
-
-    // Dispara em paralelo para todos os números configurados. O lead é
-    // considerado notificado se ao menos um POST der certo.
-    const results = await Promise.all(
-      ADMIN_WHATSAPP_NUMBERS.map(async (whatsappNumber) => {
-        try {
-          const response = await fetch(WHATSAPP_NOTIFICATION_WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Webhook-Secret': process.env.WEBHOOK_SECRET || '',
-            },
-            body: JSON.stringify({ ...basePayload, whatsappNumber }),
-          })
-          if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error')
-            console.error(`[WhatsApp] Webhook error for ${whatsappNumber}:`, response.status, errorText)
-            return { number: whatsappNumber, ok: false, error: `${response.status}` }
-          }
-          return { number: whatsappNumber, ok: true }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error'
-          console.error(`[WhatsApp] Fetch error for ${whatsappNumber}:`, msg)
-          return { number: whatsappNumber, ok: false, error: msg }
-        }
-      })
-    )
-
-    const anySuccess = results.some(r => r.ok)
-    if (!anySuccess) {
-      const errs = results.map(r => `${r.number}:${r.error || 'fail'}`).join(', ')
-      return { success: false, error: `All destinations failed — ${errs}` }
-    }
-
-    console.log('[WhatsApp] Notification dispatched. Results:', results)
-    return { success: true }
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[WhatsApp] Error sending notification:', errorMessage)
-    return { success: false, error: errorMessage }
-  }
-}
-
-/**
  * Sends WhatsApp notification via Avisa API directly to the store's
- * WhatsApp number(s). Independent canal — não depende de Resend, N8N
- * nem CRM externo. Garantia mínima de captura quando os outros canais
- * falham silenciosamente (auth, rate limit, downtime do webhook).
+ * WhatsApp number(s). Canal independente — não depende de Resend nem
+ * de sistema externo. Garantia mínima de captura quando os outros
+ * canais falham silenciosamente (auth, rate limit, downtime).
  *
  * Configuração (envs no .env.production):
  *   AVISA_API_TOKEN     — token Bearer da instância de ENVIO (ex: Lorrayne)
@@ -471,9 +379,9 @@ export async function sendAvisaWhatsApp(data: NotificationData): Promise<WhatsAp
 }
 
 /**
- * Sends email and WhatsApp notifications (Resend + N8N webhook + Avisa).
- * Os 3 canais disparam em paralelo. Avisa é a "linha-base garantida" que
- * leva o lead direto pro WhatsApp da loja, mesmo que email/N8N falhem.
+ * Sends email and WhatsApp notifications (Resend + Avisa).
+ * Os 2 canais disparam em paralelo. Avisa é a "linha-base garantida" que
+ * leva o lead direto pro WhatsApp da loja, mesmo que o email falhe.
  */
 export async function sendNotification(data: NotificationData): Promise<NotificationResult> {
   // Add timestamp if not present
@@ -482,20 +390,18 @@ export async function sendNotification(data: NotificationData): Promise<Notifica
     timestamp: data.timestamp || new Date().toISOString(),
   }
 
-  // Dispara os 3 canais em paralelo — falha em um não bloqueia os outros.
-  const [emailResult, whatsappResult, avisaResult] = await Promise.all([
+  // Dispara os canais em paralelo — falha em um não bloqueia o outro.
+  const [emailResult, avisaResult] = await Promise.all([
     sendEmailNotification(notificationData),
-    sendWhatsAppNotification(notificationData),
     sendAvisaWhatsApp(notificationData),
   ])
 
   console.log(
-    `[Notification] Complete — Email: ${emailResult.success}, WhatsApp: ${whatsappResult.success}, Avisa: ${avisaResult.success}`
+    `[Notification] Complete — Email: ${emailResult.success}, Avisa: ${avisaResult.success}`
   )
 
   return {
     email: emailResult,
-    whatsapp: whatsappResult,
     avisa: avisaResult,
   }
 }

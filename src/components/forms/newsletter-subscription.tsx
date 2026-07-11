@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Mail, CheckCircle, Sparkles } from 'lucide-react'
-import { sendWhatsAppWebhook, getGeoLocation } from '@/lib/webhook'
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -40,16 +39,6 @@ export function NewsletterSubscription({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: data.email, source: `newsletter_${source}` }),
       })
-
-      // Also send webhook notification
-      const geoLocation = await getGeoLocation()
-      await sendWhatsAppWebhook({
-        eventType: 'general_inquiry',
-        sourcePage: `newsletter_${source}`,
-        context: {
-          userMessage: `Newsletter Subscription - Email: ${data.email}`,
-        },
-      }, geoLocation)
 
       setIsSuccess(true)
       reset()

@@ -28,12 +28,6 @@ function logSecurityEvent(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Block all access to automations folder (N8N workflows - internal only)
-  if (pathname.startsWith('/automations')) {
-    logSecurityEvent('automations_access_blocked', request)
-    return NextResponse.json({ error: 'Not Found' }, { status: 404 })
-  }
-
   // Only protect admin routes (except login and reset-password)
   if (!pathname.startsWith('/admin') ||
     pathname === '/admin/login' ||
@@ -203,7 +197,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/automations/:path*',
   ],
 }
 

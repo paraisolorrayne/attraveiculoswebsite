@@ -41,7 +41,7 @@ export function VehicleRequestForm() {
       await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: '/solicitar-veiculo', traffic: visitorContext.traffic }),
+        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: '/solicitar-veiculo', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
       })
 
       // Track form submission in analytics with visitor context (includes geolocation)

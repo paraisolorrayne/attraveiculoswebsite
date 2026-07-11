@@ -46,9 +46,9 @@ export default function AdminLoginPage() {
       // Redirect to intended page or default based on user role
       let redirect = searchParams.get('redirect')
 
-      // If no redirect specified, use role-based default
+      // If no redirect specified, use default landing page
       if (!redirect) {
-        redirect = data.user?.role === 'admin' ? '/admin/crm/leads' : '/admin/engine-sounds'
+        redirect = '/admin/engine-sounds'
       }
 
       // Use window.location.replace for a full page reload

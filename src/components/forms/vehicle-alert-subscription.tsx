@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Bell, CheckCircle } from 'lucide-react'
-import { sendWhatsAppWebhook, getGeoLocation } from '@/lib/webhook'
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -46,17 +45,21 @@ export function VehicleAlertSubscription() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     try {
-      const geoLocation = await getGeoLocation()
       const brandNames = data.brands.map(id => luxuryBrands.find(b => b.id === id)?.label).join(', ')
-      
-      await sendWhatsAppWebhook({
-        eventType: 'general_inquiry',
-        sourcePage: 'veiculos_vehicle_alerts',
-        context: {
-          userMessage: `Alerta de Veículos - Email: ${data.email}, Marcas: ${brandNames}`,
-        },
-      }, geoLocation)
-      
+
+      // Notifica a loja por email + Avisa (sem telefone não vira lead Fykos)
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Alerta de veículos (site)',
+          email: data.email,
+          message: `Quer ser avisado sobre: ${brandNames}`,
+          formType: 'vehicle_alert',
+          sourcePage: '/veiculos',
+        }),
+      })
+
       setIsSuccess(true)
     } catch (error) {
       console.error('Error:', error)

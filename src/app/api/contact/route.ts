@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sendNotification, logNotificationEvent, NotificationType } from '@/lib/notifications'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
-import { classifyLeadSource } from '@/lib/crm/lead-source'
+import { classifyLeadSource } from '@/lib/lead-source'
+import { sendFykosLead } from '@/lib/fykos'
 
 const trafficSchema = z.object({
   utmSource:   z.string().optional(),
@@ -24,7 +25,9 @@ const contactSchema = z.object({
   name: z.string().min(3),
   // Email is optional — short lead-capture forms (WhatsApp-first) may omit it
   email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().min(10),
+  // Phone é opcional no servidor (guia grátis / exit-intent / alertas não
+  // exigem); cada formulário valida a própria obrigatoriedade no client
+  phone: z.string().optional().or(z.literal('')),
   subject: z.string().optional(),
   message: z.string().optional(),
   sourcePage: z.string().optional(),
@@ -44,6 +47,9 @@ const contactSchema = z.object({
   yearMax: z.string().optional(),
   budgetMax: z.string().optional(),
   details: z.string().optional(),
+  // ID de sessão do tracking (attra_session_id) — correlaciona o lead no
+  // Fykos com a navegação do visitante no site
+  sessionId: z.string().optional(),
 })
 
 // Map form types to notification types
@@ -122,7 +128,7 @@ export async function POST(request: NextRequest) {
     const notificationResult = await sendNotification({
       type: notificationType,
       senderName: data.name,
-      senderEmail: data.email,
+      senderEmail: data.email || '',
       senderPhone: data.phone,
       subject: data.subject,
       message: data.message,
@@ -131,14 +137,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Log notification event for monitoring. Considera o lead capturado
-    // se ao menos UM dos 3 canais funcionou (email, n8n whatsapp, avisa).
+    // se ao menos UM dos canais funcionou (email, avisa).
     const anyChannelSuccess =
       notificationResult.email.success ||
-      notificationResult.whatsapp.success ||
       notificationResult.avisa.success
     logNotificationEvent(notificationType, anyChannelSuccess, {
       email: notificationResult.email,
-      whatsapp: notificationResult.whatsapp,
       avisa: notificationResult.avisa,
       senderEmail: data.email,
       sourcePage: data.sourcePage,
@@ -153,37 +157,34 @@ export async function POST(request: NextRequest) {
       ttclid:     data.traffic?.ttclid,
       referrer:   data.traffic?.referrer,
     })
+    console.log('[Contact API] Lead source:', fonte)
 
-    // Also send to CRM webhook if configured
-    const crmWebhookUrl = process.env.CRM_WEBHOOK_URL
-    if (crmWebhookUrl) {
-      try {
-        await fetch(crmWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: notificationType,
-            data: {
-              ...data,
-              fonte,
-              timestamp: new Date().toISOString(),
-              source: 'website',
-            },
-          }),
+    // Envia o lead pro CRM Fykos (falha não bloqueia a resposta — email e
+    // Avisa acima são os canais garantidos de captura). Só vai pro Fykos
+    // com telefone: sem ele não há como a loja iniciar o atendimento.
+    const hasPhone = Boolean(data.phone?.replace(/\D/g, ''))
+    const fykosResult = hasPhone
+      ? await sendFykosLead({
+          name: data.name,
+          email: data.email,
+          phone: data.phone!,
+          message: data.message,
+          brand: data.brand,
+          model: data.model,
+          year: data.year,
+          mileage: data.mileage,
+          vehicleValue: data.vehicleValue,
+          sessionId: data.sessionId,
         })
-      } catch (crmError) {
-        console.error('[Contact API] CRM webhook error:', crmError)
-        // Don't fail the request if CRM webhook fails
-      }
-    }
+      : { success: false, error: 'sem telefone — não enviado ao Fykos' }
 
     return NextResponse.json({
       success: true,
       message: 'Mensagem enviada com sucesso!',
       notifications: {
         email: notificationResult.email.success,
-        whatsapp: notificationResult.whatsapp.success,
         avisa: notificationResult.avisa.success,
+        fykos: fykosResult.success,
       }
     })
   } catch (error) {

@@ -16,7 +16,7 @@ const securityHeaders = [
       // Fonts: self and Google Fonts
       "font-src 'self' https://fonts.gstatic.com data:",
       // Connect: API endpoints and analytics
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://region1.google-analytics.com https://*.hotjar.com https://*.hotjar.io wss://*.hotjar.com https://webhook.dexidigital.com.br https://api.resend.com https://*.clarity.ms https://clarity.ms wss://*.clarity.ms https://www.instagram.com https://graph.instagram.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://*.googleadservices.com https://www.google.com https://*.google.com https://www.google.com.br https://*.google.com.br https://*.doubleclick.net https://*.googlesyndication.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://region1.google-analytics.com https://*.hotjar.com https://*.hotjar.io wss://*.hotjar.com https://api.resend.com https://*.clarity.ms https://clarity.ms wss://*.clarity.ms https://www.instagram.com https://graph.instagram.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://*.googleadservices.com https://www.google.com https://*.google.com https://www.google.com.br https://*.google.com.br https://*.doubleclick.net https://*.googlesyndication.com",
       // Frames: YouTube embeds, Instagram embeds, Google Ads, and same origin
       "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.instagram.com https://td.doubleclick.net https://www.googletagmanager.com",
       // Media: self and external sources
@@ -240,20 +240,6 @@ const nextConfig: NextConfig = {
     // Increase default quality
     minimumCacheTTL: 60 * 60 * 24, // 24 hours cache
   },
-  // Block access to automations folder (N8N workflows - internal only)
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/automations/:path*',
-          destination: '/404',
-        },
-      ],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
-
   // Apply security headers to all routes
   async headers() {
     return [

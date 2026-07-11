@@ -92,7 +92,7 @@ export function FinancingForm() {
       await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, subject: 'Simulação de Financiamento', sourcePage: '/financiamento', traffic: visitorContext.traffic }),
+        body: JSON.stringify({ ...data, subject: 'Simulação de Financiamento', sourcePage: '/financiamento', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
       })
 
       // Track financing calculation in analytics with visitor context (includes geolocation)

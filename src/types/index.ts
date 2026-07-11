@@ -53,39 +53,6 @@ export interface GeoLocation {
 	ip?: string
 }
 
-// WhatsApp/N8N webhook payload
-export interface WhatsAppWebhookPayload {
-	eventType: 'chat_request' | 'vehicle_inquiry' | 'service_inquiry' | 'whatsapp_click'
-	sourcePage: string
-	context: {
-		vehicleId?: string
-		vehicleBrand?: string
-		vehicleModel?: string
-		vehicleYear?: string | number
-		vehiclePrice?: number
-		vehicleSlug?: string
-		serviceType?: string
-		blogCategory?: string
-		scrollProgress?: number
-		timeOnPage?: number
-		userMessage?: string
-	}
-	// Enhanced fields for N8N agent
-	pageUrl?: string
-	userAgent?: string
-	localTimestamp?: string
-	sessionId?: string
-	timestamp: string
-	// Geolocation data
-	geoLocation?: GeoLocation
-}
-
-// Webhook response type
-export interface WebhookResponse {
-	success: boolean
-	message: string
-}
-
 // SEO metadata
 export interface SEOData {
 	title: string

@@ -295,164 +295,6 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['campaign_vehicles']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['campaign_vehicles']['Insert']>
       }
-      // CRM Tables
-      clientes: {
-        Row: {
-          id: string
-          nome: string
-          telefone: string | null
-          email: string | null
-          cpf_cnpj: string | null
-          tipo: 'lead' | 'cliente' | 'ex_cliente'
-          origem_principal: OrigemCliente
-          faixa_valor_preferida_min: number | null
-          faixa_valor_preferida_max: number | null
-          tipos_preferidos: string[]
-          marcas_preferidas: string[]
-          criado_em: string
-          atualizado_em: string
-        }
-        Insert: Omit<Database['public']['Tables']['clientes']['Row'], 'id' | 'criado_em' | 'atualizado_em'>
-        Update: Partial<Database['public']['Tables']['clientes']['Insert']>
-      }
-      leads: {
-        Row: {
-          id: string
-          origem: OrigemLead
-          payload_bruto: Json
-          cliente_id: string | null
-          nome: string
-          telefone: string | null
-          email: string | null
-          interesse_tipo: InteresseTipo | null
-          faixa_preco_interesse_min: number | null
-          faixa_preco_interesse_max: number | null
-          categoria_interesse: string | null
-          marca_interesse: string | null
-          modelo_interesse: string | null
-          prioridade: PrioridadeLead
-          status: StatusLead
-          // Tracking / attribution columns
-          session_id: string | null
-          visitor_session_db_id: string | null
-          ip_address: string | null
-          landing_page: string | null
-          referrer: string | null
-          utm_source: string | null
-          utm_medium: string | null
-          utm_campaign: string | null
-          utm_content: string | null
-          utm_term: string | null
-          fbclid: string | null
-          gclid: string | null
-          ttclid: string | null
-          criado_em: string
-          atualizado_em: string
-          // Funil de vendas
-          etapa_funil: EtapaFunil
-          motivo_perda: MotivoPerdaTipo | null
-          motivo_perda_texto: string | null
-          /** Provisório (text). Migrar para vendedor_responsavel_id (FK admin_users) em sprint futura. */
-          vendedor_responsavel: string | null
-          valor_potencial: number | null
-          data_ultimo_contato: string | null
-          probabilidade_fechamento: number | null
-          veiculo_placa: string | null
-        }
-        Insert: Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'criado_em' | 'atualizado_em'>
-        Update: Partial<Database['public']['Tables']['leads']['Insert']>
-      }
-      eventos_lead: {
-        Row: {
-          id: string
-          lead_id: string
-          tipo: EventoLeadTipo
-          descricao: string | null
-          proximo_contato_em: string | null
-          responsavel: string
-          webhook_disparado: boolean
-          criado_em: string
-        }
-        Insert: Omit<Database['public']['Tables']['eventos_lead']['Row'], 'id' | 'criado_em'>
-        Update: Partial<Database['public']['Tables']['eventos_lead']['Insert']>
-      }
-      historico_compras: {
-        Row: {
-          id: string
-          cliente_id: string
-          lead_id: string | null
-          veiculo_id_externo: string | null
-          data_compra: string
-          valor_compra: number
-          categoria: string | null
-          marca: string | null
-          modelo: string | null
-          status: StatusCompra
-          loja: string | null
-          vendedor: string | null
-          descricao: string | null
-          criado_em: string
-        }
-        Insert: Omit<Database['public']['Tables']['historico_compras']['Row'], 'id' | 'criado_em'>
-        Update: Partial<Database['public']['Tables']['historico_compras']['Insert']>
-      }
-      boletos: {
-        Row: {
-          id: string
-          cliente_id: string
-          lead_id: string | null
-          venda_id: string | null
-          identificador_externo: string | null
-          nosso_numero: string | null
-          linha_digitavel: string | null
-          descricao: string
-          valor_total: number
-          data_emissao: string
-          data_vencimento: string
-          data_pagamento: string | null
-          valor_pago: number | null
-          veiculo_descricao: string | null
-          status: StatusBoleto
-          forma_cobranca: FormaCobranca
-          origem: OrigemBoleto
-          criado_em: string
-          atualizado_em: string
-        }
-        Insert: Omit<Database['public']['Tables']['boletos']['Row'], 'id' | 'criado_em' | 'atualizado_em'>
-        Update: Partial<Database['public']['Tables']['boletos']['Insert']>
-      }
-      eventos_boleto: {
-        Row: {
-          id: string
-          boleto_id: string
-          tipo: EventoBoletoTipo
-          descricao: string | null
-          data_evento: string
-          criado_em: string
-        }
-        Insert: Omit<Database['public']['Tables']['eventos_boleto']['Row'], 'id' | 'criado_em'>
-        Update: Partial<Database['public']['Tables']['eventos_boleto']['Insert']>
-      }
-      // Site Banners
-      site_banners: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          image_url: string
-          image_mobile_url: string | null
-          target_url: string | null
-          display_order: number
-          is_active: boolean
-          start_date: string | null
-          end_date: string | null
-          device_type: 'all' | 'desktop' | 'mobile'
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['site_banners']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['site_banners']['Insert']>
-      }
       // Newsletter Campaigns
       newsletter_campaigns: {
         Row: {
@@ -487,19 +329,6 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['newsletter_subscribers']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['newsletter_subscribers']['Insert']>
-      }
-      // Lead Notes (CRM)
-      lead_notes: {
-        Row: {
-          id: string
-          lead_id: string
-          content: string
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['lead_notes']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['lead_notes']['Insert']>
       }
     }
     Views: {
@@ -599,11 +428,6 @@ export interface MarketingTaskWithDetails extends MarketingTask {
   comments_count?: number
 }
 
-// Site Banners Table Types
-export type SiteBanner = Database['public']['Tables']['site_banners']['Row']
-export type SiteBannerInsert = Database['public']['Tables']['site_banners']['Insert']
-export type SiteBannerUpdate = Database['public']['Tables']['site_banners']['Update']
-
 // Newsletter Table Types
 export type NewsletterCampaign = Database['public']['Tables']['newsletter_campaigns']['Row']
 export type NewsletterCampaignInsert = Database['public']['Tables']['newsletter_campaigns']['Insert']
@@ -611,54 +435,6 @@ export type NewsletterCampaignUpdate = Database['public']['Tables']['newsletter_
 export type NewsletterSubscriber = Database['public']['Tables']['newsletter_subscribers']['Row']
 export type NewsletterSubscriberInsert = Database['public']['Tables']['newsletter_subscribers']['Insert']
 export type NewsletterSubscriberUpdate = Database['public']['Tables']['newsletter_subscribers']['Update']
-
-// Lead Notes Table Types
-export type LeadNote = Database['public']['Tables']['lead_notes']['Row']
-export type LeadNoteInsert = Database['public']['Tables']['lead_notes']['Insert']
-export type LeadNoteUpdate = Database['public']['Tables']['lead_notes']['Update']
-
-// CRM Table Types
-export type Cliente = Database['public']['Tables']['clientes']['Row']
-export type ClienteInsert = Database['public']['Tables']['clientes']['Insert']
-export type ClienteUpdate = Database['public']['Tables']['clientes']['Update']
-
-export type Lead = Database['public']['Tables']['leads']['Row']
-export type LeadInsert = Database['public']['Tables']['leads']['Insert']
-export type LeadUpdate = Database['public']['Tables']['leads']['Update']
-
-export type EventoLead = Database['public']['Tables']['eventos_lead']['Row']
-export type EventoLeadInsert = Database['public']['Tables']['eventos_lead']['Insert']
-
-export type HistoricoCompra = Database['public']['Tables']['historico_compras']['Row']
-export type HistoricoCompraInsert = Database['public']['Tables']['historico_compras']['Insert']
-
-export type Boleto = Database['public']['Tables']['boletos']['Row']
-export type BoletoInsert = Database['public']['Tables']['boletos']['Insert']
-export type BoletoUpdate = Database['public']['Tables']['boletos']['Update']
-
-export type EventoBoleto = Database['public']['Tables']['eventos_boleto']['Row']
-export type EventoBoletoInsert = Database['public']['Tables']['eventos_boleto']['Insert']
-
-// Extended types with relations
-export interface ClienteWithStats extends Cliente {
-  lead_count: number
-  purchase_count: number
-  total_spent: number
-  last_purchase_date: string | null
-}
-
-export interface LeadWithCliente extends Lead {
-  cliente?: Cliente | null
-  eventos?: EventoLead[]
-  proximo_contato?: string | null
-}
-
-export interface BoletoWithCliente extends Boleto {
-  cliente: Cliente
-  lead?: Lead | null
-  dias_em_atraso?: number
-}
-
 
 
 // =====================================================

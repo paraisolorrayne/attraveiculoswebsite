@@ -63,6 +63,7 @@ export function LeadCaptureSection() {
           formType: 'lead_capture_home',
           sourcePage: '/',
           traffic: visitorContext.traffic,
+          sessionId: visitorContext.sessionId,
         }),
       })
 

@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Download, CheckCircle } from 'lucide-react'
-import { sendWhatsAppWebhook, getGeoLocation } from '@/lib/webhook'
 import { useAnalytics } from '@/hooks/use-analytics'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
@@ -32,18 +31,25 @@ export function LeadMagnetForm() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
     try {
-      const geoLocation = await getGeoLocation()
+      const visitorContext = getVisitorContext()
 
-      await sendWhatsAppWebhook({
-        eventType: 'general_inquiry',
-        sourcePage: 'lead_magnet_guia_supercarro',
-        context: {
-          userMessage: `Lead Magnet Download - Nome: ${data.name}, Email: ${data.email}, Telefone: ${data.phone || 'Não informado'}`,
-        },
-      }, geoLocation)
+      // Captura o lead (email + Avisa + Fykos) via rota unificada
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          message: 'Baixou o Guia Supercarro Attra',
+          formType: 'lead_magnet',
+          sourcePage: '/guia-supercarro-gratis',
+          traffic: visitorContext.traffic,
+          sessionId: visitorContext.sessionId,
+        }),
+      })
 
       // Track form submission and guide download in analytics with visitor context (includes geolocation)
-      const visitorContext = getVisitorContext()
       trackFormSubmission({
         formName: 'lead_magnet_form',
         formLocation: '/guia-supercarro-gratis',

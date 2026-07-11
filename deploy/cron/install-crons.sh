@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JOBS=(attra-blog-ai attra-news-ingestion attra-hero-preprocess)
+JOBS=(attra-blog-ai attra-news-ingestion attra-hero-preprocess attra-cleanup-tracking)
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "ERRO: rode como root (sudo) — escreve em /usr/local/bin e /etc/cron.d." >&2
@@ -39,4 +39,4 @@ for job in "${JOBS[@]}"; do
   test -x "/usr/local/bin/$job.sh" || { echo "ERRO: /usr/local/bin/$job.sh não executável"; exit 1; }
   test -f "/etc/cron.d/$job"       || { echo "ERRO: /etc/cron.d/$job ausente"; exit 1; }
 done
-echo "OK — 3 wrappers + 3 crontabs instalados e validados."
+echo "OK — ${#JOBS[@]} wrappers + ${#JOBS[@]} crontabs instalados e validados."
