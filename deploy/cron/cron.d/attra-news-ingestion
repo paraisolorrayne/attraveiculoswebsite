@@ -1,4 +1,4 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-0 3 * * 0 root /usr/local/bin/attra-news-ingestion.sh >> /var/log/attra-news.log 2>&1
+0 3 * * * root /usr/local/bin/attra-news-ingestion.sh >> /var/log/attra-news.log 2>&1

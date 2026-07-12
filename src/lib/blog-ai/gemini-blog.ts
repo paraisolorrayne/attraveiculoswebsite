@@ -17,6 +17,7 @@ import type {
   EducativoFields,
 } from '@/types'
 import { GEMINI_TEXT_MODEL } from '@/lib/gemini-config'
+import { composeComparisonFeaturedImage } from './comparison-image'
 
 const GEMINI_MODEL = GEMINI_TEXT_MODEL
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -609,15 +610,21 @@ ${JSON_SCHEMA_EDUCATIVO}
     seo_keyword: `${carA.brand} ${carA.model} vs ${carB.brand} ${carB.model}`,
   }
 
+  const slug = buildSlug(raw.slug_hint ?? '', raw.title)
+
+  // Post de dois carros pede imagem destacada com os dois: split A|B com
+  // selo VS. Falhou? Cai na primeira foto, como antes.
+  const composedFeatured = await composeComparisonFeaturedImage(imagesA[0], imagesB[0], slug)
+
   return {
     strategy: 'comparison',
     post: {
       post_type: 'educativo',
       title: raw.title,
-      slug: buildSlug(raw.slug_hint ?? '', raw.title),
+      slug,
       excerpt: raw.excerpt,
       content,
-      featured_image: images[0] ?? '',
+      featured_image: composedFeatured ?? images[0] ?? '',
       featured_image_alt: `${carA.brand} ${carA.model} vs ${carB.brand} ${carB.model}`,
       author: { name: 'Attra Veículos', bio: 'Curadoria em superesportivos e alto padrão' },
       published_date: new Date().toISOString(),
@@ -628,6 +635,7 @@ ${JSON_SCHEMA_EDUCATIVO}
     },
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // Strategy 3: From Instagram caption + media

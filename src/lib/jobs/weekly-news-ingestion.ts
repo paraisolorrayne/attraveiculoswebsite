@@ -207,13 +207,34 @@ export async function runWeeklyNewsIngestion(): Promise<{
 }> {
   const errors: string[] = []
   let articlesInserted = 0
-  
+
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const { weekStart, weekEnd, startDate, endDate } = getWeekRange()
 
   console.log(`[NewsIngestion] Starting for week ${weekStart} to ${weekEnd}`)
 
   try {
+    // 0. Auto-cura: o cron roda diariamente, mas só ingere quando o ciclo
+    // ativo está velho (>6 dias). Semana normal → no-op de seg a sáb; se a
+    // execução de domingo falhar (ex.: banco fora do ar), o dia seguinte
+    // cria o ciclo da semana em vez de deixar o site defasado 7 dias.
+    const { data: activeCycle } = await supabase
+      .from('news_cycles')
+      .select('id, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (activeCycle?.created_at) {
+      const ageMs = Date.now() - new Date(activeCycle.created_at).getTime()
+      const sixDaysMs = 6 * 24 * 60 * 60 * 1000
+      if (ageMs < sixDaysMs) {
+        console.log(`[NewsIngestion] Ciclo ativo tem ${(ageMs / 86_400_000).toFixed(1)} dias — nada a fazer`)
+        return { success: true, cycleId: activeCycle.id, articlesInserted: 0, errors: [] }
+      }
+    }
+
     // 1. Check if cycle already exists for this week
     const { data: existingCycle } = await supabase
       .from('news_cycles')

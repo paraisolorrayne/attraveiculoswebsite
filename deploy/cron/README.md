@@ -20,7 +20,7 @@ deploy/cron/
     attra-cleanup-tracking.sh   # curl /api/cron/cleanup-tracking (retenção 60d)
   cron.d/                       # -> /etc/cron.d/ (0644, root)
     attra-blog-ai               # 0 4 * * *   (diário 04:00)
-    attra-news-ingestion        # 0 3 * * 0   (domingo 03:00)
+    attra-news-ingestion        # 0 3 * * *   (diário 03:00 — no-op se o ciclo tem <6 dias; auto-cura quando o domingo falha)
     attra-hero-preprocess       # 0 */6 * * * (a cada 6h)
     attra-cleanup-tracking      # 30 3 * * *  (diário 03:30)
   install-crons.sh              # aplica tudo, idempotente, valida com ls
