@@ -480,8 +480,9 @@ function renderClassico(){
     // preserva o brilho do letreiro; escurece só a área do título
     g = ctx.createLinearGradient(0, 170, 0, 780);
     g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(.24, 'rgba(0,0,0,.46)');
-    g.addColorStop(.62, 'rgba(0,0,0,.24)');
+    g.addColorStop(.22, 'rgba(0,0,0,.60)');
+    g.addColorStop(.48, 'rgba(0,0,0,.48)');
+    g.addColorStop(.75, 'rgba(0,0,0,.22)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 170, W, 610);
   }
@@ -500,9 +501,9 @@ function renderClassico(){
 
   // sombra suave para o título não se perder no fundo da fachada/foto
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,.6)';
-  ctx.shadowBlur = 16;
-  ctx.shadowOffsetY = 2;
+  ctx.shadowColor = 'rgba(0,0,0,.75)';
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 3;
 
   if(marca) spacedText(marca, W/2, 316, '600 30px Montserrat, sans-serif', 11, '#ffffff');
 
