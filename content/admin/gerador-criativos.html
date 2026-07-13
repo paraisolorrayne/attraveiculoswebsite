@@ -446,6 +446,13 @@ function renderClassico(){
   } else {
     ctx.fillStyle = '#101013'; ctx.fillRect(0, 0, W, PHOTO1_H);
   }
+  // esfuma a base da fachada no fundo cinza — remove a linha dura da rua
+  // que aparece quando a foto do veículo não cobre essa área
+  const fg = ctx.createLinearGradient(0, 560, 0, PHOTO1_H);
+  fg.addColorStop(0, 'rgba(219,219,221,0)');
+  fg.addColorStop(1, 'rgba(219,219,221,1)');
+  ctx.fillStyle = fg;
+  ctx.fillRect(0, 560, W, PHOTO1_H - 560);
   ctx.restore();
 
   // foto do carro com bordas esfumadas, fundida na fachada
@@ -491,6 +498,12 @@ function renderClassico(){
   const modelo = val('modelo').toUpperCase();
   const ano    = val('ano');
 
+  // sombra suave para o título não se perder no fundo da fachada/foto
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.6)';
+  ctx.shadowBlur = 16;
+  ctx.shadowOffsetY = 2;
+
   if(marca) spacedText(marca, W/2, 316, '600 30px Montserrat, sans-serif', 11, '#ffffff');
 
   let msize = 96, mspace = 30;
@@ -508,6 +521,8 @@ function renderClassico(){
     ctx.moveTo(W/2 + tw/2 + 40,  yy - 11); ctx.lineTo(W/2 + tw/2 + 225, yy - 11);
     ctx.stroke();
   }
+
+  ctx.restore(); // fim da sombra do título
 
   const DIAG_L = 1622, DIAG_R = 1548;
   g = ctx.createLinearGradient(0, PHOTO1_H, 0, DIAG_L);
@@ -531,13 +546,13 @@ function renderClassico(){
   ctx.restore();
 
   const preco = val('preco');
-  if(preco) spacedText('R$  ' + preco, W/2, 1112, '300 88px Montserrat, sans-serif', 18, '#7f7f83');
+  if(preco) spacedText('R$ ' + preco, W/2, 1106, '300 60px Montserrat, sans-serif', 12, '#5a5a5f');
 
   const kmParts = [];
   if(val('km')) kmParts.push(val('km') + ' KM');
   if(val('kmextra')) kmParts.push(val('kmextra').toUpperCase());
   if(kmParts.length)
-    spacedText(kmParts.join('  |  '), W/2, 1164, '500 28px Montserrat, sans-serif', 5, '#4a4a4e');
+    spacedText(kmParts.join('  |  '), W/2, 1154, '500 24px Montserrat, sans-serif', 5, '#6f6f74');
 
   const bullets = ['b1','b2','b3','b4'].map(val).filter(Boolean);
   const bFont = '700 34px Montserrat, sans-serif';
