@@ -441,18 +441,22 @@ function renderClassico(){
   ctx.save();
   ctx.beginPath(); ctx.rect(0, 0, W, PHOTO1_H); ctx.clip();
   if(facadeImg.complete && facadeImg.naturalWidth){
-    // -40px esconde o toldo e deixa o letreiro mais compacto no topo
-    ctx.drawImage(facadeImg, 0, -40, W, facadeImg.height * (W/facadeImg.width));
+    // -60px esconde o toldo e deixa o letreiro mais compacto no topo
+    // (limite prático: o letreiro começa ~70px do topo da foto)
+    ctx.drawImage(facadeImg, 0, -60, W, facadeImg.height * (W/facadeImg.width));
   } else {
     ctx.fillStyle = '#101013'; ctx.fillRect(0, 0, W, PHOTO1_H);
   }
-  // esfuma a base da fachada no fundo cinza — remove a linha dura da rua
-  // que aparece quando a foto do veículo não cobre essa área
-  const fg = ctx.createLinearGradient(0, 560, 0, PHOTO1_H);
+  // some com a calçada/asfalto da foto (a divisa criava uma linha dura):
+  // fade curto a partir da base da vitrine + cinza sólido dali pra baixo,
+  // igual ao fundo dos layouts originais
+  const fg = ctx.createLinearGradient(0, 430, 0, 590);
   fg.addColorStop(0, 'rgba(219,219,221,0)');
   fg.addColorStop(1, 'rgba(219,219,221,1)');
   ctx.fillStyle = fg;
-  ctx.fillRect(0, 560, W, PHOTO1_H - 560);
+  ctx.fillRect(0, 430, W, 160);
+  ctx.fillStyle = 'rgb(219,219,221)';
+  ctx.fillRect(0, 590, W, PHOTO1_H - 590);
   ctx.restore();
 
   // foto do carro com bordas esfumadas, fundida na fachada
@@ -501,8 +505,8 @@ function renderClassico(){
 
   // sombra suave para o título não se perder no fundo da fachada/foto
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,.75)';
-  ctx.shadowBlur = 22;
+  ctx.shadowColor = 'rgba(0,0,0,.85)';
+  ctx.shadowBlur = 30;
   ctx.shadowOffsetY = 3;
 
   if(marca) spacedText(marca, W/2, 316, '600 30px Montserrat, sans-serif', 11, '#ffffff');
