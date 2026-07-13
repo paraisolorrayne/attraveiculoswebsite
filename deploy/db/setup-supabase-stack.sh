@@ -79,21 +79,17 @@ else
   echo "    segredos gerados e gravados em $DIR/docker/.env (chmod 600)"
 fi
 
-echo "==> [3/5] Portas restritas a 127.0.0.1 (docker-compose.override.yml)"
-cat > docker-compose.override.yml <<'EOF'
-# Gateway e pooler só em localhost — acesso externo será via Nginx com TLS.
-# IMPORTANTE: o compose oficial publica o Kong também em 8443 (HTTPS);
-# sem o override das DUAS portas o gateway fica exposto na internet.
-services:
-  kong:
-    ports: !override
-      - "127.0.0.1:8000:8000/tcp"
-      - "127.0.0.1:8443:8443/tcp"
-  supavisor:
-    ports: !override
-      - "127.0.0.1:5432:5432/tcp"
-      - "127.0.0.1:6543:6543/tcp"
-EOF
+echo "==> [3/5] Portas restritas a 127.0.0.1 (patch direto no docker-compose.yml)"
+# O !override do compose não preservou o host_ip na prática — patch direto é
+# determinístico. Idempotente: depois do prefixo, o padrão não casa mais.
+rm -f docker-compose.override.yml
+sed -i \
+  -e 's|- \${KONG_HTTP_PORT}:8000/tcp|- 127.0.0.1:\${KONG_HTTP_PORT}:8000/tcp|' \
+  -e 's|- \${KONG_HTTPS_PORT}:8443/tcp|- 127.0.0.1:\${KONG_HTTPS_PORT}:8443/tcp|' \
+  -e 's|- \${POSTGRES_PORT}:5432$|- 127.0.0.1:\${POSTGRES_PORT}:5432|' \
+  -e 's|- \${POOLER_PROXY_PORT_TRANSACTION}:6543$|- 127.0.0.1:\${POOLER_PROXY_PORT_TRANSACTION}:6543|' \
+  docker-compose.yml
+grep -n "127.0.0.1:\${KONG_HTTP_PORT}\|127.0.0.1:\${POSTGRES_PORT}" docker-compose.yml | head -4
 echo "    ok"
 
 echo "==> [4/5] Subindo o stack (primeira vez baixa ~3GB de imagens; paciência)"
