@@ -482,10 +482,10 @@ function renderClassico(){
     ctx.fillStyle = g; ctx.fillRect(0, 170, W, 610);
   }
 
-  g = ctx.createLinearGradient(0, PHOTO1_H-130, 0, PHOTO1_H);
+  g = ctx.createLinearGradient(0, PHOTO1_H-60, 0, PHOTO1_H);
   g.addColorStop(0, 'rgba(219,219,221,0)');
   g.addColorStop(1, 'rgba(219,219,221,1)');
-  ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-130, W, 130);
+  ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-60, W, 60);
 
   // logo desenhado só quando a foto cobre o letreiro da fachada
   if(topGap < 150) drawLogoWhite(W/2, 168, 340);
@@ -542,7 +542,7 @@ function renderClassico(){
   ctx.restore();
 
   const preco = val('preco');
-  if(preco) spacedText('R$ ' + preco, W/2, 1070, '300 60px Montserrat, sans-serif', 12, '#5a5a5f');
+  if(preco) spacedText('R$ ' + preco, W/2, 1066, '300 54px Montserrat, sans-serif', 11, '#5a5a5f');
 
   const kmParts = [];
   if(val('km')) kmParts.push(val('km') + ' KM');
