@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   LogOut,
   User,
+  Users,
   Shield,
   Volume2,
   ChevronDown,
@@ -85,6 +86,12 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
       href: '/admin/gerador-criativos',
       icon: <Palette className="w-4 h-4" />,
       allowedRoles: ['admin', 'gerente'],
+    },
+    {
+      label: 'Usuários',
+      href: '/admin/usuarios',
+      icon: <Users className="w-4 h-4" />,
+      allowedRoles: ['admin'],
     },
     {
       label: 'Configurações',
