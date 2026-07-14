@@ -936,11 +936,11 @@ function renderEditorial(){
 
   // ---------- topo: sombreamento suave (as barras de luz não ofuscam
   // a logo) + logo maior ----------
-  const topo = ctx.createLinearGradient(0, 0, 0, 390);
-  topo.addColorStop(0, 'rgba(0,0,0,.80)');
-  topo.addColorStop(.55, 'rgba(0,0,0,.42)');
+  const topo = ctx.createLinearGradient(0, 0, 0, 420);
+  topo.addColorStop(0, 'rgba(0,0,0,.85)');
+  topo.addColorStop(.55, 'rgba(0,0,0,.45)');
   topo.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = topo; ctx.fillRect(0, 0, W, 390);
+  ctx.fillStyle = topo; ctx.fillRect(0, 0, W, 420);
   drawLogoWhite(W/2, 128, 250);
 
   // ---------- carro (recortado pela IA) no palco ----------
