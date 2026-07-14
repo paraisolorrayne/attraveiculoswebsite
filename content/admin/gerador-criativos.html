@@ -936,11 +936,11 @@ function renderEditorial(){
 
   // ---------- topo: sombreamento suave (as barras de luz não ofuscam
   // a logo) + logo maior ----------
-  const topo = ctx.createLinearGradient(0, 0, 0, 340);
-  topo.addColorStop(0, 'rgba(0,0,0,.62)');
-  topo.addColorStop(.6, 'rgba(0,0,0,.30)');
+  const topo = ctx.createLinearGradient(0, 0, 0, 390);
+  topo.addColorStop(0, 'rgba(0,0,0,.80)');
+  topo.addColorStop(.55, 'rgba(0,0,0,.42)');
   topo.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = topo; ctx.fillRect(0, 0, W, 340);
+  ctx.fillStyle = topo; ctx.fillRect(0, 0, W, 390);
   drawLogoWhite(W/2, 128, 250);
 
   // ---------- carro (recortado pela IA) no palco ----------
@@ -977,19 +977,25 @@ function renderEditorial(){
     ctx.textAlign = 'left';
   }
 
-  // ---------- bottom: informações à esquerda, tons escuros sobre o
-  // piso claro (contraste garantido) ----------
+  // ---------- bottom: sombreamento espelhado ao do topo garante a
+  // legibilidade — textos claros sobre o véu escuro ----------
+  const rodape = ctx.createLinearGradient(0, 1400, 0, H);
+  rodape.addColorStop(0, 'rgba(0,0,0,0)');
+  rodape.addColorStop(.45, 'rgba(0,0,0,.38)');
+  rodape.addColorStop(1, 'rgba(0,0,0,.66)');
+  ctx.fillStyle = rodape; ctx.fillRect(0, 1400, W, H - 1400);
+
   const M = 76;
   let y = 1548;
 
   // rótulo de curadoria com filete vermelho
-  ctx.fillStyle = '#9a1c1c';
+  ctx.fillStyle = '#c33a39';
   ctx.fillRect(M, y - 16, 42, 3);
-  edTextoEsq('SELEÇÃO ATTRA', M + 58, y - 8, '500 21px ' + ED.fonte, 7, '#5d5d62');
+  edTextoEsq('SELEÇÃO ATTRA', M + 58, y - 8, '500 21px ' + ED.fonte, 7, '#d4d4da');
 
   y += 66;
   const marca = val('marca').toUpperCase();
-  if(marca) edTextoEsq(marca, M, y, '500 30px ' + ED.fonte, 9, '#3f3f44');
+  if(marca) edTextoEsq(marca, M, y, '500 30px ' + ED.fonte, 9, '#e4e4e9');
 
   y += 74;
   const modelo = val('modelo').toUpperCase();
@@ -999,7 +1005,7 @@ function renderEditorial(){
     while(ms > 36 && ctx.measureText(modelo).width > W - 2*M){
       ms -= 2; ctx.font = `600 ${ms}px ` + ED.fonte;
     }
-    ctx.fillStyle = '#141416';
+    ctx.fillStyle = '#ffffff';
     ctx.fillText(modelo, M, y);
   }
 
@@ -1009,7 +1015,7 @@ function renderEditorial(){
     val('km') ? val('km') + ' KM' : '',
     val('kmextra').toUpperCase(),
   ].filter(Boolean).join('   •   ');
-  if(meta) edTextoEsq(meta, M, y, '400 27px ' + ED.fonte, 3, '#47474c');
+  if(meta) edTextoEsq(meta, M, y, '400 27px ' + ED.fonte, 3, '#cfcfd6');
 
   y += 84;
   const preco = val('preco').replace(/^R\$\s*/i, '');
@@ -1020,7 +1026,7 @@ function renderEditorial(){
     while(ps > 34 && ctx.measureText(ptxt).width > W - 2*M){
       ps -= 1; ctx.font = `500 ${ps}px ` + ED.fonte;
     }
-    ctx.fillStyle = '#141416';
+    ctx.fillStyle = '#ffffff';
     ctx.fillText(ptxt, M, y);
   }
 }
