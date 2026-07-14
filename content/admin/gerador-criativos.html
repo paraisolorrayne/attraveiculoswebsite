@@ -199,6 +199,12 @@
         <div><label>Posição ↔</label><input type="range" id="f2x" min="0" max="100" value="50"></div>
         <div><label>Posição ↕</label><input type="range" id="f2y" min="0" max="100" value="50"></div>
       </div>
+      <div id="corte-wrap">
+        <label style="margin-top:12px">Altura do corte transversal (Clássico)</label>
+        <input type="range" id="corte" min="-160" max="200" value="0">
+        <div class="hint">Arraste pra direita em carros ALTOS (mais área de foto);
+          pra esquerda em carros baixos (mais espaço pros destaques).</div>
+      </div>
       <div id="fotos-extra" style="display:none">
         <label style="margin-top:16px">Foto de baixo 2 (opcional)</label>
         <input type="file" id="foto3" accept="image/*">
@@ -552,7 +558,10 @@ function renderClassico(){
 
   ctx.restore(); // fim da sombra do título
 
-  const DIAG_L = 1440, DIAG_R = 1400;
+  // corte transversal ajustável: slider positivo sobe a diagonal (carros
+  // altos ganham foto); negativo desce (carros baixos ganham texto)
+  const corte = parseInt($('corte').value, 10) || 0;
+  const DIAG_L = 1440 - corte, DIAG_R = 1400 - corte;
   g = ctx.createLinearGradient(0, PHOTO1_H, 0, DIAG_L);
   g.addColorStop(0, '#dbdbdd'); g.addColorStop(1, '#c9c9cc');
   ctx.fillStyle = g;
@@ -602,7 +611,7 @@ function renderClassico(){
   });
   let gap = 30;
   if(items.length > 1)
-    gap = Math.max(20, Math.min(30, (areaBot - areaTop - items.length*lineH) / (items.length - 1)));
+    gap = Math.max(20, Math.min(48, (areaBot - areaTop - items.length*lineH) / (items.length - 1)));
   const totalH = items.length*lineH + gap*Math.max(0, items.length-1);
   let by = areaTop + Math.max(0, (areaBot - areaTop - totalH)/2) + 30;
 
@@ -931,8 +940,13 @@ function edChip(x, y, w, h, r){
 }
 
 function renderEditorial(){
-  const M = ED.margem, FH = ED.fotoH;
+  const M = ED.margem;
   const T = ED_TEMAS[state.edTema] || ED_TEMAS.escuro;
+  // A área da foto segue a PROPORÇÃO NATURAL da imagem (quadrada = 1080px,
+  // 16:9 = ~608px): zoom 1 = foto inteira, sem corte e sem sobras.
+  const FH = state.foto1
+    ? Math.min(Math.round(W * state.foto1.height / state.foto1.width), 1150)
+    : ED.fotoH;
 
   // fundo de base (a foto se funde nele)
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -964,8 +978,8 @@ function renderEditorial(){
   // logo pequena e discreta no topo (sobre a foto)
   drawLogoWhite(W/2, 92, 150);
 
-  // ---------- painel de informação ----------
-  let y = 1268;
+  // ---------- painel de informação (ancorado no rodapé) ----------
+  let y = H - 500;
 
   // rótulo de curadoria com filete vermelho mínimo
   ctx.fillStyle = T.vermelho;
@@ -1031,16 +1045,6 @@ function renderEditorial(){
     y += ch;
   }
 
-  // cor / motor / som — pequenas, discretas
-  y += 64;
-  for(const id of ['b1','b2','b3']){
-    const t = val(id);
-    if(!t) continue;
-    ctx.font = '400 24px ' + ED.fonte;
-    ctx.fillStyle = T.suave;
-    ctx.fillText(t, M, y);
-    y += 42;
-  }
 }
 
 function render(){
@@ -1110,7 +1114,7 @@ $('clearlogo').addEventListener('click', () => {
 });
 
 ['marca','modelo','ano','preco','km','kmextra','b1','b2','b3',
- 'selo','et1','et2'].forEach(id =>
+ 'selo','et1','et2','corte'].forEach(id =>
   $(id).addEventListener('input', render));
 
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
@@ -1126,9 +1130,10 @@ $('clearlogo').addEventListener('click', () => {
 function updateVisibility(){
   const t = state.tipo;
   $('sec-edtema').style.display    = t === 'editorial' ? '' : 'none';
+  $('corte-wrap').style.display    = t === 'classico' ? '' : 'none';
   $('sec-busca').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-veiculo').style.display   = t === 'estoque' ? 'none' : '';
-  $('sec-destaques').style.display = (t === 'classico' || t === 'editorial') ? '' : 'none';
+  $('sec-destaques').style.display = t === 'classico' ? '' : 'none';
   $('sec-specs').style.display     = t === 'destaque' ? '' : 'none';
   $('sec-fotos').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-estoque').style.display   = t === 'estoque' ? '' : 'none';
