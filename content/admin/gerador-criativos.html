@@ -6,7 +6,7 @@
 <title>Gerador de Criativos — Attra Veículos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#101014; --panel:#1a1a20; --panel2:#22222a; --line:#2e2e38;
@@ -122,10 +122,11 @@
         <button class="typebtn active" data-tipo="classico">1 · Clássico<small>escuro, foto grande</small></button>
         <button class="typebtn" data-tipo="destaque">2 · Destaque<small>claro, ficha técnica</small></button>
         <button class="typebtn" data-tipo="estoque">3 · Estoque<small>lista de até 4 carros</small></button>
+        <button class="typebtn" data-tipo="editorial">4 · Editorial<small>luxo, minimalista</small></button>
       </div>
     </fieldset>
 
-    <fieldset id="sec-estoque">
+    <fieldset id="sec-busca">
       <legend>Buscar do estoque (opcional)</legend>
       <div class="row">
         <div style="flex:3"><label>Veículo no estoque</label>
@@ -528,10 +529,10 @@ function renderClassico(){
   while(msize > 40 && spacedWidth(modelo, `200 ${msize}px Montserrat, sans-serif`, mspace) > 980){
     msize -= 3; mspace = Math.max(10, mspace - 1);
   }
-  if(modelo) spacedText(modelo, W/2, 424, `200 ${msize}px Montserrat, sans-serif`, mspace, '#ffffff');
+  if(modelo) spacedText(modelo, W/2, 400, `200 ${msize}px Montserrat, sans-serif`, mspace, '#ffffff');
 
   if(ano){
-    const yy = 490;
+    const yy = 458;
     const tw = spacedText(ano, W/2, yy, '300 34px Montserrat, sans-serif', 15, '#ffffff');
     ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2;
     ctx.beginPath();
@@ -868,6 +869,125 @@ function renderEstoque(){
 }
 
 /* ---------- RENDER (dispatch) ---------- */
+/* ================================================================
+   TIPO 4 — EDITORIAL (revista de luxo: sofisticação, exclusividade,
+   discrição; o veículo é o protagonista absoluto)
+   Paleta: #FAFAFA branco · #181818 preto · #8B8B8B cinza · #EAEAEA linha
+   Tipografia: Inter / Helvetica — sem caixa alta exagerada, tracking suave
+================================================================ */
+const ED = {
+  branco: '#FAFAFA', preto: '#181818', cinza: '#8B8B8B', linha: '#EAEAEA',
+  fonte: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+  fotoH: Math.round(H * .72),   // foto ≈ 72% da altura
+  margem: 76,
+};
+
+function edTextoEsq(text, x, y, font, spacing, color){
+  ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic';
+  let cx = x;
+  for(const ch of [...text]){
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  return cx - spacing - x;
+}
+
+function renderEditorial(){
+  const M = ED.margem, FH = ED.fotoH;
+
+  // fundo geral (rodapé branco, muito espaço negativo)
+  ctx.fillStyle = ED.branco; ctx.fillRect(0, 0, W, H);
+
+  // foto: cover, sem molduras — horizontais e quadradas acomodadas pelos
+  // sliders de enquadramento da Foto 1 (nunca deforma)
+  if(state.foto1){
+    drawPhoto(state.foto1, 0, 0, W, FH, state.f1);
+  } else {
+    ctx.fillStyle = ED.preto; ctx.fillRect(0, 0, W, FH);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.font = '400 24px ' + ED.fonte;
+    ctx.textAlign = 'center';
+    ctx.fillText('ENVIE A FOTO PRINCIPAL (horizontal ou quadrada)', W/2, FH/2);
+    ctx.textAlign = 'left';
+  }
+
+  // leve gradiente preto transparente só na base da foto
+  const g = ctx.createLinearGradient(0, FH - 240, 0, FH);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,.32)');
+  ctx.fillStyle = g; ctx.fillRect(0, FH - 240, W, 240);
+
+  // logo pequena e discreta no topo
+  drawLogoWhite(W/2, 84, 150);
+
+  // ---------- rodapé (≈28%) ----------
+  let y = FH + 96;
+
+  // marca — Inter Medium, tracking elegante
+  const marca = val('marca').toUpperCase();
+  if(marca) edTextoEsq(marca, M, y, '500 27px ' + ED.fonte, 7, ED.cinza);
+
+  // modelo — SemiBold, encolhe até caber (nada quebra com nome longo)
+  y += 64;
+  const modelo = val('modelo');
+  if(modelo){
+    let ms = 54;
+    ctx.font = `600 ${ms}px ` + ED.fonte;
+    while(ms > 34 && ctx.measureText(modelo).width > W - 2*M){
+      ms -= 1; ctx.font = `600 ${ms}px ` + ED.fonte;
+    }
+    ctx.fillStyle = ED.preto;
+    ctx.fillText(modelo, M, y);
+  }
+
+  // ano • km • complemento — Regular, cinza
+  y += 52;
+  const meta = [
+    val('ano'),
+    val('km') ? val('km') + ' km' : '',
+    val('kmextra'),
+  ].filter(Boolean).join('  •  ');
+  if(meta){
+    ctx.font = '400 26px ' + ED.fonte;
+    ctx.fillStyle = ED.cinza;
+    ctx.fillText(meta, M, y);
+  }
+
+  // linha divisória extremamente fina
+  y += 40;
+  ctx.fillStyle = ED.linha;
+  ctx.fillRect(M, y, W - 2*M, 1);
+
+  // informações (cor / motor / som) — Regular, uma por linha
+  y += 52;
+  for(const id of ['b1','b2','b3']){
+    const t = val(id);
+    if(!t) continue;
+    ctx.font = '400 25px ' + ED.fonte;
+    ctx.fillStyle = ED.cinza;
+    ctx.fillText(t, M, y);
+    y += 44;
+  }
+
+  // canto inferior esquerdo — Seleção Attra
+  edTextoEsq('Seleção Attra', M, H - 72, '400 22px ' + ED.fonte, 3, ED.cinza);
+
+  // canto inferior direito — preço importante, não dominante (encolhe se precisar)
+  const preco = val('preco').replace(/^R\$\s*/i, '');
+  if(preco){
+    const ptxt = 'R$ ' + preco;
+    let ps = 42;
+    ctx.font = `500 ${ps}px ` + ED.fonte;
+    while(ps > 28 && ctx.measureText(ptxt).width > 420){
+      ps -= 1; ctx.font = `500 ${ps}px ` + ED.fonte;
+    }
+    ctx.fillStyle = ED.preto;
+    ctx.textAlign = 'right';
+    ctx.fillText(ptxt, W - M, H - 72);
+    ctx.textAlign = 'left';
+  }
+}
+
 function render(){
   ctx.clearRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = true;
@@ -875,6 +995,7 @@ function render(){
   ctx.textAlign = 'left';
   if(state.tipo === 'destaque') renderDestaque();
   else if(state.tipo === 'estoque') renderEstoque();
+  else if(state.tipo === 'editorial') renderEditorial();
   else renderClassico();
 }
 
@@ -949,8 +1070,9 @@ $('clearlogo').addEventListener('click', () => {
 /* ---------- troca de tipo ---------- */
 function updateVisibility(){
   const t = state.tipo;
+  $('sec-busca').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-veiculo').style.display   = t === 'estoque' ? 'none' : '';
-  $('sec-destaques').style.display = t === 'classico' ? '' : 'none';
+  $('sec-destaques').style.display = (t === 'classico' || t === 'editorial') ? '' : 'none';
   $('sec-specs').style.display     = t === 'destaque' ? '' : 'none';
   $('sec-fotos').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-estoque').style.display   = t === 'estoque' ? '' : 'none';
