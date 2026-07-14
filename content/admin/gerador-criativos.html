@@ -903,6 +903,16 @@ const ED = {
   fonte: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif",
 };
 
+function edTextoEsq(text, x, y, font, spacing, color){
+  ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic';
+  let cx = x;
+  for(const ch of [...text]){
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  return cx - spacing - x;
+}
+
 function edTextoCentro(text, cx, y, font, spacing, color){
   ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic';
   const chars = [...text];
@@ -924,8 +934,14 @@ function renderEditorial(){
     ctx.fillStyle = '#121317'; ctx.fillRect(0, 0, W, H);
   }
 
-  // ---------- topo: apenas a logo ----------
-  drawLogoWhite(W/2, 110, 170);
+  // ---------- topo: sombreamento suave (as barras de luz não ofuscam
+  // a logo) + logo maior ----------
+  const topo = ctx.createLinearGradient(0, 0, 0, 340);
+  topo.addColorStop(0, 'rgba(0,0,0,.62)');
+  topo.addColorStop(.6, 'rgba(0,0,0,.30)');
+  topo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topo; ctx.fillRect(0, 0, W, 340);
+  drawLogoWhite(W/2, 128, 250);
 
   // ---------- carro (recortado pela IA) no palco ----------
   const carro = state.foto1Cut || state.foto1;
@@ -961,45 +977,52 @@ function renderEditorial(){
     ctx.textAlign = 'left';
   }
 
-  // ---------- bottom: informações do veículo no piso claro ----------
-  const marca = val('marca').toUpperCase();
-  if(marca) edTextoCentro(marca, W/2, 1568, '500 28px ' + ED.fonte, 10, '#55555a');
+  // ---------- bottom: informações à esquerda, tons escuros sobre o
+  // piso claro (contraste garantido) ----------
+  const M = 76;
+  let y = 1548;
 
+  // rótulo de curadoria com filete vermelho
+  ctx.fillStyle = '#9a1c1c';
+  ctx.fillRect(M, y - 16, 42, 3);
+  edTextoEsq('SELEÇÃO ATTRA', M + 58, y - 8, '500 21px ' + ED.fonte, 7, '#5d5d62');
+
+  y += 66;
+  const marca = val('marca').toUpperCase();
+  if(marca) edTextoEsq(marca, M, y, '500 30px ' + ED.fonte, 9, '#3f3f44');
+
+  y += 74;
   const modelo = val('modelo').toUpperCase();
   if(modelo){
-    let ms = 58;
+    let ms = 62;
     ctx.font = `600 ${ms}px ` + ED.fonte;
-    while(ms > 34 && ctx.measureText(modelo).width > 940){
+    while(ms > 36 && ctx.measureText(modelo).width > W - 2*M){
       ms -= 2; ctx.font = `600 ${ms}px ` + ED.fonte;
     }
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#181818';
-    ctx.fillText(modelo, W/2, 1648);
-    ctx.textAlign = 'left';
+    ctx.fillStyle = '#141416';
+    ctx.fillText(modelo, M, y);
   }
 
+  y += 56;
   const meta = [
     val('ano'),
     val('km') ? val('km') + ' KM' : '',
     val('kmextra').toUpperCase(),
   ].filter(Boolean).join('   •   ');
-  if(meta) edTextoCentro(meta, W/2, 1706, '400 26px ' + ED.fonte, 4, '#6f6f74');
+  if(meta) edTextoEsq(meta, M, y, '400 27px ' + ED.fonte, 3, '#47474c');
 
+  y += 84;
   const preco = val('preco').replace(/^R\$\s*/i, '');
   if(preco){
     const ptxt = 'R$ ' + preco;
-    let ps = 48;
+    let ps = 52;
     ctx.font = `500 ${ps}px ` + ED.fonte;
-    while(ps > 32 && ctx.measureText(ptxt).width > 700){
+    while(ps > 34 && ctx.measureText(ptxt).width > W - 2*M){
       ps -= 1; ctx.font = `500 ${ps}px ` + ED.fonte;
     }
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#181818';
-    ctx.fillText(ptxt, W/2, 1790);
-    ctx.textAlign = 'left';
+    ctx.fillStyle = '#141416';
+    ctx.fillText(ptxt, M, y);
   }
-
-  edTextoCentro('SELEÇÃO ATTRA', W/2, 1862, '500 19px ' + ED.fonte, 7, '#8a8a90');
 }
 
 function render(){
