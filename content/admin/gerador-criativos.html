@@ -129,6 +129,8 @@
     <fieldset id="sec-edtema" style="display:none">
       <legend>Editorial — recorte da foto</legend>
       <button class="btn secondary" id="rembgbtn" type="button" style="width:100%; padding:12px; font-size:13px">✂ REMOVER FUNDO DA FOTO (IA)</button>
+      <div style="margin-top:12px"><label>Rotação do veículo (°)</label>
+        <input type="range" id="edrot" min="-180" max="180" value="0"></div>
       <div class="hint" id="rembg-status">Envie a Foto principal e clique acima — o carro é recortado
         (~10-30s via IA) e composto no estúdio. Sem o recorte, a foto aparece inteira.</div>
     </fieldset>
@@ -256,6 +258,7 @@ const state = {
   foto1Cut: null,   // foto principal com fundo removido (Editorial)
   foto1Data: null,  // dataURL da foto original (upload manual → rembg)
   foto1Url: null,   // URL pública da foto (estoque → rembg sem upload)
+  edRot: 0,         // rotação do carro recortado no Editorial (graus)
 };
 
 /* ---------- logos oficiais embutidas ---------- */
@@ -528,10 +531,13 @@ function renderClassico(){
     ctx.fillStyle = g; ctx.fillRect(0, 170, W, 610);
   }
 
-  g = ctx.createLinearGradient(0, PHOTO1_H-60, 0, PHOTO1_H);
+  // véu longo: começa 260px DENTRO da foto e só fica opaco 40px depois
+  // da divisa — nenhuma linha de mudança de contexto visível
+  g = ctx.createLinearGradient(0, PHOTO1_H-260, 0, PHOTO1_H+40);
   g.addColorStop(0, 'rgba(219,219,221,0)');
+  g.addColorStop(.45, 'rgba(219,219,221,.42)');
   g.addColorStop(1, 'rgba(219,219,221,1)');
-  ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-60, W, 60);
+  ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-260, W, 300);
 
   // logo desenhado só quando a foto cobre o letreiro da fachada
   if(topGap < 150) drawLogoWhite(W/2, 168, 340);
@@ -957,6 +963,15 @@ function renderEditorial(){
     const dx = bx + (bw - dw)/2 + (state.f1.x - .5) * bw * .8;
     const dy = by + (bh - dh)/2 + (state.f1.y - .5) * bh * .8;
 
+    // rotação em torno do centro do carro (controle "Rotação do veículo")
+    if(state.edRot){
+      const rcx = dx + dw/2, rcy = dy + dh/2;
+      ctx.save();
+      ctx.translate(rcx, rcy);
+      ctx.rotate(state.edRot * Math.PI / 180);
+      ctx.translate(-rcx, -rcy);
+    }
+
     // sombra elíptica suave no piso (só quando o carro está recortado)
     if(state.foto1Cut){
       const scx = dx + dw/2, scy = dy + dh - 8;
@@ -973,6 +988,7 @@ function renderEditorial(){
     }
 
     ctx.drawImage(carro, dx, dy, dw, dh);
+    if(state.edRot) ctx.restore();
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.4)';
     ctx.font = '400 24px ' + ED.fonte;
@@ -1236,6 +1252,11 @@ function montarFotosEstoque(v){
 }
 
 /* ---------- recorte de fundo via IA (Replicate, rota do admin) ---------- */
+$('edrot').addEventListener('input', e => {
+  state.edRot = parseInt(e.target.value, 10) || 0;
+  render();
+});
+
 $('rembgbtn').addEventListener('click', async () => {
   const st = $('rembg-status');
   if(!state.foto1Data && !state.foto1Url){ st.textContent = 'Envie a Foto principal (ou selecione uma do estoque) primeiro.'; return; }
