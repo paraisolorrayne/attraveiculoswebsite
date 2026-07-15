@@ -547,7 +547,7 @@ function renderClassico(){
 
   if(marca) spacedText(marca, W/2, 316, '600 30px Montserrat, sans-serif', 11, '#ffffff');
 
-  let msize = 96, mspace = 30;
+  let msize = 92, mspace = 34;
   while(msize > 40 && spacedWidth(modelo, `200 ${msize}px Montserrat, sans-serif`, mspace) > 980){
     msize -= 3; mspace = Math.max(10, mspace - 1);
   }
@@ -556,10 +556,10 @@ function renderClassico(){
   if(ano){
     const yy = 458;
     const tw = spacedText(ano, W/2, yy, '300 34px Montserrat, sans-serif', 15, '#ffffff');
-    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W/2 - tw/2 - 225, yy - 11); ctx.lineTo(W/2 - tw/2 - 40, yy - 11);
-    ctx.moveTo(W/2 + tw/2 + 40,  yy - 11); ctx.lineTo(W/2 + tw/2 + 225, yy - 11);
+    ctx.moveTo(W/2 - tw/2 - 195, yy - 11); ctx.lineTo(W/2 - tw/2 - 40, yy - 11);
+    ctx.moveTo(W/2 + tw/2 + 40,  yy - 11); ctx.lineTo(W/2 + tw/2 + 195, yy - 11);
     ctx.stroke();
   }
 
@@ -568,26 +568,14 @@ function renderClassico(){
   // corte transversal ajustável: slider positivo sobe a diagonal (carros
   // altos ganham foto); negativo desce (carros baixos ganham texto)
   const corte = parseInt($('corte').value, 10) || 0;
-  const DIAG_L = 1440 - corte, DIAG_R = 1400 - corte;
-  g = ctx.createLinearGradient(0, PHOTO1_H, 0, DIAG_L);
+  // Transição RETA e esfumada pra foto de baixo (padrão da arte manual
+  // em Photoshop): a área cinza se dissolve na foto, sem corte duro.
+  const CUT = 1416 - corte;
+  const FUSAO = 120; // altura do esfumado cinza→foto
+  g = ctx.createLinearGradient(0, PHOTO1_H, 0, CUT + FUSAO);
   g.addColorStop(0, '#dbdbdd'); g.addColorStop(1, '#c9c9cc');
   ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(0, PHOTO1_H); ctx.lineTo(W, PHOTO1_H);
-  ctx.lineTo(W, DIAG_R); ctx.lineTo(0, DIAG_L);
-  ctx.closePath(); ctx.fill();
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, PHOTO1_H); ctx.lineTo(W, PHOTO1_H);
-  ctx.lineTo(W, DIAG_R); ctx.lineTo(0, DIAG_L);
-  ctx.closePath(); ctx.clip();
-  ctx.fillStyle = 'rgba(255,255,255,.09)';
-  ctx.beginPath();
-  ctx.moveTo(620, PHOTO1_H); ctx.lineTo(1080, PHOTO1_H);
-  ctx.lineTo(1080, 1400); ctx.lineTo(880, 1640);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
+  ctx.fillRect(0, PHOTO1_H, W, CUT + FUSAO - PHOTO1_H);
 
   const preco = val('preco').replace(/^R\$\s*/i, '');
   if(preco) spacedText('R$ ' + preco, W/2, 1062, '300 48px Montserrat, sans-serif', 10, '#5a5a5f');
@@ -602,7 +590,7 @@ function renderClassico(){
   // e em último caso o texto é cortado com "…" — nunca quebra de linha.
   const bullets = ['b1','b2','b3'].map(val).filter(Boolean);
   const textX = 208, maxW = 800, lineH = 44;
-  const areaTop = 1188, areaBot = Math.min(DIAG_L, DIAG_R) - 26;
+  const areaTop = 1188, areaBot = CUT - 26;
   const items = bullets.map(b => {
     let size = 34;
     ctx.font = `700 ${size}px Montserrat, sans-serif`;
@@ -634,16 +622,13 @@ function renderClassico(){
   }
 
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, DIAG_L); ctx.lineTo(W, DIAG_R);
-  ctx.lineTo(W, H); ctx.lineTo(0, H);
-  ctx.closePath(); ctx.clip();
+  ctx.beginPath(); ctx.rect(0, CUT, W, H - CUT); ctx.clip();
   if(state.foto2){
     // A faixa é sempre preenchida por inteiro (sem sobras, sem blur).
     // Foto mais alta que a faixa: âncora automática na BASE da foto —
     // as rodas nunca cortam; sai céu/fundo por cima. Se o usuário mexer
     // no slider de posição da Foto 2, o valor dele prevalece.
-    const bw = W, bh = H - DIAG_R + 20;
+    const bw = W, bh = H - CUT;
     const cover = Math.max(bw/state.foto2.width, bh/state.foto2.height);
     const dh = state.foto2.height * cover * (state.f2.zoom || 1);
     let opt = state.f2;
@@ -651,20 +636,17 @@ function renderClassico(){
       const rangeY = Math.max(dh - bh, bh*.6);
       opt = {...state.f2, y: .5 + (dh - bh) / (2 * rangeY)};
     }
-    drawPhoto(state.foto2, 0, DIAG_R - 20, bw, bh, opt);
+    drawPhoto(state.foto2, 0, CUT, bw, bh, opt);
   }
-  else placeholder(0, DIAG_R, W, H - DIAG_R, 'FOTO TRASEIRA / LATERAL');
-  ctx.restore();
+  else placeholder(0, CUT, W, H - CUT, 'FOTO TRASEIRA / LATERAL');
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, DIAG_L); ctx.lineTo(W, DIAG_R);
-  ctx.lineTo(W, DIAG_R + 90); ctx.lineTo(0, DIAG_L + 90);
-  ctx.closePath(); ctx.clip();
-  g = ctx.createLinearGradient(0, DIAG_R, 0, DIAG_R + 80);
-  g.addColorStop(0, 'rgba(0,0,0,.30)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  // véu cinza esfumado sobre o topo da foto — a área de texto se
+  // dissolve na imagem, como na montagem manual
+  g = ctx.createLinearGradient(0, CUT, 0, CUT + FUSAO);
+  g.addColorStop(0, '#c9c9cc');
+  g.addColorStop(1, 'rgba(201,201,204,0)');
   ctx.fillStyle = g;
-  ctx.fillRect(0, DIAG_R - 20, W, 130);
+  ctx.fillRect(0, CUT, W, FUSAO);
   ctx.restore();
 }
 
