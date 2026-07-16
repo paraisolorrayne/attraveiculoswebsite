@@ -200,6 +200,14 @@
         <div><label>Posição ↔</label><input type="range" id="f2x" min="0" max="100" value="50"></div>
         <div><label>Posição ↕</label><input type="range" id="f2y" min="0" max="100" value="50"></div>
       </div>
+      <div id="estilo-wrap">
+        <label style="margin-top:12px">Área de texto (Clássico)</label>
+        <div class="types">
+          <button class="estilobtn typebtn active" data-estilo="perola">Pérola<small>bloco sólido atual</small></button>
+          <button class="estilobtn typebtn" data-estilo="faixa">Faixa<small>foto atrás + branco 85%</small></button>
+          <button class="estilobtn typebtn" data-estilo="vidro">Vidro<small>glassmorphism leve</small></button>
+        </div>
+      </div>
       <div id="corte-wrap">
         <label style="margin-top:12px">Altura do corte transversal (Clássico)</label>
         <input type="range" id="corte" min="-160" max="200" value="0">
@@ -259,6 +267,7 @@ const state = {
   foto1Data: null,  // dataURL da foto original (upload manual → rembg)
   foto1Url: null,   // URL pública da foto (estoque → rembg sem upload)
   edRot: 0,         // rotação do carro recortado no Editorial (graus)
+  txEstilo: 'perola', // área de texto do Clássico: perola | faixa | vidro
 };
 
 /* ---------- logos oficiais embutidas ---------- */
@@ -1164,6 +1173,7 @@ function updateVisibility(){
   const t = state.tipo;
   $('sec-edtema').style.display    = t === 'editorial' ? '' : 'none';
   $('corte-wrap').style.display    = t === 'classico' ? '' : 'none';
+  $('estilo-wrap').style.display   = t === 'classico' ? '' : 'none';
   $('sec-busca').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-veiculo').style.display   = t === 'estoque' ? 'none' : '';
   $('sec-destaques').style.display = t === 'classico' ? '' : 'none';
@@ -1272,6 +1282,15 @@ function montarFotosEstoque(v){
 }
 
 /* ---------- recorte de fundo via IA (Replicate, rota do admin) ---------- */
+document.querySelectorAll('.estilobtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.estilobtn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.txEstilo = btn.dataset.estilo;
+    render();
+  });
+});
+
 $('edrot').addEventListener('input', e => {
   state.edRot = parseInt(e.target.value, 10) || 0;
   render();
