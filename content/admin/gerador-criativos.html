@@ -557,10 +557,12 @@ function renderClassico(){
     ctx.fillStyle = g; ctx.fillRect(0, 170, W, 610);
   }
 
-  g = ctx.createLinearGradient(0, PHOTO1_H-60, 0, PHOTO1_H);
-  g.addColorStop(0, 'rgba(244,242,238,0)');
-  g.addColorStop(1, 'rgba(244,242,238,1)');
-  ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-60, W, 60);
+  if((state.txEstilo || 'perola') === 'perola'){
+    g = ctx.createLinearGradient(0, PHOTO1_H-60, 0, PHOTO1_H);
+    g.addColorStop(0, 'rgba(244,242,238,0)');
+    g.addColorStop(1, 'rgba(244,242,238,1)');
+    ctx.fillStyle = g; ctx.fillRect(0, PHOTO1_H-60, W, 60);
+  }
 
   // logo desenhado só quando a foto cobre o letreiro da fachada
   if(topGap < 150) drawLogoWhite(W/2, 168, 340);
@@ -595,65 +597,109 @@ function renderClassico(){
 
   ctx.restore(); // fim da sombra do título
 
-  // corte transversal ajustável: slider positivo sobe a diagonal (carros
-  // altos ganham foto); negativo desce (carros baixos ganham texto)
+  // corte transversal ajustável (slider): positivo sobe, negativo desce
   const corte = parseInt($('corte').value, 10) || 0;
-  // Transição RETA e esfumada pra foto de baixo (padrão da arte manual
-  // em Photoshop): a área cinza se dissolve na foto, sem corte duro.
   const CUT = 1416 - corte;
-  // Bloco premium: base pérola/off-white quente, luz radial no centro e
-  // grão finíssimo — profundidade de material, não faixa digital chapada.
-  g = ctx.createLinearGradient(0, PHOTO1_H, 0, CUT);
-  g.addColorStop(0, '#f4f2ee'); g.addColorStop(1, '#e8e4dd');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, PHOTO1_H, W, CUT - PHOTO1_H);
+  // diagonal de volta (assinatura do layout): 40px de inclinação
+  const DIAG_L = CUT + 20, DIAG_R = CUT - 20;
+  const estilo = state.txEstilo || 'perola';
 
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, PHOTO1_H, W, CUT - PHOTO1_H); ctx.clip();
-  // luz radial sutil (mais claro no centro, bordas levemente mais densas)
-  const meioY = PHOTO1_H + (CUT - PHOTO1_H) * .40;
-  const luz = ctx.createRadialGradient(W/2, meioY, 60, W/2, meioY, 860);
-  luz.addColorStop(0, 'rgba(255,255,255,.34)');
-  luz.addColorStop(.6, 'rgba(255,255,255,.10)');
-  luz.addColorStop(1, 'rgba(120,112,100,.07)');
-  ctx.fillStyle = luz;
-  ctx.fillRect(0, PHOTO1_H, W, CUT - PHOTO1_H);
-  // grão fino (~4%) tira o aspecto liso/digital
-  ctx.globalAlpha = .04;
-  ctx.drawImage(grainCanvas(), 0, PHOTO1_H, W, CUT - PHOTO1_H);
-  ctx.globalAlpha = 1;
-  ctx.restore();
+  const areaPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, PHOTO1_H); ctx.lineTo(W, PHOTO1_H);
+    ctx.lineTo(W, DIAG_R); ctx.lineTo(0, DIAG_L);
+    ctx.closePath();
+  };
 
-  // Sombras internas suaves e longas nas bordas do bloco — as fotos
-  // parecem levemente acima da superfície (profundidade real)
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, PHOTO1_H, W, CUT - PHOTO1_H); ctx.clip();
-  const sombraTopo = ctx.createLinearGradient(0, PHOTO1_H, 0, PHOTO1_H + 150);
-  sombraTopo.addColorStop(0, 'rgba(60,52,40,.13)');
-  sombraTopo.addColorStop(.5, 'rgba(60,52,40,.05)');
-  sombraTopo.addColorStop(1, 'rgba(60,52,40,0)');
-  ctx.fillStyle = sombraTopo; ctx.fillRect(0, PHOTO1_H, W, 150);
-  const sombraBase = ctx.createLinearGradient(0, CUT - 150, 0, CUT);
-  sombraBase.addColorStop(0, 'rgba(60,52,40,0)');
-  sombraBase.addColorStop(.5, 'rgba(60,52,40,.05)');
-  sombraBase.addColorStop(1, 'rgba(60,52,40,.13)');
-  ctx.fillStyle = sombraBase; ctx.fillRect(0, CUT - 150, W, 150);
-  ctx.restore();
+  if(estilo !== 'perola' && state.foto1){
+    // faixa/vidro: a foto continua atrás da área de texto
+    ctx.save(); areaPath(); ctx.clip();
+    drawPhoto(state.foto1, 0, 0, W, DIAG_L, state.f1);
+    ctx.restore();
+  }
+
+  if(estilo === 'perola'){
+    g = ctx.createLinearGradient(0, PHOTO1_H, 0, DIAG_L);
+    g.addColorStop(0, '#f4f2ee'); g.addColorStop(1, '#e8e4dd');
+    ctx.fillStyle = g;
+    areaPath(); ctx.fill();
+
+    ctx.save(); areaPath(); ctx.clip();
+    const meioY = PHOTO1_H + (CUT - PHOTO1_H) * .40;
+    const luz = ctx.createRadialGradient(W/2, meioY, 60, W/2, meioY, 860);
+    luz.addColorStop(0, 'rgba(255,255,255,.34)');
+    luz.addColorStop(.6, 'rgba(255,255,255,.10)');
+    luz.addColorStop(1, 'rgba(120,112,100,.07)');
+    ctx.fillStyle = luz;
+    ctx.fillRect(0, PHOTO1_H, W, DIAG_L - PHOTO1_H);
+    ctx.globalAlpha = .04;
+    ctx.drawImage(grainCanvas(), 0, PHOTO1_H, W, DIAG_L - PHOTO1_H);
+    ctx.globalAlpha = 1;
+    const sombraTopo = ctx.createLinearGradient(0, PHOTO1_H, 0, PHOTO1_H + 150);
+    sombraTopo.addColorStop(0, 'rgba(60,52,40,.13)');
+    sombraTopo.addColorStop(.5, 'rgba(60,52,40,.05)');
+    sombraTopo.addColorStop(1, 'rgba(60,52,40,0)');
+    ctx.fillStyle = sombraTopo; ctx.fillRect(0, PHOTO1_H, W, 150);
+    const sombraBase = ctx.createLinearGradient(0, DIAG_R - 150, 0, DIAG_R);
+    sombraBase.addColorStop(0, 'rgba(60,52,40,0)');
+    sombraBase.addColorStop(.5, 'rgba(60,52,40,.05)');
+    sombraBase.addColorStop(1, 'rgba(60,52,40,.13)');
+    ctx.fillStyle = sombraBase; ctx.fillRect(0, DIAG_R - 150, W, 150);
+    ctx.restore();
+  } else if(estilo === 'faixa'){
+    // faixa: blur leve da foto atrás + branco a 85%
+    ctx.save(); areaPath(); ctx.clip();
+    const snap = document.createElement('canvas');
+    snap.width = W; snap.height = DIAG_L - PHOTO1_H + 80;
+    snap.getContext('2d').drawImage(cv, 0, PHOTO1_H - 40, W, snap.height, 0, 0, W, snap.height);
+    ctx.filter = 'blur(16px)';
+    ctx.drawImage(snap, 0, PHOTO1_H - 40);
+    ctx.filter = 'none';
+    ctx.fillStyle = 'rgba(250,249,247,.85)';
+    ctx.fillRect(0, PHOTO1_H, W, DIAG_L - PHOTO1_H);
+    ctx.restore();
+  } else {
+    // vidro: cartão quase transparente, borda fina, sombra discreta
+    const gx = 56, gw = W - 112, gy = PHOTO1_H + 26, gh = DIAG_R - PHOTO1_H - 64;
+    const snap = document.createElement('canvas');
+    snap.width = gw; snap.height = gh;
+    snap.getContext('2d').drawImage(cv, gx, gy, gw, gh, 0, 0, gw, gh);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.22)'; ctx.shadowBlur = 34; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = 'rgba(255,255,255,.01)';
+    rr(gx, gy, gw, gh, 26); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    rr(gx, gy, gw, gh, 26); ctx.clip();
+    ctx.filter = 'blur(20px)';
+    ctx.drawImage(snap, gx, gy);
+    ctx.filter = 'none';
+    ctx.fillStyle = 'rgba(20,20,24,.38)';
+    ctx.fillRect(gx, gy, gw, gh);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5;
+    rr(gx, gy, gw, gh, 26); ctx.stroke();
+  }
+
+  // cores dos textos conforme o fundo do estilo
+  const tx = estilo === 'vidro'
+    ? { preco: '#f4f4f6', km: '#cfcfd6', bullet: '#ffffff', icone: '#e8e8ec' }
+    : { preco: '#5a5a5f', km: '#6f6f74', bullet: '#161618', icone: '#1c1c1e' };
 
   const preco = val('preco').replace(/^R\$\s*/i, '');
-  if(preco) spacedText('R$ ' + preco, W/2, 1062, '300 48px Montserrat, sans-serif', 10, '#5a5a5f');
+  if(preco) spacedText('R$ ' + preco, W/2, 1062, '300 48px Montserrat, sans-serif', 10, tx.preco);
 
   const kmParts = [];
   if(val('km')) kmParts.push(val('km') + ' KM');
   if(val('kmextra')) kmParts.push(val('kmextra').toUpperCase());
   if(kmParts.length)
-    spacedText(kmParts.join('  |  '), W/2, 1118, '500 24px Montserrat, sans-serif', 5, '#6f6f74');
+    spacedText(kmParts.join('  |  '), W/2, 1118, '500 24px Montserrat, sans-serif', 5, tx.km);
 
   // Máximo 3 destaques, UMA linha cada: a fonte encolhe até caber (mín. 25px)
   // e em último caso o texto é cortado com "…" — nunca quebra de linha.
   const bullets = ['b1','b2','b3'].map(val).filter(Boolean);
   const textX = 208, maxW = 800, lineH = 44;
-  const areaTop = 1188, areaBot = CUT - 26;
+  const areaTop = 1188, areaBot = Math.min(DIAG_L, DIAG_R) - 26;
   const items = bullets.map(b => {
     let size = 34;
     ctx.font = `700 ${size}px Montserrat, sans-serif`;
@@ -675,23 +721,26 @@ function renderClassico(){
 
   for(const it of items){
     const iy = by - 11;
-    ctx.strokeStyle = '#1c1c1e'; ctx.lineWidth = 3.5;
+    ctx.strokeStyle = tx.icone; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.arc(158, iy, 16, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle = '#1c1c1e';
+    ctx.fillStyle = tx.icone;
     ctx.beginPath(); ctx.arc(158, iy, 7.5, 0, Math.PI*2); ctx.fill();
-    ctx.font = `700 ${it.size}px Montserrat, sans-serif`; ctx.fillStyle = '#161618';
+    ctx.font = `700 ${it.size}px Montserrat, sans-serif`; ctx.fillStyle = tx.bullet;
     ctx.fillText(it.text, textX, by);
     by += lineH + gap;
   }
 
   ctx.save();
-  ctx.beginPath(); ctx.rect(0, CUT, W, H - CUT); ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(0, DIAG_L); ctx.lineTo(W, DIAG_R);
+  ctx.lineTo(W, H); ctx.lineTo(0, H);
+  ctx.closePath(); ctx.clip();
   if(state.foto2){
     // A faixa é sempre preenchida por inteiro (sem sobras, sem blur).
     // Foto mais alta que a faixa: âncora automática na BASE da foto —
     // as rodas nunca cortam; sai céu/fundo por cima. Se o usuário mexer
     // no slider de posição da Foto 2, o valor dele prevalece.
-    const bw = W, bh = H - CUT;
+    const bw = W, bh = H - DIAG_R;
     const cover = Math.max(bw/state.foto2.width, bh/state.foto2.height);
     const dh = state.foto2.height * cover * (state.f2.zoom || 1);
     let opt = state.f2;
@@ -699,9 +748,9 @@ function renderClassico(){
       const rangeY = Math.max(dh - bh, bh*.6);
       opt = {...state.f2, y: .5 + (dh - bh) / (2 * rangeY)};
     }
-    drawPhoto(state.foto2, 0, CUT, bw, bh, opt);
+    drawPhoto(state.foto2, 0, DIAG_R, bw, bh, opt);
   }
-  else placeholder(0, CUT, W, H - CUT, 'FOTO TRASEIRA / LATERAL');
+  else placeholder(0, DIAG_R, W, H - DIAG_R, 'FOTO TRASEIRA / LATERAL');
 
   ctx.restore();
 }
