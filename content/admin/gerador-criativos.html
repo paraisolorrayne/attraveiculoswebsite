@@ -1281,10 +1281,23 @@ $('download').addEventListener('click', () => {
     name = [val('marca'), val('modelo'), val('ano')].filter(Boolean).map(clean).join('-') || 'criativo-attra';
     if(state.tipo === 'destaque') name += '-DESTAQUE';
   }
-  const a = document.createElement('a');
-  a.download = name + '-STORIES-v1.png';
-  a.href = cv.toDataURL('image/png');
-  a.click();
+  // toBlob + Object URL: dataURL gigante falha silenciosamente no Safari
+  // (PNGs com textura passam fácil do limite) — blob não tem esse teto
+  try{
+    cv.toBlob(blob => {
+      if(!blob){ alert('Falha ao gerar o PNG — tente novamente.'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = name + '-STORIES-v1.png';
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }, 'image/png');
+  }catch(err){
+    alert('Não foi possível exportar: ' + err.message);
+  }
 });
 
 /* ---------- init ---------- */
