@@ -6,6 +6,7 @@ import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGeoLocation, generateVehicleMessage } from '@/lib/webhook'
 import { WHATSAPP_NUMBER, isSeoPage } from '@/lib/constants'
+import { appendWhatsAppRef } from '@/lib/whatsapp-ref'
 import { GeoLocation } from '@/types'
 import { useVehicleContext } from '@/contexts/vehicle-context'
 import { useAnalytics } from '@/hooks/use-analytics'
@@ -37,7 +38,7 @@ function getContextMessage(sourcePage: string, vehicleBrand?: string, vehicleMod
     return {
       title: 'Falar com especialista',
       subtitle: 'Atendimento direto via WhatsApp',
-      message: `Olá! Vim da página "${label}" e gostaria de mais informações. [ref: ${sourcePage}]`,
+      message: `Olá! Vim da página "${label}" e gostaria de mais informações.`,
       buttonText: 'Abrir WhatsApp',
     }
   }
@@ -69,7 +70,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   const pathname = usePathname()
   const { vehicle } = useVehicleContext()
   const { trackWhatsAppClick } = useAnalytics()
-  const { getVisitorContext, trackInteraction } = useVisitorTracking()
+  const { getVisitorContext, trackInteraction, sessionId } = useVisitorTracking()
   const [isOpen, setIsOpen] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -151,12 +152,14 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   // URL wa.me memoizada — calculada de forma síncrona pra ser usada como
   // href do anchor (preserva o user-gesture do clique).
   const whatsAppUrl = useMemo(() => {
-    const message =
+    const baseMessage =
       isSeoPage(currentPage) && !vehicleBrand
         ? context.message
         : generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
+    // Embute [ref: <session_id>] pra o Fykos ligar a conversa à origem
+    const message = appendWhatsAppRef(baseMessage, sessionId)
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
-  }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message])
+  }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message, sessionId])
 
   const IconComponent = vehicleBrand && vehicleModel ? Car : MessageCircle
 
