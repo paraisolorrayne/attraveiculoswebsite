@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { sendNotification, logNotificationEvent, NotificationType } from '@/lib/notifications'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
-import { classifyLeadSource } from '@/lib/lead-source'
+import { classifyLeadSource, fonteLabels } from '@/lib/lead-source'
 import { sendFykosLead } from '@/lib/fykos'
 
 const trafficSchema = z.object({
@@ -175,6 +175,9 @@ export async function POST(request: NextRequest) {
           mileage: data.mileage,
           vehicleValue: data.vehicleValue,
           sessionId: data.sessionId,
+          // Atribuição: leva campanha/termo/gclid pro CRM (antes era descartada)
+          traffic: data.traffic,
+          leadSource: fonteLabels[fonte],
         })
       : { success: false, error: 'sem telefone — não enviado ao Fykos' }
 
