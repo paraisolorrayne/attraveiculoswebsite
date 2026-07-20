@@ -18,21 +18,26 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import sharp from 'sharp'
+import { evaluateCutouts } from '@/lib/rembg-quality'
 
-// Modelo rembg: BRIA RMBG-2.0 (`bria/remove-background`). Especializado em
-// fotos de produto comercial — bordas mais precisas em rodas vazadas,
-// vidros, espelhos e reflexos no piso. Custo ~$0.011/img.
+// Modelos rembg (rodados EM PARALELO e cruzados pelo gate de qualidade):
+//   - BRIA RMBG-2.0 (`bria/remove-background`): robusto em manter o objeto
+//     inteiro, especializado em foto de produto (rodas vazadas, vidros).
+//   - BiRefNet (`men1scus/birefnet`): recorte afiado em bordas finas.
+// Rodar os dois e medir a concordância dá a "confiança" que nenhum modelo
+// entrega sozinho — ver src/lib/rembg-quality. Custo ~$0.011+$0.005/img.
 //
-// Modelo inpainting: Flux Fill Pro (`black-forest-labs/flux-fill-pro`).
-// Recebe a foto + máscara invertida → preenche apenas a área da máscara
-// (background) mantendo o carro pixel-perfect. Custo ~$0.05/img.
+// GATE (agressivo, pra não denegrir a marca): só cacheamos o no_bg se a
+// integridade >= REMBG_MIN_SCORE (99%) E a concordância >= REMBG_MIN_AGREEMENT
+// (90%). Reprovou → NÃO grava no_bg; o FeaturedVehicleHero cai pra foto
+// original automaticamente (noBgPhotoUrl null). A decisão fica cacheada
+// (rembg_status='rejected') pra o cron não re-billar a mesma foto.
 //
 // Usamos endpoint path-based (`/v1/models/{owner}/{name}/predictions`)
 // que aceita automaticamente a última versão estável do modelo.
-const REPLICATE_REMBG_MODEL = 'bria/remove-background'
+const REPLICATE_REMBG_MODELS = ['bria/remove-background', 'men1scus/birefnet']
 const REPLICATE_FLUX_FILL_MODEL = 'black-forest-labs/flux-fill-pro'
 
-const REPLICATE_REMBG_URL = `https://api.replicate.com/v1/models/${REPLICATE_REMBG_MODEL}/predictions`
 const REPLICATE_FLUX_FILL_URL = `https://api.replicate.com/v1/models/${REPLICATE_FLUX_FILL_MODEL}/predictions`
 
 const REPLICATE_POLL_INTERVAL_MS = 2000
@@ -68,8 +73,15 @@ const COMPOSITE_PROMPT = [
 export interface HeroAsset {
   vehicle_id: number
   source_photo_url: string
-  no_bg_storage_path: string
-  no_bg_public_url: string
+  /** Path/URL do PNG recortado. NULL quando o gate de qualidade reprovou o
+   *  recorte — nesse caso o hero usa a foto original (fallback). */
+  no_bg_storage_path: string | null
+  no_bg_public_url: string | null
+  /** Nota de integridade 0-100 do recorte aceito, ou do reprovado (log). */
+  rembg_score?: number | null
+  /** 'accepted' (no_bg válido) | 'rejected' (usar foto original). Ausente em
+   *  linhas antigas, anteriores ao gate — tratadas como aceitas. */
+  rembg_status?: 'accepted' | 'rejected' | null
   /**
    * URL pública do composite final (carro + background integrado via
    * Flux Fill Pro). Null se inpainting ainda não foi processado ou falhou
@@ -110,6 +122,8 @@ export async function getCachedHeroAsset(
       source_photo_url: data.source_photo_url,
       no_bg_storage_path: data.no_bg_storage_path,
       no_bg_public_url: data.no_bg_public_url,
+      rembg_score: data.rembg_score ?? null,
+      rembg_status: data.rembg_status ?? null,
       composite_storage_path: data.composite_storage_path ?? null,
       composite_public_url: data.composite_public_url ?? null,
     }
@@ -120,11 +134,11 @@ export async function getCachedHeroAsset(
 }
 
 /**
- * Chama Replicate rembg model. Retorna URL do PNG transparente (hospedado
- * temporariamente nos servidores deles, expira em ~24h — por isso precisamos
- * baixar e re-uploadar no nosso storage).
+ * Chama UM modelo rembg do Replicate e baixa o PNG transparente resultante.
+ * Retorna o buffer do PNG (pra passar pelo gate de qualidade), ou null se
+ * falhar/timeout. As URLs do Replicate expiram em ~24h, por isso baixamos já.
  */
-async function callReplicateRembg(imageUrl: string): Promise<string | null> {
+async function callRembgModel(model: string, imageUrl: string): Promise<Buffer | null> {
   const apiToken = process.env.REPLICATE_API_TOKEN
   if (!apiToken) {
     console.warn('[vehicle-hero-asset] REPLICATE_API_TOKEN não configurada')
@@ -133,7 +147,7 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
 
   try {
     // 1. Inicia prediction
-    const startResp = await fetch(REPLICATE_REMBG_URL, {
+    const startResp = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiToken}`,
@@ -148,7 +162,7 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
 
     if (!startResp.ok) {
       const errText = await startResp.text().catch(() => '')
-      console.error(`[vehicle-hero-asset] Replicate start HTTP ${startResp.status}:`, errText.substring(0, 200))
+      console.error(`[vehicle-hero-asset] ${model} start HTTP ${startResp.status}:`, errText.substring(0, 200))
       return null
     }
 
@@ -169,7 +183,7 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
       })
 
       if (!pollResp.ok) {
-        console.error(`[vehicle-hero-asset] Replicate poll HTTP ${pollResp.status}`)
+        console.error(`[vehicle-hero-asset] ${model} poll HTTP ${pollResp.status}`)
         return null
       }
 
@@ -181,8 +195,6 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
         //   - string: "https://replicate.delivery/..."
         //   - array: ["https://..."]
         //   - objeto: { image: "https://..." } ou { url: "https://..." }
-        // Cobrimos os 3 casos defensivamente — se algum modelo novo aparecer
-        // com formato diferente, vai logar e retornar null pra fallback.
         const output = pollData.output
         let outputUrl: string | null = null
         if (typeof output === 'string') {
@@ -194,22 +206,28 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
         }
         if (!outputUrl) {
           console.error(
-            '[vehicle-hero-asset] Replicate succeeded mas output inesperado:',
+            `[vehicle-hero-asset] ${model} succeeded mas output inesperado:`,
             JSON.stringify(output).substring(0, 200),
           )
           return null
         }
-        return outputUrl
+        // Baixa o PNG já (URL do Replicate é efêmera)
+        const imgResp = await fetch(outputUrl)
+        if (!imgResp.ok) {
+          console.error(`[vehicle-hero-asset] ${model} download HTTP ${imgResp.status}`)
+          return null
+        }
+        return Buffer.from(await imgResp.arrayBuffer())
       }
 
       if (status === 'failed' || status === 'canceled') {
-        console.error(`[vehicle-hero-asset] Replicate ${status}:`, pollData.error)
+        console.error(`[vehicle-hero-asset] ${model} ${status}:`, pollData.error)
         return null
       }
       // 'starting' | 'processing' — continua poll
     }
 
-    console.error('[vehicle-hero-asset] Replicate timeout após', REPLICATE_TIMEOUT_MS, 'ms')
+    console.error(`[vehicle-hero-asset] ${model} timeout após`, REPLICATE_TIMEOUT_MS, 'ms')
     return null
   } catch (error) {
     console.error('[vehicle-hero-asset] Replicate fetch failed:', error)
@@ -218,22 +236,39 @@ async function callReplicateRembg(imageUrl: string): Promise<string | null> {
 }
 
 /**
- * Baixa o PNG do Replicate e faz upload pro nosso Supabase Storage.
+ * Roda os dois modelos rembg EM PARALELO e aplica o gate de qualidade
+ * (src/lib/rembg-quality). Retorna o buffer do melhor recorte quando aprovado,
+ * ou accepted:false quando nenhum passou — nesse caso o caller NÃO grava
+ * no_bg e o hero cai pra foto original.
+ */
+async function gatedRembg(imageUrl: string): Promise<{
+  accepted: boolean
+  buffer: Buffer | null
+  score: number
+  agreement: number | null
+}> {
+  const buffers = await Promise.all(
+    REPLICATE_REMBG_MODELS.map((m) => callRembgModel(m, imageUrl)),
+  )
+  const evaluation = await evaluateCutouts(buffers)
+  console.log(`[vehicle-hero-asset] rembg gate: ${evaluation.reason}`)
+  return {
+    accepted: evaluation.accepted,
+    buffer: evaluation.accepted ? evaluation.bestBuffer : null,
+    score: evaluation.score,
+    agreement: evaluation.agreement,
+  }
+}
+
+/**
+ * Faz upload do PNG recortado (buffer) pro nosso Supabase Storage.
  * Retorna { storagePath, publicUrl }.
  */
 async function uploadToSupabaseStorage(
-  imageUrl: string,
+  bytes: Buffer,
   vehicleId: number,
 ): Promise<{ storagePath: string; publicUrl: string } | null> {
   try {
-    const imageResp = await fetch(imageUrl)
-    if (!imageResp.ok) {
-      console.error('[vehicle-hero-asset] download Replicate output HTTP', imageResp.status)
-      return null
-    }
-    const buffer = await imageResp.arrayBuffer()
-    const bytes = new Uint8Array(buffer)
-
     const supabase = createAdminClient()
     const storagePath = `hero/${vehicleId}-${Date.now()}.png`
 
@@ -279,58 +314,84 @@ export async function generateAndCacheHeroAsset(
     return null
   }
 
-  // 0. Checa cache existente — reutiliza no_bg se já foi processado
-  //    pra economizar a chamada do BRIA (~$0.011). Útil quando o composite
-  //    falhou em execução anterior e estamos só completando ele.
+  // 0. Checa cache existente. Qualquer linha (com rembg_status ou legada com
+  //    no_bg) já representa uma DECISÃO tomada pra esta foto — reusa e NÃO
+  //    re-billa o Replicate. getCachedHeroAsset invalida sozinho se a foto
+  //    principal mudar no Autoconf (source_photo_url diferente).
   const existing = await getCachedHeroAsset(vehicleId, sourcePhotoUrl)
+  if (existing && (existing.rembg_status || existing.no_bg_public_url)) {
+    return existing
+  }
 
-  let noBgAsset: HeroAsset
+  // 1. Roda os dois modelos + gate de qualidade.
+  const gate = await gatedRembg(sourcePhotoUrl)
+  const supabase = createAdminClient()
 
-  if (existing) {
-    // Cache parcial detectado — pula BRIA, reusa no_bg cached
-    noBgAsset = existing
-  } else {
-    // Cache vazio — roda pipeline completo (BRIA + upload + upsert)
-    const replicateUrl = await callReplicateRembg(sourcePhotoUrl)
-    if (!replicateUrl) return null
-
-    const stored = await uploadToSupabaseStorage(replicateUrl, numericId)
-    if (!stored) return null
-
+  // 2a. Reprovado no gate → grava a REJEIÇÃO (sem no_bg) pra cachear a decisão
+  //     e não re-processar toda execução do cron. O hero usa a foto original.
+  if (!gate.accepted || !gate.buffer) {
     try {
-      const supabase = createAdminClient()
-      await supabase
-        .from('vehicle_hero_asset')
-        .upsert(
-          {
-            vehicle_id: numericId,
-            vehicle_slug: vehicleSlug,
-            source_photo_url: sourcePhotoUrl,
-            no_bg_storage_path: stored.storagePath,
-            no_bg_public_url: stored.publicUrl,
-          },
-          { onConflict: 'vehicle_id' },
-        )
+      await supabase.from('vehicle_hero_asset').upsert(
+        {
+          vehicle_id: numericId,
+          vehicle_slug: vehicleSlug,
+          source_photo_url: sourcePhotoUrl,
+          no_bg_storage_path: null,
+          no_bg_public_url: null,
+          rembg_score: gate.score,
+          rembg_status: 'rejected',
+        },
+        { onConflict: 'vehicle_id' },
+      )
     } catch (error) {
-      console.error('[vehicle-hero-asset] DB upsert failed:', error)
-      return null
+      console.error('[vehicle-hero-asset] DB upsert (rejected) failed:', error)
     }
-
-    noBgAsset = {
+    return {
       vehicle_id: numericId,
       source_photo_url: sourcePhotoUrl,
-      no_bg_storage_path: stored.storagePath,
-      no_bg_public_url: stored.publicUrl,
+      no_bg_storage_path: null,
+      no_bg_public_url: null,
+      rembg_score: gate.score,
+      rembg_status: 'rejected',
     }
+  }
+
+  // 2b. Aprovado → upload do melhor recorte + upsert.
+  const stored = await uploadToSupabaseStorage(gate.buffer, numericId)
+  if (!stored) return null
+
+  try {
+    await supabase.from('vehicle_hero_asset').upsert(
+      {
+        vehicle_id: numericId,
+        vehicle_slug: vehicleSlug,
+        source_photo_url: sourcePhotoUrl,
+        no_bg_storage_path: stored.storagePath,
+        no_bg_public_url: stored.publicUrl,
+        rembg_score: gate.score,
+        rembg_status: 'accepted',
+      },
+      { onConflict: 'vehicle_id' },
+    )
+  } catch (error) {
+    console.error('[vehicle-hero-asset] DB upsert failed:', error)
+    return null
   }
 
   // NOTA: a geração de composite (inpainting Flux Fill Pro) foi REMOVIDA.
   // O modelo alucinava texto e distorcia a foto premium do veículo —
   // inaceitável pra marca. O hero da home agora usa vídeo do YouTube.
-  // Mantemos só o no_bg (BRIA rembg), ainda usado no FeaturedVehicleHero
-  // da página /veiculos (carro flutuante sobre o card).
+  // Mantemos só o no_bg, ainda usado no FeaturedVehicleHero da página
+  // /veiculos (carro flutuante sobre o card).
 
-  return noBgAsset
+  return {
+    vehicle_id: numericId,
+    source_photo_url: sourcePhotoUrl,
+    no_bg_storage_path: stored.storagePath,
+    no_bg_public_url: stored.publicUrl,
+    rembg_score: gate.score,
+    rembg_status: 'accepted',
+  }
 }
 
 /**
