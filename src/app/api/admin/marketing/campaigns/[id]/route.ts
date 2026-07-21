@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Updateable } from 'kysely'
+import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
-import { createAdminClient } from '@/lib/supabase/server'
-import type { CampaignWithVehicles } from '@/types/database'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
+
+function campaignWithVehicles(id: string) {
+  return db.selectFrom('marketing_campaigns')
+    .selectAll('marketing_campaigns')
+    .select((eb) => [
+      jsonArrayFrom(
+        eb.selectFrom('campaign_vehicles')
+          .selectAll('campaign_vehicles')
+          .whereRef('campaign_vehicles.campaign_id', '=', 'marketing_campaigns.id')
+          .orderBy('display_order', 'asc'),
+      ).as('vehicles'),
+    ])
+    .where('marketing_campaigns.id', '=', id)
+}
 
 // GET - Get single campaign with vehicles
 export async function GET(
@@ -17,22 +34,11 @@ export async function GET(
     }
 
     const { id } = await params
-    const supabase = createAdminClient()
+    const campaign = await campaignWithVehicles(id).executeTakeFirst()
 
-    const { data: campaign, error } = await supabase
-      .from('marketing_campaigns')
-      .select('*, vehicles:campaign_vehicles(*)')
-      .eq('id', id)
-      .single() as { data: CampaignWithVehicles | null; error: unknown }
-
-    if (error || !campaign) {
+    if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
-
-    // Sort vehicles
-    campaign.vehicles = (campaign.vehicles || []).sort(
-      (a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order
-    )
 
     return NextResponse.json({ campaign })
   } catch (error) {
@@ -58,24 +64,20 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const supabase = createAdminClient()
 
     // Build update object for campaign fields
     const updateData: Record<string, unknown> = {}
     const allowedFields = ['name', 'description', 'status']
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field]
-      }
+      if (body[field] !== undefined) updateData[field] = body[field]
     }
 
     if (Object.keys(updateData).length > 0) {
-      const { error: updateError } = await supabase
-        .from('marketing_campaigns')
-        .update(updateData as never)
-        .eq('id', id)
-
-      if (updateError) {
+      try {
+        await db.updateTable('marketing_campaigns')
+          .set(updateData as Updateable<Database['marketing_campaigns']>)
+          .where('id', '=', id).execute()
+      } catch (updateError) {
         console.error('Error updating campaign:', updateError)
         return NextResponse.json({ error: 'Failed to update campaign' }, { status: 500 })
       }
@@ -83,13 +85,8 @@ export async function PATCH(
 
     // If vehicles array is provided, replace all vehicles
     if (body.vehicles !== undefined) {
-      // Delete existing vehicles
-      await supabase
-        .from('campaign_vehicles')
-        .delete()
-        .eq('campaign_id', id)
+      await db.deleteFrom('campaign_vehicles').where('campaign_id', '=', id).execute()
 
-      // Insert new vehicles
       if (body.vehicles && body.vehicles.length > 0) {
         const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string }, i: number) => ({
           campaign_id: id,
@@ -98,23 +95,15 @@ export async function PATCH(
           notes: v.notes || null,
           display_order: i,
         }))
-
-        const { error: vehiclesError } = await supabase
-          .from('campaign_vehicles')
-          .insert(vehicleRows as never)
-
-        if (vehiclesError) {
+        try {
+          await db.insertInto('campaign_vehicles').values(vehicleRows).execute()
+        } catch (vehiclesError) {
           console.error('Error inserting vehicles:', vehiclesError)
         }
       }
     }
 
-    // Return updated campaign
-    const { data: campaign } = await supabase
-      .from('marketing_campaigns')
-      .select('*, vehicles:campaign_vehicles(*)')
-      .eq('id', id)
-      .single() as { data: CampaignWithVehicles | null; error: unknown }
+    const campaign = await campaignWithVehicles(id).executeTakeFirst()
 
     return NextResponse.json({ campaign })
   } catch (error) {
@@ -122,4 +111,3 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
