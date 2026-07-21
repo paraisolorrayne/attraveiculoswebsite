@@ -2,8 +2,11 @@
 set -euo pipefail
 # ============================================================================
 # Fase 1 — Provisiona o Postgres na VPS (RODE NA VPS, como root ou com sudo).
-# Ubuntu/Debian. Instala PG16 + pgvector e deixa user/db/extensões prontos
+# Ubuntu/Debian. Instala PG17 + pgvector e deixa user/db/extensões prontos
 # para o restore da Fase 3 (deploy/migrate-data.sh).
+#
+# PG17 para casar com a versão do Supabase (17.x): o pg_dump precisa ser >= a
+# versão do servidor de origem, e restaurar dump novo em servidor antigo quebra.
 #
 # Uso:
 #   sudo ATTRA_DB_PASSWORD='uma-senha-forte-sem-aspas' bash deploy/postgres-setup.sh
@@ -12,7 +15,7 @@ set -euo pipefail
 # ============================================================================
 
 : "${ATTRA_DB_PASSWORD:?defina ATTRA_DB_PASSWORD='senha-forte' antes de rodar}"
-PG_VERSION="${PG_VERSION:-16}"
+PG_VERSION="${PG_VERSION:-17}"
 DB_NAME="${DB_NAME:-attra}"
 DB_USER="${DB_USER:-attra}"
 
