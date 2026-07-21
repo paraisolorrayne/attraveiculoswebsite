@@ -79,10 +79,23 @@ Para cada módulo: adicionar tabelas em `src/lib/db/types.ts`, trocar `supabase-
 > restantes são em `admin_users` (arquivos de auth) → vão na Fase 5. Tipadas ~30
 > tabelas em `src/lib/db/types.ts`.
 
-### Fase 5 — Auth (código) — o mais arriscado, por último
-- Auth.js Credentials contra `admin_users` (bcrypt via `pgcrypto`/`bcryptjs`).
-- Migrar hashes: GoTrue guarda bcrypt em `auth.users.encrypted_password` → copiar pro `admin_users` (ou tabela de credenciais nova) casando por `id`.
-- Reescrever: `src/lib/admin-auth-supabase.ts`, `src/middleware.ts`, `api/admin/{login,logout,users}`, reset de senha (e-mail via Resend, já disponível).
+### Fase 5 — Auth ✅ NÚCLEO FEITO (commit 01e591f)
+- **Auth.js (next-auth v5) Credentials** contra `admin_users` (bcrypt via `bcryptjs`).
+  `src/auth.config.ts` (edge-safe, middleware) + `src/auth.ts` (Node) + route handler
+  em `app/api/auth/[...nextauth]`. `getCurrentAdmin`/`isAuthenticated`/`signIn`/`signOut`
+  reimplementados em `admin-auth-supabase.ts` — as ~40 rotas não mudam.
+- **5 papéis** (admin/owner/operador/marketing/gerente) + matriz de acesso em
+  `src/lib/auth/roles.ts`. Migration `20260721_auth_roles_and_password.sql` adiciona
+  os valores ao enum + `admin_users.password_hash`.
+- `middleware.ts`: gating real por papel (removeu o bypass temporário).
+- login/logout + gestão de usuários (create/reset senha) → bcrypt + Kysely.
+- **Pendências (precisam do banco real / decisão):**
+  1. `AUTH_SECRET` no `.env` (`npx auth secret`).
+  2. **Migrar os hashes** GoTrue `auth.users.encrypted_password` → `admin_users.password_hash`
+     por `id` (GoTrue usa bcrypt padrão → `bcryptjs.compare` valida; ninguém troca senha).
+  3. **Atribuir papéis**: Lorrayne=admin, Cris=owner, Pedro Spini=operador, Eduardo=marketing, + um gerente.
+  4. **Reset de senha por e-mail** (token + Resend) — fatia à parte (hoje stub; admin reseta pelo painel de usuários).
+  5. Testar login de cada admin no staging ANTES do cutover.
 
 ### Fase 6 — Storage (código + ops)
 - Baixar os 3 buckets (`audio-files`, `blog-images`, `vehicle-hero-assets`) → `/var/www/attra-media/<bucket>/`.
