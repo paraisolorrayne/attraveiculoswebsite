@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 
 // Google Ads Enhanced Conversions config
@@ -52,11 +55,10 @@ export async function POST(request: NextRequest) {
     let profileId: string | null = null
 
     if (session_db_id) {
-      const { data: session } = await supabase
-        .from('visitor_sessions')
-        .select('gclid, fbclid, ttclid')
-        .eq('id', session_db_id)
-        .single()
+      const session = await db.selectFrom('visitor_sessions')
+        .select(['gclid', 'fbclid', 'ttclid'])
+        .where('id', '=', session_db_id)
+        .executeTakeFirst()
 
       if (session) {
         gclid = session.gclid
@@ -66,18 +68,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get profile ID from fingerprint
-    const { data: fingerprint } = await supabase
-      .from('visitor_fingerprints')
+    const fingerprint = await db.selectFrom('visitor_fingerprints')
       .select('resolved_profile_id')
-      .eq('id', fingerprint_db_id)
-      .single()
+      .where('id', '=', fingerprint_db_id)
+      .executeTakeFirst()
 
     profileId = fingerprint?.resolved_profile_id || null
 
     // Insert conversion event
-    const { data: conversionEvent, error: insertError } = await supabase
-      .from('conversion_events')
-      .insert({
+    const conversionEvent = await db.insertInto('conversion_events')
+      .values({
         fingerprint_id: fingerprint_db_id,
         profile_id: profileId,
         session_id: session_db_id || null,
@@ -90,13 +90,13 @@ export async function POST(request: NextRequest) {
         hashed_phone: hashed_phone || null,
         page_path: page_path || null,
         vehicle_id: vehicle_id || null,
-        metadata: metadata || {},
+        metadata: sql`${JSON.stringify(metadata || {})}::jsonb`,
       })
-      .select('id')
-      .single()
+      .returning('id')
+      .executeTakeFirst()
 
-    if (insertError) {
-      console.error('[Conversion] Insert error:', insertError)
+    if (!conversionEvent?.id) {
+      console.error('[Conversion] Insert error')
       return NextResponse.json({ error: 'Failed to record conversion' }, { status: 500 })
     }
 
@@ -192,14 +192,14 @@ async function sendToGoogleAds(
   const result = await response.json()
 
   // Update conversion event with Google response
-  await supabase
-    .from('conversion_events')
-    .update({
+  await db.updateTable('conversion_events')
+    .set({
       sent_to_google: true,
-      sent_to_google_at: new Date().toISOString(),
-      google_response: result,
+      sent_to_google_at: new Date(),
+      google_response: sql`${JSON.stringify(result)}::jsonb`,
     })
-    .eq('id', conversionId)
+    .where('id', '=', conversionId)
+    .execute()
 
   if (!response.ok) {
     console.error('[Conversion] Google Ads API error:', result)
@@ -267,14 +267,14 @@ async function sendToMetaConversions(
   const result = await response.json()
 
   // Update conversion event with Meta response
-  await supabase
-    .from('conversion_events')
-    .update({
+  await db.updateTable('conversion_events')
+    .set({
       sent_to_meta: true,
-      sent_to_meta_at: new Date().toISOString(),
-      meta_response: result,
+      sent_to_meta_at: new Date(),
+      meta_response: sql`${JSON.stringify(result)}::jsonb`,
     })
-    .eq('id', conversionId)
+    .where('id', '=', conversionId)
+    .execute()
 
   if (!response.ok) {
     console.error('[Conversion] Meta API error:', result)

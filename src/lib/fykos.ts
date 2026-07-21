@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/tracking-client'
+import { db } from '@/lib/db'
 
 // Integração com o CRM Fykos: um POST por lead novo capturado nos
 // formulários do site, no mesmo formato dos leads Webmotors/iCarros
@@ -145,24 +145,22 @@ async function lookupSession(sessionId: string, needVehicle: boolean): Promise<{
   vehicle: FykosVehicle | null
 }> {
   try {
-    const { data: session } = await supabase
-      .from('visitor_sessions')
+    const session = await db.selectFrom('visitor_sessions')
       .select('id')
-      .eq('session_id', sessionId)
-      .single()
+      .where('session_id', '=', sessionId)
+      .executeTakeFirst()
 
     if (!session?.id) return { sessionDbId: null, vehicle: null }
     if (!needVehicle) return { sessionDbId: session.id, vehicle: null }
 
-    const { data: views } = await supabase
-      .from('visitor_page_views')
-      .select('vehicle_brand, vehicle_model, vehicle_slug, viewed_at')
-      .eq('session_id', session.id)
-      .not('vehicle_slug', 'is', null)
-      .order('viewed_at', { ascending: false })
+    const view = await db.selectFrom('visitor_page_views')
+      .select(['vehicle_brand', 'vehicle_model', 'vehicle_slug', 'viewed_at'])
+      .where('session_id', '=', session.id)
+      .where('vehicle_slug', 'is not', null)
+      .orderBy('viewed_at', 'desc')
       .limit(1)
+      .executeTakeFirst()
 
-    const view = views?.[0]
     if (!view) return { sessionDbId: session.id, vehicle: null }
 
     return {

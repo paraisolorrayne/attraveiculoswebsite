@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS identity_events, visitor_page_views, visitor_sessions, visitor_profiles, visitor_fingerprints CASCADE;
+DROP TABLE IF EXISTS conversion_events, ip_geolocation_cache, identity_events, visitor_page_views, visitor_sessions, visitor_profiles, visitor_fingerprints CASCADE;
 
 CREATE TABLE visitor_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -65,4 +65,23 @@ CREATE TABLE identity_events (
   profile_id UUID,
   event_type TEXT NOT NULL, event_data JSONB DEFAULT '{}', source TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE conversion_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fingerprint_id UUID REFERENCES visitor_fingerprints(id) ON DELETE CASCADE,
+  profile_id UUID, session_id UUID,
+  event_name TEXT NOT NULL, event_value DECIMAL(12,2), currency TEXT DEFAULT 'BRL',
+  gclid TEXT, fbclid TEXT, ttclid TEXT, hashed_email TEXT, hashed_phone TEXT,
+  sent_to_google BOOLEAN DEFAULT FALSE, sent_to_google_at TIMESTAMPTZ, google_response JSONB,
+  sent_to_meta BOOLEAN DEFAULT FALSE, sent_to_meta_at TIMESTAMPTZ, meta_response JSONB,
+  page_path TEXT, vehicle_id TEXT, metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ip_geolocation_cache (
+  ip_address INET PRIMARY KEY,
+  country_code TEXT, region TEXT, city TEXT,
+  cached_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days')
 );

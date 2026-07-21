@@ -62,11 +62,12 @@ site em produção segue no Supabase até o cutover.
 
 ### Fase 4 — Portar acesso a dados (código) — por módulo, ordem de risco ↑
 Para cada módulo: adicionar tabelas em `src/lib/db/types.ts`, trocar `supabase-js` por Kysely, testar (compile-test + integração contra Postgres real).
-1. **Tracking** (11 arquivos `tracking-client`, service-role puro) ← EM ANDAMENTO
-   - ✅ **Núcleo portado + integração verde** (`session`, `pageview`, `interaction`/whatsapp_click, `page-time`). RPCs `increment` e `increment_session_page_views` viraram SQL inline (`sql\`x + 1\``). Tabelas: `visitor_fingerprints/sessions/page_views/identity_events`.
-   - ✅ **`identify` + `abandoned` portados + integração verde** (merge de perfil, LGPD, abandono). Tabela `visitor_profiles` tipada. `Updateable<>` do Kysely pras chaves dinâmicas do update.
-   - ✅ **10 testes de integração contra PG real** em `tracking-routes.integration.test.ts` (opt-in via `TEST_DATABASE_URL`). Fixture: `src/lib/db/__tests__/fixtures/tracking-schema.sql`. Proxy `db` corrigido pra getters do Kysely (`fn`/`dynamic`).
-   - ⏳ Falta: `conversion` (morta hoje — porta junto do wiring de conversão), os 2 dashboards admin (`admin/visitors` + `metrics` + `session-explore`), `geolocation`, e `fykos.ts` `lookupSession` (read). Só então remover `src/lib/supabase/tracking-client.ts`.
+1. **Tracking** ✅ **MÓDULO 100% PORTADO** — `src/lib/supabase/tracking-client.ts` REMOVIDO.
+   - Rotas de escrita: `session`, `pageview`, `interaction`/whatsapp_click, `page-time`, `identify`, `abandoned`, `conversion`. RPCs `increment`/`increment_session_page_views` viraram SQL inline.
+   - Reads: `admin/visitors` (embedding do PostgREST → LEFT JOIN + agregação), `admin/visitors/metrics` (counts), `session-explore` (+ **corrigido o bug do UUID**: `session_id` é a string do client, não UUID), `geolocation` (cache IP + update de sessão), `fykos.ts` `lookupSession`.
+   - Tabelas tipadas: visitor_fingerprints/sessions/page_views/identity_events/visitor_profiles/conversion_events/ip_geolocation_cache.
+   - **12 testes de integração contra PG real** (opt-in via `TEST_DATABASE_URL`; fixture `src/lib/db/__tests__/fixtures/tracking-schema.sql`). Proxy `db` corrigido pra getters do Kysely (`fn`/`dynamic`).
+   - Dívida herdada: a Edge Function `ip-geo-updater` do geolocation ainda é do Supabase (código fora do repo, tem fallback ipapi.co) — recuperar numa fase posterior.
 2. Leitura de veículos / conteúdo (SSR)
 3. Marketing / blog / news / newsletter
 4. `match_vehicles` (pgvector → SQL cru)

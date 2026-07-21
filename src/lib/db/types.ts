@@ -17,6 +17,10 @@ import type { Generated, ColumnType } from 'kysely'
 /** TIMESTAMPTZ: lê Date; no insert/update aceita Date ou ISO string (default no banco). */
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>
 
+/** JSONB: lê objeto; grava objeto/string/`sql` (default no banco). */
+type Json = ColumnType<Record<string, unknown>, Record<string, unknown> | string | undefined, Record<string, unknown> | string>
+type JsonNullable = ColumnType<Record<string, unknown> | null, Record<string, unknown> | string | null, Record<string, unknown> | string | null>
+
 // ─────────────────────────── TRACKING ───────────────────────────
 
 export interface VisitorFingerprintsTable {
@@ -149,6 +153,40 @@ export interface VisitorPageViewsTable {
   viewed_at: Timestamp
 }
 
+export interface ConversionEventsTable {
+  id: Generated<string>
+  fingerprint_id: string | null
+  profile_id: string | null
+  session_id: string | null
+  event_name: string
+  event_value: ColumnType<number | null, number | string | null, number | string | null>
+  currency: Generated<string>
+  gclid: string | null
+  fbclid: string | null
+  ttclid: string | null
+  hashed_email: string | null
+  hashed_phone: string | null
+  sent_to_google: Generated<boolean>
+  sent_to_google_at: Timestamp | null
+  google_response: JsonNullable
+  sent_to_meta: Generated<boolean>
+  sent_to_meta_at: Timestamp | null
+  meta_response: JsonNullable
+  page_path: string | null
+  vehicle_id: string | null
+  metadata: Json
+  created_at: Timestamp
+}
+
+export interface IpGeolocationCacheTable {
+  ip_address: string // INET PK — obrigatório no insert
+  country_code: string | null
+  region: string | null
+  city: string | null
+  cached_at: Timestamp
+  expires_at: Timestamp
+}
+
 /**
  * Interface raiz do banco. Chave = nome da tabela no schema `public`.
  * Adicione novas tabelas AQUI conforme cada módulo migra do supabase-js.
@@ -159,6 +197,8 @@ export interface Database {
   visitor_page_views: VisitorPageViewsTable
   identity_events: IdentityEventsTable
   visitor_profiles: VisitorProfilesTable
-  // TODO(migração): conversion_events, vehicles, admin_users, dual_blog_posts,
-  // vehicle_embeddings, news_*, marketing_*, etc.
+  conversion_events: ConversionEventsTable
+  ip_geolocation_cache: IpGeolocationCacheTable
+  // TODO(migração): vehicles, admin_users, dual_blog_posts, vehicle_embeddings,
+  // news_*, marketing_*, etc.
 }

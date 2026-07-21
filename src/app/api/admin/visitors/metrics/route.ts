@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { getCurrentAdmin } from '@/lib/admin-auth'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export async function GET() {
   try {
@@ -10,60 +12,54 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get total visitors (unique fingerprints)
-    const { count: totalVisitors } = await supabase
-      .from('visitor_fingerprints')
-      .select('*', { count: 'exact', head: true })
+    const countExpr = sql<number>`count(*)::int`
 
-    // Get identified visitors
-    const { count: identifiedVisitors } = await supabase
-      .from('visitor_profiles')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['identified', 'enriched', 'converted'])
+    // Total de visitantes (fingerprints únicos)
+    const totalVisitors = (await db.selectFrom('visitor_fingerprints')
+      .select(countExpr.as('n')).executeTakeFirst())?.n ?? 0
 
-    // Get enriched visitors
-    const { count: enrichedVisitors } = await supabase
-      .from('visitor_profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'enriched')
+    // Visitantes identificados
+    const identifiedVisitors = (await db.selectFrom('visitor_profiles')
+      .select(countExpr.as('n'))
+      .where('status', 'in', ['identified', 'enriched', 'converted'])
+      .executeTakeFirst())?.n ?? 0
 
-    // Get total sessions
-    const { count: totalSessions } = await supabase
-      .from('visitor_sessions')
-      .select('*', { count: 'exact', head: true })
+    // Visitantes enriquecidos
+    const enrichedVisitors = (await db.selectFrom('visitor_profiles')
+      .select(countExpr.as('n')).where('status', '=', 'enriched').executeTakeFirst())?.n ?? 0
 
-    // Get total page views
-    const { count: totalPageViews } = await supabase
-      .from('visitor_page_views')
-      .select('*', { count: 'exact', head: true })
+    // Total de sessões
+    const totalSessions = (await db.selectFrom('visitor_sessions')
+      .select(countExpr.as('n')).executeTakeFirst())?.n ?? 0
 
-    // Get average session duration
-    const { data: sessionDurations } = await supabase
-      .from('visitor_sessions')
+    // Total de page views
+    const totalPageViews = (await db.selectFrom('visitor_page_views')
+      .select(countExpr.as('n')).executeTakeFirst())?.n ?? 0
+
+    // Duração média de sessão (amostra de até 1000)
+    const sessionDurations = await db.selectFrom('visitor_sessions')
       .select('duration_seconds')
-      .not('duration_seconds', 'is', null)
+      .where('duration_seconds', 'is not', null)
       .limit(1000)
+      .execute()
 
-    const avgSessionDuration = sessionDurations?.length
+    const avgSessionDuration = sessionDurations.length
       ? sessionDurations.reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / sessionDurations.length
       : 0
 
-    // Get WhatsApp clicks
-    const { count: whatsappClicks } = await supabase
-      .from('visitor_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('contacted_whatsapp', true)
+    // Cliques no WhatsApp
+    const whatsappClicks = (await db.selectFrom('visitor_sessions')
+      .select(countExpr.as('n')).where('contacted_whatsapp', '=', true).executeTakeFirst())?.n ?? 0
 
-    // Get top vehicles
-    const { data: topVehicles } = await supabase
-      .from('visitor_page_views')
-      .select('vehicle_slug, vehicle_brand, vehicle_model')
-      .not('vehicle_slug', 'is', null)
+    // Top veículos (amostra de até 500 page views de veículo)
+    const topVehicles = await db.selectFrom('visitor_page_views')
+      .select(['vehicle_slug', 'vehicle_brand', 'vehicle_model'])
+      .where('vehicle_slug', 'is not', null)
       .limit(500)
+      .execute()
 
-    // Aggregate vehicle views
     const vehicleViews: Record<string, { slug: string; brand: string; model: string; views: number }> = {}
-    topVehicles?.forEach(pv => {
+    for (const pv of topVehicles) {
       if (pv.vehicle_slug) {
         if (!vehicleViews[pv.vehicle_slug]) {
           vehicleViews[pv.vehicle_slug] = {
@@ -75,20 +71,20 @@ export async function GET() {
         }
         vehicleViews[pv.vehicle_slug].views++
       }
-    })
+    }
 
     const sortedVehicles = Object.values(vehicleViews)
       .sort((a, b) => b.views - a.views)
       .slice(0, 10)
 
     return NextResponse.json({
-      total_visitors: totalVisitors || 0,
-      identified_visitors: identifiedVisitors || 0,
-      enriched_visitors: enrichedVisitors || 0,
-      total_sessions: totalSessions || 0,
-      total_page_views: totalPageViews || 0,
+      total_visitors: totalVisitors,
+      identified_visitors: identifiedVisitors,
+      enriched_visitors: enrichedVisitors,
+      total_sessions: totalSessions,
+      total_page_views: totalPageViews,
       avg_session_duration: Math.round(avgSessionDuration),
-      whatsapp_clicks: whatsappClicks || 0,
+      whatsapp_clicks: whatsappClicks,
       top_vehicles: sortedVehicles,
     })
 
@@ -97,4 +93,3 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

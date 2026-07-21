@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { sql } from 'kysely'
 
 const TEST_DB = process.env.TEST_DATABASE_URL
 
@@ -31,6 +32,7 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
   let pageTimePOST: typeof import('@/app/api/tracking/page-time/route').POST
   let identifyPOST: typeof import('@/app/api/tracking/identify/route').POST
   let abandonedPOST: typeof import('@/app/api/tracking/abandoned/route').POST
+  let conversionPOST: typeof import('@/app/api/tracking/conversion/route').POST
 
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DB
@@ -41,6 +43,7 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     ;({ POST: pageTimePOST } = await import('@/app/api/tracking/page-time/route'))
     ;({ POST: identifyPOST } = await import('@/app/api/tracking/identify/route'))
     ;({ POST: abandonedPOST } = await import('@/app/api/tracking/abandoned/route'))
+    ;({ POST: conversionPOST } = await import('@/app/api/tracking/conversion/route'))
   })
 
   beforeEach(async () => {
@@ -211,5 +214,46 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     const ev = await db.selectFrom('identity_events').selectAll()
       .where('event_type', '=', 'session_abandoned').executeTakeFirstOrThrow()
     expect((ev.event_data as Record<string, unknown>).pages_viewed).toBe(4)
+  })
+
+  it('conversion: grava conversion_event ligado à sessão (gclid herdado)', async () => {
+    const { fingerprint_db_id, session_db_id } = await newSession()
+    const out = await conversionPOST(req('/api/tracking/conversion', {
+      fingerprint_db_id, session_db_id, event_name: 'whatsapp_click',
+      event_value: 5500000, page_path: '/veiculos/x', metadata: { source: 'test' },
+    })).then(r => r.json())
+    expect(out.success).toBe(true)
+
+    const ev = await db.selectFrom('conversion_events').selectAll()
+      .where('id', '=', out.conversion_id).executeTakeFirstOrThrow()
+    expect(ev.event_name).toBe('whatsapp_click')
+    expect(ev.gclid).toBe('GCL-abc123') // herdado da sessão
+    expect((ev.metadata as Record<string, unknown>).source).toBe('test')
+  })
+
+  it('admin/visitors: agregação (join) conta sessões e soma veículos por perfil', async () => {
+    const prof = await db.insertInto('visitor_profiles')
+      .values({ email: 'agg@attra.com', status: 'identified' })
+      .returning('id').executeTakeFirstOrThrow()
+    const fp = await db.insertInto('visitor_fingerprints')
+      .values({ visitor_id: 'agg-vis', resolved_profile_id: prof.id })
+      .returning('id').executeTakeFirstOrThrow()
+    await db.insertInto('visitor_sessions').values([
+      { fingerprint_id: fp.id, session_id: 'agg-s1', vehicles_viewed: 3 },
+      { fingerprint_id: fp.id, session_id: 'agg-s2', vehicles_viewed: 2 },
+    ]).execute()
+
+    const rows = await db.selectFrom('visitor_profiles as p')
+      .leftJoin('visitor_fingerprints as fp', 'fp.resolved_profile_id', 'p.id')
+      .leftJoin('visitor_sessions as s', 's.fingerprint_id', 'fp.id')
+      .select('p.id')
+      .select([
+        sql<number>`count(distinct s.id)::int`.as('total_sessions'),
+        sql<number>`coalesce(sum(s.vehicles_viewed), 0)::int`.as('total_vehicles_viewed'),
+      ])
+      .groupBy('p.id').where('p.id', '=', prof.id).execute()
+
+    expect(rows[0].total_sessions).toBe(2)
+    expect(rows[0].total_vehicles_viewed).toBe(5)
   })
 })
