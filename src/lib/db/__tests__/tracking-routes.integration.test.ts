@@ -33,6 +33,8 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
   let identifyPOST: typeof import('@/app/api/tracking/identify/route').POST
   let abandonedPOST: typeof import('@/app/api/tracking/abandoned/route').POST
   let conversionPOST: typeof import('@/app/api/tracking/conversion/route').POST
+  let getSiteSettings: typeof import('@/lib/site-settings').getSiteSettings
+  let getCachedVehicleSections: typeof import('@/lib/vehicle-sections').getCachedVehicleSections
 
   beforeAll(async () => {
     process.env.DATABASE_URL = TEST_DB
@@ -44,13 +46,17 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     ;({ POST: identifyPOST } = await import('@/app/api/tracking/identify/route'))
     ;({ POST: abandonedPOST } = await import('@/app/api/tracking/abandoned/route'))
     ;({ POST: conversionPOST } = await import('@/app/api/tracking/conversion/route'))
+    ;({ getSiteSettings } = await import('@/lib/site-settings'))
+    ;({ getCachedVehicleSections } = await import('@/lib/vehicle-sections'))
   })
 
   beforeEach(async () => {
     // cascata limpa sessions/page_views/identity_events via FK
     await db.deleteFrom('visitor_fingerprints').execute()
-    // visitor_profiles não tem FK de entrada — limpa à parte
+    // sem FK de entrada — limpa à parte
     await db.deleteFrom('visitor_profiles').execute()
+    await db.deleteFrom('site_settings').execute()
+    await db.deleteFrom('vehicle_section_content').execute()
   })
 
   async function newSession() {
@@ -255,5 +261,32 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
 
     expect(rows[0].total_sessions).toBe(2)
     expect(rows[0].total_vehicles_viewed).toBe(5)
+  })
+
+  it('site-settings: lê flags do banco (jsonb) com defaults', async () => {
+    await db.insertInto('site_settings').values([
+      { key: 'listen_to_content_enabled', value: sql`'false'::jsonb` },
+      { key: 'engine_sound_section_enabled', value: sql`'true'::jsonb` },
+    ]).execute()
+    const s = await getSiteSettings()
+    expect(s.listen_to_content_enabled).toBe(false)
+    expect(s.engine_sound_section_enabled).toBe(true)
+  })
+
+  it('vehicle-sections: cache hit + invalida quando muda a contagem de fotos', async () => {
+    await db.insertInto('vehicle_section_content').values({
+      vehicle_id: 989248, vehicle_slug: 'ferrari-sf90', photo_count: 20,
+      overview_photo_url: 'a.jpg', exterior_photo_url: 'b.jpg', interior_photo_url: 'c.jpg',
+      overview_copy: 'copy o', exterior_copy: null, interior_copy: null,
+    }).execute()
+
+    const hit = await getCachedVehicleSections('989248', 20)
+    expect(hit?.source).toBe('cache')
+    expect(hit?.overview.photo_url).toBe('a.jpg')
+    expect(hit?.overview.copy).toBe('copy o')
+
+    // contagem de fotos diferente → invalida (retorna null)
+    const miss = await getCachedVehicleSections('989248', 12)
+    expect(miss).toBeNull()
   })
 })

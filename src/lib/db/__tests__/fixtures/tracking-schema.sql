@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS conversion_events, ip_geolocation_cache, identity_events, visitor_page_views, visitor_sessions, visitor_profiles, visitor_fingerprints CASCADE;
+DROP TABLE IF EXISTS conversion_events, ip_geolocation_cache, vehicle_section_content, site_settings, identity_events, visitor_page_views, visitor_sessions, visitor_profiles, visitor_fingerprints CASCADE;
 
 CREATE TABLE visitor_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -84,4 +84,24 @@ CREATE TABLE ip_geolocation_cache (
   country_code TEXT, region TEXT, city TEXT,
   cached_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days')
+);
+
+CREATE TABLE site_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL UNIQUE,
+  value JSONB NOT NULL DEFAULT 'true'::jsonb,
+  description TEXT, updated_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE vehicle_section_content (
+  id BIGSERIAL PRIMARY KEY,
+  vehicle_id INTEGER NOT NULL UNIQUE,
+  vehicle_slug TEXT NOT NULL,
+  photo_count INTEGER NOT NULL,
+  overview_photo_url TEXT NOT NULL, exterior_photo_url TEXT NOT NULL, interior_photo_url TEXT NOT NULL,
+  overview_copy TEXT, exterior_copy TEXT, interior_copy TEXT,
+  classified_at TIMESTAMPTZ DEFAULT NOW(), copy_generated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
 );

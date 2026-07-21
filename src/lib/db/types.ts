@@ -187,6 +187,35 @@ export interface IpGeolocationCacheTable {
   expires_at: Timestamp
 }
 
+// ─────────────────────────── CONTEÚDO / CONFIG ───────────────────────────
+
+export interface SiteSettingsTable {
+  id: Generated<string>
+  key: string
+  value: ColumnType<unknown, unknown, unknown> // jsonb (boolean/string/objeto)
+  description: string | null
+  updated_by: string | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface VehicleSectionContentTable {
+  id: Generated<number> // BIGSERIAL
+  vehicle_id: number
+  vehicle_slug: string
+  photo_count: number
+  overview_photo_url: string
+  exterior_photo_url: string
+  interior_photo_url: string
+  overview_copy: string | null
+  exterior_copy: string | null
+  interior_copy: string | null
+  classified_at: Timestamp
+  copy_generated_at: Timestamp | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
 /**
  * Interface raiz do banco. Chave = nome da tabela no schema `public`.
  * Adicione novas tabelas AQUI conforme cada módulo migra do supabase-js.
@@ -199,6 +228,8 @@ export interface Database {
   visitor_profiles: VisitorProfilesTable
   conversion_events: ConversionEventsTable
   ip_geolocation_cache: IpGeolocationCacheTable
+  site_settings: SiteSettingsTable
+  vehicle_section_content: VehicleSectionContentTable
   // TODO(migração): vehicles, admin_users, dual_blog_posts, vehicle_embeddings,
-  // news_*, marketing_*, etc.
+  // news_*, marketing_*, vehicle_sounds, vehicle_hero_asset, etc.
 }
