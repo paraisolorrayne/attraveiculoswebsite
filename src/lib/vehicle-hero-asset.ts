@@ -17,6 +17,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
 import sharp from 'sharp'
 import { evaluateCutouts } from '@/lib/rembg-quality'
 
@@ -107,14 +108,11 @@ export async function getCachedHeroAsset(
   if (Number.isNaN(numericId)) return null
 
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_hero_asset')
-      .select('*')
-      .eq('vehicle_id', numericId)
-      .maybeSingle()
+    const data = await db.selectFrom('vehicle_hero_asset').selectAll()
+      .where('vehicle_id', '=', numericId)
+      .executeTakeFirst()
 
-    if (error || !data) return null
+    if (!data) return null
     if (data.source_photo_url !== currentSourceUrl) return null
 
     return {
@@ -123,7 +121,7 @@ export async function getCachedHeroAsset(
       no_bg_storage_path: data.no_bg_storage_path,
       no_bg_public_url: data.no_bg_public_url,
       rembg_score: data.rembg_score ?? null,
-      rembg_status: data.rembg_status ?? null,
+      rembg_status: (data.rembg_status ?? null) as 'accepted' | 'rejected' | null,
       composite_storage_path: data.composite_storage_path ?? null,
       composite_public_url: data.composite_public_url ?? null,
     }
@@ -325,14 +323,13 @@ export async function generateAndCacheHeroAsset(
 
   // 1. Roda os dois modelos + gate de qualidade.
   const gate = await gatedRembg(sourcePhotoUrl)
-  const supabase = createAdminClient()
 
   // 2a. Reprovado no gate → grava a REJEIÇÃO (sem no_bg) pra cachear a decisão
   //     e não re-processar toda execução do cron. O hero usa a foto original.
   if (!gate.accepted || !gate.buffer) {
     try {
-      await supabase.from('vehicle_hero_asset').upsert(
-        {
+      await db.insertInto('vehicle_hero_asset')
+        .values({
           vehicle_id: numericId,
           vehicle_slug: vehicleSlug,
           source_photo_url: sourcePhotoUrl,
@@ -340,9 +337,16 @@ export async function generateAndCacheHeroAsset(
           no_bg_public_url: null,
           rembg_score: gate.score,
           rembg_status: 'rejected',
-        },
-        { onConflict: 'vehicle_id' },
-      )
+        })
+        .onConflict((oc) => oc.column('vehicle_id').doUpdateSet({
+          vehicle_slug: vehicleSlug,
+          source_photo_url: sourcePhotoUrl,
+          no_bg_storage_path: null,
+          no_bg_public_url: null,
+          rembg_score: gate.score,
+          rembg_status: 'rejected',
+        }))
+        .execute()
     } catch (error) {
       console.error('[vehicle-hero-asset] DB upsert (rejected) failed:', error)
     }
@@ -361,8 +365,8 @@ export async function generateAndCacheHeroAsset(
   if (!stored) return null
 
   try {
-    await supabase.from('vehicle_hero_asset').upsert(
-      {
+    await db.insertInto('vehicle_hero_asset')
+      .values({
         vehicle_id: numericId,
         vehicle_slug: vehicleSlug,
         source_photo_url: sourcePhotoUrl,
@@ -370,9 +374,16 @@ export async function generateAndCacheHeroAsset(
         no_bg_public_url: stored.publicUrl,
         rembg_score: gate.score,
         rembg_status: 'accepted',
-      },
-      { onConflict: 'vehicle_id' },
-    )
+      })
+      .onConflict((oc) => oc.column('vehicle_id').doUpdateSet({
+        vehicle_slug: vehicleSlug,
+        source_photo_url: sourcePhotoUrl,
+        no_bg_storage_path: stored.storagePath,
+        no_bg_public_url: stored.publicUrl,
+        rembg_score: gate.score,
+        rembg_status: 'accepted',
+      }))
+      .execute()
   } catch (error) {
     console.error('[vehicle-hero-asset] DB upsert failed:', error)
     return null
@@ -629,15 +640,15 @@ async function generateComposite(
       .from(STORAGE_BUCKET)
       .getPublicUrl(storagePath)
 
-    // 4. Update DB com composite_*
-    await supabase
-      .from('vehicle_hero_asset')
-      .update({
+    // 4. Update DB com composite_* (Kysely)
+    await db.updateTable('vehicle_hero_asset')
+      .set({
         composite_storage_path: storagePath,
         composite_public_url: urlData.publicUrl,
-        composite_generated_at: new Date().toISOString(),
+        composite_generated_at: new Date(),
       })
-      .eq('vehicle_id', vehicleId)
+      .where('vehicle_id', '=', vehicleId)
+      .execute()
 
     return { storagePath, publicUrl: urlData.publicUrl }
   } catch (error) {

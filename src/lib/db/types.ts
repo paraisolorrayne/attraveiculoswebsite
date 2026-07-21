@@ -216,6 +216,288 @@ export interface VehicleSectionContentTable {
   updated_at: Timestamp
 }
 
+// ─────────────────────────── VEÍCULOS (conteúdo) ───────────────────────────
+
+export interface VehicleSoundsTable {
+  id: Generated<string>
+  vehicle_id: string
+  vehicle_name: string
+  vehicle_brand: string
+  vehicle_slug: Generated<string>
+  sound_file_url: string
+  description: string | null
+  icon: Generated<string>
+  is_electric: Generated<boolean>
+  is_active: Generated<boolean>
+  display_order: Generated<number>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface VehicleHeroAssetTable {
+  id: Generated<number>
+  vehicle_id: number
+  vehicle_slug: string
+  source_photo_url: string
+  no_bg_storage_path: string | null
+  no_bg_public_url: string | null
+  rembg_score: number | null
+  rembg_status: string | null
+  composite_storage_path: string | null
+  composite_public_url: string | null
+  composite_generated_at: Timestamp | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface VehicleEmbeddingsTable {
+  id: Generated<number>
+  vehicle_id: number
+  vehicle_slug: string
+  passage_text: string
+  embedding: string // pgvector VECTOR(1024) — string tipo '[...]'; match via SQL cru
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+// ─────────────────────────── BLOG / NEWS ───────────────────────────
+
+export interface DualBlogPostsTable {
+  id: Generated<string>
+  post_type: string
+  title: string
+  slug: string
+  excerpt: Generated<string>
+  content: Generated<string>
+  featured_image: Generated<string>
+  featured_image_alt: Generated<string>
+  author: Json
+  published_date: Timestamp
+  updated_date: Timestamp | null
+  reading_time: Generated<string>
+  is_published: Generated<boolean>
+  educativo: JsonNullable
+  car_review: JsonNullable
+  seo: Json
+  source: Generated<string>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface BlogPostsTable {
+  id: Generated<string>
+  slug: string
+  title: string
+  excerpt: string
+  content: string
+  featured_image: string | null
+  category_id: string | null
+  tags: Generated<string[]>
+  author: string
+  seo_title: string | null
+  seo_description: string | null
+  is_published: Generated<boolean>
+  published_at: Timestamp | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface BlogAiGenerationsTable {
+  id: Generated<string>
+  run_date: Generated<string>
+  run_at: Timestamp
+  strategy: string
+  blog_post_id: string | null
+  source: Json
+  success: Generated<boolean>
+  error_message: string | null
+  created_at: Timestamp
+}
+
+export interface NewsCyclesTable {
+  id: Generated<string>
+  week_start: string
+  week_end: string
+  is_active: Generated<boolean>
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface NewsCategoriesTable {
+  id: Generated<number>
+  slug: string
+  name: string
+  description: string | null
+  created_at: Timestamp
+}
+
+export interface NewsSourcesTable {
+  id: Generated<number>
+  slug: string
+  name: string
+  created_at: Timestamp
+}
+
+export interface NewsArticlesTable {
+  id: Generated<string>
+  news_cycle_id: string
+  category_id: number
+  source_id: number
+  title: string
+  description: string | null
+  content: string | null
+  image_url: string | null
+  source_name: string
+  original_url: string
+  published_at: Timestamp
+  is_featured: Generated<boolean>
+  featured_order: number | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+// ─────────────────────────── MARKETING ───────────────────────────
+
+export interface MarketingStrategiesTable {
+  id: Generated<string>
+  name: string
+  description: string | null
+  category: string
+  status: Generated<string>
+  budget: ColumnType<number | null, number | string | null, number | string | null>
+  start_date: string | null
+  end_date: string | null
+  goals: Json
+  created_by: string | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface MarketingTasksTable {
+  id: Generated<string>
+  title: string
+  description: string | null
+  strategy_id: string | null
+  category: string
+  status: Generated<string>
+  priority: Generated<string>
+  due_date: Timestamp | null
+  estimated_hours: ColumnType<number | null, number | string | null, number | string | null>
+  actual_hours: ColumnType<number | null, number | string | null, number | string | null>
+  created_by: string | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface TaskAssignmentsTable {
+  id: Generated<string>
+  task_id: string
+  user_id: string
+  assigned_by: string | null
+  assigned_at: Timestamp
+}
+
+export interface TaskCommentsTable {
+  id: Generated<string>
+  task_id: string
+  user_id: string
+  content: string
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface TaskStatusHistoryTable {
+  id: Generated<string>
+  task_id: string
+  old_status: string | null
+  new_status: string
+  changed_by: string | null
+  changed_at: Timestamp
+}
+
+export interface MarketingCampaignsTable {
+  id: Generated<string>
+  name: string
+  description: string | null
+  status: Generated<string>
+  created_by: string | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface CampaignVehiclesTable {
+  id: Generated<string>
+  campaign_id: string
+  vehicle_name: string
+  added_date: string | null
+  notes: string | null
+  display_order: Generated<number>
+  created_at: Timestamp
+}
+
+// ─────────────────────────── NEWSLETTER / CRM / INFRA ───────────────────────────
+
+export interface NewsletterCampaignsTable {
+  id: Generated<string>
+  title: string
+  subject: string | null
+  featured_image: string | null
+  sections: Json
+  html_content: string | null
+  status: Generated<string>
+  scheduled_at: Timestamp | null
+  sent_at: Timestamp | null
+  recipient_count: Generated<number>
+  created_by: string | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
+export interface NewsletterSubscribersTable {
+  id: Generated<string>
+  email: string
+  name: string | null
+  is_active: Generated<boolean>
+  source: Generated<string>
+  subscribed_at: Timestamp
+  unsubscribed_at: Timestamp | null
+  created_at: Timestamp
+}
+
+export interface CrmCardsTable {
+  id: string
+  etapa: string
+  nome: string | null
+  telefone: string | null
+  email: string | null
+  veiculo: string | null
+  valor: ColumnType<number | null, number | string | null, number | string | null>
+  origem: string | null
+  vendedor: string | null
+  dados: JsonNullable
+  criado_em: Timestamp
+  atualizado_em: Timestamp
+}
+
+export interface InventorySnapshotsTable {
+  id: Generated<string>
+  source: string
+  payload: Json
+  vehicle_count: Generated<number>
+  created_at: Timestamp
+}
+
+export interface AdminUsersTable {
+  id: string
+  email: string
+  role: Generated<string>
+  name: string | null
+  is_active: Generated<boolean>
+  last_login_at: Timestamp | null
+  created_at: Timestamp
+  updated_at: Timestamp
+}
+
 /**
  * Interface raiz do banco. Chave = nome da tabela no schema `public`.
  * Adicione novas tabelas AQUI conforme cada módulo migra do supabase-js.
@@ -230,6 +512,26 @@ export interface Database {
   ip_geolocation_cache: IpGeolocationCacheTable
   site_settings: SiteSettingsTable
   vehicle_section_content: VehicleSectionContentTable
-  // TODO(migração): vehicles, admin_users, dual_blog_posts, vehicle_embeddings,
-  // news_*, marketing_*, vehicle_sounds, vehicle_hero_asset, etc.
+  vehicle_sounds: VehicleSoundsTable
+  vehicle_hero_asset: VehicleHeroAssetTable
+  vehicle_embeddings: VehicleEmbeddingsTable
+  dual_blog_posts: DualBlogPostsTable
+  blog_posts: BlogPostsTable
+  blog_ai_generations: BlogAiGenerationsTable
+  news_cycles: NewsCyclesTable
+  news_categories: NewsCategoriesTable
+  news_sources: NewsSourcesTable
+  news_articles: NewsArticlesTable
+  marketing_strategies: MarketingStrategiesTable
+  marketing_tasks: MarketingTasksTable
+  task_assignments: TaskAssignmentsTable
+  task_comments: TaskCommentsTable
+  task_status_history: TaskStatusHistoryTable
+  marketing_campaigns: MarketingCampaignsTable
+  campaign_vehicles: CampaignVehiclesTable
+  newsletter_campaigns: NewsletterCampaignsTable
+  newsletter_subscribers: NewsletterSubscribersTable
+  crm_cards: CrmCardsTable
+  inventory_snapshots: InventorySnapshotsTable
+  admin_users: AdminUsersTable
 }

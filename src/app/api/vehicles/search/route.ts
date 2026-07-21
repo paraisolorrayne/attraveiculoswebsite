@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { embedQuery, rerankDocuments } from '@/lib/jina'
+
+// Migrado de supabase-js (rpc match_vehicles) → Kysely + SQL cru pgvector
+// (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export const dynamic = 'force-dynamic'
 
@@ -62,17 +66,24 @@ export async function GET(request: NextRequest) {
 		// Step 1: embed the query
 		const queryEmbedding = await embedQuery(query)
 
-		// Step 2: vector search in Supabase
-		const supabase = createAdminClient()
-		const { data: matches, error: matchError } = await supabase.rpc('match_vehicles', {
-			query_embedding: JSON.stringify(queryEmbedding),
-			match_count: limit * 2,
-			match_threshold: 0.25,
-		})
-
-		if (matchError) {
-			throw new Error(`pgvector search failed: ${matchError.message}`)
-		}
+		// Step 2: vector search via pgvector (era o RPC match_vehicles).
+		// Cosine distance <=> ; similarity = 1 - distância. Threshold 0.25.
+		const embStr = JSON.stringify(queryEmbedding)
+		const matchCount = limit * 2
+		const matchThreshold = 0.25
+		const { rows: matches } = await sql<{
+			vehicle_id: number
+			vehicle_slug: string
+			passage_text: string
+			similarity: number
+		}>`
+			SELECT ve.vehicle_id, ve.vehicle_slug, ve.passage_text,
+			       1 - (ve.embedding <=> ${embStr}::vector) AS similarity
+			FROM vehicle_embeddings ve
+			WHERE 1 - (ve.embedding <=> ${embStr}::vector) > ${matchThreshold}
+			ORDER BY ve.embedding <=> ${embStr}::vector
+			LIMIT ${matchCount}
+		`.execute(db)
 
 		if (!matches || matches.length === 0) {
 			return NextResponse.json({ results: [], query })
