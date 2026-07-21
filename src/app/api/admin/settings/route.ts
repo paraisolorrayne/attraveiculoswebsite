@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export const dynamic = 'force-dynamic'
 
@@ -21,34 +23,19 @@ export interface SiteSettings {
  */
 export async function GET() {
   try {
-    const supabase = await createClient()
-    
-    const { data: settings, error } = await supabase
-      .from('site_settings')
-      .select('key, value')
-    
-    if (error) {
-      console.error('Error fetching settings:', error)
-      // Return defaults if table doesn't exist yet
-      return NextResponse.json({
-        settings: {
-          listen_to_content_enabled: true,
-          engine_sound_section_enabled: true,
-        }
-      })
-    }
-    
+    const settings = await db.selectFrom('site_settings').select(['key', 'value']).execute()
+
     // Convert array to object
     const settingsObject: Record<string, unknown> = {
       // Defaults
       listen_to_content_enabled: true,
       engine_sound_section_enabled: true,
     }
-    
-    settings?.forEach((setting) => {
+
+    for (const setting of settings) {
       settingsObject[setting.key] = setting.value
-    })
-    
+    }
+
     return NextResponse.json({ settings: settingsObject })
   } catch (error) {
     console.error('Error in settings GET:', error)
@@ -108,35 +95,28 @@ export async function PATCH(request: NextRequest) {
       )
     }
     
-    // Use admin client to bypass RLS for upsert
-    const adminClient = createAdminClient()
-    
-    // Upsert the setting
-    const { data, error } = await adminClient
-      .from('site_settings')
-      .upsert({
+    // Upsert the setting (value gravado como jsonb explícito)
+    const jsonbValue = sql`${JSON.stringify(value)}::jsonb`
+    let data
+    try {
+      data = await db.insertInto('site_settings').values({
         key,
-        value,
+        value: jsonbValue,
         updated_by: admin.id,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'key'
+        updated_at: new Date(),
       })
-      .select()
-      .single()
-    
-    if (error) {
+        .onConflict((oc) => oc.column('key').doUpdateSet({
+          value: jsonbValue,
+          updated_by: admin.id,
+          updated_at: new Date(),
+        }))
+        .returningAll().executeTakeFirst()
+    } catch (error) {
       console.error('Error updating setting:', error)
-      return NextResponse.json(
-        { error: 'Failed to update setting' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Failed to update setting' }, { status: 500 })
     }
-    
-    return NextResponse.json({
-      success: true,
-      setting: data,
-    })
+
+    return NextResponse.json({ success: true, setting: data })
   } catch (error) {
     console.error('Error in settings PATCH:', error)
     return NextResponse.json(

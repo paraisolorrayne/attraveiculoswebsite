@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
 
 // Visão CRM (somente leitura) — dados populados pelo Fykos via webhook.
@@ -12,18 +13,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
-  // IMPORTANTE: o retorno precisa incluir o JSONB `dados` (atribuido_em,
-  // encerrado_em, observacoes_alerta, ultima_resposta_vendedor, ...) — o
-  // modal de detalhes do painel depende dele. `select('*')` já o inclui.
-  const { data, error } = await supabase
-    .from('crm_cards')
-    .select('*')
-    .order('atualizado_em', { ascending: false })
-    .limit(500)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  // IMPORTANTE: inclui o JSONB `dados` (o modal de detalhes depende dele).
+  try {
+    const data = await db.selectFrom('crm_cards').selectAll()
+      .orderBy('atualizado_em', 'desc')
+      .limit(500)
+      .execute()
+    return NextResponse.json({ cards: data })
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'query failed' }, { status: 500 })
   }
-  return NextResponse.json({ cards: data ?? [] })
 }

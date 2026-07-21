@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // Retenção de dados: apaga tracking/caches com mais de N dias (default 60)
 // chamando a função SQL cleanup_old_tracking_data (migration 20260506).
@@ -38,20 +40,10 @@ export async function GET(request: NextRequest) {
   console.log(`[CleanupTracking API] Running cleanup (retention: ${retentionDays} days)...`)
 
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase.rpc('cleanup_old_tracking_data', {
-      retention_days: retentionDays,
-    } as never)
-
-    if (error) {
-      return NextResponse.json({
-        message: 'Cleanup failed',
-        error: `RPC cleanup_old_tracking_data indisponível: ${error.message}. ` +
-          `Confira se a migration 20260506_data_retention_cleanup.sql foi aplicada.`,
-      }, { status: 500 })
-    }
-
-    const rows = (data || []) as CleanupRow[]
+    // Chama a função SQL cleanup_old_tracking_data(retention_days) → tabela.
+    const { rows } = await sql<CleanupRow>`
+      SELECT * FROM cleanup_old_tracking_data(${retentionDays})
+    `.execute(db)
     const totalDeleted = rows.reduce((sum, r) => sum + Number(r.rows_deleted || 0), 0)
     console.log(`[CleanupTracking API] Done: ${totalDeleted} rows deleted`, rows)
 
