@@ -16,7 +16,7 @@
  *   - Bucket Supabase Storage `vehicle-hero-assets` público (criar via dashboard)
  */
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { putObject } from '@/lib/storage/disk'
 import { db } from '@/lib/db'
 import sharp from 'sharp'
 import { evaluateCutouts } from '@/lib/rembg-quality'
@@ -267,30 +267,9 @@ async function uploadToSupabaseStorage(
   vehicleId: number,
 ): Promise<{ storagePath: string; publicUrl: string } | null> {
   try {
-    const supabase = createAdminClient()
     const storagePath = `hero/${vehicleId}-${Date.now()}.png`
-
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(storagePath, bytes, {
-        contentType: 'image/png',
-        cacheControl: '31536000', // 1 ano — imagem é imutável até source mudar
-        upsert: false,
-      })
-
-    if (uploadError) {
-      console.error('[vehicle-hero-asset] Supabase upload failed:', uploadError.message)
-      return null
-    }
-
-    const { data: urlData } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(storagePath)
-
-    return {
-      storagePath,
-      publicUrl: urlData.publicUrl,
-    }
+    const publicUrl = await putObject(STORAGE_BUCKET, storagePath, bytes)
+    return { storagePath, publicUrl }
   } catch (error) {
     console.error('[vehicle-hero-asset] upload failed:', error)
     return null
@@ -618,39 +597,22 @@ async function generateComposite(
       return null
     }
     const buffer = await imageResp.arrayBuffer()
-    const bytes = new Uint8Array(buffer)
+    const bytes = Buffer.from(buffer)
 
-    const supabase = createAdminClient()
     const storagePath = `composite/${vehicleId}-${Date.now()}.png`
-
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(storagePath, bytes, {
-        contentType: 'image/png',
-        cacheControl: '31536000',
-        upsert: false,
-      })
-
-    if (uploadError) {
-      console.error('[vehicle-hero-asset] Composite upload failed:', uploadError.message)
-      return null
-    }
-
-    const { data: urlData } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(storagePath)
+    const publicUrl = await putObject(STORAGE_BUCKET, storagePath, bytes)
 
     // 4. Update DB com composite_* (Kysely)
     await db.updateTable('vehicle_hero_asset')
       .set({
         composite_storage_path: storagePath,
-        composite_public_url: urlData.publicUrl,
+        composite_public_url: publicUrl,
         composite_generated_at: new Date(),
       })
       .where('vehicle_id', '=', vehicleId)
       .execute()
 
-    return { storagePath, publicUrl: urlData.publicUrl }
+    return { storagePath, publicUrl }
   } catch (error) {
     console.error('[vehicle-hero-asset] generateComposite failed:', error)
     return null

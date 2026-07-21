@@ -97,10 +97,11 @@ Para cada módulo: adicionar tabelas em `src/lib/db/types.ts`, trocar `supabase-
   4. **Reset de senha por e-mail** (token + Resend) — fatia à parte (hoje stub; admin reseta pelo painel de usuários).
   5. Testar login de cada admin no staging ANTES do cutover.
 
-### Fase 6 — Storage (código + ops)
-- Baixar os 3 buckets (`audio-files`, `blog-images`, `vehicle-hero-assets`) → `/var/www/attra-media/<bucket>/`.
-- Nginx serve `/media/` estático; reescrever `getPublicUrl` (`src/lib/supabase/storage.ts`) e o upload (`fs.writeFile`).
-- **Reescrever URLs `*.supabase.co` gravadas no banco** (`dual_blog_posts`, `vehicle_sounds`, `vehicle_hero_asset`, `newsletter_campaigns`).
+### Fase 6 — Storage ✅ CÓDIGO FEITO
+- ✅ **Código**: `src/lib/storage/disk.ts` (nova camada `fs` — `putObject`/`deleteObject`/`publicUrl`/`objectPathFromUrl`, anti path-traversal). `src/lib/supabase/storage.ts` reescrito sobre ela (mesmos exports); `vehicle-hero-asset.ts` e `blog-ai/comparison-image.ts` → `putObject`. `deleteObject`/`objectPathFromUrl` aceitam URL **legada Supabase E nova** (transição). Removidos `client.ts`/`server.ts`/`admin.ts` e as deps `@supabase/*`. **Zero `@supabase` no src.**
+- Env: `MEDIA_ROOT` (default `/var/www/attra-media`), `MEDIA_PUBLIC_URL` (default `https://attraveiculos.com.br/media`).
+- ⚙️ **OPS (Fase 7)**: criar `/var/www/attra-media` (dono = user do PM2); `location /media/ { alias /var/www/attra-media/; expires 30d; }` no Nginx; `next.config.ts` → adicionar host de `MEDIA_PUBLIC_URL` em `images.remotePatterns` + CSP.
+- ⚙️ **OPS (Fase 7)**: baixar os 3 buckets (`audio-files`, `blog-images`, `vehicle-hero-assets`) → `/var/www/attra-media/<bucket>/`; **reescrever URLs `*.supabase.co` gravadas no banco** (`dual_blog_posts`, `vehicle_sounds`, `vehicle_hero_asset`, `newsletter_campaigns`).
 
 ### Fase 7 — Cutover (⚙️ ops + você)
 - Dump final de dados → restore no Postgres de produção da VPS.
@@ -113,7 +114,7 @@ Para cada módulo: adicionar tabelas em `src/lib/db/types.ts`, trocar `supabase-
 - **Backups próprios**: `pg_dump` diário (custom format) + `/var/www/attra-media` → cópia **fora da VPS**. O backup automático do cloud deixa de existir.
 - Monitoramento: disco (tracking cresce), healthcheck do PG.
 - **Rotacionar** os secrets hardcoded nas migrations de pg_cron (`20260517`, `20260420`) — ficam inertes sem pg_cron, mas o token vazou no git.
-- Reativar o auth do middleware (`src/middleware.ts` está com bypass temporário).
+- ~~Reativar o auth do middleware~~ ✅ feito na Fase 5 (bypass removido; gating real por role).
 
 ---
 

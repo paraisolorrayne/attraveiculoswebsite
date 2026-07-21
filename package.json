@@ -16,8 +16,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "kysely": "^0.29.4",
