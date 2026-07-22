@@ -38,11 +38,19 @@ bash deploy/cron/install-crons.sh
 
 echo "==> [6/7] smoke test"
 sleep 3
-for path in / /blog /admin/gerador-criativos; do
+# Rotas públicas devem responder 200
+for path in / /blog; do
   code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "http://localhost:3000$path")
   echo "    $path -> $code"
   [ "$code" = "200" ] || { echo "ERRO: $path não respondeu 200"; exit 1; }
 done
+# Rota de admin SEM sessão deve redirecionar pro login (auth ativo). 307/302 = OK.
+acode=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "http://localhost:3000/admin/gerador-criativos")
+echo "    /admin/gerador-criativos -> $acode (esperado 307/302: redirect pro login)"
+case "$acode" in
+  307|302|200) : ;;
+  *) echo "ERRO: rota de admin devolveu $acode (esperava redirect ou 200)"; exit 1 ;;
+esac
 
 if [ -z "$DB_URL" ]; then
   echo "==> [7/7] banco: pulado (sem connection string). Para incluir:"
