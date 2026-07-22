@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
+import { canAccessRoute } from '@/lib/auth/roles'
 import { db } from '@/lib/db'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
@@ -47,15 +48,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (admin.role !== 'admin') {
-      return NextResponse.json({ error: 'Only admins can create campaigns' }, { status: 403 })
+    // Quem acessa o painel de Marketing (admin/owner/marketing/gerente) gerencia campanhas.
+    if (!canAccessRoute(admin.role, '/admin/marketing')) {
+      return NextResponse.json({ error: 'Sem permissão para gerenciar campanhas' }, { status: 403 })
     }
 
     const body = await request.json()
     const { name, description, vehicles } = body as {
       name: string
       description?: string
-      vehicles?: { vehicle_name: string; added_date?: string; notes?: string }[]
+      vehicles?: { vehicle_name: string; added_date?: string; notes?: string; ended_date?: string; end_reason?: string }[]
     }
 
     if (!name) {
@@ -86,6 +88,8 @@ export async function POST(request: NextRequest) {
         added_date: v.added_date || null,
         notes: v.notes || null,
         display_order: i,
+        ended_date: v.ended_date || null,
+        end_reason: v.end_reason || null,
       }))
       try {
         await db.insertInto('campaign_vehicles').values(vehicleRows).execute()

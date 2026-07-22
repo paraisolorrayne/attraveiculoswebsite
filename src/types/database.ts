@@ -290,6 +290,8 @@ export interface Database {
           added_date: string | null
           notes: string | null
           display_order: number
+          ended_date: string | null
+          end_reason: EndReason | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['campaign_vehicles']['Row'], 'id' | 'created_at'>
@@ -413,6 +415,16 @@ export type TaskStatusHistoryInsert = Database['public']['Tables']['task_status_
 export type MarketingCampaign = Database['public']['Tables']['marketing_campaigns']['Row']
 export type MarketingCampaignInsert = Database['public']['Tables']['marketing_campaigns']['Insert']
 export type MarketingCampaignUpdate = Database['public']['Tables']['marketing_campaigns']['Update']
+// Motivo de retirada do ar de um item de campanha (por item — decidido com a Attra).
+export type EndReason = 'ganho' | 'vendido_externo' | 'performance' | 'despriorizado'
+
+export const END_REASON_LABELS: Record<EndReason, string> = {
+  ganho: 'Encerrado por ganho (vendido pelo patrocinado)',
+  vendido_externo: 'Vendido, mas não pelo patrocinado',
+  performance: 'Performance',
+  despriorizado: 'Despriorizado',
+}
+
 export type CampaignVehicle = Database['public']['Tables']['campaign_vehicles']['Row']
 export type CampaignVehicleInsert = Database['public']['Tables']['campaign_vehicles']['Insert']
 

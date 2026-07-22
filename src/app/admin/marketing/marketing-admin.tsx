@@ -20,6 +20,7 @@ import { TaskModal } from './components/task-modal'
 import { CampaignsBoard } from './components/campaigns-board'
 import { CampaignModal } from './components/campaign-modal'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
+import { canAccessRoute } from '@/lib/auth/roles'
 import type { MarketingTask, MarketingStrategy, TaskStatus, CampaignWithVehicles, CampaignStatus } from '@/types/database'
 
 interface MarketingAdminProps {
@@ -188,6 +189,9 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
   }
 
   const isAdmin = admin.role === 'admin'
+  // Gestão de campanhas é de quem acessa o painel de Marketing (admin/owner/marketing/gerente),
+  // não só do admin — o Eduardo (marketing) precisa registrar/retirar itens e pôr o motivo.
+  const canManageCampaigns = canAccessRoute(admin.role, '/admin/marketing')
 
   return (
     <div className="min-h-screen bg-background">
@@ -201,7 +205,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
             <div>
               <h1 className="text-lg font-bold text-foreground">Marketing</h1>
               <p className="text-xs text-foreground-secondary">
-                {isAdmin ? 'Gestão de Campanhas' : 'Minhas Tarefas'}
+                {canManageCampaigns ? 'Gestão de Campanhas' : 'Minhas Tarefas'}
               </p>
             </div>
           </div>
@@ -279,7 +283,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
               <span className="hidden sm:inline">Atualizar</span>
             </button>
-            {isAdmin && (
+            {(viewMode === 'campanhas' ? canManageCampaigns : isAdmin) && (
               <button
                 onClick={viewMode === 'campanhas' ? handleCreateCampaign : handleCreateTask}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -301,7 +305,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
             campaigns={campaigns}
             onCampaignClick={handleCampaignClick}
             onStatusChange={handleCampaignStatusChange}
-            isAdmin={isAdmin}
+            isAdmin={canManageCampaigns}
           />
         ) : viewMode === 'kanban' ? (
           <KanbanBoard
@@ -335,7 +339,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
       {showCampaignModal && (
         <CampaignModal
           campaign={selectedCampaign}
-          isAdmin={isAdmin}
+          isAdmin={canManageCampaigns}
           onClose={() => {
             setShowCampaignModal(false)
             setSelectedCampaign(null)

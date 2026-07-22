@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Loader2, Plus, Trash2, GripVertical } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { CampaignWithVehicles, CampaignStatus } from '@/types/database'
+import { X, Loader2, Plus, Trash2 } from 'lucide-react'
+import type { CampaignWithVehicles, CampaignStatus, EndReason } from '@/types/database'
+import { END_REASON_LABELS } from '@/types/database'
 
 interface CampaignModalProps {
   campaign: CampaignWithVehicles | null
@@ -16,6 +16,8 @@ interface VehicleEntry {
   vehicle_name: string
   added_date: string
   notes: string
+  ended_date: string
+  end_reason: string // '' = ainda no ar
 }
 
 const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
@@ -23,6 +25,13 @@ const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
   { value: 'encerrada_ganho', label: 'Encerrada por Ganho' },
   { value: 'encerrada_desempenho', label: 'Encerrada por Desempenho' },
 ]
+
+const END_REASON_OPTIONS = (Object.keys(END_REASON_LABELS) as EndReason[]).map((value) => ({
+  value,
+  label: END_REASON_LABELS[value],
+}))
+
+const today = () => new Date().toISOString().slice(0, 10)
 
 export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignModalProps) {
   const [isSaving, setIsSaving] = useState(false)
@@ -34,11 +43,13 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
       vehicle_name: v.vehicle_name,
       added_date: v.added_date || '',
       notes: v.notes || '',
-    })) || [{ vehicle_name: '', added_date: '', notes: '' }]
+      ended_date: v.ended_date || '',
+      end_reason: v.end_reason || '',
+    })) || [{ vehicle_name: '', added_date: '', notes: '', ended_date: '', end_reason: '' }]
   )
 
   const addVehicle = () => {
-    setVehicles(prev => [...prev, { vehicle_name: '', added_date: '', notes: '' }])
+    setVehicles(prev => [...prev, { vehicle_name: '', added_date: '', notes: '', ended_date: '', end_reason: '' }])
   }
 
   const removeVehicle = (index: number) => {
@@ -47,6 +58,15 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
 
   const updateVehicle = (index: number, field: keyof VehicleEntry, value: string) => {
     setVehicles(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v))
+  }
+
+  // Ao escolher um motivo, marca a data de retirada (default hoje); ao limpar, some.
+  const setEndReason = (index: number, reason: string) => {
+    setVehicles(prev => prev.map((v, i) => {
+      if (i !== index) return v
+      if (!reason) return { ...v, end_reason: '', ended_date: '' }
+      return { ...v, end_reason: reason, ended_date: v.ended_date || today() }
+    }))
   }
 
   const handleSave = async () => {
@@ -63,6 +83,8 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
           vehicle_name: v.vehicle_name.trim(),
           added_date: v.added_date || null,
           notes: v.notes.trim() || null,
+          ended_date: v.end_reason ? (v.ended_date || today()) : null,
+          end_reason: v.end_reason || null,
         })),
       }
 
@@ -159,36 +181,71 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
                 </button>
               )}
             </div>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {vehicles.map((v, i) => (
-                <div key={i} className="flex items-center gap-2 bg-background-soft rounded-lg p-2">
-                  <span className="text-xs text-foreground-secondary font-mono min-w-[1.5rem] text-center">{i + 1}</span>
-                  <input
-                    type="text"
-                    value={v.vehicle_name}
-                    onChange={(e) => updateVehicle(i, 'vehicle_name', e.target.value)}
-                    disabled={!isAdmin}
-                    className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50"
-                    placeholder="Nome do veículo"
-                  />
-                  <input
-                    type="date"
-                    value={v.added_date}
-                    onChange={(e) => updateVehicle(i, 'added_date', e.target.value)}
-                    disabled={!isAdmin}
-                    className="w-[130px] px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50"
-                  />
-                  {isAdmin && vehicles.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeVehicle(i)}
-                      className="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+            <div className="space-y-2 max-h-[340px] overflow-y-auto">
+              {vehicles.map((v, i) => {
+                const isEnded = !!v.end_reason
+                return (
+                  <div key={i} className="bg-background-soft rounded-lg p-2 space-y-2">
+                    {/* Linha 1: nome + entrada no ar */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-foreground-secondary font-mono min-w-[1.5rem] text-center">{i + 1}</span>
+                      <input
+                        type="text"
+                        value={v.vehicle_name}
+                        onChange={(e) => updateVehicle(i, 'vehicle_name', e.target.value)}
+                        disabled={!isAdmin}
+                        className={`flex-1 px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50 ${isEnded ? 'line-through opacity-60' : ''}`}
+                        placeholder="Nome do veículo / reel"
+                      />
+                      <input
+                        type="date"
+                        value={v.added_date}
+                        onChange={(e) => updateVehicle(i, 'added_date', e.target.value)}
+                        disabled={!isAdmin}
+                        title="Entrou no ar em"
+                        className="w-[130px] px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50"
+                      />
+                      {isAdmin && vehicles.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVehicle(i)}
+                          className="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Linha 2: retirada do ar (motivo + data) */}
+                    <div className="flex items-center gap-2 pl-[calc(1.5rem+0.5rem)]">
+                      <span className={`text-xs whitespace-nowrap ${isEnded ? 'text-red-400' : 'text-foreground-secondary'}`}>
+                        {isEnded ? 'Retirado do ar:' : 'No ar'}
+                      </span>
+                      <select
+                        value={v.end_reason}
+                        onChange={(e) => setEndReason(i, e.target.value)}
+                        disabled={!isAdmin}
+                        className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50"
+                      >
+                        <option value="">— No ar (não encerrado) —</option>
+                        {END_REASON_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      {isEnded && (
+                        <input
+                          type="date"
+                          value={v.ended_date}
+                          onChange={(e) => updateVehicle(i, 'ended_date', e.target.value)}
+                          disabled={!isAdmin}
+                          title="Retirado do ar em"
+                          className="w-[130px] px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground disabled:opacity-50"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -216,4 +273,3 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
     </div>
   )
 }
-

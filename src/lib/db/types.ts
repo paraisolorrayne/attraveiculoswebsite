@@ -437,6 +437,8 @@ export interface CampaignVehiclesTable {
   added_date: string | null
   notes: string | null
   display_order: Generated<number>
+  ended_date: string | null
+  end_reason: string | null
   created_at: Timestamp
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Updateable } from 'kysely'
 import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
+import { canAccessRoute } from '@/lib/auth/roles'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 
@@ -58,8 +59,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (admin.role !== 'admin') {
-      return NextResponse.json({ error: 'Only admins can update campaigns' }, { status: 403 })
+    // Quem acessa o painel de Marketing (admin/owner/marketing/gerente) gerencia campanhas.
+    if (!canAccessRoute(admin.role, '/admin/marketing')) {
+      return NextResponse.json({ error: 'Sem permissão para gerenciar campanhas' }, { status: 403 })
     }
 
     const { id } = await params
@@ -88,12 +90,14 @@ export async function PATCH(
       await db.deleteFrom('campaign_vehicles').where('campaign_id', '=', id).execute()
 
       if (body.vehicles && body.vehicles.length > 0) {
-        const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string }, i: number) => ({
+        const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string; ended_date?: string; end_reason?: string }, i: number) => ({
           campaign_id: id,
           vehicle_name: v.vehicle_name,
           added_date: v.added_date || null,
           notes: v.notes || null,
           display_order: i,
+          ended_date: v.ended_date || null,
+          end_reason: v.end_reason || null,
         }))
         try {
           await db.insertInto('campaign_vehicles').values(vehicleRows).execute()
