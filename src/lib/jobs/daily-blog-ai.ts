@@ -17,8 +17,10 @@
  * the job returns early without generating.
  */
 
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
 import { snapshotExternalImages } from '@/lib/supabase/storage'
+
+// DB migrado supabase-js → Kysely; storage segue no Supabase (Fase 6).
 import type { CarReviewFields, CarReviewGalleryImage } from '@/types'
 import {
   fetchLatestInstagramPost,
@@ -68,33 +70,31 @@ function todayInSaoPaulo(): string {
 }
 
 async function alreadyRanToday(): Promise<boolean> {
-  const supabase = createAdminClient()
-  const today = todayInSaoPaulo()
-  const { data, error } = await supabase
-    .from('blog_ai_generations')
-    .select('id, strategy, success')
-    .eq('run_date', today)
-    .eq('success', true)
-    .limit(1)
-
-  if (error) {
-    console.error('[DailyBlogAI] idempotency check failed:', error.message)
+  try {
+    const today = todayInSaoPaulo()
+    const data = await db.selectFrom('blog_ai_generations')
+      .select(['id', 'strategy', 'success'])
+      .where('run_date', '=', today)
+      .where('success', '=', true)
+      .limit(1)
+      .execute()
+    return data.length > 0
+  } catch (error) {
+    console.error('[DailyBlogAI] idempotency check failed:', error instanceof Error ? error.message : error)
     return false // fail-open: try to generate
   }
-  return (data?.length ?? 0) > 0
 }
 
 async function lastStrategy(): Promise<BlogAiStrategy | null> {
-  const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('blog_ai_generations')
+  const data = await db.selectFrom('blog_ai_generations')
     .select('strategy')
-    .eq('success', true)
-    .in('strategy', ['review', 'comparison'])
-    .order('run_at', { ascending: false })
+    .where('success', '=', true)
+    .where('strategy', 'in', ['review', 'comparison'])
+    .orderBy('run_at', 'desc')
     .limit(1)
+    .execute()
 
-  const s = data?.[0]?.strategy as BlogAiStrategy | undefined
+  const s = data[0]?.strategy as BlogAiStrategy | undefined
   return s ?? null
 }
 
@@ -106,19 +106,14 @@ async function logRun(params: {
   errorMessage?: string
 }): Promise<void> {
   try {
-    const supabase = createAdminClient()
-    const { error } = await supabase.from('blog_ai_generations').insert({
+    await db.insertInto('blog_ai_generations').values({
       strategy: params.strategy,
       blog_post_id: params.blogPostId ?? null,
       source: params.source,
       success: params.success,
       error_message: params.errorMessage ?? null,
       run_date: todayInSaoPaulo(),
-    })
-    if (error) {
-      // Don't fail the job if the tracking table isn't available yet (migration pending).
-      console.warn('[DailyBlogAI] logRun insert failed (non-fatal):', error.message)
-    }
+    }).execute()
   } catch (err) {
     console.warn('[DailyBlogAI] logRun threw (non-fatal):', err instanceof Error ? err.message : String(err))
   }
@@ -199,16 +194,14 @@ async function persistPost(generated: GeneratedBlog): Promise<{
   id: string
   slug: string
 }> {
-  const supabase = createAdminClient()
   const linked = await addInternalLinks(generated.post)
   if (linked.linksAdded > 0) {
     console.log(`[DailyBlogAI] added ${linked.linksAdded} internal links`)
   }
   const post = await snapshotPostImages(linked.post)
 
-  const { data, error } = await supabase
-    .from('dual_blog_posts')
-    .insert({
+  const data = await db.insertInto('dual_blog_posts')
+    .values({
       post_type: post.post_type,
       title: post.title,
       slug: post.slug,
@@ -225,11 +218,11 @@ async function persistPost(generated: GeneratedBlog): Promise<{
       seo: post.seo,
       source: 'admin', // 'admin' so it shows up in the normal feed
     })
-    .select('id, slug')
-    .single()
+    .returning(['id', 'slug'])
+    .executeTakeFirst()
 
-  if (error || !data) {
-    throw new Error(`Supabase insert failed: ${error?.message ?? 'no data'}`)
+  if (!data) {
+    throw new Error('DB insert failed: no data')
   }
   return { id: data.id as string, slug: data.slug as string }
 }

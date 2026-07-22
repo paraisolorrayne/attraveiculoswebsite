@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -17,26 +19,16 @@ const DEFAULT_SETTINGS = {
  */
 export async function GET() {
   try {
-    const supabase = await createClient()
-    
-    const { data: settings, error } = await supabase
-      .from('site_settings')
-      .select('key, value')
-    
-    if (error) {
-      console.error('Error fetching public settings:', error)
-      // Return defaults if table doesn't exist yet
-      return NextResponse.json({ settings: DEFAULT_SETTINGS })
-    }
-    
+    const settings = await db.selectFrom('site_settings').select(['key', 'value']).execute()
+
     // Convert array to object with defaults
     const settingsObject: Record<string, unknown> = { ...DEFAULT_SETTINGS }
-    
-    settings?.forEach((setting) => {
+
+    for (const setting of settings) {
       settingsObject[setting.key] = setting.value
-    })
-    
-    return NextResponse.json({ 
+    }
+
+    return NextResponse.json({
       settings: settingsObject 
     }, {
       headers: {

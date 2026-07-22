@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
 
 // GET - List all admin users for assignment
@@ -12,20 +13,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createAdminClient()
+    const users = await db.selectFrom('admin_users')
+      .select(['id', 'email', 'name', 'role'])
+      .where('is_active', '=', true)
+      .orderBy('name', 'asc')
+      .execute()
 
-    const { data: users, error } = await supabase
-      .from('admin_users')
-      .select('id, email, name, role')
-      .eq('is_active', true)
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching users:', error)
-      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
-    }
-
-    return NextResponse.json({ users: users || [] })
+    return NextResponse.json({ users })
   } catch (error) {
     console.error('Error in users GET:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

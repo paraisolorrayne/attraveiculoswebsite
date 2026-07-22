@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
 
 // GET - Get marketing metrics/analytics
@@ -12,21 +13,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createAdminClient()
-
-    // Get all tasks with their status
-    let tasksQuery = supabase
-      .from('marketing_tasks')
-      .select('id, status, category, priority, created_at, due_date, estimated_hours, actual_hours, assignments:task_assignments(user_id)')
+    // Tasks (o embed de assignments não era usado no cálculo — removido)
+    let tasksQuery = db.selectFrom('marketing_tasks')
+      .select(['id', 'status', 'category', 'priority', 'created_at', 'due_date', 'estimated_hours', 'actual_hours'])
 
     // For gerente, only get assigned tasks
     if (admin.role === 'gerente') {
-      const { data: assignments } = await supabase
-        .from('task_assignments')
-        .select('task_id')
-        .eq('user_id', admin.id)
-      
-      const taskIds = assignments?.map(a => a.task_id) || []
+      const assignments = await db.selectFrom('task_assignments').select('task_id')
+        .where('user_id', '=', admin.id).execute()
+
+      const taskIds = assignments.map(a => a.task_id)
       if (taskIds.length === 0) {
         return NextResponse.json({
           metrics: {
@@ -40,15 +36,10 @@ export async function GET() {
           }
         })
       }
-      tasksQuery = tasksQuery.in('id', taskIds)
+      tasksQuery = tasksQuery.where('id', 'in', taskIds)
     }
 
-    const { data: tasks, error } = await tasksQuery
-
-    if (error) {
-      console.error('Error fetching metrics:', error)
-      return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 })
-    }
+    const tasks = await tasksQuery.execute()
 
     const now = new Date()
     
@@ -102,13 +93,13 @@ export async function GET() {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
-    const { data: recentHistory } = await supabase
-      .from('task_status_history')
-      .select('new_status, changed_at')
-      .gte('changed_at', thirtyDaysAgo.toISOString())
-      .eq('new_status', 'completed')
+    const recentHistory = await db.selectFrom('task_status_history')
+      .select(['new_status', 'changed_at'])
+      .where('changed_at', '>=', thirtyDaysAgo)
+      .where('new_status', '=', 'completed')
+      .execute()
 
-    const completionsLast30Days = recentHistory?.length || 0
+    const completionsLast30Days = recentHistory.length
 
     return NextResponse.json({
       metrics: {

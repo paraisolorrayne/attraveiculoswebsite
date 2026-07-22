@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import type { Insertable } from 'kysely'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export const dynamic = 'force-dynamic'
 
@@ -54,15 +58,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
-  const agora = new Date().toISOString()
+  const agora = new Date()
 
   // Remoções (lead saiu do funil no Fykos)
   const remover = Array.isArray(body.remover) ? body.remover.map(String) : []
   if (remover.length > 0) {
-    const { error } = await supabase.from('crm_cards').delete().in('id', remover)
-    if (error) {
-      return NextResponse.json({ error: `Falha ao remover: ${error.message}` }, { status: 500 })
+    try {
+      await db.deleteFrom('crm_cards').where('id', 'in', remover).execute()
+    } catch (error) {
+      return NextResponse.json({ error: `Falha ao remover: ${error instanceof Error ? error.message : error}` }, { status: 500 })
     }
   }
 
@@ -92,10 +96,24 @@ export async function POST(request: NextRequest) {
         dados: Object.keys(extras).length > 0 ? extras : null,
         atualizado_em: agora,
       }
-    })
-    const { error } = await supabase.from('crm_cards').upsert(rows as never, { onConflict: 'id' })
-    if (error) {
-      return NextResponse.json({ error: `Falha no upsert: ${error.message}` }, { status: 500 })
+    }) as Insertable<Database['crm_cards']>[]
+    try {
+      await db.insertInto('crm_cards').values(rows)
+        .onConflict((oc) => oc.column('id').doUpdateSet((eb) => ({
+          etapa: eb.ref('excluded.etapa'),
+          nome: eb.ref('excluded.nome'),
+          telefone: eb.ref('excluded.telefone'),
+          email: eb.ref('excluded.email'),
+          veiculo: eb.ref('excluded.veiculo'),
+          valor: eb.ref('excluded.valor'),
+          origem: eb.ref('excluded.origem'),
+          vendedor: eb.ref('excluded.vendedor'),
+          dados: eb.ref('excluded.dados'),
+          atualizado_em: eb.ref('excluded.atualizado_em'),
+        })))
+        .execute()
+    } catch (error) {
+      return NextResponse.json({ error: `Falha no upsert: ${error instanceof Error ? error.message : error}` }, { status: 500 })
     }
   }
 

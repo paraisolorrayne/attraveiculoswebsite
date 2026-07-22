@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Eye, EyeOff, Loader2, Mail, AlertCircle, CheckCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -74,24 +73,10 @@ export default function AdminLoginPage() {
       return
     }
 
-    setError('')
-    setIsLoading(true)
-
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/admin/reset-password`,
-      })
-
-      if (error) throw error
-
-      setResetEmailSent(true)
-      setShowForgotPassword(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar email')
-    } finally {
-      setIsLoading(false)
-    }
+    // Reset de senha por e-mail está em migração (GoTrue → Auth.js). Enquanto
+    // o fluxo próprio não sobe, um admin redefine a senha pelo painel de
+    // usuários (/api/admin/users/[id]).
+    setError('Recuperação por e-mail em migração. Peça a um administrador para redefinir sua senha no painel de usuários.')
   }
 
   return (

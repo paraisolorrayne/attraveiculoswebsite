@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/admin-auth'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // GET - Get single campaign
 export async function GET(
@@ -16,14 +18,10 @@ export async function GET(
     }
 
     const { id } = await params
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('newsletter_campaigns')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const data = await db.selectFrom('newsletter_campaigns').selectAll()
+      .where('id', '=', id).executeTakeFirst()
 
-    if (error) {
+    if (!data) {
       return NextResponse.json({ error: 'Campanha não encontrada' }, { status: 404 })
     }
 
@@ -49,10 +47,9 @@ export async function PUT(
     const body = await request.json()
     const { title, subject, featured_image, sections, html_content, status, scheduled_at } = body
 
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('newsletter_campaigns')
-      .update({
+    let data
+    try {
+      data = await db.updateTable('newsletter_campaigns').set({
         title,
         subject: subject || null,
         featured_image: featured_image || null,
@@ -60,14 +57,10 @@ export async function PUT(
         html_content: html_content || null,
         status: status || 'draft',
         scheduled_at: scheduled_at || null,
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
+      }).where('id', '=', id).returningAll().executeTakeFirst()
+    } catch (error) {
       console.error('Error updating campaign:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'update failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, campaign: data })
@@ -92,27 +85,20 @@ export async function DELETE(
     if (blocked) return blocked
 
     const { id } = await params
-    const supabase = createAdminClient()
 
     // Only allow deleting draft or cancelled campaigns
-    const { data: campaign } = await supabase
-      .from('newsletter_campaigns')
-      .select('status')
-      .eq('id', id)
-      .single()
+    const campaign = await db.selectFrom('newsletter_campaigns').select('status')
+      .where('id', '=', id).executeTakeFirst()
 
     if (campaign && campaign.status === 'sent') {
       return NextResponse.json({ error: 'Não é possível excluir uma campanha já enviada' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('newsletter_campaigns')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await db.deleteFrom('newsletter_campaigns').where('id', '=', id).execute()
+    } catch (error) {
       console.error('Error deleting campaign:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'delete failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

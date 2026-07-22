@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+// NOTA: a Edge Function `ip-geo-updater` ainda é do Supabase (código não está
+// no repo). Tem fallback (ipapi.co / ip-api.com), então segue funcionando; será
+// recuperada/reescrita numa fase posterior da migração.
 const SUPABASE_FUNCTIONS_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('.supabase.co', '.functions.supabase.co') || ''
 
 interface GeoLocationResponse {
@@ -11,6 +14,25 @@ interface GeoLocationResponse {
   region: string
   country: string
   ip: string
+}
+
+// Upsert do cache de geolocalização de IP (expira em 7 dias)
+async function upsertGeoCache(
+  ip: string,
+  data: { country_code: string | null; region: string | null; city: string | null },
+): Promise<void> {
+  const now = new Date()
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  await db.insertInto('ip_geolocation_cache')
+    .values({ ip_address: ip, ...data, cached_at: now, expires_at: expires })
+    .onConflict((oc) => oc.column('ip_address').doUpdateSet({
+      country_code: (eb) => eb.ref('excluded.country_code'),
+      region: (eb) => eb.ref('excluded.region'),
+      city: (eb) => eb.ref('excluded.city'),
+      cached_at: now,
+      expires_at: expires,
+    }))
+    .execute()
 }
 
 /**
@@ -44,12 +66,11 @@ export async function GET(request: Request) {
 
     // Step 1: Check ip_geolocation_cache first
     try {
-      const { data: cached } = await supabase
-        .from('ip_geolocation_cache')
-        .select('country_code, region, city')
-        .eq('ip_address', clientIp)
-        .gt('expires_at', new Date().toISOString())
-        .single()
+      const cached = await db.selectFrom('ip_geolocation_cache')
+        .select(['country_code', 'region', 'city'])
+        .where('ip_address', '=', clientIp)
+        .where('expires_at', '>', new Date())
+        .executeTakeFirst()
 
       if (cached && cached.city) {
         geoData = {
@@ -88,16 +109,11 @@ export async function GET(request: Request) {
             }
 
             // Cache the result
-            await supabase
-              .from('ip_geolocation_cache')
-              .upsert({
-                ip_address: clientIp,
-                country_code: data.country_code || null,
-                region: data.region || null,
-                city: data.city || null,
-                cached_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-              }, { onConflict: 'ip_address' })
+            await upsertGeoCache(clientIp, {
+              country_code: data.country_code || null,
+              region: data.region || null,
+              city: data.city || null,
+            })
 
             console.log('[GeoLocation API] Edge Function success:', geoData.city)
           }
@@ -126,16 +142,11 @@ export async function GET(request: Request) {
             }
 
             // Cache the result
-            await supabase
-              .from('ip_geolocation_cache')
-              .upsert({
-                ip_address: clientIp,
-                country_code: data.country_code || null,
-                region: data.region || null,
-                city: data.city || null,
-                cached_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-              }, { onConflict: 'ip_address' })
+            await upsertGeoCache(clientIp, {
+              country_code: data.country_code || null,
+              region: data.region || null,
+              city: data.city || null,
+            })
           }
         }
       } catch (e) {
@@ -162,16 +173,11 @@ export async function GET(request: Request) {
             }
 
             // Cache the result
-            await supabase
-              .from('ip_geolocation_cache')
-              .upsert({
-                ip_address: clientIp,
-                country_code: data.countryCode || null,
-                region: data.regionName || null,
-                city: data.city || null,
-                cached_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-              }, { onConflict: 'ip_address' })
+            await upsertGeoCache(clientIp, {
+              country_code: data.countryCode || null,
+              region: data.regionName || null,
+              city: data.city || null,
+            })
           }
         }
       } catch (e) {
@@ -181,18 +187,12 @@ export async function GET(request: Request) {
 
     // Step 5: Update visitor_sessions with geo data if we have a session
     if (geoData && sessionDbId) {
-      supabase
-        .from('visitor_sessions')
-        .update({
-          country_code: geoData.country,
-          region: geoData.region,
-          city: geoData.city,
-        })
-        .eq('id', sessionDbId)
-        .then(({ error }) => {
-          if (error) console.error('[GeoLocation API] Session geo update error:', error)
-          else console.log('[GeoLocation API] Session geo updated:', sessionDbId)
-        })
+      void db.updateTable('visitor_sessions')
+        .set({ country_code: geoData.country, region: geoData.region, city: geoData.city })
+        .where('id', '=', sessionDbId)
+        .execute()
+        .then(() => console.log('[GeoLocation API] Session geo updated:', sessionDbId))
+        .catch((e) => console.error('[GeoLocation API] Session geo update error:', e))
     }
 
     if (geoData) {

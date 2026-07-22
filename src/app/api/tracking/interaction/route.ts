@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+// É aqui que o whatsapp_click é gravado — a ponte de atribuição do WhatsApp
+// (src/lib/whatsapp-ref.ts) liga a conversa a esta sessão.
 
-// Map interaction types to session flags and identity events
-const INTERACTION_CONFIG: Record<string, { 
-  sessionFlag?: string
+// Colunas booleanas tipadas (união) pra o Kysely aceitar as chaves dinâmicas.
+type SessionFlag = 'contacted_whatsapp' | 'submitted_form' | 'used_calculator'
+type PageViewFlag = 'clicked_whatsapp' | 'clicked_phone' | 'clicked_form' | 'played_engine_sound'
+
+const INTERACTION_CONFIG: Record<string, {
+  sessionFlag?: SessionFlag
   identityEvent?: string
-  updatePageView?: { field: string; value: boolean }
+  updatePageView?: { field: PageViewFlag; value: boolean }
 }> = {
   whatsapp_click: {
     sessionFlag: 'contacted_whatsapp',
@@ -58,54 +65,58 @@ export async function POST(request: NextRequest) {
     }
 
     const config = INTERACTION_CONFIG[type]
-    
+
     if (!config) {
       return NextResponse.json({ error: 'Unknown interaction type' }, { status: 400 })
     }
 
-    // Update session flag if configured
+    // Marca o flag na sessão, se houver
     if (config.sessionFlag) {
-      await supabase
-        .from('visitor_sessions')
-        .update({ [config.sessionFlag]: true })
-        .eq('id', session_db_id)
+      await db
+        .updateTable('visitor_sessions')
+        .set(config.sessionFlag, true)
+        .where('id', '=', session_db_id)
+        .execute()
     }
 
-    // Update latest page view if configured
+    // Atualiza o page view mais recente da sessão+página, se houver
     if (config.updatePageView) {
-      // Get the most recent page view for this session and page
-      const { data: pageViews } = await supabase
-        .from('visitor_page_views')
+      const latest = await db
+        .selectFrom('visitor_page_views')
         .select('id')
-        .eq('session_id', session_db_id)
-        .eq('page_path', page_path)
-        .order('viewed_at', { ascending: false })
+        .where('session_id', '=', session_db_id)
+        .where('page_path', '=', page_path)
+        .orderBy('viewed_at', 'desc')
         .limit(1)
+        .executeTakeFirst()
 
-      if (pageViews && pageViews.length > 0) {
-        await supabase
-          .from('visitor_page_views')
-          .update({ [config.updatePageView.field]: config.updatePageView.value })
-          .eq('id', pageViews[0].id)
+      if (latest) {
+        await db
+          .updateTable('visitor_page_views')
+          .set(config.updatePageView.field, config.updatePageView.value)
+          .where('id', '=', latest.id)
+          .execute()
       }
     }
 
-    // Create identity event if configured
+    // Cria o identity_event, se houver
     if (config.identityEvent) {
-      // Get profile ID from fingerprint
-      const { data: fingerprint } = await supabase
-        .from('visitor_fingerprints')
+      const fingerprint = await db
+        .selectFrom('visitor_fingerprints')
         .select('resolved_profile_id')
-        .eq('id', fingerprint_db_id)
-        .single()
+        .where('id', '=', fingerprint_db_id)
+        .executeTakeFirst()
 
-      await supabase.from('identity_events').insert({
-        fingerprint_id: fingerprint_db_id,
-        profile_id: fingerprint?.resolved_profile_id || null,
-        event_type: config.identityEvent,
-        event_data: { page_path, ...metadata },
-        source: 'interaction',
-      })
+      await db
+        .insertInto('identity_events')
+        .values({
+          fingerprint_id: fingerprint_db_id,
+          profile_id: fingerprint?.resolved_profile_id ?? null,
+          event_type: config.identityEvent,
+          event_data: sql`${JSON.stringify({ page_path, ...metadata })}::jsonb`,
+          source: 'interaction',
+        })
+        .execute()
     }
 
     return NextResponse.json({ success: true })
@@ -115,4 +126,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

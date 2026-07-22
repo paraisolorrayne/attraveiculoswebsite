@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 
@@ -28,34 +28,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Update the most recent page view for this session and page
-    const { data: pageViews } = await supabase
-      .from('visitor_page_views')
+    // Atualiza o page view mais recente da sessão+página
+    const latest = await db
+      .selectFrom('visitor_page_views')
       .select('id')
-      .eq('session_id', session_db_id)
-      .eq('page_path', page_path)
-      .order('viewed_at', { ascending: false })
+      .where('session_id', '=', session_db_id)
+      .where('page_path', '=', page_path)
+      .orderBy('viewed_at', 'desc')
       .limit(1)
+      .executeTakeFirst()
 
-    if (pageViews && pageViews.length > 0) {
-      const updateData: Record<string, unknown> = { time_on_page_seconds }
-      if (typeof scroll_depth_percent === 'number' && scroll_depth_percent > 0) {
-        updateData.scroll_depth_percent = scroll_depth_percent
-      }
-      await supabase
-        .from('visitor_page_views')
-        .update(updateData)
-        .eq('id', pageViews[0].id)
+    if (latest) {
+      const scroll =
+        typeof scroll_depth_percent === 'number' && scroll_depth_percent > 0
+          ? { scroll_depth_percent }
+          : {}
+      await db
+        .updateTable('visitor_page_views')
+        .set({ time_on_page_seconds, ...scroll })
+        .where('id', '=', latest.id)
+        .execute()
     }
 
-    // Update session heartbeat (last_activity_at + duration)
-    await supabase
-      .from('visitor_sessions')
-      .update({
-        last_activity_at: new Date().toISOString(),
-        ...(is_exit ? { ended_at: new Date().toISOString() } : {}),
+    // Heartbeat da sessão (last_activity_at + ended_at no exit)
+    const now = new Date()
+    await db
+      .updateTable('visitor_sessions')
+      .set({
+        last_activity_at: now,
+        ...(is_exit ? { ended_at: now } : {}),
       })
-      .eq('id', session_db_id)
+      .where('id', '=', session_db_id)
+      .execute()
 
     return NextResponse.json({ success: true })
 

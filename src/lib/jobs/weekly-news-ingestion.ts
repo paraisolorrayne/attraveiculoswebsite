@@ -11,16 +11,16 @@
  * - Manual: Call /api/cron/news-ingestion endpoint with CRON_SECRET
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { validateArticleWithAI } from '@/lib/news-guardrails'
 import { generateNewsSlug } from '@/lib/utils'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+
 const GNEWS_API_KEY = process.env.GNEWS_API_KEY || '3fed0093c3944c90b74dd58d7110ee4e'
 const GNEWS_BASE_URL = 'https://gnews.io/api/v4/search'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 interface GNewsArticle {
   title: string
@@ -208,7 +208,6 @@ export async function runWeeklyNewsIngestion(): Promise<{
   const errors: string[] = []
   let articlesInserted = 0
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
   const { weekStart, weekEnd, startDate, endDate } = getWeekRange()
 
   console.log(`[NewsIngestion] Starting for week ${weekStart} to ${weekEnd}`)
@@ -218,13 +217,12 @@ export async function runWeeklyNewsIngestion(): Promise<{
     // ativo está velho (>6 dias). Semana normal → no-op de seg a sáb; se a
     // execução de domingo falhar (ex.: banco fora do ar), o dia seguinte
     // cria o ciclo da semana em vez de deixar o site defasado 7 dias.
-    const { data: activeCycle } = await supabase
-      .from('news_cycles')
-      .select('id, created_at')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const activeCycle = await db.selectFrom('news_cycles')
+      .select(['id', 'created_at'])
+      .where('is_active', '=', true)
+      .orderBy('created_at', 'desc')
       .limit(1)
-      .maybeSingle()
+      .executeTakeFirst()
 
     if (activeCycle?.created_at) {
       const ageMs = Date.now() - new Date(activeCycle.created_at).getTime()
@@ -236,12 +234,10 @@ export async function runWeeklyNewsIngestion(): Promise<{
     }
 
     // 1. Check if cycle already exists for this week
-    const { data: existingCycle } = await supabase
-      .from('news_cycles')
-      .select('*')
-      .eq('week_start', weekStart)
-      .eq('week_end', weekEnd)
-      .single()
+    const existingCycle = await db.selectFrom('news_cycles').selectAll()
+      .where('week_start', '=', weekStart)
+      .where('week_end', '=', weekEnd)
+      .executeTakeFirst()
 
     let newCycle = existingCycle
 
@@ -249,18 +245,11 @@ export async function runWeeklyNewsIngestion(): Promise<{
       console.log(`[NewsIngestion] Using existing cycle ${existingCycle.id}`)
     } else {
       // Create new cycle (inactive)
-      const { data: createdCycle, error: cycleError } = await supabase
-        .from('news_cycles')
-        .insert({ week_start: weekStart, week_end: weekEnd, is_active: false })
-        .select()
-        .single()
-
-      if (cycleError) {
-        throw new Error(`Failed to create cycle: ${cycleError.message}`)
-      }
-
-      newCycle = createdCycle
-      console.log(`[NewsIngestion] Created cycle ${newCycle.id}`)
+      newCycle = await db.insertInto('news_cycles')
+        .values({ week_start: weekStart, week_end: weekEnd, is_active: false })
+        .returningAll()
+        .executeTakeFirst()
+      console.log(`[NewsIngestion] Created cycle ${newCycle?.id}`)
     }
 
     if (!newCycle) {
@@ -409,49 +398,51 @@ export async function runWeeklyNewsIngestion(): Promise<{
       const articleId = crypto.randomUUID()
       const slug = generateNewsSlug(article.title, articleId)
 
-      const { error: insertError } = await supabase.from('news_articles').insert({
-        id: articleId,
-        slug,
-        news_cycle_id: newCycle.id,
-        category_id: isFeatured ? 1 : classifyArticle(article.title, article.description),
-        source_id: 1,
-        title: article.title,
-        description: article.description,
-        image_url: article.image,
-        source_name: article.source.name,
-        original_url: article.url,
-        published_at: article.publishedAt,
-        is_featured: isFeatured,
-        featured_order: isFeatured ? featuredIndex + 1 : null,
-      })
-
-      if (insertError && insertError.code !== '23505') {
-        errors.push(`Insert failed "${article.title}": ${insertError.message}`)
-      } else if (!insertError) {
-        articlesInserted++
+      try {
+        const inserted = await db.insertInto('news_articles')
+          .values({
+            id: articleId,
+            slug,
+            news_cycle_id: newCycle.id,
+            category_id: isFeatured ? 1 : classifyArticle(article.title, article.description),
+            source_id: 1,
+            title: article.title,
+            description: article.description,
+            image_url: article.image,
+            source_name: article.source.name,
+            original_url: article.url,
+            published_at: article.publishedAt,
+            is_featured: isFeatured,
+            featured_order: isFeatured ? featuredIndex + 1 : null,
+          })
+          // 23505 dup → ignora (idempotência)
+          .onConflict((oc) => oc.doNothing())
+          .returning('id')
+          .executeTakeFirst()
+        if (inserted) articlesInserted++
+      } catch (e) {
+        errors.push(`Insert failed "${article.title}": ${e instanceof Error ? e.message : String(e)}`)
       }
     }
 
     console.log(`[NewsIngestion] Inserted ${articlesInserted} articles`)
 
     // 6. Activate new cycle, deactivate old
-    const { error: deactivateError } = await supabase
-      .from('news_cycles')
-      .update({ is_active: false })
-      .neq('id', newCycle.id)
-    if (deactivateError) {
-      errors.push(`Failed to deactivate old cycles: ${deactivateError.message}`)
+    try {
+      await db.updateTable('news_cycles').set({ is_active: false })
+        .where('id', '!=', newCycle.id).execute()
+    } catch (e) {
+      errors.push(`Failed to deactivate old cycles: ${e instanceof Error ? e.message : String(e)}`)
     }
 
-    const { error: activateError } = await supabase
-      .from('news_cycles')
-      .update({ is_active: true })
-      .eq('id', newCycle.id)
-    if (activateError) {
+    try {
+      await db.updateTable('news_cycles').set({ is_active: true })
+        .where('id', '=', newCycle.id).execute()
+    } catch (e) {
       // Activation is the line between /news showing this cycle and rendering
       // "No active cycle found". A silent failure here would report success
       // while the page stays empty — fail loudly instead.
-      throw new Error(`Failed to activate cycle ${newCycle.id}: ${activateError.message}`)
+      throw new Error(`Failed to activate cycle ${newCycle.id}: ${e instanceof Error ? e.message : String(e)}`)
     }
 
     console.log(`[NewsIngestion] Activated cycle ${newCycle.id}`)

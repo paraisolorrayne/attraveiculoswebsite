@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/admin-auth'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
 import { importedBlogPosts } from '@/lib/imported-blog-posts'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // GET - List all blog posts (Supabase + imported WordPress)
 export async function GET(request: NextRequest) {
@@ -17,19 +19,14 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const source = searchParams.get('source') || 'all' // 'all', 'admin', 'wordpress'
 
-    // Fetch Supabase posts
-    const supabase = createAdminClient()
-    const { data: dbPosts, error } = await supabase
-      .from('dual_blog_posts')
-      .select('*')
-      .order('published_date', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching blog posts from Supabase:', error)
-    }
+    // Fetch DB posts
+    const dbPosts = await db.selectFrom('dual_blog_posts').selectAll()
+      .orderBy('published_date', 'desc')
+      .execute()
+      .catch((error) => { console.error('Error fetching blog posts:', error); return [] })
 
     // Transform DB posts to match DualBlogPost interface
-    const supabasePosts = (dbPosts || []).map((p: Record<string, unknown>) => ({
+    const supabasePosts = (dbPosts as unknown as Record<string, unknown>[]).map((p) => ({
       id: p.id as string,
       post_type: p.post_type as string,
       title: p.title as string,
@@ -115,14 +112,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createAdminClient()
-
     // Check slug uniqueness
-    const { data: existing } = await supabase
-      .from('dual_blog_posts')
-      .select('id')
-      .eq('slug', slug)
-      .single()
+    const existing = await db.selectFrom('dual_blog_posts').select('id')
+      .where('slug', '=', slug).executeTakeFirst()
 
     if (existing) {
       return NextResponse.json(
@@ -140,31 +132,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: newPost, error } = await supabase
-      .from('dual_blog_posts')
-      .insert({
-        post_type,
-        title,
-        slug,
-        excerpt: excerpt || '',
-        content: content || '',
-        featured_image: featured_image || '',
-        featured_image_alt: featured_image_alt || '',
-        author: author || { name: 'Attra Veículos' },
-        published_date: published_date || new Date().toISOString(),
-        reading_time: reading_time || '5 min',
-        is_published: is_published || false,
-        educativo: post_type === 'educativo' ? educativo : null,
-        car_review: post_type === 'car_review' ? car_review : null,
-        seo: seo || { meta_title: title, meta_description: excerpt || '', keywords: [] },
-        source: 'admin',
-      })
-      .select()
-      .single()
-
-    if (error) {
+    let newPost
+    try {
+      newPost = await db.insertInto('dual_blog_posts')
+        .values({
+          post_type,
+          title,
+          slug,
+          excerpt: excerpt || '',
+          content: content || '',
+          featured_image: featured_image || '',
+          featured_image_alt: featured_image_alt || '',
+          author: author || { name: 'Attra Veículos' },
+          published_date: published_date || new Date(),
+          reading_time: reading_time || '5 min',
+          is_published: is_published || false,
+          educativo: post_type === 'educativo' ? educativo : null,
+          car_review: post_type === 'car_review' ? car_review : null,
+          seo: seo || { meta_title: title, meta_description: excerpt || '', keywords: [] },
+          source: 'admin',
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow()
+    } catch (error) {
       console.error('Error creating blog post:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'insert failed' }, { status: 500 })
     }
 
     return NextResponse.json({ post: newPost }, { status: 201 })

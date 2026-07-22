@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/tracking-client'
+import { db } from '@/lib/db'
 
 // Integração com o CRM Fykos: um POST por lead novo capturado nos
 // formulários do site, no mesmo formato dos leads Webmotors/iCarros
@@ -7,6 +7,24 @@ import { supabase } from '@/lib/supabase/tracking-client'
 // Endpoint configurável via FYKOS_WEBHOOK_URL; sem a env usa o padrão.
 const FYKOS_WEBHOOK_URL =
   process.env.FYKOS_WEBHOOK_URL || 'https://app.fykos.com.br/webhooks/webmotors'
+
+// Atribuição de mídia do visitante (UTM + click IDs), capturada no browser
+// por src/lib/visitor-tracking.ts. Mesmos nomes camelCase do payload dos forms.
+export interface FykosTraffic {
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  utmContent?: string
+  utmTerm?: string
+  utmId?: string
+  adsetId?: string
+  adId?: string
+  gclid?: string
+  fbclid?: string
+  ttclid?: string
+  referrer?: string
+  landingPage?: string
+}
 
 export interface FykosLeadInput {
   name: string
@@ -23,6 +41,60 @@ export interface FykosLeadInput {
   // resolver lead_id e, na ausência de veículo no formulário, buscar os
   // veículos visitados na sessão.
   sessionId?: string
+  // Atribuição de mídia — DE ONDE o lead veio (campanha, termo, gclid). Sem
+  // isso o time comercial não sabe qual anúncio/campanha gerou o atendimento.
+  traffic?: FykosTraffic
+  // Rótulo legível da fonte já classificada (ex.: "Google Ads"), de
+  // classifyLeadSource → fonteLabels.
+  leadSource?: string
+}
+
+/**
+ * Monta o objeto de atribuição enxuto (só campos preenchidos) em snake_case,
+ * pronto pro payload do Fykos. Retorna null se não houver nada.
+ */
+export function buildFykosAttribution(
+  traffic?: FykosTraffic,
+  leadSource?: string,
+): Record<string, string> | null {
+  const map: Record<string, string | undefined> = {
+    lead_source:  leadSource,
+    utm_source:   traffic?.utmSource,
+    utm_medium:   traffic?.utmMedium,
+    utm_campaign: traffic?.utmCampaign,
+    utm_content:  traffic?.utmContent,
+    utm_term:     traffic?.utmTerm,
+    utm_id:       traffic?.utmId,
+    adset_id:     traffic?.adsetId,
+    ad_id:        traffic?.adId,
+    gclid:        traffic?.gclid,
+    fbclid:       traffic?.fbclid,
+    ttclid:       traffic?.ttclid,
+    referrer:     traffic?.referrer,
+    landing_page: traffic?.landingPage,
+  }
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(map)) {
+    const s = v?.trim()
+    if (s) out[k] = s
+  }
+  return Object.keys(out).length ? out : null
+}
+
+/**
+ * Linha legível de atribuição pro time de vendas ver direto no card do lead
+ * (campanha e termo em destaque). Retorna null se não houver o que mostrar.
+ */
+export function formatAttributionLine(attr: Record<string, string> | null): string | null {
+  if (!attr) return null
+  const parts: string[] = []
+  if (attr.lead_source) parts.push(`Origem: ${attr.lead_source}`)
+  if (attr.utm_campaign) parts.push(`Campanha: ${attr.utm_campaign}`)
+  if (attr.utm_term) parts.push(`Termo: ${attr.utm_term}`)
+  if (!attr.lead_source && attr.utm_source) parts.push(`Fonte: ${attr.utm_source}`)
+  if (attr.utm_medium) parts.push(`Mídia: ${attr.utm_medium}`)
+  if (attr.gclid) parts.push(`gclid: ${attr.gclid}`)
+  return parts.length ? parts.join(' · ') : null
 }
 
 interface FykosVehicle {
@@ -73,24 +145,22 @@ async function lookupSession(sessionId: string, needVehicle: boolean): Promise<{
   vehicle: FykosVehicle | null
 }> {
   try {
-    const { data: session } = await supabase
-      .from('visitor_sessions')
+    const session = await db.selectFrom('visitor_sessions')
       .select('id')
-      .eq('session_id', sessionId)
-      .single()
+      .where('session_id', '=', sessionId)
+      .executeTakeFirst()
 
     if (!session?.id) return { sessionDbId: null, vehicle: null }
     if (!needVehicle) return { sessionDbId: session.id, vehicle: null }
 
-    const { data: views } = await supabase
-      .from('visitor_page_views')
-      .select('vehicle_brand, vehicle_model, vehicle_slug, viewed_at')
-      .eq('session_id', session.id)
-      .not('vehicle_slug', 'is', null)
-      .order('viewed_at', { ascending: false })
+    const view = await db.selectFrom('visitor_page_views')
+      .select(['vehicle_brand', 'vehicle_model', 'vehicle_slug', 'viewed_at'])
+      .where('session_id', '=', session.id)
+      .where('vehicle_slug', 'is not', null)
+      .orderBy('viewed_at', 'desc')
       .limit(1)
+      .executeTakeFirst()
 
-    const view = views?.[0]
     if (!view) return { sessionDbId: session.id, vehicle: null }
 
     return {
@@ -161,6 +231,19 @@ export async function sendFykosLead(input: FykosLeadInput): Promise<{ success: b
 
     const interestedVehicle = formVehicle || visitedVehicle
 
+    // Atribuição de mídia: de onde o lead veio (campanha/termo/gclid). Vai
+    // estruturada no payload E numa linha legível no histórico, pra garantir
+    // que o comercial veja mesmo que o Fykos não mapeie o campo estruturado.
+    const attribution = buildFykosAttribution(input.traffic, input.leadSource)
+    const attrLine = formatAttributionLine(attribution)
+
+    const baseConvText = message
+      ? `[${createAt.slice(0, 16)}] ${input.name} (cliente): ${message}`
+      : null
+    const conversationText = attrLine
+      ? [baseConvText, `[rastreamento] ${attrLine}`].filter(Boolean).join('\n')
+      : baseConvText
+
     const payload = {
       type: 'Novo Atendimento',
       origem: 'Formulario Site',
@@ -183,17 +266,18 @@ export async function sendFykosLead(input: FykosLeadInput): Promise<{ success: b
       conversation: message
         ? [{ datetime: createAt, author: 'cliente', author_name: input.name, text: message }]
         : [],
-      conversation_text: message
-        ? `[${createAt.slice(0, 16)}] ${input.name} (cliente): ${message}`
-        : null,
+      conversation_text: conversationText,
       negotiation_type: null,
       negotiation_type_slug: null,
       interested_in_vehicle: interestedVehicle ? [interestedVehicle] : [],
       evaluated_vehicles: [],
       origins: [],
+      // Atribuição de mídia (UTM + click IDs). Campo extra — Fykos ignora se
+      // não suportar; um integrador que leia isso ganha campanha/termo/gclid.
+      attribution: attribution ?? null,
     }
 
-    console.log('[Fykos] Sending lead:', input.name, interestedVehicle?.brand || 'sem veículo')
+    console.log('[Fykos] Sending lead:', input.name, interestedVehicle?.brand || 'sem veículo', attrLine ? `· ${attrLine}` : '')
 
     const response = await fetch(FYKOS_WEBHOOK_URL, {
       method: 'POST',

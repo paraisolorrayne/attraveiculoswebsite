@@ -20,8 +20,10 @@
  */
 
 import { Vehicle } from '@/types'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
 import { GEMINI_TEXT_MODEL } from '@/lib/gemini-config'
+
+// Persistência migrada de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export interface VehicleSectionPart {
   photo_url: string
@@ -76,14 +78,11 @@ export async function getCachedVehicleSections(
   if (Number.isNaN(numericId)) return null
 
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_section_content')
-      .select('*')
-      .eq('vehicle_id', numericId)
-      .maybeSingle()
+    const data = await db.selectFrom('vehicle_section_content').selectAll()
+      .where('vehicle_id', '=', numericId)
+      .executeTakeFirst()
 
-    if (error || !data) return null
+    if (!data) return null
 
     // Invalida cache se número de fotos mudou (fotos foram add/removidas)
     if (data.photo_count !== currentPhotoCount) return null
@@ -311,28 +310,36 @@ export async function generateAndCacheVehicleSections(
   }
 
   try {
-    const supabase = createAdminClient()
     const photoCount = vehicle.photos?.length ?? 0
-    const now = new Date().toISOString()
+    const now = new Date()
+    const row = {
+      vehicle_id: numericId,
+      vehicle_slug: vehicle.slug,
+      photo_count: photoCount,
+      overview_photo_url: sections.overview.photo_url,
+      exterior_photo_url: sections.exterior.photo_url,
+      interior_photo_url: sections.interior.photo_url,
+      overview_copy: sections.overview.copy,
+      exterior_copy: sections.exterior.copy,
+      interior_copy: sections.interior.copy,
+      classified_at: now,
+      copy_generated_at: now,
+    }
 
-    await supabase
-      .from('vehicle_section_content')
-      .upsert(
-        {
-          vehicle_id: numericId,
-          vehicle_slug: vehicle.slug,
-          photo_count: photoCount,
-          overview_photo_url: sections.overview.photo_url,
-          exterior_photo_url: sections.exterior.photo_url,
-          interior_photo_url: sections.interior.photo_url,
-          overview_copy: sections.overview.copy,
-          exterior_copy: sections.exterior.copy,
-          interior_copy: sections.interior.copy,
-          classified_at: now,
-          copy_generated_at: now,
-        },
-        { onConflict: 'vehicle_id' },
-      )
+    await db.insertInto('vehicle_section_content').values(row)
+      .onConflict((oc) => oc.column('vehicle_id').doUpdateSet({
+        vehicle_slug: row.vehicle_slug,
+        photo_count: row.photo_count,
+        overview_photo_url: row.overview_photo_url,
+        exterior_photo_url: row.exterior_photo_url,
+        interior_photo_url: row.interior_photo_url,
+        overview_copy: row.overview_copy,
+        exterior_copy: row.exterior_copy,
+        interior_copy: row.interior_copy,
+        classified_at: row.classified_at,
+        copy_generated_at: row.copy_generated_at,
+      }))
+      .execute()
   } catch (error) {
     console.error('[vehicle-sections] upsert falhou:', error)
   }

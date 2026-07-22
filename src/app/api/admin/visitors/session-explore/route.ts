@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/admin-auth'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // Helper: extract query params from URL string
 function extractUrlParams(url: string): Record<string, string> {
@@ -92,37 +94,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'session_id query parameter is required' }, { status: 400 })
     }
 
-    // Validate session_id format (UUID)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(sessionId)) {
-      return NextResponse.json({ error: 'Invalid session_id format. Expected UUID.' }, { status: 400 })
+    // Sanidade do session_id: é a string gerada no client (`${ts}-${base36}`),
+    // NÃO um UUID (era o bug — a validação de UUID rejeitava ids válidos).
+    if (!/^[\w-]{6,80}$/.test(sessionId)) {
+      return NextResponse.json({ error: 'Invalid session_id format.' }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
-
     // ── Step 1: Get session data ──
-    const { data: session, error: sessionError } = await supabase
-      .from('visitor_sessions')
-      .select('*')
-      .eq('session_id', sessionId)
-      .single()
+    const session = await db.selectFrom('visitor_sessions').selectAll()
+      .where('session_id', '=', sessionId).executeTakeFirst()
 
-    if (sessionError || !session) {
+    if (!session) {
       return NextResponse.json({ error: 'Session not found', session_id: sessionId }, { status: 404 })
     }
 
     const sessionDbId = session.id // UUID primary key
 
     // ── Step 2: Get all page views for this session ──
-    const { data: pageViews } = await supabase
-      .from('visitor_page_views')
-      .select('*')
-      .eq('session_id', sessionDbId)
-      .order('viewed_at', { ascending: true })
-      .limit(500)
+    const pageViews = await db.selectFrom('visitor_page_views').selectAll()
+      .where('session_id', '=', sessionDbId)
+      .orderBy('viewed_at', 'asc').limit(500).execute()
 
     // Extract params from first page URL
-    const firstPageUrl = pageViews?.[0]?.page_url || ''
+    const firstPageUrl = pageViews[0]?.page_url || ''
     const extractedParams = extractUrlParams(firstPageUrl)
 
     // ── Step 3: (removido) correlação com leads do CRM ──
@@ -131,25 +125,19 @@ export async function GET(request: NextRequest) {
     const matchedLeads: Array<Record<string, unknown> & { match_type: string }> = []
 
     // ── Step 4: Get identity events for this session's fingerprint ──
-    const { data: identityEvents } = await supabase
-      .from('identity_events')
-      .select('*')
-      .eq('fingerprint_id', session.fingerprint_id)
-      .order('created_at', { ascending: true })
-      .limit(200)
+    const identityEvents = await db.selectFrom('identity_events').selectAll()
+      .where('fingerprint_id', '=', session.fingerprint_id)
+      .orderBy('created_at', 'asc').limit(200).execute()
 
     // ── Step 5: Get conversion events for this session ──
-    const { data: conversionEvents } = await supabase
-      .from('conversion_events')
-      .select('*')
-      .eq('session_id', sessionDbId)
-      .order('created_at', { ascending: true })
-      .limit(200)
+    const conversionEvents = await db.selectFrom('conversion_events').selectAll()
+      .where('session_id', '=', sessionDbId)
+      .orderBy('created_at', 'asc').limit(200).execute()
 
     // ── Step 6: Build summary ──
-    const likelyOrigin = determineLikelyOrigin(session, extractedParams)
+    const likelyOrigin = determineLikelyOrigin(session as unknown as Record<string, unknown>, extractedParams)
 
-    const navigationTimeline = (pageViews || []).map(pv => ({
+    const navigationTimeline = pageViews.map(pv => ({
       page_path: pv.page_path,
       page_title: pv.page_title,
       page_type: pv.page_type,
@@ -168,14 +156,14 @@ export async function GET(request: NextRequest) {
     const leadsFound: Record<string, unknown>[] = []
 
     const events = [
-      ...(identityEvents || []).map(e => ({
+      ...identityEvents.map(e => ({
         type: 'identity',
         event_type: e.event_type,
         event_data: e.event_data,
         source: e.source,
         created_at: e.created_at,
       })),
-      ...(conversionEvents || []).map(e => ({
+      ...conversionEvents.map(e => ({
         type: 'conversion',
         event_name: e.event_name,
         event_value: e.event_value,
@@ -185,9 +173,9 @@ export async function GET(request: NextRequest) {
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
     const recommendations = generateRecommendations(
-      pageViews || [],
+      pageViews as unknown as Record<string, unknown>[],
       matchedLeads,
-      conversionEvents || [],
+      conversionEvents as unknown as Record<string, unknown>[],
       likelyOrigin
     )
 

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { getCurrentAdmin } from '@/lib/admin-auth'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+// O embedding do PostgREST (profiles→fingerprints→sessions) virou LEFT JOIN +
+// agregação: só precisamos de total_sessions e total_vehicles_viewed por perfil.
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,68 +20,33 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = (page - 1) * limit
 
-    let query = supabase
-      .from('visitor_profiles')
-      .select(`
-        *,
-        fingerprints:visitor_fingerprints(
-          id,
-          visitor_id,
-          total_visits,
-          last_seen_at,
-          sessions:visitor_sessions(
-            id,
-            page_views_count,
-            vehicles_viewed,
-            contacted_whatsapp,
-            submitted_form
-          )
-        )
-      `)
-      .order('updated_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+    let query = db
+      .selectFrom('visitor_profiles as p')
+      .leftJoin('visitor_fingerprints as fp', 'fp.resolved_profile_id', 'p.id')
+      .leftJoin('visitor_sessions as s', 's.fingerprint_id', 'fp.id')
+      .selectAll('p')
+      .select([
+        sql<number>`count(distinct s.id)::int`.as('total_sessions'),
+        sql<number>`coalesce(sum(s.vehicles_viewed), 0)::int`.as('total_vehicles_viewed'),
+      ])
+      .groupBy('p.id')
+      .orderBy('p.updated_at', 'desc')
+      .limit(limit)
+      .offset(offset)
 
-    // Apply status filter
+    // Filtro de status
     if (status === 'identified') {
-      query = query.in('status', ['identified', 'enriched', 'converted'])
+      query = query.where('p.status', 'in', ['identified', 'enriched', 'converted'])
     } else if (status === 'enriched') {
-      query = query.eq('status', 'enriched')
+      query = query.where('p.status', '=', 'enriched')
     }
 
-    const { data: profiles, error } = await query
+    const profiles = await query.execute()
 
-    if (error) {
-      console.error('[Visitors API] Error:', error)
-      return NextResponse.json({ error: 'Failed to fetch visitors' }, { status: 500 })
-    }
-
-    // Transform data to include aggregated metrics
-    const transformedProfiles = profiles?.map(profile => {
-      const fingerprints = profile.fingerprints || []
-      let totalSessions = 0
-      let totalVehiclesViewed = 0
-
-      fingerprints.forEach((fp: { sessions?: Array<{ vehicles_viewed?: number }> }) => {
-        const sessions = fp.sessions || []
-        totalSessions += sessions.length
-        sessions.forEach((s: { vehicles_viewed?: number }) => {
-          totalVehiclesViewed += s.vehicles_viewed || 0
-        })
-      })
-
-      return {
-        ...profile,
-        total_sessions: totalSessions,
-        total_vehicles_viewed: totalVehiclesViewed,
-        fingerprints: undefined, // Remove nested data
-      }
-    })
-
-    return NextResponse.json(transformedProfiles)
+    return NextResponse.json(profiles)
 
   } catch (error) {
     console.error('[Visitors API] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

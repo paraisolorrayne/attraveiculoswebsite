@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 /**
  * GET /api/admin/cron-status
@@ -61,7 +64,6 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
   const response: CronStatusResponse = {
     cron_jobs: { error: 'not_attempted' },
     cron_secret_configured: Boolean(process.env.CRON_SECRET),
@@ -74,32 +76,22 @@ export async function GET() {
   // 1. Cron jobs (schema cron) — exige RPC ou query raw, então tentamos via RPC.
   //    Se não houver função RPC `list_cron_jobs`, retornamos erro descritivo.
   try {
-    const { data, error } = await supabase.rpc('list_cron_jobs')
-    if (error) {
-      response.cron_jobs = {
-        error: `RPC list_cron_jobs indisponível: ${error.message}. ` +
-          `Rode em SQL: SELECT jobname, schedule, active FROM cron.job;`,
-      }
-    } else {
-      response.cron_jobs = (data || []) as CronJobRow[]
-    }
+    const { rows } = await sql<CronJobRow>`SELECT jobname, schedule, active FROM cron.job`.execute(db)
+    response.cron_jobs = rows
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    response.cron_jobs = { error: msg }
+    response.cron_jobs = {
+      error: `cron.job indisponível (pg_cron não instalado?): ${msg}. ` +
+        `Os crons rodam via /etc/cron.d na VPS.`,
+    }
   }
 
   // 2. Últimas 5 runs do Blog AI
   try {
-    const { data, error } = await supabase
-      .from('blog_ai_generations')
-      .select('id, run_date, run_at, strategy, success, error_message, blog_post_id')
-      .order('run_at', { ascending: false })
-      .limit(5)
-    if (error) {
-      response.blog_ai_last_runs = { error: error.message }
-    } else {
-      response.blog_ai_last_runs = (data || []) as BlogAiRunRow[]
-    }
+    const data = await db.selectFrom('blog_ai_generations')
+      .select(['id', 'run_date', 'run_at', 'strategy', 'success', 'error_message', 'blog_post_id'])
+      .orderBy('run_at', 'desc').limit(5).execute()
+    response.blog_ai_last_runs = data as unknown as BlogAiRunRow[]
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     response.blog_ai_last_runs = { error: msg }
@@ -107,16 +99,10 @@ export async function GET() {
 
   // 3. Últimos 3 news_cycles
   try {
-    const { data, error } = await supabase
-      .from('news_cycles')
-      .select('id, week_start, week_end, is_active')
-      .order('week_start', { ascending: false })
-      .limit(3)
-    if (error) {
-      response.news_cycles_recent = { error: error.message }
-    } else {
-      response.news_cycles_recent = (data || []) as NewsCycleRow[]
-    }
+    const data = await db.selectFrom('news_cycles')
+      .select(['id', 'week_start', 'week_end', 'is_active'])
+      .orderBy('week_start', 'desc').limit(3).execute()
+    response.news_cycles_recent = data as unknown as NewsCycleRow[]
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     response.news_cycles_recent = { error: msg }

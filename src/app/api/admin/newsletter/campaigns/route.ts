@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated, getCurrentAdmin } from '@/lib/admin-auth'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // GET - List all campaigns
 export async function GET() {
@@ -10,16 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('newsletter_campaigns')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching campaigns:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    const data = await db.selectFrom('newsletter_campaigns').selectAll()
+      .orderBy('created_at', 'desc').execute()
 
     return NextResponse.json({ success: true, campaigns: data })
   } catch (error) {
@@ -44,10 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Título é obrigatório' }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('newsletter_campaigns')
-      .insert({
+    let data
+    try {
+      data = await db.insertInto('newsletter_campaigns').values({
         title,
         subject: subject || null,
         featured_image: featured_image || null,
@@ -58,13 +51,10 @@ export async function POST(request: NextRequest) {
         sent_at: null,
         recipient_count: 0,
         created_by: admin?.id || null,
-      })
-      .select()
-      .single()
-
-    if (error) {
+      }).returningAll().executeTakeFirst()
+    } catch (error) {
       console.error('Error creating campaign:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'insert failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, campaign: data })

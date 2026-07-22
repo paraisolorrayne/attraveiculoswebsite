@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // Cache for 1 hour since data changes only weekly
 export const revalidate = 3600
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 interface NewsArticle {
   id: string
@@ -30,18 +28,13 @@ interface NewsCycle {
 
 export async function GET() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
     // Get active cycle
-    const { data: cycle, error: cycleError } = await supabase
-      .from('news_cycles')
-      .select('*')
-      .eq('is_active', true)
-      .single()
+    const cycle = await db.selectFrom('news_cycles').selectAll()
+      .where('is_active', '=', true).executeTakeFirst()
 
-    if (cycleError || !cycle) {
+    if (!cycle) {
       return NextResponse.json(
-        { 
+        {
           error: 'No active news cycle found',
           cycle: null,
           featured: [],
@@ -52,44 +45,26 @@ export async function GET() {
       )
     }
 
-    // Get featured articles (category_id = 1, is_featured = true)
-    const { data: featured, error: featuredError } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('is_featured', true)
-      .order('featured_order', { ascending: true })
-      .limit(3)
-
-    if (featuredError) {
-      console.error('Error fetching featured articles:', featuredError)
-    }
+    // Get featured articles (is_featured = true)
+    const featured = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('is_featured', '=', true)
+      .orderBy('featured_order', 'asc')
+      .limit(3).execute()
 
     // Get Formula 1 articles (category_id = 2)
-    const { data: formula1, error: f1Error } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('category_id', 2)
-      .order('published_at', { ascending: false })
-      .limit(9)
-
-    if (f1Error) {
-      console.error('Error fetching Formula 1 articles:', f1Error)
-    }
+    const formula1 = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('category_id', '=', 2)
+      .orderBy('published_at', 'desc')
+      .limit(9).execute()
 
     // Get Premium Market articles (category_id = 3)
-    const { data: premiumMarket, error: pmError } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('category_id', 3)
-      .order('published_at', { ascending: false })
-      .limit(9)
-
-    if (pmError) {
-      console.error('Error fetching Premium Market articles:', pmError)
-    }
+    const premiumMarket = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('category_id', '=', 3)
+      .orderBy('published_at', 'desc')
+      .limit(9).execute()
 
     return NextResponse.json({
       cycle: {

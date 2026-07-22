@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 import { embedQuery, cosineSimilarity } from '@/lib/jina'
 
 export const dynamic = 'force-dynamic'
@@ -70,17 +71,22 @@ export async function POST(request: Request) {
 		// use defaults
 	}
 
-	const supabase = createAdminClient()
-
-	// Load all embeddings from Supabase
-	const { data: allEmbeddings, error: loadError } = await supabase
-		.from('vehicle_embeddings')
-		.select('vehicle_slug, passage_text, embedding')
-
-	if (loadError || !allEmbeddings || allEmbeddings.length === 0) {
+	// Load all embeddings do banco
+	let allEmbeddings: Array<{ vehicle_slug: string; passage_text: string; embedding: string }>
+	try {
+		allEmbeddings = await db.selectFrom('vehicle_embeddings')
+			.select(['vehicle_slug', 'passage_text', 'embedding'])
+			.execute()
+	} catch (loadError) {
 		return NextResponse.json({
 			error: 'No vehicle embeddings found. Run /api/embeddings/sync first.',
-			details: loadError?.message,
+			details: loadError instanceof Error ? loadError.message : String(loadError),
+		}, { status: 503 })
+	}
+
+	if (allEmbeddings.length === 0) {
+		return NextResponse.json({
+			error: 'No vehicle embeddings found. Run /api/embeddings/sync first.',
 		}, { status: 503 })
 	}
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/admin-auth'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // GET - Export subscribers as CSV
 export async function GET(request: NextRequest) {
@@ -13,28 +15,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'active'
 
-    const supabase = createAdminClient()
-    let query = supabase
-      .from('newsletter_subscribers')
-      .select('email, name, is_active, source, subscribed_at, unsubscribed_at')
-      .order('subscribed_at', { ascending: false })
+    let base = db.selectFrom('newsletter_subscribers')
+      .select(['email', 'name', 'is_active', 'source', 'subscribed_at', 'unsubscribed_at'])
+      .orderBy('subscribed_at', 'desc')
 
-    if (status === 'active') {
-      query = query.eq('is_active', true)
-    } else if (status === 'inactive') {
-      query = query.eq('is_active', false)
-    }
+    if (status === 'active') base = base.where('is_active', '=', true)
+    else if (status === 'inactive') base = base.where('is_active', '=', false)
 
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Error exporting subscribers:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    const data = await base.execute()
 
     // Build CSV
     const headers = ['Email', 'Nome', 'Ativo', 'Origem', 'Inscrito em', 'Desinscrito em']
-    const rows = (data || []).map(s => [
+    const rows = data.map(s => [
       s.email,
       s.name || '',
       s.is_active ? 'Sim' : 'Não',

@@ -1,24 +1,19 @@
 /**
- * Supabase Storage Service
- * Handles file uploads, downloads, and deletions using Supabase Storage
+ * Storage Service — agora em DISCO + Nginx (Fase 6), não mais Supabase Storage.
+ * Ver src/lib/storage/disk.ts e docs/MIGRACAO_POSTGRES_PURO.md.
+ *
+ * O nome/caminho do arquivo é mantido pra não quebrar os ~6 imports existentes.
+ * Interface preservada (uploadAudioFile, uploadBlogImage, snapshot*, delete*).
  */
 
-import { createAdminClient } from './server'
+import { putObject, deleteObject, objectPathFromUrl, isManagedStorageUrl, isInBucket } from '@/lib/storage/disk'
 
-// Storage bucket name for audio files
+// Buckets = subpastas em MEDIA_ROOT
 export const AUDIO_BUCKET = 'audio-files'
+export const BLOG_IMAGES_BUCKET = 'blog-images'
 
-// Allowed audio MIME types
-const ALLOWED_AUDIO_TYPES = [
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/wav',
-  'audio/x-wav',
-  'audio/wave',
-]
-
-// Maximum file size (10MB)
-const MAX_FILE_SIZE = 10 * 1024 * 1024
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave']
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export interface UploadResult {
   success: boolean
@@ -32,9 +27,6 @@ export interface DeleteResult {
   error?: string
 }
 
-/**
- * Generate a unique filename for uploaded files
- */
 function generateFilename(originalName: string): string {
   const ext = originalName.split('.').pop()?.toLowerCase() || 'mp3'
   const timestamp = Date.now()
@@ -42,161 +34,70 @@ function generateFilename(originalName: string): string {
   return `engine-sound-${timestamp}-${random}.${ext}`
 }
 
-/**
- * Validate audio file before upload
- */
 function validateAudioFile(file: File): { valid: boolean; error?: string } {
   if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
-    return {
-      valid: false,
-      error: 'Invalid file type. Only MP3 and WAV files are allowed.',
-    }
+    return { valid: false, error: 'Invalid file type. Only MP3 and WAV files are allowed.' }
   }
-
   if (file.size > MAX_FILE_SIZE) {
-    return {
-      valid: false,
-      error: 'File too large. Maximum size is 10MB.',
-    }
+    return { valid: false, error: 'File too large. Maximum size is 10MB.' }
   }
-
   return { valid: true }
 }
 
-/**
- * Upload an audio file to Supabase Storage
- */
+/** Upload de áudio (som de motor) pro disco. */
 export async function uploadAudioFile(file: File): Promise<UploadResult> {
   try {
-    // Validate file
     const validation = validateAudioFile(file)
-    if (!validation.valid) {
-      return { success: false, error: validation.error }
-    }
+    if (!validation.valid) return { success: false, error: validation.error }
 
-    const supabase = createAdminClient()
-    const filename = generateFilename(file.name)
-    const filePath = `sounds/${filename}`
+    const filePath = `sounds/${generateFilename(file.name)}`
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const url = await putObject(AUDIO_BUCKET, filePath, bytes)
 
-    // Convert File to ArrayBuffer then to Uint8Array for Supabase
-    const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(AUDIO_BUCKET)
-      .upload(filePath, uint8Array, {
-        contentType: file.type,
-        cacheControl: '3600',
-        upsert: false,
-      })
-
-    if (error) {
-      console.error('Supabase upload error:', error)
-      return { success: false, error: error.message }
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(AUDIO_BUCKET)
-      .getPublicUrl(filePath)
-
-    return {
-      success: true,
-      url: urlData.publicUrl,
-      path: data.path,
-    }
+    return { success: true, url, path: filePath }
   } catch (error) {
     console.error('Error uploading audio file:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
-/**
- * Delete an audio file from Supabase Storage
- */
+/** Remove um áudio. Aceita URL legada (Supabase) e a nova (disco). */
 export async function deleteAudioFile(fileUrl: string): Promise<DeleteResult> {
   try {
-    const supabase = createAdminClient()
-
-    // Extract the path from the URL
-    // URL format: https://xxx.supabase.co/storage/v1/object/public/audio-files/sounds/filename.mp3
-    const urlParts = fileUrl.split(`/storage/v1/object/public/${AUDIO_BUCKET}/`)
-    if (urlParts.length !== 2) {
-      // Not a Supabase Storage URL, might be legacy local file
-      console.warn('Not a Supabase Storage URL, skipping deletion:', fileUrl)
+    const objectPath = objectPathFromUrl(fileUrl, AUDIO_BUCKET)
+    if (!objectPath) {
+      console.warn('Not a managed storage URL, skipping deletion:', fileUrl)
       return { success: true }
     }
-
-    const filePath = urlParts[1]
-
-    const { error } = await supabase.storage
-      .from(AUDIO_BUCKET)
-      .remove([filePath])
-
-    if (error) {
-      console.error('Supabase delete error:', error)
-      return { success: false, error: error.message }
-    }
-
+    await deleteObject(AUDIO_BUCKET, objectPath)
     return { success: true }
   } catch (error) {
     console.error('Error deleting audio file:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
-/**
- * Check if a URL is a Supabase Storage URL
- */
+/** URL gerenciada por nós (Supabase legado OU disco). Nome mantido por compat. */
 export function isSupabaseStorageUrl(url: string): boolean {
-  return url.includes('supabase.co/storage/v1/object/public/')
+  return isManagedStorageUrl(url)
 }
 
-/**
- * Check if a URL is a legacy local upload URL
- */
 export function isLegacyLocalUrl(url: string): boolean {
   return url.startsWith('/uploads/sounds/')
 }
 
-// =============================================
-// BLOG IMAGE UPLOAD
-// =============================================
+// ============================= BLOG IMAGE =============================
 
-export const BLOG_IMAGES_BUCKET = 'blog-images'
-
-const ALLOWED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/avif',
-]
-
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/avif']
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
 function validateImageFile(file: File): { valid: boolean; error?: string } {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    return {
-      valid: false,
-      error: 'Tipo de arquivo inválido. Apenas JPEG, PNG, WebP e AVIF são permitidos.',
-    }
+    return { valid: false, error: 'Tipo de arquivo inválido. Apenas JPEG, PNG, WebP e AVIF são permitidos.' }
   }
-
   if (file.size > MAX_IMAGE_SIZE) {
-    return {
-      valid: false,
-      error: 'Arquivo muito grande. Tamanho máximo é 5MB.',
-    }
+    return { valid: false, error: 'Arquivo muito grande. Tamanho máximo é 5MB.' }
   }
-
   return { valid: true }
 }
 
@@ -207,57 +108,24 @@ function generateImageFilename(originalName: string): string {
   return `blog-${timestamp}-${random}.${ext}`
 }
 
-/**
- * Upload a blog image to Supabase Storage
- */
+/** Upload de imagem de blog pro disco. */
 export async function uploadBlogImage(file: File): Promise<UploadResult> {
   try {
     const validation = validateImageFile(file)
-    if (!validation.valid) {
-      return { success: false, error: validation.error }
-    }
+    if (!validation.valid) return { success: false, error: validation.error }
 
-    const supabase = createAdminClient()
-    const filename = generateImageFilename(file.name)
-    const filePath = `posts/${filename}`
+    const filePath = `posts/${generateImageFilename(file.name)}`
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const url = await putObject(BLOG_IMAGES_BUCKET, filePath, bytes)
 
-    const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
-
-    const { data, error } = await supabase.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .upload(filePath, uint8Array, {
-        contentType: file.type,
-        cacheControl: '31536000', // 1 year cache for images
-        upsert: false,
-      })
-
-    if (error) {
-      console.error('Supabase blog image upload error:', error)
-      return { success: false, error: error.message }
-    }
-
-    const { data: urlData } = supabase.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .getPublicUrl(filePath)
-
-    return {
-      success: true,
-      url: urlData.publicUrl,
-      path: data.path,
-    }
+    return { success: true, url, path: filePath }
   } catch (error) {
     console.error('Error uploading blog image:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
-// =============================================
-// EXTERNAL IMAGE SNAPSHOT (link rot prevention)
-// =============================================
+// =============== EXTERNAL IMAGE SNAPSHOT (link rot prevention) ===============
 
 const SNAPSHOT_FETCH_TIMEOUT_MS = 15_000
 const SNAPSHOT_MAX_BYTES = 8 * 1024 * 1024
@@ -265,11 +133,7 @@ const SNAPSHOT_CONCURRENCY = 4
 const SNAPSHOT_MAX_ATTEMPTS = 2
 const SNAPSHOT_RETRY_DELAY_MS = 800
 
-const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
-
-function isAlreadyInBucket(url: string, bucket: string): boolean {
-  return url.includes(`/storage/v1/object/public/${bucket}/`)
-}
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 function extOfContentType(contentType: string | null, fallbackUrl: string): string {
   if (contentType) {
@@ -282,11 +146,7 @@ function extOfContentType(contentType: string | null, fallbackUrl: string): stri
   return (m?.[1] ?? 'jpg').toLowerCase().replace('jpeg', 'jpg')
 }
 
-/**
- * One attempt to download + upload. Returns null on retriable failure
- * (network, 5xx, upload error), throws on permanent failure (4xx, oversize,
- * non-image content-type), and returns the snapshotted URL on success.
- */
+/** Uma tentativa: baixa + grava no disco. null = falha retriável; throw = permanente. */
 async function snapshotAttempt(externalUrl: string): Promise<string | null> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), SNAPSHOT_FETCH_TIMEOUT_MS)
@@ -298,7 +158,6 @@ async function snapshotAttempt(externalUrl: string): Promise<string | null> {
       headers: { 'User-Agent': 'Attra-BlogSnapshot/1.0' },
     })
     if (!res.ok) {
-      // 5xx is retriable; 4xx is permanent (don't retry into the same wall)
       if (res.status >= 500) return null
       throw new Error(`HTTP ${res.status}`)
     }
@@ -312,46 +171,30 @@ async function snapshotAttempt(externalUrl: string): Promise<string | null> {
     }
 
     const ext = extOfContentType(contentType, externalUrl)
-    const filename = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const filePath = `snapshots/${filename}`
-
-    const supabase = createAdminClient()
-    const { error } = await supabase.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .upload(filePath, new Uint8Array(buf), {
-        contentType: contentType ?? `image/${ext}`,
-        cacheControl: '31536000',
-        upsert: false,
-      })
-    if (error) return null // upload errors are usually transient (network/5xx)
-
-    const { data: urlData } = supabase.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .getPublicUrl(filePath)
-    return urlData.publicUrl
+    const filePath = `snapshots/snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    try {
+      return await putObject(BLOG_IMAGES_BUCKET, filePath, new Uint8Array(buf))
+    } catch {
+      return null // erro de escrita — retriável
+    }
   } finally {
     clearTimeout(timeoutId)
   }
 }
 
 /**
- * Download an external image and re-upload to Supabase Storage so blog posts
- * stop depending on third-party CDNs (link rot prevention).
- *
- * Best-effort with one retry on transient failures (network, 5xx, upload).
- * Returns the original URL on permanent failure — callers should not depend
- * on the snapshot succeeding.
+ * Baixa uma imagem externa e re-hospeda no nosso storage (evita link rot).
+ * Best-effort com 1 retry; devolve a URL original em falha permanente.
  */
 export async function snapshotExternalImage(externalUrl: string): Promise<string> {
   if (!externalUrl) return externalUrl
-  if (isAlreadyInBucket(externalUrl, BLOG_IMAGES_BUCKET)) return externalUrl
+  if (isInBucket(externalUrl, BLOG_IMAGES_BUCKET)) return externalUrl
   if (!/^https?:\/\//i.test(externalUrl)) return externalUrl
 
   for (let attempt = 1; attempt <= SNAPSHOT_MAX_ATTEMPTS; attempt++) {
     try {
       const url = await snapshotAttempt(externalUrl)
       if (url) return url
-      // Retriable failure — wait and try again unless we've exhausted attempts
       if (attempt < SNAPSHOT_MAX_ATTEMPTS) {
         await sleep(SNAPSHOT_RETRY_DELAY_MS * attempt)
         continue
@@ -367,53 +210,31 @@ export async function snapshotExternalImage(externalUrl: string): Promise<string
   return externalUrl
 }
 
-/**
- * Snapshot multiple external images in parallel (bounded concurrency).
- * Returns a map of original URL → snapshotted URL (or original if snapshot failed).
- */
+/** Snapshot de várias imagens (concorrência limitada). */
 export async function snapshotExternalImages(urls: string[]): Promise<Record<string, string>> {
   const unique = [...new Set(urls.filter(Boolean))]
   const result: Record<string, string> = {}
 
   for (let i = 0; i < unique.length; i += SNAPSHOT_CONCURRENCY) {
     const batch = unique.slice(i, i + SNAPSHOT_CONCURRENCY)
-    const settled = await Promise.all(batch.map(u => snapshotExternalImage(u)))
+    const settled = await Promise.all(batch.map((u) => snapshotExternalImage(u)))
     batch.forEach((u, idx) => { result[u] = settled[idx] })
   }
   return result
 }
 
-/**
- * Delete a blog image from Supabase Storage
- */
+/** Remove uma imagem de blog. Aceita URL legada (Supabase) e a nova (disco). */
 export async function deleteBlogImage(fileUrl: string): Promise<DeleteResult> {
   try {
-    const supabase = createAdminClient()
-
-    const urlParts = fileUrl.split(`/storage/v1/object/public/${BLOG_IMAGES_BUCKET}/`)
-    if (urlParts.length !== 2) {
-      console.warn('Not a Supabase blog image URL, skipping deletion:', fileUrl)
+    const objectPath = objectPathFromUrl(fileUrl, BLOG_IMAGES_BUCKET)
+    if (!objectPath) {
+      console.warn('Not a managed blog image URL, skipping deletion:', fileUrl)
       return { success: true }
     }
-
-    const filePath = urlParts[1]
-
-    const { error } = await supabase.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .remove([filePath])
-
-    if (error) {
-      console.error('Supabase blog image delete error:', error)
-      return { success: false, error: error.message }
-    }
-
+    await deleteObject(BLOG_IMAGES_BUCKET, objectPath)
     return { success: true }
   } catch (error) {
     console.error('Error deleting blog image:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
-

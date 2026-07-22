@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
 
@@ -35,9 +36,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert page view
-    const { error } = await supabase
-      .from('visitor_page_views')
-      .insert({
+    await db
+      .insertInto('visitor_page_views')
+      .values({
         fingerprint_id: fingerprint_db_id,
         session_id: session_db_id,
         page_url,
@@ -50,17 +51,19 @@ export async function POST(request: NextRequest) {
         vehicle_model: vehicle_model || null,
         vehicle_price: vehicle_price || null,
       })
+      .execute()
 
-    if (error) {
-      console.error('[Tracking] Page view insert error:', error)
-      return NextResponse.json({ error: 'Failed to track page view' }, { status: 500 })
-    }
-
-    // Update session page_views_count
-    await supabase.rpc('increment_session_page_views', { 
-      p_session_id: session_db_id,
-      is_vehicle: page_type === 'vehicle',
-    })
+    // Incrementa page_views_count (+ vehicles_viewed em páginas de veículo) —
+    // era o RPC increment_session_page_views, agora inline em SQL.
+    await db
+      .updateTable('visitor_sessions')
+      .set({
+        page_views_count: sql`page_views_count + 1`,
+        vehicles_viewed:
+          page_type === 'vehicle' ? sql`vehicles_viewed + 1` : sql`vehicles_viewed`,
+      })
+      .where('id', '=', session_db_id)
+      .execute()
 
     return NextResponse.json({ success: true })
 

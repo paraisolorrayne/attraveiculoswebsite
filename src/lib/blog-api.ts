@@ -1,22 +1,18 @@
 import type { DualBlogPost, BlogPostType, BlogAuthor, EducativoFields, CarReviewFields, BlogPostSEO } from '@/types'
 import { importedBlogPosts } from './imported-blog-posts'
 import { processInstagramEmbeds } from './instagram-processor'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
 
-/**
- * Create a lightweight Supabase client for public read-only queries.
- * Does NOT use cookies/headers, so it works in both static and dynamic contexts.
- */
-function createPublicClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // ===========================================
 // HELPERS
 // ===========================================
+
+function isoOrUndef(v: unknown): string | undefined {
+  if (v == null) return undefined
+  return v instanceof Date ? v.toISOString() : String(v)
+}
 
 function transformDbPost(p: Record<string, unknown>): DualBlogPost {
   return {
@@ -29,8 +25,8 @@ function transformDbPost(p: Record<string, unknown>): DualBlogPost {
     featured_image: p.featured_image as string,
     featured_image_alt: p.featured_image_alt as string,
     author: p.author as BlogAuthor,
-    published_date: p.published_date as string,
-    updated_date: p.updated_date as string | undefined,
+    published_date: isoOrUndef(p.published_date) as string,
+    updated_date: isoOrUndef(p.updated_date),
     reading_time: p.reading_time as string,
     is_published: p.is_published as boolean,
     educativo: p.educativo as EducativoFields | undefined,
@@ -52,23 +48,16 @@ interface GetBlogPostsOptions {
 export async function getBlogPosts(options: GetBlogPostsOptions = {}): Promise<DualBlogPost[]> {
   const { type = 'all', limit, category } = options
 
-  // Fetch published posts from Supabase
+  // Fetch published posts do banco
   let supabasePosts: DualBlogPost[] = []
   try {
-    const supabase = createPublicClient()
-    const { data: dbPosts, error } = await supabase
-      .from('dual_blog_posts')
-      .select('*')
-      .eq('is_published', true)
-      .order('published_date', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching blog posts from Supabase:', error)
-    } else {
-      supabasePosts = (dbPosts || []).map(p => transformDbPost(p as unknown as Record<string, unknown>))
-    }
+    const dbPosts = await db.selectFrom('dual_blog_posts').selectAll()
+      .where('is_published', '=', true)
+      .orderBy('published_date', 'desc')
+      .execute()
+    supabasePosts = dbPosts.map(p => transformDbPost(p as unknown as Record<string, unknown>))
   } catch (error) {
-    console.error('Supabase connection error in getBlogPosts:', error)
+    console.error('DB error in getBlogPosts:', error)
   }
 
   // Merge with imported WordPress posts
@@ -93,17 +82,14 @@ export async function getBlogPosts(options: GetBlogPostsOptions = {}): Promise<D
 }
 
 export async function getBlogPost(slug: string): Promise<DualBlogPost | null> {
-  // Try Supabase first (admin-created posts)
+  // Try DB first (admin-created posts)
   try {
-    const supabase = createPublicClient()
-    const { data: dbPost, error } = await supabase
-      .from('dual_blog_posts')
-      .select('*')
-      .eq('slug', slug)
-      .eq('is_published', true)
-      .single()
+    const dbPost = await db.selectFrom('dual_blog_posts').selectAll()
+      .where('slug', '=', slug)
+      .where('is_published', '=', true)
+      .executeTakeFirst()
 
-    if (!error && dbPost) {
+    if (dbPost) {
       const post = transformDbPost(dbPost as unknown as Record<string, unknown>)
       return {
         ...post,
@@ -111,7 +97,7 @@ export async function getBlogPost(slug: string): Promise<DualBlogPost | null> {
       }
     }
   } catch (error) {
-    console.error('Supabase connection error in getBlogPost:', error)
+    console.error('DB error in getBlogPost:', error)
   }
 
   // Fall back to imported WordPress posts

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 import { getVehicles } from '@/lib/autoconf-api'
 import { generateEmbeddings, buildVehiclePassage } from '@/lib/jina'
 
@@ -36,7 +38,6 @@ export async function POST(request: Request) {
 			return NextResponse.json({ synced: 0, message: 'No available vehicles' })
 		}
 
-		const supabase = createAdminClient()
 		const batchSize = 20
 		let synced = 0
 		const errors: string[] = []
@@ -49,21 +50,25 @@ export async function POST(request: Request) {
 				const embeddingResponse = await generateEmbeddings(passages, 'retrieval.passage')
 
 				const rows = batch.map((v, idx) => ({
-					vehicle_id: v.id,
+					vehicle_id: Number(v.id),
 					vehicle_slug: v.slug,
 					passage_text: passages[idx],
-					embedding: JSON.stringify(embeddingResponse.data[idx].embedding),
-					updated_at: new Date().toISOString(),
+					embedding: sql<string>`${JSON.stringify(embeddingResponse.data[idx].embedding)}::vector`,
+					updated_at: new Date(),
 				}))
 
-				const { error: upsertError } = await supabase
-					.from('vehicle_embeddings')
-					.upsert(rows, { onConflict: 'vehicle_id' })
-
-				if (upsertError) {
-					errors.push(`Batch ${i}: ${upsertError.message}`)
-				} else {
+				try {
+					await db.insertInto('vehicle_embeddings').values(rows)
+						.onConflict((oc) => oc.column('vehicle_id').doUpdateSet({
+							vehicle_slug: (eb) => eb.ref('excluded.vehicle_slug'),
+							passage_text: (eb) => eb.ref('excluded.passage_text'),
+							embedding: (eb) => eb.ref('excluded.embedding'),
+							updated_at: (eb) => eb.ref('excluded.updated_at'),
+						}))
+						.execute()
 					synced += batch.length
+				} catch (upsertError) {
+					errors.push(`Batch ${i}: ${upsertError instanceof Error ? upsertError.message : String(upsertError)}`)
 				}
 			} catch (batchErr) {
 				errors.push(`Batch ${i}: ${batchErr instanceof Error ? batchErr.message : String(batchErr)}`)
@@ -74,12 +79,11 @@ export async function POST(request: Request) {
 		// GUARD: if AutoConf is down or returns an empty list, activeIds will be
 		// empty and the DELETE below would wipe ALL embeddings. Skip the cleanup
 		// in that scenario to avoid data loss.
-		const activeIds = vehicles.map(v => v.id)
+		const activeIds = vehicles.map(v => Number(v.id))
 		if (activeIds.length > 0) {
-			await supabase
-				.from('vehicle_embeddings')
-				.delete()
-				.not('vehicle_id', 'in', `(${activeIds.join(',')})`)
+			await db.deleteFrom('vehicle_embeddings')
+				.where('vehicle_id', 'not in', activeIds)
+				.execute()
 		} else {
 			console.warn('[embeddings/sync] activeIds is empty — skipping stale-embedding cleanup to prevent data loss (AutoConf may be down)')
 		}

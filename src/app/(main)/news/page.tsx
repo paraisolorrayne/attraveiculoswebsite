@@ -5,7 +5,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Calendar, Newspaper, Trophy, Car, BookOpen, Search } from 'lucide-react'
 import { EDITORIAL_SECTION } from '@/lib/constants'
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
 
 // Primary refresh comes from revalidatePath('/news') inside the weekly ingestion job;
 // this 1h ISR window is just a safety net in case the cron-triggered revalidate fails.
@@ -45,54 +45,39 @@ interface NewsData {
 
 async function getNews(): Promise<NewsData> {
   try {
-    // Use plain anon client (no cookies) so ISR revalidation works correctly.
-    // This is a public page — no auth cookies are needed.
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
     // Get the most recently created active cycle
-    const { data: cycleRaw, error: cycleError } = await supabase
-      .from('news_cycles')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const cycleRaw = await db.selectFrom('news_cycles').selectAll()
+      .where('is_active', '=', true)
+      .orderBy('created_at', 'desc')
       .limit(1)
-      .single()
+      .executeTakeFirst()
 
-    if (cycleError || !cycleRaw) {
+    if (!cycleRaw) {
       return { cycle: null, featured: [], formula1: [], premiumMarket: [] }
     }
 
     const cycle = cycleRaw as unknown as { id: string; week_start: string; week_end: string }
 
     // Get featured articles
-    const { data: featuredRaw } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('is_featured', true)
-      .order('featured_order', { ascending: true })
-      .limit(3)
+    const featuredRaw = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('is_featured', '=', true)
+      .orderBy('featured_order', 'asc')
+      .limit(3).execute()
 
     // Get Formula 1 articles (category_id = 2)
-    const { data: formula1Raw } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('category_id', 2)
-      .order('published_at', { ascending: false })
-      .limit(9)
+    const formula1Raw = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('category_id', '=', 2)
+      .orderBy('published_at', 'desc')
+      .limit(9).execute()
 
     // Get Premium Market articles (category_id = 3)
-    const { data: premiumMarketRaw } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('news_cycle_id', cycle.id)
-      .eq('category_id', 3)
-      .order('published_at', { ascending: false })
-      .limit(9)
+    const premiumMarketRaw = await db.selectFrom('news_articles').selectAll()
+      .where('news_cycle_id', '=', cycle.id)
+      .where('category_id', '=', 3)
+      .orderBy('published_at', 'desc')
+      .limit(9).execute()
 
     return {
       cycle: {

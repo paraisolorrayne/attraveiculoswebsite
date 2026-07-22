@@ -6,7 +6,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Calendar, ExternalLink, Newspaper, Car, ArrowRight, Sparkles } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
 import { getVehicles } from '@/lib/autoconf-api'
 import { VehicleCard } from '@/components/vehicles/vehicle-card'
 import { Vehicle } from '@/types'
@@ -23,32 +23,19 @@ interface NewsArticle {
   category_id: number
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
+// Lookup por slug; fallback por id (Kysely; ver MIGRACAO_POSTGRES_PURO.md)
 async function getArticleBySlug(slug: string): Promise<NewsArticle | null> {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-  // Try to get article by slug first
-  let { data, error } = await supabase
-    .from('news_articles')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-
-  // Fallback: if not found by slug, try by ID (for backward compatibility)
-  if (error || !data) {
-    const { data: articleById, error: idError } = await supabase
-      .from('news_articles')
-      .select('*')
-      .eq('id', slug)
-      .single()
-
-    if (idError || !articleById) return null
-    data = articleById
+  let data = await db.selectFrom('news_articles').selectAll()
+    .where('slug', '=', slug).executeTakeFirst()
+  if (!data) {
+    try {
+      data = await db.selectFrom('news_articles').selectAll()
+        .where('id', '=', slug).executeTakeFirst()
+    } catch {
+      data = undefined
+    }
   }
-
-  return data
+  return (data as unknown as NewsArticle) ?? null
 }
 
 interface PageProps {

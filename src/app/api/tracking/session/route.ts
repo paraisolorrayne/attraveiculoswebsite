@@ -1,34 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
+import type { Insertable } from 'kysely'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
-// Use service role for tracking (no user auth required)
+// Tracking roda com acesso total ao banco (rota server-side, sem auth de user).
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
-// Insert a session, or return the existing row's id when the session_id
-// already exists (page reload within the same sessionStorage lifetime).
+// Insere a sessão, ou devolve o id da linha existente quando o session_id já
+// existe (reload dentro do mesmo sessionStorage). ON CONFLICT DO NOTHING troca
+// o antigo tratamento do erro 23505.
 async function getOrCreateSession(
-  row: Record<string, unknown> & { session_id: string },
+  row: Insertable<Database['visitor_sessions']>,
 ): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('visitor_sessions')
-    .insert(row)
+  const inserted = await db
+    .insertInto('visitor_sessions')
+    .values(row)
+    .onConflict((oc) => oc.column('session_id').doNothing())
+    .returning('id')
+    .executeTakeFirst()
+
+  if (inserted?.id) return inserted.id
+
+  const existing = await db
+    .selectFrom('visitor_sessions')
     .select('id')
-    .single()
-
-  if (!error) return data?.id ?? null
-
-  // 23505 = duplicate key — session already created on a previous request.
-  if (error.code === '23505') {
-    const { data: existing } = await supabase
-      .from('visitor_sessions')
-      .select('id')
-      .eq('session_id', row.session_id)
-      .single()
-    return existing?.id ?? null
-  }
-
-  console.error('[Tracking] Session insert error:', error)
-  return null
+    .where('session_id', '=', row.session_id)
+    .executeTakeFirst()
+  return existing?.id ?? null
 }
 
 export async function POST(request: NextRequest) {
@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get client IP
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] 
-      || request.headers.get('x-real-ip') 
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]
+      || request.headers.get('x-real-ip')
       || null
 
     // Extract referrer domain
@@ -70,10 +70,13 @@ export async function POST(request: NextRequest) {
       } catch {}
     }
 
-    // Upsert fingerprint
-    const { data: fingerprint, error: fpError } = await supabase
-      .from('visitor_fingerprints')
-      .upsert({
+    // Upsert do fingerprint: cria na 1ª visita; nas seguintes, atualiza os
+    // dados do dispositivo/last_seen e INCREMENTA total_visits (antes o
+    // supabase-js resetava pra 1 no upsert — aqui fica correto).
+    const now = new Date()
+    const fingerprint = await db
+      .insertInto('visitor_fingerprints')
+      .values({
         visitor_id,
         browser_name: device_data?.browser_name || null,
         browser_version: device_data?.browser_version || null,
@@ -83,66 +86,33 @@ export async function POST(request: NextRequest) {
         screen_resolution: device_data?.screen_resolution || null,
         timezone: device_data?.timezone || null,
         language: device_data?.language || null,
-        confidence_score: 0.9, // High confidence for device fingerprint
-        last_seen_at: new Date().toISOString(),
-        total_visits: 1, // Will be incremented on subsequent visits
-      }, {
-        onConflict: 'visitor_id',
-        ignoreDuplicates: false,
+        confidence_score: 0.9,
+        last_seen_at: now,
+        total_visits: 1,
       })
-      .select('id')
-      .single()
+      .onConflict((oc) =>
+        oc.column('visitor_id').doUpdateSet({
+          browser_name: (eb) => eb.ref('excluded.browser_name'),
+          browser_version: (eb) => eb.ref('excluded.browser_version'),
+          os_name: (eb) => eb.ref('excluded.os_name'),
+          os_version: (eb) => eb.ref('excluded.os_version'),
+          device_type: (eb) => eb.ref('excluded.device_type'),
+          screen_resolution: (eb) => eb.ref('excluded.screen_resolution'),
+          timezone: (eb) => eb.ref('excluded.timezone'),
+          language: (eb) => eb.ref('excluded.language'),
+          last_seen_at: now,
+          total_visits: sql`visitor_fingerprints.total_visits + 1`,
+          updated_at: now,
+        }),
+      )
+      .returning(['id', 'resolved_profile_id'])
+      .executeTakeFirst()
 
-    if (fpError) {
-      console.error('[Tracking] Fingerprint upsert error:', fpError)
-      // Try to get existing fingerprint
-      const { data: existingFp } = await supabase
-        .from('visitor_fingerprints')
-        .select('id')
-        .eq('visitor_id', visitor_id)
-        .single()
-      
-      if (!existingFp) {
-        return NextResponse.json({ error: 'Failed to create fingerprint' }, { status: 500 })
-      }
-      
-      // Update last_seen and increment visits
-      await supabase
-        .from('visitor_fingerprints')
-        .update({
-          last_seen_at: new Date().toISOString(),
-          total_visits: supabase.rpc('increment', { x: 1, row_id: existingFp.id }),
-        })
-        .eq('id', existingFp.id)
-      
-      // Create session with existing fingerprint (returns existing on conflict)
-      const sessionId = await getOrCreateSession({
-        fingerprint_id: existingFp.id,
-        session_id,
-        referrer_url,
-        referrer_domain,
-        utm_source: utm_params?.utm_source || null,
-        utm_medium: utm_params?.utm_medium || null,
-        utm_campaign: utm_params?.utm_campaign || null,
-        utm_content: utm_params?.utm_content || null,
-        utm_term: utm_params?.utm_term || null,
-        utm_id:   utm_params?.utm_id   || null,
-        adset_id: utm_params?.adset_id || null,
-        ad_id:    utm_params?.ad_id    || null,
-        gclid: click_ids?.gclid || null,
-        fbclid: click_ids?.fbclid || null,
-        ttclid: click_ids?.ttclid || null,
-        ip_address: ip,
-      })
-
-      return NextResponse.json({
-        success: true,
-        fingerprint_db_id: existingFp.id,
-        session_db_id: sessionId,
-      })
+    if (!fingerprint?.id) {
+      return NextResponse.json({ error: 'Failed to create fingerprint' }, { status: 500 })
     }
 
-    // Create session with new fingerprint (returns existing on conflict)
+    // Cria a sessão (devolve a existente em caso de conflito)
     const sessionId = await getOrCreateSession({
       fingerprint_id: fingerprint.id,
       session_id,
@@ -153,9 +123,9 @@ export async function POST(request: NextRequest) {
       utm_campaign: utm_params?.utm_campaign || null,
       utm_content: utm_params?.utm_content || null,
       utm_term: utm_params?.utm_term || null,
-      utm_id:   utm_params?.utm_id   || null,
+      utm_id: utm_params?.utm_id || null,
       adset_id: utm_params?.adset_id || null,
-      ad_id:    utm_params?.ad_id    || null,
+      ad_id: utm_params?.ad_id || null,
       gclid: click_ids?.gclid || null,
       fbclid: click_ids?.fbclid || null,
       ttclid: click_ids?.ttclid || null,
@@ -173,4 +143,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

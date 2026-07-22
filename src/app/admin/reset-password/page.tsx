@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, KeyRound } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+
+// Reset de senha em migração (GoTrue → Auth.js). O fluxo próprio (token + email
+// via Resend) é uma fatia pendente da Fase 5. Enquanto isso, esta página só
+// mostra "link inválido" e um admin redefine a senha pelo painel de usuários.
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -18,53 +21,14 @@ export default function ResetPasswordPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user has a valid session from the reset link
-    const checkSession = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      setHasSession(!!session)
-      setCheckingSession(false)
-    }
-    checkSession()
+    // Fluxo de reset por link em migração — sem sessão de recovery por ora.
+    setHasSession(false)
+    setCheckingSession(false)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem')
-      return
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-      setError('A senha deve ter pelo menos 8 caracteres')
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      })
-
-      if (error) throw error
-
-      setSuccess(true)
-      
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.push('/admin/login')
-      }, 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar senha')
-    } finally {
-      setIsLoading(false)
-    }
+    setError('Redefinição por link está em migração. Peça a um administrador para redefinir sua senha no painel de usuários.')
   }
 
   if (checkingSession) {

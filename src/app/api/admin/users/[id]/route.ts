@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Updateable } from 'kysely'
+import bcrypt from 'bcryptjs'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
+import { isAdminRole } from '@/lib/auth/roles'
 
+// Migrado do Supabase GoTrue → Auth.js/Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/admin/users/[id] — atualiza nome/papel/ativo e redefine senha
@@ -20,18 +25,14 @@ export async function PATCH(
 
   const { id } = await params
   const body = await request.json()
-  const supabase = createAdminClient()
 
-  // Trava de segurança: nunca deixar o sistema sem nenhum admin ativo
+  // Trava: nunca deixar o sistema sem nenhum admin ativo
   const desativando = body.is_active === false
-  const rebaixando = body.role === 'gerente'
+  const rebaixando = body.role !== undefined && body.role !== 'admin'
   if (desativando || rebaixando) {
-    const { data: admins } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('role', 'admin')
-      .eq('is_active', true)
-    const outros = (admins ?? []).filter(a => (a as { id: string }).id !== id)
+    const admins = await db.selectFrom('admin_users').select('id')
+      .where('role', '=', 'admin').where('is_active', '=', true).execute()
+    const outros = admins.filter(a => a.id !== id)
     if (outros.length === 0) {
       return NextResponse.json(
         { error: 'Não é possível desativar/rebaixar o último administrador ativo' },
@@ -40,30 +41,32 @@ export async function PATCH(
     }
   }
 
-  // Redefinição de senha (via Auth)
+  // Redefinição de senha (bcrypt → password_hash)
   if (typeof body.password === 'string' && body.password) {
     if (body.password.length < 8) {
       return NextResponse.json({ error: 'Senha precisa de pelo menos 8 caracteres' }, { status: 400 })
     }
-    const { error } = await supabase.auth.admin.updateUserById(id, { password: body.password })
-    if (error) {
-      return NextResponse.json({ error: `Falha ao redefinir senha: ${error.message}` }, { status: 500 })
+    const password_hash = await bcrypt.hash(body.password, 10)
+    try {
+      await db.updateTable('admin_users').set({ password_hash }).where('id', '=', id).execute()
+    } catch (error) {
+      return NextResponse.json({ error: `Falha ao redefinir senha: ${error instanceof Error ? error.message : error}` }, { status: 500 })
     }
   }
 
   // Campos de autorização
   const updates: Record<string, unknown> = {}
   if (typeof body.name === 'string' && body.name.trim()) updates.name = body.name.trim()
-  if (body.role === 'admin' || body.role === 'gerente') updates.role = body.role
+  if (isAdminRole(body.role)) updates.role = body.role
   if (typeof body.is_active === 'boolean') updates.is_active = body.is_active
 
   if (Object.keys(updates).length > 0) {
-    const { error } = await supabase
-      .from('admin_users')
-      .update(updates as never)
-      .eq('id', id)
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    try {
+      await db.updateTable('admin_users')
+        .set(updates as Updateable<Database['admin_users']>)
+        .where('id', '=', id).execute()
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'update failed' }, { status: 500 })
     }
   }
 

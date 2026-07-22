@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from "@/lib/supabase/tracking-client"
+import { sql } from 'kysely'
+import type { Updateable } from 'kysely'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
 import { createHash } from 'crypto'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +27,8 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       name,
-      cpf,              // Optional: CPF will be hashed before storage (LGPD)
-      consent_given,    // Optional: explicit consent from form checkbox
+      cpf,              // Optional: CPF será hasheado antes de gravar (LGPD)
+      consent_given,    // Optional: consentimento explícito do checkbox
     } = body
 
     if (!fingerprint_db_id) {
@@ -35,137 +39,115 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email or phone required' }, { status: 400 })
     }
 
-    // Check if profile already exists with this email or phone
-    let existingProfile = null
-    
-    if (email) {
-      const { data } = await supabase
-        .from('visitor_profiles')
-        .select('*')
-        .eq('email', email.toLowerCase())
-        .single()
-      existingProfile = data
-    }
-    
+    // Procura perfil existente por email ou telefone
+    let existingProfile = email
+      ? await db.selectFrom('visitor_profiles').selectAll()
+          .where('email', '=', email.toLowerCase()).executeTakeFirst()
+      : undefined
+
     if (!existingProfile && phone) {
       const cleanPhone = phone.replace(/\D/g, '')
-      const { data } = await supabase
-        .from('visitor_profiles')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .single()
-      existingProfile = data
+      existingProfile = await db.selectFrom('visitor_profiles').selectAll()
+        .where('phone', '=', cleanPhone).executeTakeFirst()
     }
 
     let profileId: string
 
-    // Hash CPF if provided (LGPD: never store plain text CPF)
+    // Hash do CPF (LGPD: nunca gravar CPF em claro)
     const cpfHash = cpf ? hashCPF(cpf) : null
+    const now = new Date()
 
     if (existingProfile) {
-      // Update existing profile
+      // Atualiza perfil existente
       profileId = existingProfile.id
 
-      const updates: Record<string, unknown> = {
+      const updates: Updateable<Database['visitor_profiles']> = {
         status: 'identified',
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       }
 
-      if (email && !existingProfile.email) {
-        updates.email = email.toLowerCase()
-      }
-      if (phone && !existingProfile.phone) {
-        updates.phone = phone.replace(/\D/g, '')
-      }
+      if (email && !existingProfile.email) updates.email = email.toLowerCase()
+      if (phone && !existingProfile.phone) updates.phone = phone.replace(/\D/g, '')
       if (name) {
         updates.full_name = name
         const nameParts = name.split(' ')
         updates.first_name = nameParts[0]
         updates.last_name = nameParts.slice(1).join(' ') || null
       }
-      if (cpfHash && !existingProfile.cpf_hash) {
-        updates.cpf_hash = cpfHash
-      }
+      if (cpfHash && !existingProfile.cpf_hash) updates.cpf_hash = cpfHash
 
-      // LGPD: Record explicit consent if given
+      // LGPD: registra consentimento explícito, se dado
       if (consent_given) {
         updates.consent_given = true
-        updates.consent_given_at = new Date().toISOString()
+        updates.consent_given_at = now
         updates.consent_marketing = true
-        updates.consent_date = new Date().toISOString()
+        updates.consent_date = now
       }
 
-      // Set legitimate interest basis for form submissions
+      // Base legal para submissões de formulário
       if (!existingProfile.legitimate_interest_basis) {
         updates.legitimate_interest_basis = source === 'form' ? 'explicit_consent' : 'url_param_interaction'
       }
 
-      await supabase
-        .from('visitor_profiles')
-        .update(updates)
-        .eq('id', profileId)
+      await db.updateTable('visitor_profiles').set(updates).where('id', '=', profileId).execute()
 
-      // Log merge event
-      await supabase.from('identity_events').insert({
+      // Log do merge
+      await db.insertInto('identity_events').values({
         fingerprint_id: fingerprint_db_id,
         profile_id: profileId,
         event_type: 'profile_merged',
-        event_data: { source, merged_with_existing: true },
+        event_data: sql`${JSON.stringify({ source, merged_with_existing: true })}::jsonb`,
         source,
-      })
+      }).execute()
 
     } else {
-      // Create new profile
+      // Cria perfil novo
       const nameParts = name?.split(' ') || []
-      
-      const { data: newProfile, error: profileError } = await supabase
-        .from('visitor_profiles')
-        .insert({
-          email: email?.toLowerCase() || null,
-          phone: phone?.replace(/\D/g, '') || null,
-          cpf_hash: cpfHash,
-          full_name: name || null,
-          first_name: nameParts[0] || null,
-          last_name: nameParts.slice(1).join(' ') || null,
-          status: 'identified',
-          // LGPD fields
-          consent_given: consent_given || false,
-          consent_given_at: consent_given ? new Date().toISOString() : null,
-          consent_marketing: consent_given || false,
-          consent_date: consent_given ? new Date().toISOString() : null,
-          legitimate_interest_basis: source === 'form' ? 'explicit_consent' : 'url_param_interaction',
-        })
-        .select('id')
-        .single()
 
-      if (profileError) {
-        console.error('[Tracking] Profile insert error:', profileError)
+      const newProfile = await db.insertInto('visitor_profiles').values({
+        email: email?.toLowerCase() || null,
+        phone: phone?.replace(/\D/g, '') || null,
+        cpf_hash: cpfHash,
+        full_name: name || null,
+        first_name: nameParts[0] || null,
+        last_name: nameParts.slice(1).join(' ') || null,
+        status: 'identified',
+        // LGPD
+        consent_given: consent_given || false,
+        consent_given_at: consent_given ? now : null,
+        consent_marketing: consent_given || false,
+        consent_date: consent_given ? now : null,
+        legitimate_interest_basis: source === 'form' ? 'explicit_consent' : 'url_param_interaction',
+      }).returning('id').executeTakeFirst()
+
+      if (!newProfile?.id) {
+        console.error('[Tracking] Profile insert error')
         return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
       }
 
       profileId = newProfile.id
     }
 
-    // Link fingerprint to profile
-    await supabase
-      .from('visitor_fingerprints')
-      .update({ resolved_profile_id: profileId })
-      .eq('id', fingerprint_db_id)
+    // Liga o fingerprint ao perfil
+    await db.updateTable('visitor_fingerprints')
+      .set({ resolved_profile_id: profileId })
+      .where('id', '=', fingerprint_db_id)
+      .execute()
 
-    // Log identity event
-    const eventType = source === 'url_param' ? 'url_param_captured' : 
+    // Log do identity event
+    const eventType = source === 'url_param' ? 'url_param_captured' :
                       email ? 'email_captured' : 'phone_captured'
-    
-    await supabase.from('identity_events').insert({
+
+    await db.insertInto('identity_events').values({
       fingerprint_id: fingerprint_db_id,
       profile_id: profileId,
       event_type: eventType,
-      event_data: { email, phone, name },
+      event_data: sql`${JSON.stringify({ email, phone, name })}::jsonb`,
       source,
-    })
+    }).execute()
 
     return NextResponse.json({
-      success: true, 
+      success: true,
       profile_id: profileId,
       was_merged: !!existingProfile,
     })
@@ -177,11 +159,9 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Hash CPF using SHA-256 for LGPD compliance.
- * Never store plain text CPF.
+ * Hash CPF com SHA-256 pra conformidade LGPD. Nunca gravar CPF em claro.
  */
 function hashCPF(cpf: string): string {
-  const cleanCPF = cpf.replace(/\D/g, '') // Remove non-digits
+  const cleanCPF = cpf.replace(/\D/g, '')
   return createHash('sha256').update(cleanCPF).digest('hex')
 }
-

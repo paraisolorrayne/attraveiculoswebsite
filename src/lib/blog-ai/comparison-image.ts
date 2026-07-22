@@ -1,6 +1,8 @@
 import sharp from 'sharp'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { putObject } from '@/lib/storage/disk'
 import { BLOG_IMAGES_BUCKET } from '@/lib/supabase/storage'
+
+// Storage migrado p/ disco (Fase 6) — ver docs/MIGRACAO_POSTGRES_PURO.md.
 
 // Imagem destacada para posts de comparação (dois carros): split 50/50 com
 // divisor e selo "VS" nas cores da marca. 1200×630 (proporção OG/social).
@@ -66,18 +68,12 @@ export async function composeComparisonFeaturedImage(
   try {
     const jpeg = await composeComparisonImage(photoUrlA, photoUrlB)
 
-    const admin = createAdminClient()
     const safeSlug = slugHint.toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 80)
     const path = `comparisons/${safeSlug}-${Date.now()}.jpg`
 
-    const { error } = await admin.storage
-      .from(BLOG_IMAGES_BUCKET)
-      .upload(path, jpeg, { contentType: 'image/jpeg', cacheControl: '31536000' })
-    if (error) throw new Error(error.message)
-
-    const { data } = admin.storage.from(BLOG_IMAGES_BUCKET).getPublicUrl(path)
-    console.log('[ComparisonImage] Gerada:', data.publicUrl)
-    return data.publicUrl
+    const publicUrl = await putObject(BLOG_IMAGES_BUCKET, path, jpeg)
+    console.log('[ComparisonImage] Gerada:', publicUrl)
+    return publicUrl
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.warn('[ComparisonImage] Falhou, usando fallback de foto única:', msg)

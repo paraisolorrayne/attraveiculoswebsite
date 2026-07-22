@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Updateable } from 'kysely'
 import { isAuthenticated } from '@/lib/admin-auth'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
 import { deleteBlogImage, isSupabaseStorageUrl } from '@/lib/supabase/storage'
+
+// DB migrado supabase-js → Kysely; storage segue no Supabase (Fase 6).
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -18,15 +22,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params
-    const supabase = createAdminClient()
+    const post = await db.selectFrom('dual_blog_posts').selectAll()
+      .where('id', '=', id).executeTakeFirst()
 
-    const { data: post, error } = await supabase
-      .from('dual_blog_posts')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error || !post) {
+    if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
@@ -47,16 +46,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
     const body = await request.json()
-    const supabase = createAdminClient()
 
     // If slug is being changed, check uniqueness
     if (body.slug) {
-      const { data: existing } = await supabase
-        .from('dual_blog_posts')
-        .select('id')
-        .eq('slug', body.slug)
-        .neq('id', id)
-        .single()
+      const existing = await db.selectFrom('dual_blog_posts').select('id')
+        .where('slug', '=', body.slug)
+        .where('id', '!=', id)
+        .executeTakeFirst()
 
       if (existing) {
         return NextResponse.json(
@@ -67,18 +63,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Add updated_date
-    body.updated_date = new Date().toISOString()
+    body.updated_date = new Date()
 
-    const { data: updatedPost, error } = await supabase
-      .from('dual_blog_posts')
-      .update(body)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
+    let updatedPost
+    try {
+      updatedPost = await db.updateTable('dual_blog_posts')
+        .set(body as Updateable<Database['dual_blog_posts']>)
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirst()
+    } catch (error) {
       console.error('Error updating blog post:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'update failed' }, { status: 500 })
     }
 
     if (!updatedPost) {
@@ -104,14 +100,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (blocked) return blocked
 
     const { id } = await params
-    const supabase = createAdminClient()
 
     // Get post to delete associated images
-    const { data: post } = await supabase
-      .from('dual_blog_posts')
-      .select('featured_image, car_review')
-      .eq('id', id)
-      .single()
+    const post = await db.selectFrom('dual_blog_posts')
+      .select(['featured_image', 'car_review'])
+      .where('id', '=', id)
+      .executeTakeFirst()
 
     if (post) {
       // Delete featured image from storage
@@ -131,14 +125,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const { error } = await supabase
-      .from('dual_blog_posts')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await db.deleteFrom('dual_blog_posts').where('id', '=', id).execute()
+    } catch (error) {
       console.error('Error deleting blog post:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'delete failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

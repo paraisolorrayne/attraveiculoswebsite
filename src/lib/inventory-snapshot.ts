@@ -1,6 +1,8 @@
-import { createAdminClient } from '@/lib/supabase/admin'
-import type { Json } from '@/types/database'
+import { db } from '@/lib/db'
 import type { AutoConfResponse, AutoConfVehicle } from './autoconf-api'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+// Funções tolerantes a falha (cache não-crítico): erro → log + null/void.
 
 const SOURCE_LIST = 'autoconf:veiculos:list'
 const SOURCE_VEHICLE = 'autoconf:veiculos:byId'
@@ -17,36 +19,25 @@ export const InventorySnapshotSources = {
   adsHome: SOURCE_ADS_HOME,
 } as const
 
-function getAdmin() {
-  try {
-    return createAdminClient()
-  } catch {
-    return null
-  }
-}
-
 // Só a linha mais recente por source é lida (loadLatestSnapshot). Sem poda,
-// a tabela cresce sem limite — chegou a 294k linhas e estourou a cota do
-// Supabase em 2026-07. Mantemos uma folga de 5 por source.
+// a tabela cresce sem limite. Mantemos uma folga de 5 por source.
 const KEEP_PER_SOURCE = 5
 
 async function pruneOldSnapshots(source: SnapshotSource): Promise<void> {
-  const admin = getAdmin()
-  if (!admin) return
-  const { data: keep, error: selErr } = await admin
-    .from('inventory_snapshots')
-    .select('created_at')
-    .eq('source', source)
-    .order('created_at', { ascending: false })
-    .range(KEEP_PER_SOURCE - 1, KEEP_PER_SOURCE - 1)
-  if (selErr || !keep?.length) return
-  const { error } = await admin
-    .from('inventory_snapshots')
-    .delete()
-    .eq('source', source)
-    .lt('created_at', keep[0].created_at)
-  if (error) {
-    console.error('[inventory-snapshot] prune failed:', source, error.message)
+  try {
+    const keep = await db.selectFrom('inventory_snapshots')
+      .select('created_at')
+      .where('source', '=', source)
+      .orderBy('created_at', 'desc')
+      .limit(1).offset(KEEP_PER_SOURCE - 1)
+      .executeTakeFirst()
+    if (!keep) return
+    await db.deleteFrom('inventory_snapshots')
+      .where('source', '=', source)
+      .where('created_at', '<', keep.created_at)
+      .execute()
+  } catch (error) {
+    console.error('[inventory-snapshot] prune failed:', source, error)
   }
 }
 
@@ -55,15 +46,12 @@ export async function saveInventorySnapshot(
   payload: unknown,
   vehicleCount: number,
 ): Promise<void> {
-  const admin = getAdmin()
-  if (!admin) return
-  const { error } = await admin.from('inventory_snapshots').insert({
-    source,
-    payload: payload as Json,
-    vehicle_count: vehicleCount,
-  })
-  if (error) {
-    console.error('[inventory-snapshot] save failed:', source, error.message)
+  try {
+    await db.insertInto('inventory_snapshots')
+      .values({ source, payload, vehicle_count: vehicleCount })
+      .execute()
+  } catch (error) {
+    console.error('[inventory-snapshot] save failed:', source, error)
     return
   }
   // Poda fire-and-forget: falha não afeta o save
@@ -71,20 +59,18 @@ export async function saveInventorySnapshot(
 }
 
 async function loadLatestSnapshot<T>(source: SnapshotSource): Promise<T | null> {
-  const admin = getAdmin()
-  if (!admin) return null
-  const { data, error } = await admin
-    .from('inventory_snapshots')
-    .select('payload')
-    .eq('source', source)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (error) {
-    console.error('[inventory-snapshot] load failed:', source, error.message)
+  try {
+    const data = await db.selectFrom('inventory_snapshots')
+      .select('payload')
+      .where('source', '=', source)
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .executeTakeFirst()
+    return (data?.payload as T) ?? null
+  } catch (error) {
+    console.error('[inventory-snapshot] load failed:', source, error)
     return null
   }
-  return (data?.payload as T) ?? null
 }
 
 export function loadLatestListSnapshot(): Promise<AutoConfResponse | null> {
@@ -103,17 +89,14 @@ export async function appendVehicleToSnapshot(
   vehicleId: number,
   vehicle: AutoConfVehicle,
 ): Promise<void> {
-  const admin = getAdmin()
-  if (!admin) return
   const existing = await loadLatestSnapshot<Record<string, AutoConfVehicle>>(SOURCE_VEHICLE)
   const next = { ...(existing || {}), [String(vehicleId)]: vehicle }
-  const { error } = await admin.from('inventory_snapshots').insert({
-    source: SOURCE_VEHICLE,
-    payload: next as unknown as Json,
-    vehicle_count: Object.keys(next).length,
-  })
-  if (error) {
-    console.error('[inventory-snapshot] append vehicle failed:', error.message)
+  try {
+    await db.insertInto('inventory_snapshots')
+      .values({ source: SOURCE_VEHICLE, payload: next, vehicle_count: Object.keys(next).length })
+      .execute()
+  } catch (error) {
+    console.error('[inventory-snapshot] append vehicle failed:', error)
     return
   }
   pruneOldSnapshots(SOURCE_VEHICLE).catch(() => {})

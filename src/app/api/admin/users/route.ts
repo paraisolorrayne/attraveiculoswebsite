@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
+import bcrypt from 'bcryptjs'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/db'
+import { isAdminRole } from '@/lib/auth/roles'
 
+// Migrado do Supabase GoTrue → Auth.js/Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+// Não há mais auth.users: a senha (bcrypt) vive em admin_users.password_hash.
 export const dynamic = 'force-dynamic'
-
-// Gestão de usuários do admin — restrito ao papel `admin`.
-// Autenticação = Supabase Auth; autorização = linha ativa em admin_users.
 
 // GET /api/admin/users — lista usuários
 export async function GET() {
@@ -15,19 +17,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from('admin_users')
-    .select('id, email, name, role, is_active, last_login_at, created_at')
-    .order('created_at', { ascending: true })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const data = await db.selectFrom('admin_users')
+      .select(['id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'created_at'])
+      .orderBy('created_at', 'asc')
+      .execute()
+    return NextResponse.json({ users: data })
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'query failed' }, { status: 500 })
   }
-  return NextResponse.json({ users: data })
 }
 
-// POST /api/admin/users — cria usuário (Auth + admin_users, com rollback)
+// POST /api/admin/users — cria usuário (bcrypt + admin_users)
 export async function POST(request: NextRequest) {
   const admin = await getCurrentAdmin()
   if (!admin || admin.role !== 'admin') {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const email = String(body.email || '').trim().toLowerCase()
   const name = String(body.name || '').trim()
-  const role = body.role === 'admin' ? 'admin' : 'gerente'
+  const role = isAdminRole(body.role) ? body.role : 'gerente'
   const password = String(body.password || '')
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -53,41 +54,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
+  const id = randomUUID()
+  const password_hash = await bcrypt.hash(password, 10)
 
-  // 1) usuário no Auth (e-mail já confirmado — contas internas)
-  const { data: created, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  })
-  if (authError || !created.user) {
-    return NextResponse.json(
-      { error: `Falha ao criar no Auth: ${authError?.message ?? 'sem detalhes'}` },
-      { status: 400 }
-    )
-  }
-
-  // 2) autorização em admin_users (rollback do Auth se falhar)
-  const { error: insertError } = await supabase.from('admin_users').insert({
-    id: created.user.id,
-    email,
-    name,
-    role,
-    is_active: true,
-  } as never)
-
-  if (insertError) {
-    await supabase.auth.admin.deleteUser(created.user.id)
-    return NextResponse.json(
-      { error: `Falha ao autorizar usuário: ${insertError.message}` },
-      { status: 500 }
-    )
+  try {
+    await db.insertInto('admin_users')
+      .values({ id, email, name, role, is_active: true, password_hash })
+      .execute()
+  } catch (insertError) {
+    const msg = insertError instanceof Error ? insertError.message : String(insertError)
+    const friendly = /duplicate|unique/i.test(msg) ? 'Já existe um usuário com este e-mail' : msg
+    return NextResponse.json({ error: friendly }, { status: 400 })
   }
 
   console.log(`[AdminUsers] ${admin.email} criou ${email} (${role})`)
-  return NextResponse.json({
-    success: true,
-    user: { id: created.user.id, email, name, role, is_active: true },
-  })
+  return NextResponse.json({ success: true, user: { id, email, name, role, is_active: true } })
 }

@@ -14,7 +14,9 @@ import {
   mapAutoConfToVehicle,
   type AutoConfVehicle,
 } from '@/lib/autoconf-api'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// DB migrado supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 export const REVIEW_MIN_PRICE = 300_000
 
@@ -24,15 +26,12 @@ export const REVIEW_MIN_PRICE = 300_000
  */
 async function getRecentlyReviewedKeys(days = 60): Promise<Set<string>> {
   try {
-    const supabase = createAdminClient()
-    const since = new Date(Date.now() - days * 86_400_000).toISOString()
+    const since = new Date(Date.now() - days * 86_400_000)
 
-    const { data, error } = await supabase
-      .from('dual_blog_posts')
-      .select('title, car_review')
-      .gte('published_date', since)
-
-    if (error || !data) return new Set()
+    const data = await db.selectFrom('dual_blog_posts')
+      .select(['title', 'car_review'])
+      .where('published_date', '>=', since)
+      .execute()
 
     const keys = new Set<string>()
     for (const row of data as Array<{

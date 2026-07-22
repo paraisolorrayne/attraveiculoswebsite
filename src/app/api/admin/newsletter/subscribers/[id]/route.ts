@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Updateable } from 'kysely'
 import { isAuthenticated } from '@/lib/admin-auth'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // PUT - Update subscriber
 export async function PUT(
@@ -19,25 +23,21 @@ export async function PUT(
     const body = await request.json()
     const { name, is_active } = body
 
-    const supabase = createAdminClient()
     const updateData: Record<string, unknown> = {}
     if (name !== undefined) updateData.name = name
     if (is_active !== undefined) {
       updateData.is_active = is_active
-      if (!is_active) updateData.unsubscribed_at = new Date().toISOString()
-      else updateData.unsubscribed_at = null
+      updateData.unsubscribed_at = is_active ? null : new Date()
     }
 
-    const { data, error } = await supabase
-      .from('newsletter_subscribers')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
+    let data
+    try {
+      data = await db.updateTable('newsletter_subscribers')
+        .set(updateData as Updateable<Database['newsletter_subscribers']>)
+        .where('id', '=', id).returningAll().executeTakeFirst()
+    } catch (error) {
       console.error('Error updating subscriber:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'update failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, subscriber: data })
@@ -62,15 +62,11 @@ export async function DELETE(
     if (blocked) return blocked
 
     const { id } = await params
-    const supabase = createAdminClient()
-    const { error } = await supabase
-      .from('newsletter_subscribers')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
+    try {
+      await db.deleteFrom('newsletter_subscribers').where('id', '=', id).execute()
+    } catch (error) {
       console.error('Error deleting subscriber:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'delete failed' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

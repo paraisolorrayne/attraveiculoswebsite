@@ -1,14 +1,17 @@
 /**
- * Supabase-based Admin Authentication Service
- * Replaces the simple token-based authentication with Supabase Auth
- * Supports role-based access control (admin, gerente)
+ * Admin Authentication Service — agora sobre **Auth.js** (Credentials + Kysely
+ * + bcrypt), substituindo o Supabase GoTrue. Ver docs/MIGRACAO_POSTGRES_PURO.md.
+ *
+ * O nome do arquivo é mantido pra não quebrar os ~40 imports existentes.
+ * Interface preservada: getCurrentAdmin / isAuthenticated / signInWithEmail /
+ * signOut / hasRole / canAccessRoute.
  */
 
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { auth, signIn, signOut as authSignOut } from '@/auth'
+import { db } from '@/lib/db'
+import { canAccessRoute as canAccessRouteForRole, type AdminRole } from '@/lib/auth/roles'
 
-export type AdminRole = 'admin' | 'gerente'
+export type { AdminRole }
 
 export interface AdminUser {
   id: string
@@ -27,166 +30,94 @@ export interface AuthResult {
   user?: AdminUser
 }
 
+function iso(v: Date | string | null): string | null {
+  if (v == null) return null
+  return v instanceof Date ? v.toISOString() : String(v)
+}
+
 /**
- * Sign in with email and password
+ * Login com email e senha (Auth.js Credentials). Seta o cookie de sessão.
+ * Use em route handler / server action.
  */
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (error) {
-    return { success: false, error: error.message }
+  try {
+    await signIn('credentials', { email, password, redirect: false })
+  } catch (error) {
+    // Auth.js lança AuthError (ex.: CredentialsSignin) em falha de login
+    return { success: false, error: 'Email ou senha inválidos, ou acesso não autorizado' }
   }
-
-  if (!data.user) {
-    return { success: false, error: 'Login failed' }
-  }
-
-  // Check if user has admin access
-  const { data: adminUser, error: adminError } = await supabase
-    .from('admin_users')
-    .select('*')
-    .eq('id', data.user.id)
-    .eq('is_active', true)
-    .single()
-
-  if (adminError || !adminUser) {
-    // Sign out the user - they don't have admin access
-    await supabase.auth.signOut()
-    return { success: false, error: 'Acesso não autorizado ao painel admin' }
-  }
-
-  // Update last login
-  const adminClient = createAdminClient()
-  await adminClient.rpc('update_admin_last_login', { user_id: data.user.id })
-
-  return { success: true, user: adminUser as AdminUser }
+  const user = await getCurrentAdmin()
+  if (!user) return { success: false, error: 'Acesso não autorizado ao painel admin' }
+  return { success: true, user }
 }
 
-/**
- * Sign out current user
- */
+/** Logout — limpa o cookie de sessão. */
 export async function signOut(): Promise<void> {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  await authSignOut({ redirect: false })
 }
 
 /**
- * Get current authenticated admin user
+ * Admin autenticado atual. Lê a sessão (JWT) e busca o registro fresco em
+ * admin_users (garante is_active atualizado e os campos completos).
  */
 export async function getCurrentAdmin(): Promise<AdminUser | null> {
-  // DEV BYPASS: only active when explicitly enabled in local development
+  // DEV BYPASS: só quando explicitamente ligado em desenvolvimento local
   if (process.env.NODE_ENV === 'development' && process.env.ADMIN_AUTH_BYPASS === 'true') {
+    const now = new Date().toISOString()
     return {
-      id: 'dev-admin-bypass',
-      email: 'dev@localhost',
-      role: 'admin',
-      name: 'Dev Admin',
-      is_active: true,
-      last_login_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      id: 'dev-admin-bypass', email: 'dev@localhost', role: 'admin',
+      name: 'Dev Admin', is_active: true, last_login_at: now, created_at: now, updated_at: now,
     }
   }
 
-  const supabase = await createClient()
+  const session = await auth()
+  const id = session?.user?.id
+  if (!id) return null
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const row = await db.selectFrom('admin_users').selectAll()
+    .where('id', '=', id).where('is_active', '=', true).executeTakeFirst()
+  if (!row) return null
 
-  if (userError || !user) return null
-
-  const { data: adminUser, error: adminError } = await supabase
-    .from('admin_users')
-    .select('*')
-    .eq('id', user.id)
-    .eq('is_active', true)
-    .single()
-
-  if (adminError || !adminUser) return null
-
-  return adminUser as AdminUser | null
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role as AdminRole,
+    name: row.name,
+    is_active: row.is_active,
+    last_login_at: iso(row.last_login_at),
+    created_at: iso(row.created_at)!,
+    updated_at: iso(row.updated_at)!,
+  }
 }
 
-/**
- * Check if current user is authenticated as admin
- */
 export async function isAuthenticated(): Promise<boolean> {
-  const admin = await getCurrentAdmin()
-  return admin !== null
+  return (await getCurrentAdmin()) !== null
 }
 
-/**
- * Check if current user has specific role
- */
+/** admin tem acesso a tudo; senão, precisa bater o papel exato. */
 export async function hasRole(requiredRole: AdminRole): Promise<boolean> {
   const admin = await getCurrentAdmin()
   if (!admin) return false
-
-  // Admin has access to everything
   if (admin.role === 'admin') return true
-
   return admin.role === requiredRole
 }
 
-/**
- * Check if current user can access a specific route
- */
+/** Delegga pra matriz de acesso por papel (src/lib/auth/roles.ts). */
 export async function canAccessRoute(pathname: string): Promise<boolean> {
   const admin = await getCurrentAdmin()
   if (!admin) return false
-
-  // Admin has full access
-  if (admin.role === 'admin') return true
-
-  // Gerente: funções básicas — sons de motor, gerador de criativos e os
-  // módulos com visão limitada (blog, marketing — só as próprias tarefas)
-  if (admin.role === 'gerente') {
-    return pathname.startsWith('/admin/engine-sounds') ||
-      pathname.startsWith('/admin/gerador-criativos') ||
-      pathname.startsWith('/admin/blog') ||
-      pathname.startsWith('/admin/marketing') ||
-      pathname === '/admin/login' ||
-      pathname === '/admin/reset-password'
-  }
-
-  return false
+  return canAccessRouteForRole(admin.role, pathname)
 }
 
 /**
- * Request password reset email
+ * Reset de senha — TODO da Fase 5. O fluxo antigo usava o email do GoTrue.
+ * No Auth.js próprio precisa de: tabela de tokens de reset + envio via Resend
+ * (já disponível no site) + endpoint de verificação. Fica pra fatia seguinte.
  */
-export async function requestPasswordReset(email: string): Promise<AuthResult> {
-  const supabase = await createClient()
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/reset-password`,
-  })
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
+export async function requestPasswordReset(_email: string): Promise<AuthResult> {
+  return { success: false, error: 'Reset de senha ainda não migrado (Fase 5 — fatia de reset pendente)' }
 }
 
-/**
- * Update password (after reset token validation)
- */
-export async function updatePassword(newPassword: string): Promise<AuthResult> {
-  const supabase = await createClient()
-
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
-  })
-
-  if (error) {
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
+export async function updatePassword(_newPassword: string): Promise<AuthResult> {
+  return { success: false, error: 'Reset de senha ainda não migrado (Fase 5 — fatia de reset pendente)' }
 }
-

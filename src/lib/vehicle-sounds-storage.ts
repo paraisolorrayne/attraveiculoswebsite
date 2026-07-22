@@ -1,9 +1,11 @@
 /**
- * Vehicle Sounds Storage Service
- * Manages vehicle-sound associations using Supabase Database
+ * Vehicle Sounds Storage Service — associações veículo↔som.
+ * Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
  */
 
-import { createAdminClient } from './supabase/server'
+import { db } from '@/lib/db'
+import type { Selectable } from 'kysely'
+import type { VehicleSoundsTable } from '@/lib/db/types'
 
 export interface VehicleSoundRecord {
   id: string
@@ -21,21 +23,21 @@ export interface VehicleSoundRecord {
   updated_at: string
 }
 
+// Kysely devolve Date em timestamptz — normaliza pra ISO string (contrato antigo)
+function toRecord(r: Selectable<VehicleSoundsTable>): VehicleSoundRecord {
+  return {
+    ...r,
+    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+    updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
+  }
+}
+
 // Read all sound records
 export async function getAllVehicleSounds(): Promise<VehicleSoundRecord[]> {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_sounds')
-      .select('*')
-      .order('display_order', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching vehicle sounds:', error)
-      return []
-    }
-
-    return data || []
+    const rows = await db.selectFrom('vehicle_sounds').selectAll()
+      .orderBy('display_order', 'asc').execute()
+    return rows.map(toRecord)
   } catch (error) {
     console.error('Error in getAllVehicleSounds:', error)
     return []
@@ -45,19 +47,10 @@ export async function getAllVehicleSounds(): Promise<VehicleSoundRecord[]> {
 // Get active sound records (for public display)
 export async function getActiveVehicleSounds(): Promise<VehicleSoundRecord[]> {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_sounds')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching active vehicle sounds:', error)
-      return []
-    }
-
-    return data || []
+    const rows = await db.selectFrom('vehicle_sounds').selectAll()
+      .where('is_active', '=', true)
+      .orderBy('display_order', 'asc').execute()
+    return rows.map(toRecord)
   } catch (error) {
     console.error('Error in getActiveVehicleSounds:', error)
     return []
@@ -67,20 +60,9 @@ export async function getActiveVehicleSounds(): Promise<VehicleSoundRecord[]> {
 // Get a single sound record by ID
 export async function getVehicleSoundById(id: string): Promise<VehicleSoundRecord | null> {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_sounds')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null // Not found
-      console.error('Error fetching vehicle sound by ID:', error)
-      return null
-    }
-
-    return data
+    const row = await db.selectFrom('vehicle_sounds').selectAll()
+      .where('id', '=', id).executeTakeFirst()
+    return row ? toRecord(row) : null
   } catch (error) {
     console.error('Error in getVehicleSoundById:', error)
     return null
@@ -91,19 +73,9 @@ export async function getVehicleSoundById(id: string): Promise<VehicleSoundRecor
 export async function createVehicleSound(
   data: Omit<VehicleSoundRecord, 'id' | 'created_at' | 'updated_at'>
 ): Promise<VehicleSoundRecord> {
-  const supabase = createAdminClient()
-  const { data: newSound, error } = await supabase
-    .from('vehicle_sounds')
-    .insert(data)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error creating vehicle sound:', error)
-    throw new Error(error.message)
-  }
-
-  return newSound
+  const row = await db.insertInto('vehicle_sounds').values(data)
+    .returningAll().executeTakeFirstOrThrow()
+  return toRecord(row)
 }
 
 // Update a sound record
@@ -112,21 +84,9 @@ export async function updateVehicleSound(
   data: Partial<Omit<VehicleSoundRecord, 'id' | 'created_at'>>
 ): Promise<VehicleSoundRecord | null> {
   try {
-    const supabase = createAdminClient()
-    const { data: updatedSound, error } = await supabase
-      .from('vehicle_sounds')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null // Not found
-      console.error('Error updating vehicle sound:', error)
-      return null
-    }
-
-    return updatedSound
+    const row = await db.updateTable('vehicle_sounds').set(data)
+      .where('id', '=', id).returningAll().executeTakeFirst()
+    return row ? toRecord(row) : null
   } catch (error) {
     console.error('Error in updateVehicleSound:', error)
     return null
@@ -136,20 +96,10 @@ export async function updateVehicleSound(
 // Delete a sound record
 export async function deleteVehicleSound(id: string): Promise<boolean> {
   try {
-    const supabase = createAdminClient()
-    const { error } = await supabase
-      .from('vehicle_sounds')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error deleting vehicle sound:', error)
-      return false
-    }
-
+    await db.deleteFrom('vehicle_sounds').where('id', '=', id).execute()
     return true
   } catch (error) {
-    console.error('Error in deleteVehicleSound:', error)
+    console.error('Error deleting vehicle sound:', error)
     return false
   }
 }
@@ -157,19 +107,9 @@ export async function deleteVehicleSound(id: string): Promise<boolean> {
 // Check if a vehicle already has a sound associated
 export async function vehicleHasSound(vehicleId: string): Promise<boolean> {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_sounds')
-      .select('id')
-      .eq('vehicle_id', vehicleId)
-      .limit(1)
-
-    if (error) {
-      console.error('Error checking if vehicle has sound:', error)
-      return false
-    }
-
-    return (data?.length || 0) > 0
+    const row = await db.selectFrom('vehicle_sounds').select('id')
+      .where('vehicle_id', '=', vehicleId).limit(1).executeTakeFirst()
+    return !!row
   } catch (error) {
     console.error('Error in vehicleHasSound:', error)
     return false
@@ -179,24 +119,13 @@ export async function vehicleHasSound(vehicleId: string): Promise<boolean> {
 // Get sound record by vehicle ID (for vehicle detail pages)
 export async function getVehicleSoundByVehicleId(vehicleId: string): Promise<VehicleSoundRecord | null> {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('vehicle_sounds')
-      .select('*')
-      .eq('vehicle_id', vehicleId)
-      .eq('is_active', true)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null // Not found
-      console.error('Error fetching vehicle sound by vehicle ID:', error)
-      return null
-    }
-
-    return data
+    const row = await db.selectFrom('vehicle_sounds').selectAll()
+      .where('vehicle_id', '=', vehicleId)
+      .where('is_active', '=', true)
+      .executeTakeFirst()
+    return row ? toRecord(row) : null
   } catch (error) {
     console.error('Error in getVehicleSoundByVehicleId:', error)
     return null
   }
 }
-

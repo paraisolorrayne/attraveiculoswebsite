@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { db } from '@/lib/db'
+
+// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
 // POST - Public endpoint for newsletter subscription
 export async function POST(request: NextRequest) {
@@ -17,18 +19,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
-
-    const { error } = await supabase
-      .from('newsletter_subscribers')
-      .upsert({
+    try {
+      await db.insertInto('newsletter_subscribers').values({
         email: emailClean,
         is_active: true,
         source: source || 'site',
-        subscribed_at: new Date().toISOString(),
-      }, { onConflict: 'email' })
-
-    if (error) {
+        subscribed_at: new Date(),
+      })
+        .onConflict((oc) => oc.column('email').doUpdateSet({
+          is_active: true,
+          source: (eb) => eb.ref('excluded.source'),
+          subscribed_at: (eb) => eb.ref('excluded.subscribed_at'),
+        }))
+        .execute()
+    } catch (error) {
       console.error('Error subscribing:', error)
       return NextResponse.json({ error: 'Erro ao cadastrar' }, { status: 500 })
     }

@@ -58,7 +58,7 @@ const CONCURRENCY = 2 // max paralelo (Replicate aceita mais, mas evita rate lim
 interface ProcessResult {
   vehicleId: string
   label: string
-  status: 'ok' | 'cached' | 'no-photo' | 'failed' | 'non-numeric-id'
+  status: 'ok' | 'rejected' | 'cached' | 'no-photo' | 'failed' | 'non-numeric-id'
   durationMs: number
 }
 
@@ -78,8 +78,9 @@ async function processVehicle(vehicle: Vehicle): Promise<ProcessResult> {
   }
 
   const cached = await getCachedHeroAsset(vehicle.id, sourceUrl)
-  // Cache COMPLETO = tem no_bg E composite. Pula sem processar.
-  if (cached && cached.composite_public_url) {
+  // Decisão já tomada pra esta foto (recorte aceito OU reprovado no gate) →
+  // pula sem re-billar o Replicate. Linhas legadas têm no_bg e status NULL.
+  if (cached && (cached.rembg_status || cached.no_bg_public_url)) {
     return {
       vehicleId: vehicle.id,
       label,
@@ -88,16 +89,18 @@ async function processVehicle(vehicle: Vehicle): Promise<ProcessResult> {
     }
   }
 
-  // Cache parcial (no_bg ok, composite faltando) OU cache vazio → processa.
-  // A função generateAndCacheHeroAsset reutiliza o no_bg cacheado se existir
-  // e só roda Flux Fill (sem rebuild do BRIA, economiza $0.011/veículo).
-  const stage = cached ? 'composite' : 'full'
-  console.log(`  [${label}] processando (${stage})…`)
+  // Sem decisão em cache → processa (roda os dois modelos + gate).
+  console.log(`  [${label}] processando…`)
   const asset = await generateAndCacheHeroAsset(vehicle.id, vehicle.slug, sourceUrl)
+  const status: ProcessResult['status'] = !asset
+    ? 'failed'
+    : asset.rembg_status === 'rejected'
+      ? 'rejected'
+      : 'ok'
   return {
     vehicleId: vehicle.id,
     label,
-    status: asset ? 'ok' : 'failed',
+    status,
     durationMs: Date.now() - start,
   }
 }
@@ -161,6 +164,7 @@ async function main() {
   // Resumo
   const summary = {
     ok: 0,
+    rejected: 0,
     cached: 0,
     failed: 0,
     'no-photo': 0,
@@ -172,20 +176,25 @@ async function main() {
     totalDuration += r.durationMs
     if (r.status === 'failed') {
       console.error(`  ✗ ${r.label}: FALHOU`)
+    } else if (r.status === 'rejected') {
+      console.log(`  ⚠ ${r.label}: recorte reprovado no gate — hero usa foto original`)
     } else if (r.status === 'ok') {
       console.log(`  ✓ ${r.label}: ${(r.durationMs / 1000).toFixed(1)}s`)
     }
   }
 
+  // Cada veículo processado (ok OU rejected) roda os DOIS modelos → ~$0.016.
+  const billed = summary.ok + summary.rejected
   const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1)
   console.log('\n[preprocess-hero] ────────────────────────────────────────')
-  console.log(`  Novos processados:    ${summary.ok}`)
+  console.log(`  Recorte aceito:       ${summary.ok}`)
+  console.log(`  Recorte reprovado:    ${summary.rejected} (usam foto original)`)
   console.log(`  Já em cache:          ${summary.cached}`)
   console.log(`  Sem foto:             ${summary['no-photo']}`)
   console.log(`  ID não-numérico:      ${summary['non-numeric-id']}`)
   console.log(`  Falharam:             ${summary.failed}`)
   console.log(`  Tempo total:          ${elapsedSec}s`)
-  console.log(`  Custo estimado:       ~$${(summary.ok * 0.005).toFixed(3)} (USD)`)
+  console.log(`  Custo estimado:       ~$${(billed * 0.016).toFixed(3)} (USD)`)
   console.log('[preprocess-hero] ────────────────────────────────────────')
 
   process.exit(summary.failed > 0 ? 1 : 0)
