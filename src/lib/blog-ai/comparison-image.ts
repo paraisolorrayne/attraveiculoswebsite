@@ -41,8 +41,8 @@ export async function composeComparisonImage(photoUrlA: string, photoUrlB: strin
   const [rawA, rawB] = await Promise.all([fetchImage(photoUrlA), fetchImage(photoUrlB)])
 
   const [left, right] = await Promise.all([
-    sharp(rawA).resize(HALF, H, { fit: 'cover', position: 'attention' }).toBuffer(),
-    sharp(rawB).resize(HALF, H, { fit: 'cover', position: 'attention' }).toBuffer(),
+    sharp(rawA).resize(HALF, H, { fit: 'cover', position: 'centre' }).toBuffer(),
+    sharp(rawB).resize(HALF, H, { fit: 'cover', position: 'centre' }).toBuffer(),
   ])
 
   return sharp({ create: { width: W, height: H, channels: 3, background: '#101014' } })

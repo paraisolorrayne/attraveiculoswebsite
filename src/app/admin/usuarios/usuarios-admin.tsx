@@ -227,9 +227,8 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
       </div>
 
       <p className="mt-4 text-xs text-foreground-secondary">
-        Contas usam e-mail + senha (Supabase Auth). &quot;Marketing&quot; acessa Sons de Motor,
-        Criativos, Blog e as próprias tarefas de Marketing. Não é possível desativar o
-        último administrador ativo.
+        Contas usam e-mail + senha. &quot;Marketing&quot; acessa Marketing, Criativos, Blog,
+        Notícias e Newsletter. Não é possível desativar o último administrador ativo.
       </p>
     </div>
   )
