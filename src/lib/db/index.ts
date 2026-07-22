@@ -30,6 +30,17 @@ function createPool(): Pool {
       '[db] DATABASE_URL não configurada — o Postgres da VPS precisa estar no .env antes de rodar queries.',
     )
   }
+  // Diagnóstico: loga o HOST que o pool vai usar (sem senha). Ajuda a caçar o
+  // ENOIDENTIFIER — se aparecer um host *.supabase.* aqui, a env está errada.
+  try {
+    const u = new URL(connectionString)
+    console.log(`[db] pool -> ${u.hostname}:${u.port || '5432'} (user=${u.username}, db=${u.pathname.slice(1)})`)
+    if (u.hostname.includes('supabase') || u.hostname.includes('pooler')) {
+      console.error(`[db] ALERTA: DATABASE_URL aponta pra ${u.hostname} (Supabase), não pro Postgres local — corrija o .env.production!`)
+    }
+  } catch {
+    console.warn('[db] DATABASE_URL não é uma URL válida?')
+  }
   return new Pool({
     connectionString,
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),

@@ -106,6 +106,7 @@ export function CrmAdmin() {
   const [erro, setErro] = useState<string | null>(null)
   const [selecionado, setSelecionado] = useState<CrmCard | null>(null)
   const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
+  const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = qualquer período
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -143,9 +144,17 @@ export function CrmAdmin() {
   const etapas: string[] = ETAPAS_FUNIL.map(f => f.id)
   for (const c of cards) if (!etapas.includes(c.etapa)) etapas.push(c.etapa)
 
-  // Vendedores únicos (pro filtro) + cards após aplicar o filtro
+  // Vendedores únicos (pro filtro) + cards após aplicar os filtros (vendedor + período)
   const vendedores = [...new Set(cards.map(c => c.vendedor).filter((v): v is string => !!v))].sort()
-  const cardsFiltrados = filtroVendedor ? cards.filter(c => c.vendedor === filtroVendedor) : cards
+  const agora = Date.now()
+  const cardsFiltrados = cards.filter(c => {
+    if (filtroVendedor && c.vendedor !== filtroVendedor) return false
+    if (filtroDias > 0) {
+      const t = new Date(c.atualizado_em).getTime()
+      if (Number.isNaN(t) || agora - t > filtroDias * 86_400_000) return false
+    }
+    return true
+  })
 
   return (
     <div className="max-w-full px-4 sm:px-6 py-8">
@@ -157,7 +166,19 @@ export function CrmAdmin() {
             use o Fykos: as mudanças aparecem aqui automaticamente.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <select
+            value={filtroDias}
+            onChange={e => setFiltroDias(Number(e.target.value))}
+            className="px-3 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors"
+            title="Filtrar por período (última atualização)"
+          >
+            <option value={0}>Qualquer período</option>
+            <option value={7}>Últimos 7 dias</option>
+            <option value={15}>Últimos 15 dias</option>
+            <option value={30}>Últimos 30 dias</option>
+            <option value={90}>Últimos 90 dias</option>
+          </select>
           {vendedores.length > 0 && (
             <select
               value={filtroVendedor}

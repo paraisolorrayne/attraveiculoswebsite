@@ -26,6 +26,12 @@ npm ci
 echo "==> [3/7] build (site fica fora do ar só nesta etapa)"
 pm2 stop attra
 rm -rf .next
+# Blindagem contra ENOIDENTIFIER: força a DATABASE_URL LOCAL do .env.production,
+# ignorando qualquer DATABASE_URL do Supabase que tenha vazado no ambiente. Se
+# não houver linha local, mantém o que o `source` já setou (fallback).
+_dburl_local="$(grep -E '^DATABASE_URL=.*(localhost|127\.0\.0\.1)' .env.production | tail -1 | cut -d= -f2-)"
+[ -n "$_dburl_local" ] && export DATABASE_URL="$_dburl_local"
+echo "    host do banco no build: $(printf '%s' "${DATABASE_URL:-VAZIA}" | sed -E 's#^[a-z]+://[^@]*@##; s#/.*##')"
 npm run build
 test -f .next/standalone/server.js || { echo "ERRO: server.js não gerado — build falhou"; exit 1; }
 
