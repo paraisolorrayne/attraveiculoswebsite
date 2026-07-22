@@ -13,6 +13,7 @@ interface CrmCard {
   valor: number | null
   origem: string | null
   vendedor: string | null
+  criado_em: string | null
   atualizado_em: string
   dados: Record<string, unknown> | null
 }
@@ -144,13 +145,19 @@ export function CrmAdmin() {
   const etapas: string[] = ETAPAS_FUNIL.map(f => f.id)
   for (const c of cards) if (!etapas.includes(c.etapa)) etapas.push(c.etapa)
 
-  // Vendedores únicos (pro filtro) + cards após aplicar os filtros (vendedor + período)
-  const vendedores = [...new Set(cards.map(c => c.vendedor).filter((v): v is string => !!v))].sort()
+  // Vendedores únicos (pro filtro) + cards após aplicar os filtros (vendedor + período).
+  // Alguns nomes não são vendedores (ex.: Guilherme) — ocultos do filtro.
+  const VENDEDORES_OCULTOS = ['guilherme']
+  const vendedorOculto = (v: string) => VENDEDORES_OCULTOS.some(o => v.toLowerCase().includes(o))
+  const vendedores = [...new Set(cards.map(c => c.vendedor).filter((v): v is string => !!v))]
+    .filter(v => !vendedorOculto(v))
+    .sort()
   const agora = Date.now()
   const cardsFiltrados = cards.filter(c => {
     if (filtroVendedor && c.vendedor !== filtroVendedor) return false
     if (filtroDias > 0) {
-      const t = new Date(c.atualizado_em).getTime()
+      // Idade do lead pela data de CRIAÇÃO (fallback: última atualização)
+      const t = new Date(c.criado_em || c.atualizado_em).getTime()
       if (Number.isNaN(t) || agora - t > filtroDias * 86_400_000) return false
     }
     return true
@@ -221,6 +228,11 @@ export function CrmAdmin() {
             (<code>POST /api/webhook/fykos-crm</code>). Assim que o primeiro
             lead for enviado, ele aparece aqui.
           </p>
+        </div>
+      ) : cardsFiltrados.length === 0 ? (
+        <div className="max-w-7xl mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
+          <p className="text-foreground font-medium">Nenhum lead para os filtros selecionados</p>
+          <p className="text-sm text-foreground-secondary mt-2">Ajuste o período ou o vendedor no topo.</p>
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4 max-w-7xl mx-auto">

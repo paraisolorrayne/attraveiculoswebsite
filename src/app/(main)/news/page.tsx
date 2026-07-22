@@ -109,8 +109,11 @@ function formatDate(dateString: string | Date): string {
 // parses them as UTC midnight, so rendering in a negative-offset timezone
 // rolled the label back a day ("31 mai" showed as "30 mai"). Parse and render
 // in UTC so the stored calendar day is preserved verbatim.
-function formatWeekDate(ymd: string): string {
-  return new Date(`${ymd}T00:00:00Z`).toLocaleDateString('pt-BR', {
+function formatWeekDate(ymd: string): string | null {
+  if (!ymd) return null
+  const d = new Date(`${ymd}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('pt-BR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -118,8 +121,13 @@ function formatWeekDate(ymd: string): string {
   })
 }
 
-function formatWeekRange(start: string, end: string): string {
-  return `${formatWeekDate(start)} - ${formatWeekDate(end)}`
+// Retorna undefined se as datas forem nulas/inválidas — aí o subtítulo some
+// (em vez de mostrar "Invalid Date - Invalid Date").
+function formatWeekRange(start: string, end: string): string | undefined {
+  const s = formatWeekDate(start)
+  const e = formatWeekDate(end)
+  if (s && e) return `${s} - ${e}`
+  return s || e || undefined
 }
 
 function NewsCard({ article, featured = false }: { article: NewsArticle; featured?: boolean }) {

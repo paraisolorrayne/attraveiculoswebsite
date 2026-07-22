@@ -40,9 +40,12 @@ async function fetchImage(url: string): Promise<Buffer> {
 export async function composeComparisonImage(photoUrlA: string, photoUrlB: string): Promise<Buffer> {
   const [rawA, rawB] = await Promise.all([fetchImage(photoUrlA), fetchImage(photoUrlB)])
 
+  // 'contain' (não 'cover'): mostra o carro INTEIRO, sem cortar nas laterais/divisa.
+  // O que sobra vira faixa na cor do fundo do card (#101014), parecendo intencional.
+  const bg = { r: 16, g: 16, b: 20, alpha: 1 }
   const [left, right] = await Promise.all([
-    sharp(rawA).resize(HALF, H, { fit: 'cover', position: 'centre' }).toBuffer(),
-    sharp(rawB).resize(HALF, H, { fit: 'cover', position: 'centre' }).toBuffer(),
+    sharp(rawA).resize(HALF, H, { fit: 'contain', background: bg }).toBuffer(),
+    sharp(rawB).resize(HALF, H, { fit: 'contain', background: bg }).toBuffer(),
   ])
 
   return sharp({ create: { width: W, height: H, channels: 3, background: '#101014' } })
