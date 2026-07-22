@@ -105,6 +105,7 @@ export function CrmAdmin() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [selecionado, setSelecionado] = useState<CrmCard | null>(null)
+  const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -142,6 +143,10 @@ export function CrmAdmin() {
   const etapas: string[] = ETAPAS_FUNIL.map(f => f.id)
   for (const c of cards) if (!etapas.includes(c.etapa)) etapas.push(c.etapa)
 
+  // Vendedores únicos (pro filtro) + cards após aplicar o filtro
+  const vendedores = [...new Set(cards.map(c => c.vendedor).filter((v): v is string => !!v))].sort()
+  const cardsFiltrados = filtroVendedor ? cards.filter(c => c.vendedor === filtroVendedor) : cards
+
   return (
     <div className="max-w-full px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6 max-w-7xl mx-auto">
@@ -152,14 +157,29 @@ export function CrmAdmin() {
             use o Fykos: as mudanças aparecem aqui automaticamente.
           </p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-3">
+          {vendedores.length > 0 && (
+            <select
+              value={filtroVendedor}
+              onChange={e => setFiltroVendedor(e.target.value)}
+              className="px-3 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors max-w-[200px]"
+              title="Filtrar por vendedor"
+            >
+              <option value="">Todos os vendedores</option>
+              {vendedores.map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {erro && (
@@ -182,9 +202,9 @@ export function CrmAdmin() {
           </p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 max-w-7xl mx-auto">
           {etapas.map(etapa => {
-            const daEtapa = cards.filter(c => c.etapa === etapa)
+            const daEtapa = cardsFiltrados.filter(c => c.etapa === etapa)
             const estilo = etapaEstilo(etapa)
             return (
               <div key={etapa} className="flex-shrink-0 w-72">
