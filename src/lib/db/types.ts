@@ -430,6 +430,16 @@ export interface MarketingCampaignsTable {
   updated_at: Timestamp
 }
 
+export interface MarketingCreativesTable {
+  id: Generated<string>
+  image_url: string
+  vehicle_name: string | null
+  created_by: string | null
+  created_by_name: string | null
+  status: Generated<string>
+  created_at: Timestamp
+}
+
 export interface CampaignVehiclesTable {
   id: Generated<string>
   campaign_id: string
@@ -536,6 +546,7 @@ export interface Database {
   task_comments: TaskCommentsTable
   task_status_history: TaskStatusHistoryTable
   marketing_campaigns: MarketingCampaignsTable
+  marketing_creatives: MarketingCreativesTable
   campaign_vehicles: CampaignVehiclesTable
   newsletter_campaigns: NewsletterCampaignsTable
   newsletter_subscribers: NewsletterSubscribersTable

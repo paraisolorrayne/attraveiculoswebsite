@@ -11,6 +11,7 @@ import {
   Loader2,
   Download,
   Megaphone,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
@@ -19,6 +20,7 @@ import { MetricsDashboard } from './components/metrics-dashboard'
 import { TaskModal } from './components/task-modal'
 import { CampaignsBoard } from './components/campaigns-board'
 import { CampaignModal } from './components/campaign-modal'
+import { CreativesBoard } from './components/creatives-board'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
 import { canAccessRoute } from '@/lib/auth/roles'
 import type { MarketingTask, MarketingStrategy, TaskStatus, CampaignWithVehicles, CampaignStatus } from '@/types/database'
@@ -27,7 +29,7 @@ interface MarketingAdminProps {
   admin: AdminUser
 }
 
-type ViewMode = 'campanhas' | 'kanban' | 'dashboard'
+type ViewMode = 'campanhas' | 'criativos' | 'kanban' | 'dashboard'
 
 export interface TaskWithDetails extends MarketingTask {
   strategy?: { id: string; name: string; category: string } | null
@@ -241,6 +243,18 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               Campanhas
             </button>
             <button
+              onClick={() => setViewMode('criativos')}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                viewMode === 'criativos'
+                  ? "bg-primary text-white"
+                  : "text-foreground-secondary hover:text-foreground hover:bg-background-soft"
+              )}
+            >
+              <ImageIcon className="w-4 h-4" />
+              Criativos
+            </button>
+            <button
               onClick={() => setViewMode('kanban')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
@@ -283,7 +297,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
               <span className="hidden sm:inline">Atualizar</span>
             </button>
-            {(viewMode === 'campanhas' ? canManageCampaigns : isAdmin) && (
+            {((viewMode === 'campanhas' && canManageCampaigns) || (viewMode === 'kanban' && isAdmin)) && (
               <button
                 onClick={viewMode === 'campanhas' ? handleCreateCampaign : handleCreateTask}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
@@ -307,6 +321,8 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
             onStatusChange={handleCampaignStatusChange}
             isAdmin={canManageCampaigns}
           />
+        ) : viewMode === 'criativos' ? (
+          <CreativesBoard />
         ) : viewMode === 'kanban' ? (
           <KanbanBoard
             tasks={tasks}
