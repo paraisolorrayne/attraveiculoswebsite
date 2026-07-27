@@ -119,3 +119,51 @@ export function getEducativoCategories(): string[] {
   return ['Curadoria', 'Mercado', 'Dicas', 'Lifestyle']
 }
 
+// ===========================================
+// PREVIEW (listagens) — sem `content`/`seo` pra não inflar o payload RSC
+// ===========================================
+
+export interface BlogPostPreview {
+  id: string
+  post_type: BlogPostType
+  title: string
+  slug: string
+  excerpt: string
+  featured_image: string
+  featured_image_alt: string
+  published_date: string
+  reading_time: string
+  educativo?: { category?: string; seo_keyword?: string }
+  car_review?: { brand: string; model: string; year: number; version?: string }
+}
+
+export function toPreview(post: DualBlogPost): BlogPostPreview {
+  return {
+    id: post.id,
+    post_type: post.post_type,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    featured_image: post.featured_image,
+    featured_image_alt: post.featured_image_alt,
+    published_date: post.published_date,
+    reading_time: post.reading_time,
+    educativo: post.educativo
+      ? { category: post.educativo.category, seo_keyword: post.educativo.seo_keyword }
+      : undefined,
+    car_review: post.car_review
+      ? {
+          brand: post.car_review.brand,
+          model: post.car_review.model,
+          year: post.car_review.year,
+          version: post.car_review.version,
+        }
+      : undefined,
+  }
+}
+
+export async function getBlogPostsPreview(options: GetBlogPostsOptions = {}): Promise<BlogPostPreview[]> {
+  const posts = await getBlogPosts(options)
+  return posts.map(toPreview)
+}
+
