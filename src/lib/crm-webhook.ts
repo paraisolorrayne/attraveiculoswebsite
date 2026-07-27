@@ -18,6 +18,14 @@ export function verifyCrmSignature(rawBody: string, signatureHex: string | null,
 	return timingSafeEqual(given, expected)
 }
 
+/** Comparação de segredos em tempo constante (para o header legado v1). */
+export function safeEquals(a: string, b: string): boolean {
+	const ba = Buffer.from(a)
+	const bb = Buffer.from(b)
+	if (ba.length !== bb.length) return false
+	return timingSafeEqual(ba, bb)
+}
+
 const ETAPA_V1_MAP: Record<string, { etapa: string; situacaoImplicita?: string }> = {
 	aguardando_vendedor: { etapa: 'novo' },
 	encerrado_sucesso: { etapa: 'encerrado_ganho' },
@@ -30,17 +38,28 @@ export function normalizeEtapa(etapa: string): { etapa: string; situacaoImplicit
 
 const CAMPOS_TEXTO = ['situacao', 'fonte_evento', 'nome', 'telefone', 'email', 'veiculo_troca', 'origem', 'vendedor', 'andamento', 'impedimento', 'proxima_acao', 'motivo_encerramento'] as const
 const CAMPOS_DATA = ['proxima_acao_em', 'atribuido_em', 'primeiro_contato_em', 'encerrado_em'] as const
-const CAMPOS_CONHECIDOS = new Set<string>([...CAMPOS_TEXTO, ...CAMPOS_DATA, 'id', 'etapa', 'atualizado_em', 'veiculo_interesse', 'veiculo', 'valor'])
+// 'dados', 'cards' e 'remover' são envelope/coluna interna — nunca viram extras
+const CAMPOS_CONHECIDOS = new Set<string>([...CAMPOS_TEXTO, ...CAMPOS_DATA, 'id', 'etapa', 'atualizado_em', 'veiculo_interesse', 'veiculo', 'valor', 'dados', 'cards', 'remover'])
 
 export type CrmCardRowV2 = { id: string; atualizado_em: Date } & Record<string, unknown>
+
+/** true se o payload traz atualizado_em presente porém inválido (deve virar 400). */
+export function atualizadoEmInvalido(payload: Record<string, unknown>): boolean {
+	if (!('atualizado_em' in payload)) return false
+	return typeof payload.atualizado_em !== 'string' || isNaN(Date.parse(payload.atualizado_em))
+}
 
 export function mergeCardV2(
 	existing: { atualizado_em: Date | string; dados: Record<string, unknown> | null } | null,
 	payload: Record<string, unknown>,
-): { action: 'skip' } | { action: 'insert' | 'update'; row: CrmCardRowV2 } {
-	const atualizadoEm = typeof payload.atualizado_em === 'string' && !isNaN(Date.parse(payload.atualizado_em))
-		? new Date(payload.atualizado_em)
-		: new Date()
+): { action: 'skip' } | { action: 'invalid'; motivo: string } | { action: 'insert' | 'update'; row: CrmCardRowV2 } {
+	// atualizado_em presente mas imprestável NÃO pode virar "agora": promoveria
+	// um evento quebrado a mais novo que todos e bloquearia os legítimos.
+	if (atualizadoEmInvalido(payload)) {
+		return { action: 'invalid', motivo: 'atualizado_em inválido (esperado ISO-8601)' }
+	}
+	// Ausente (emissor v1 da transição): usa o relógio do servidor, como o v1 fazia.
+	const atualizadoEm = 'atualizado_em' in payload ? new Date(payload.atualizado_em as string) : new Date()
 
 	if (existing && atualizadoEm.getTime() <= new Date(existing.atualizado_em).getTime()) {
 		return { action: 'skip' }
@@ -63,7 +82,9 @@ export function mergeCardV2(
 
 	if ('valor' in payload) {
 		const v = payload.valor
-		row.valor = v === null || v === '' ? null : Number(v)
+		const n = v === null || v === '' ? null : Number(v)
+		// NaN entraria como 'NaN' na coluna NUMERIC e envenenaria os KPIs
+		row.valor = n !== null && Number.isFinite(n) ? n : null
 	}
 
 	for (const campo of CAMPOS_TEXTO) {
@@ -79,13 +100,19 @@ export function mergeCardV2(
 		}
 	}
 
-	// Extras desconhecidos → dados (merge com o existente; compatibilidade futura)
+	// Extras desconhecidos → dados (merge com o existente; compatibilidade
+	// futura). "null limpa" vale também aqui: remove a chave do JSONB.
 	const extras: Record<string, unknown> = {}
 	for (const [k, v] of Object.entries(payload)) {
 		if (!CAMPOS_CONHECIDOS.has(k)) extras[k] = v
 	}
 	if (Object.keys(extras).length > 0) {
-		row.dados = { ...(existing?.dados ?? {}), ...extras }
+		const merged: Record<string, unknown> = { ...(existing?.dados ?? {}) }
+		for (const [k, v] of Object.entries(extras)) {
+			if (v === null) delete merged[k]
+			else merged[k] = v
+		}
+		row.dados = Object.keys(merged).length > 0 ? merged : null
 	}
 
 	return { action: existing ? 'update' : 'insert', row }

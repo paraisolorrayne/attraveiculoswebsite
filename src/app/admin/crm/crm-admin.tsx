@@ -341,12 +341,12 @@ export function CrmAdmin() {
 														<span className="line-clamp-2">{c.impedimento}</span>
 													</div>
 												)}
-												{/* Próxima ação */}
-												{c.proxima_acao && (
+												{/* Próxima ação (mostra também quando só a data veio) */}
+												{(c.proxima_acao || c.proxima_acao_em) && (
 													<div className={`mt-2 flex items-start gap-1.5 text-xs ${proximaAtrasada ? 'text-amber-600 dark:text-amber-400' : 'text-foreground-secondary'}`}>
 														<CalendarClock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
 														<span className="line-clamp-2">
-															{c.proxima_acao}
+															{c.proxima_acao || 'Próxima ação'}
 															{c.proxima_acao_em && ` · ${fmtDataCurta(c.proxima_acao_em)}`}
 															{proximaAtrasada && ' (atrasada)'}
 														</span>

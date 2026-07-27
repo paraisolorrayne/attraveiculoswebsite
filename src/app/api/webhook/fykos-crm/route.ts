@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { Insertable, Updateable } from 'kysely'
+import type { Insertable, Updateable, Transaction } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
-import { verifyCrmSignature, mergeCardV2 } from '@/lib/crm-webhook'
+import { verifyCrmSignature, safeEquals, mergeCardV2, atualizadoEmInvalido } from '@/lib/crm-webhook'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +18,47 @@ export const dynamic = 'force-dynamic'
 //
 // Payload: um card no corpo, ou lote em `cards[]`. `{ "remover": [ids] }`
 // continua suportado (lead saiu do funil no emissor).
+//
+// Concorrência: cada card roda numa transação com SELECT ... FOR UPDATE, então
+// dois webhooks simultâneos do mesmo lead se serializam e a regra de ordenação
+// vale mesmo sob corrida. Insert simultâneo de id novo cai num retry único.
+
+type ResultadoCard = 'upsert' | 'skip' | 'retry'
+
+async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<string, unknown>): Promise<ResultadoCard> {
+	const existing = await trx.selectFrom('crm_cards')
+		.select(['atualizado_em', 'dados'])
+		.where('id', '=', id)
+		.forUpdate()
+		.executeTakeFirst()
+
+	const r = mergeCardV2(
+		existing
+			? { atualizado_em: existing.atualizado_em as Date, dados: existing.dados as Record<string, unknown> | null }
+			: null,
+		card,
+	)
+	if (r.action === 'skip') return 'skip'
+	if (r.action === 'invalid') throw new Error(r.motivo) // pré-validado no handler; não deve acontecer
+
+	if (r.action === 'insert') {
+		const ins = await trx.insertInto('crm_cards')
+			.values(r.row as unknown as Insertable<Database['crm_cards']>)
+			.onConflict(oc => oc.column('id').doNothing())
+			.executeTakeFirst()
+		// 0 linhas = outro request inseriu este id entre o SELECT e o INSERT —
+		// reprocessa uma vez como update (a linha agora existe e será lockada)
+		return Number(ins.numInsertedOrUpdatedRows ?? 0) > 0 ? 'upsert' : 'retry'
+	}
+
+	const { id: _id, ...mudancas } = r.row
+	void _id
+	await trx.updateTable('crm_cards')
+		.set(mudancas as unknown as Updateable<Database['crm_cards']>)
+		.where('id', '=', id)
+		.execute()
+	return 'upsert'
+}
 
 export async function POST(request: NextRequest) {
 	const secretV2 = process.env.CRM_SITE_WEBHOOK_SECRET || process.env.FYKOS_CRM_SECRET
@@ -28,20 +69,38 @@ export async function POST(request: NextRequest) {
 
 	const rawBody = await request.text()
 	const assinaturaOk = !!secretV2 && verifyCrmSignature(rawBody, request.headers.get('x-crm-signature'), secretV2)
-	const legadoOk = !!secretV1 && request.headers.get('x-webhook-secret') === secretV1
+	const headerLegado = request.headers.get('x-webhook-secret')
+	const legadoOk = !!secretV1 && !!headerLegado && safeEquals(headerLegado, secretV1)
 	if (!assinaturaOk && !legadoOk) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 	}
 
 	let body: Record<string, unknown>
 	try {
-		body = JSON.parse(rawBody)
+		const parsed: unknown = JSON.parse(rawBody)
+		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('não é objeto')
+		body = parsed as Record<string, unknown>
 	} catch {
 		return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
 	}
 
-	// Remoções (legado; no v2 o lead é encerrado, não removido)
 	const remover = Array.isArray(body.remover) ? body.remover.map(String) : []
+	const lista: Record<string, unknown>[] = Array.isArray(body.cards)
+		? (body.cards as Record<string, unknown>[])
+		: (body.id !== undefined ? [body] : [])
+
+	// Validação completa ANTES de qualquer escrita (inclusive remoções)
+	if (lista.some(c => c.id === undefined || c.id === null || String(c.id) === '')) {
+		return NextResponse.json({ error: 'Todo card precisa de id' }, { status: 400 })
+	}
+	const cardInvalido = lista.find(c => atualizadoEmInvalido(c))
+	if (cardInvalido) {
+		return NextResponse.json(
+			{ error: `Card ${String(cardInvalido.id)}: atualizado_em inválido (esperado ISO-8601)` },
+			{ status: 400 },
+		)
+	}
+
 	if (remover.length > 0) {
 		try {
 			await db.deleteFrom('crm_cards').where('id', 'in', remover).execute()
@@ -50,44 +109,18 @@ export async function POST(request: NextRequest) {
 		}
 	}
 
-	const lista: Record<string, unknown>[] = Array.isArray(body.cards)
-		? (body.cards as Record<string, unknown>[])
-		: (body.id !== undefined ? [body] : [])
-
-	if (lista.some(c => c.id === undefined || c.id === null || String(c.id) === '')) {
-		return NextResponse.json({ error: 'Todo card precisa de id' }, { status: 400 })
-	}
-
 	let upserts = 0
 	let ignorados = 0
 	try {
 		for (const card of lista) {
 			const id = String(card.id)
-			const existing = await db.selectFrom('crm_cards')
-				.select(['atualizado_em', 'dados'])
-				.where('id', '=', id)
-				.executeTakeFirst()
-
-			const r = mergeCardV2(
-				existing
-					? { atualizado_em: existing.atualizado_em as Date, dados: existing.dados as Record<string, unknown> | null }
-					: null,
-				card,
-			)
-			if (r.action === 'skip') { ignorados++; continue }
-			if (r.action === 'insert') {
-				await db.insertInto('crm_cards')
-					.values(r.row as unknown as Insertable<Database['crm_cards']>)
-					.execute()
-			} else {
-				const { id: _id, ...mudancas } = r.row
-				void _id
-				await db.updateTable('crm_cards')
-					.set(mudancas as unknown as Updateable<Database['crm_cards']>)
-					.where('id', '=', id)
-					.execute()
+			let resultado = await db.transaction().execute(trx => aplicarCard(trx, id, card))
+			if (resultado === 'retry') {
+				resultado = await db.transaction().execute(trx => aplicarCard(trx, id, card))
 			}
-			upserts++
+			// retry duplo só acontece se a linha foi removida no meio — trata como ignorado
+			if (resultado === 'upsert') upserts++
+			else ignorados++
 		}
 	} catch (error) {
 		return NextResponse.json({ error: `Falha no upsert: ${error instanceof Error ? error.message : error}` }, { status: 500 })
