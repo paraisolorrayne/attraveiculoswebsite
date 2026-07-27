@@ -55,3 +55,4 @@ next-env.d.ts
 
 # exports/backups locais de dados (nunca commitar)
 /backups/
+.worktrees/

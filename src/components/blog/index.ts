@@ -1,4 +1,5 @@
 export * from './blog-card'
+export * from './blog-card-static'
 export * from './blog-categories'
 export * from './blog-tabs'
 export * from './educativo-template'

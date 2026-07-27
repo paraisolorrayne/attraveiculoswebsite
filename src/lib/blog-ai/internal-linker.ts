@@ -1,7 +1,8 @@
 import type { DualBlogPost } from '@/types'
 import { getBlogPosts } from '@/lib/blog-api'
+import { ANCHOR_POST_SLUGS } from '@/lib/constants'
 
-interface LinkTarget {
+export interface LinkTarget {
   url: string
   term: string
   priority: number
@@ -18,25 +19,27 @@ function escapeRegex(s: string): string {
  * Build a list of link targets from published posts.
  * Priority: car review brand+model > category > title > slug words
  */
-function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[] {
+export function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[] {
   const targets: LinkTarget[] = []
   const seen = new Set<string>()
 
   for (const post of posts) {
     if (post.slug === excludeSlug) continue
     const url = `/blog/${post.slug}`
+    // Conteúdo âncora (safra "Comprar bem") vence empates de prioridade
+    const anchorBoost = ANCHOR_POST_SLUGS.includes(post.slug) ? 20 : 0
 
     if (post.post_type === 'car_review' && post.car_review) {
       const cr = post.car_review
       const brandModel = `${cr.brand} ${cr.model}`.trim()
       if (brandModel.length > 3 && !seen.has(brandModel.toLowerCase())) {
-        targets.push({ term: brandModel, url, priority: 10 })
+        targets.push({ term: brandModel, url, priority: 10 + anchorBoost })
         seen.add(brandModel.toLowerCase())
       }
       if (cr.version) {
         const full = `${brandModel} ${cr.version}`.trim()
         if (!seen.has(full.toLowerCase())) {
-          targets.push({ term: full, url, priority: 11 })
+          targets.push({ term: full, url, priority: 11 + anchorBoost })
           seen.add(full.toLowerCase())
         }
       }
@@ -45,7 +48,7 @@ function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[
     if (post.educativo?.seo_keyword) {
       const kw = post.educativo.seo_keyword.trim()
       if (kw.length > 4 && !seen.has(kw.toLowerCase())) {
-        targets.push({ term: kw, url, priority: 7 })
+        targets.push({ term: kw, url, priority: 7 + anchorBoost })
         seen.add(kw.toLowerCase())
       }
     }
@@ -60,7 +63,7 @@ function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[
  * Replace first occurrence of each term in HTML with an internal link,
  * skipping content inside protected tags (existing links, headings, code).
  */
-function linkifyHtml(html: string, targets: LinkTarget[]): { html: string; linksAdded: number } {
+export function linkifyHtml(html: string, targets: LinkTarget[], maxLinks: number = MAX_INTERNAL_LINKS): { html: string; linksAdded: number } {
   if (targets.length === 0) return { html, linksAdded: 0 }
 
   // Build a list of [start, end] ranges for protected regions
@@ -79,16 +82,27 @@ function linkifyHtml(html: string, targets: LinkTarget[]): { html: string; links
   let result = html
   let linksAdded = 0
   const usedTerms = new Set<string>()
+  const usedUrls = new Set<string>()
 
   for (const t of targets) {
-    if (linksAdded >= MAX_INTERNAL_LINKS) break
+    if (linksAdded >= maxLinks) break
     if (usedTerms.has(t.term.toLowerCase())) continue
+    // Um link por post de destino — evita "Marca Modelo" e "Marca Modelo
+    // Versão" queimarem dois slots apontando pro mesmo lugar
+    if (usedUrls.has(t.url)) continue
 
     // Match whole-word, case-insensitive, with word boundaries
     const re = new RegExp(`\\b${escapeRegex(t.term)}\\b`, 'i')
     const match = re.exec(result)
     if (!match) continue
     if (isProtected(match.index)) continue
+
+    // Dentro de uma tag (ex.: alt="Porsche 911")? Envolver quebraria o HTML
+    const lastOpen = result.lastIndexOf('<', match.index)
+    if (lastOpen !== -1) {
+      const nextClose = result.indexOf('>', lastOpen)
+      if (nextClose === -1 || nextClose > match.index) continue
+    }
 
     const before = result.slice(0, match.index)
     const after = result.slice(match.index + match[0].length)
@@ -103,9 +117,13 @@ function linkifyHtml(html: string, targets: LinkTarget[]): { html: string; links
         range[1] += delta
       }
     }
+    // O link recém-inserido também é região protegida — sem isso, um termo
+    // mais curto contido no texto do link geraria <a> aninhado
+    protectedRanges.push([match.index, match.index + replacement.length])
 
     linksAdded++
     usedTerms.add(t.term.toLowerCase())
+    usedUrls.add(t.url)
   }
 
   return { html: result, linksAdded }
