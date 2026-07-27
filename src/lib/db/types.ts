@@ -491,6 +491,18 @@ export interface CrmCardsTable {
   valor: ColumnType<number | null, number | string | null, number | string | null>
   origem: string | null
   vendedor: string | null
+  // Contrato v2 (2026-07): campos de 1ª classe do standup/negociação
+  fonte_evento: string | null
+  situacao: string | null
+  andamento: string | null
+  impedimento: string | null
+  proxima_acao: string | null
+  proxima_acao_em: Timestamp | null
+  motivo_encerramento: string | null
+  veiculo_troca: string | null
+  atribuido_em: Timestamp | null
+  primeiro_contato_em: Timestamp | null
+  encerrado_em: Timestamp | null
   dados: JsonNullable
   criado_em: Timestamp
   atualizado_em: Timestamp
