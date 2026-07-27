@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { BlogTabs } from '@/components/blog'
 import { YouTubePreview } from '@/components/videos/youtube-preview'
-import { getBlogPosts } from '@/lib/blog-api'
+import { getBlogPostsPreview } from '@/lib/blog-api'
 import { fetchAttraYouTubeFeed } from '@/lib/youtube'
 import { EDITORIAL_SECTION } from '@/lib/constants'
 
@@ -29,8 +29,8 @@ export default async function BlogPage() {
 	const breadcrumbItems = [{ label: 'Blog', href: EDITORIAL_SECTION.route }]
 
 	const [educativoPosts, reviewPosts, ytFeed] = await Promise.all([
-		getBlogPosts({ type: 'educativo', limit: POSTS_PREVIEW_LIMIT }),
-		getBlogPosts({ type: 'car_review', limit: POSTS_PREVIEW_LIMIT }),
+		getBlogPostsPreview({ type: 'educativo', limit: POSTS_PREVIEW_LIMIT }),
+		getBlogPostsPreview({ type: 'car_review', limit: POSTS_PREVIEW_LIMIT }),
 		fetchAttraYouTubeFeed(),
 	])
 

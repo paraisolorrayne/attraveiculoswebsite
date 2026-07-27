@@ -4,19 +4,19 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, Clock, ArrowRight, Tag, Gauge, BookOpen, Car } from 'lucide-react'
-import type { DualBlogPost } from '@/types'
+import type { BlogPostPreview } from '@/lib/blog-api'
 import { cn, formatDate } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 type TabType = 'todos' | 'educativo' | 'car_review'
 
 interface BlogTabsProps {
-  educativoPosts: DualBlogPost[]
-  reviewPosts: DualBlogPost[]
+  educativoPosts: BlogPostPreview[]
+  reviewPosts: BlogPostPreview[]
 }
 
 interface BlogPostCardProps {
-  post: DualBlogPost
+  post: BlogPostPreview
 }
 
 function hasValidImage(image: string | null | undefined): boolean {
