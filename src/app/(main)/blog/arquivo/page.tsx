@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
@@ -7,8 +8,8 @@ import { BlogCardStatic } from '@/components/blog'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import { cn } from '@/lib/utils'
 
-export const revalidate = 1800
-
+// Rota é dinâmica (searchParams); o cache fica na camada de dados
+// (getBlogPostsPreview usa unstable_cache com revalidate de 30 min)
 const PAGE_SIZE = 24
 
 type ArchiveSearchParams = Promise<{ tipo?: string; pagina?: string }>
@@ -30,8 +31,16 @@ function archiveHref(tipo: TipoFiltro | undefined, pagina: number): string {
   return s ? `/blog/arquivo?${s}` : '/blog/arquivo'
 }
 
+async function totalPagesFor(tipo: TipoFiltro | undefined): Promise<number> {
+  const posts = await getBlogPostsPreview({ type: tipo ? TIPO_MAP[tipo] : 'all' })
+  return Math.max(1, Math.ceil(posts.length / PAGE_SIZE))
+}
+
 export async function generateMetadata({ searchParams }: { searchParams: ArchiveSearchParams }): Promise<Metadata> {
   const { tipo, pagina } = parseParams(await searchParams)
+  // 404 precisa acontecer aqui: no corpo da página o status 200 já foi
+  // enviado (streaming) e vira soft-404. A busca é cacheada (unstable_cache).
+  if (pagina > await totalPagesFor(tipo)) notFound()
   return {
     title: 'Arquivo do Blog Attra | Todos os artigos',
     description:
@@ -45,7 +54,10 @@ export default async function BlogArchivePage({ searchParams }: { searchParams: 
 
   const allPosts = await getBlogPostsPreview({ type: tipo ? TIPO_MAP[tipo] : 'all' })
   const totalPages = Math.max(1, Math.ceil(allPosts.length / PAGE_SIZE))
-  const page = Math.min(pagina, totalPages)
+  // Página além do total é 404 — servir a última com canonical própria criaria
+  // infinitas URLs duplicadas auto-canonicalizadas
+  if (pagina > totalPages) notFound()
+  const page = pagina
   const posts = allPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const filtros: Array<{ label: string; value: TipoFiltro | undefined }> = [

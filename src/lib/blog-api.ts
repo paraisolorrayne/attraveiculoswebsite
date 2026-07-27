@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import type { DualBlogPost, BlogPostType, BlogAuthor, EducativoFields, CarReviewFields, BlogPostSEO } from '@/types'
 import { importedBlogPosts } from './imported-blog-posts'
 import { processInstagramEmbeds } from './instagram-processor'
@@ -39,7 +40,7 @@ function transformDbPost(p: Record<string, unknown>): DualBlogPost {
 // API FUNCTIONS
 // ===========================================
 
-interface GetBlogPostsOptions {
+export interface GetBlogPostsOptions {
   type?: BlogPostType | 'all'
   limit?: number
   category?: string
@@ -162,8 +163,49 @@ export function toPreview(post: DualBlogPost): BlogPostPreview {
   }
 }
 
+// Busca leve (sem `content`) + cache de 30 min: as páginas de listagem viram
+// dinâmicas por causa de searchParams, e sem isto cada request (inclusive
+// crawler paginando o arquivo) faria um full scan da tabela com o conteúdo
+// integral de todos os posts.
+async function fetchAllPreviews(): Promise<BlogPostPreview[]> {
+  let dbPreviews: BlogPostPreview[] = []
+  try {
+    const rows = await db.selectFrom('dual_blog_posts')
+      .select([
+        'id', 'post_type', 'title', 'slug', 'excerpt', 'featured_image',
+        'featured_image_alt', 'published_date', 'reading_time', 'educativo', 'car_review',
+      ])
+      .where('is_published', '=', true)
+      .orderBy('published_date', 'desc')
+      .execute()
+    dbPreviews = rows.map(r => toPreview({
+      ...r,
+      published_date: isoOrUndef(r.published_date),
+    } as unknown as DualBlogPost))
+  } catch (error) {
+    console.error('DB error in fetchAllPreviews:', error)
+  }
+
+  const imported = importedBlogPosts.filter(p => p.is_published).map(toPreview)
+  const posts = [...dbPreviews, ...imported]
+  posts.sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
+  return posts
+}
+
+const getAllPreviewsCached = unstable_cache(fetchAllPreviews, ['blog-posts-preview'], { revalidate: 1800 })
+
 export async function getBlogPostsPreview(options: GetBlogPostsOptions = {}): Promise<BlogPostPreview[]> {
-  const posts = await getBlogPosts(options)
-  return posts.map(toPreview)
+  const { type = 'all', limit, category } = options
+  let posts = await getAllPreviewsCached()
+  if (type !== 'all') {
+    posts = posts.filter(p => p.post_type === type)
+  }
+  if (category && type === 'educativo') {
+    posts = posts.filter(p => p.educativo?.category === category)
+  }
+  if (limit) {
+    posts = posts.slice(0, limit)
+  }
+  return posts
 }
 

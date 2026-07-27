@@ -82,16 +82,27 @@ export function linkifyHtml(html: string, targets: LinkTarget[], maxLinks: numbe
   let result = html
   let linksAdded = 0
   const usedTerms = new Set<string>()
+  const usedUrls = new Set<string>()
 
   for (const t of targets) {
     if (linksAdded >= maxLinks) break
     if (usedTerms.has(t.term.toLowerCase())) continue
+    // Um link por post de destino — evita "Marca Modelo" e "Marca Modelo
+    // Versão" queimarem dois slots apontando pro mesmo lugar
+    if (usedUrls.has(t.url)) continue
 
     // Match whole-word, case-insensitive, with word boundaries
     const re = new RegExp(`\\b${escapeRegex(t.term)}\\b`, 'i')
     const match = re.exec(result)
     if (!match) continue
     if (isProtected(match.index)) continue
+
+    // Dentro de uma tag (ex.: alt="Porsche 911")? Envolver quebraria o HTML
+    const lastOpen = result.lastIndexOf('<', match.index)
+    if (lastOpen !== -1) {
+      const nextClose = result.indexOf('>', lastOpen)
+      if (nextClose === -1 || nextClose > match.index) continue
+    }
 
     const before = result.slice(0, match.index)
     const after = result.slice(match.index + match[0].length)
@@ -106,9 +117,13 @@ export function linkifyHtml(html: string, targets: LinkTarget[], maxLinks: numbe
         range[1] += delta
       }
     }
+    // O link recém-inserido também é região protegida — sem isso, um termo
+    // mais curto contido no texto do link geraria <a> aninhado
+    protectedRanges.push([match.index, match.index + replacement.length])
 
     linksAdded++
     usedTerms.add(t.term.toLowerCase())
+    usedUrls.add(t.url)
   }
 
   return { html: result, linksAdded }

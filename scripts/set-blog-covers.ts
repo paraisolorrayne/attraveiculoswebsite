@@ -69,7 +69,14 @@ async function main() {
 			console.warn(`slug não encontrado no banco: ${slug}`)
 			continue
 		}
-		console.log(`${apply ? 'APLICANDO' : 'dry-run'}: ${slug} -> ${cover.image} (antes: ${row.featured_image || '(vazio)'})`)
+		const current = String(row.featured_image || '')
+		// Só preenche capa ausente/placeholder — nunca sobrescreve capa
+		// definida depois (ex.: via admin)
+		if (current && !current.includes('default-cover')) {
+			console.log(`pulado (já tem capa própria): ${slug} -> ${current}`)
+			continue
+		}
+		console.log(`${apply ? 'APLICANDO' : 'dry-run'}: ${slug} -> ${cover.image} (antes: ${current || '(vazio)'})`)
 		if (apply) {
 			await db.updateTable('dual_blog_posts')
 				.set({ featured_image: cover.image, featured_image_alt: cover.alt })
@@ -77,10 +84,11 @@ async function main() {
 				.execute()
 		}
 	}
-	await db.destroy()
 }
 
-main().catch((err) => {
-	console.error(err)
-	process.exit(1)
-})
+main()
+	.catch((err) => {
+		console.error(err)
+		process.exitCode = 1
+	})
+	.finally(() => db.destroy().catch(() => {}))

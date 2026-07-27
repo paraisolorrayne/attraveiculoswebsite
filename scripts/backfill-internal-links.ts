@@ -11,11 +11,13 @@
  * - Cap TOTAL de 5 links internos por post: desconta os que o post já tem
  *   (class="blog-internal-link"), então re-rodar é seguro.
  */
+import fs from 'node:fs'
 import { db } from '../src/lib/db'
 import { getBlogPosts } from '../src/lib/blog-api'
 import { buildLinkIndex, linkifyHtml } from '../src/lib/blog-ai/internal-linker'
 
 const MAX_TOTAL_LINKS = 5
+const REPORT_FILE = 'backfill-internal-links.report.txt'
 
 async function main() {
 	const apply = process.argv.includes('--apply')
@@ -30,6 +32,7 @@ async function main() {
 
 	let touched = 0
 	let totalAdded = 0
+	const report: string[] = []
 	for (const row of dbPosts) {
 		const slug = row.slug as string
 		const content = row.content as string
@@ -37,13 +40,22 @@ async function main() {
 		const budget = MAX_TOTAL_LINKS - existing
 		if (budget <= 0) continue
 
+		// Priority-first: no backfill, o conteúdo âncora leva os slots antes
+		// de termos meramente mais longos (na geração diária o sort padrão
+		// longest-first do linkifyHtml continua valendo)
 		const targets = buildLinkIndex(allPosts, slug)
+			.sort((a, b) => b.priority - a.priority || b.term.length - a.term.length)
 		const { html, linksAdded } = linkifyHtml(content, targets, budget)
 		if (linksAdded === 0) continue
 
 		touched++
 		totalAdded += linksAdded
 		console.log(`${apply ? 'APLICANDO' : 'dry-run'}: ${slug} +${linksAdded} links (já tinha ${existing})`)
+		// Registro de cada link inserido, pra revisão antes do --apply
+		const inserted = [...html.matchAll(/<a href="([^"]+)" class="blog-internal-link">([^<]+)<\/a>/g)]
+			.filter(m => !content.includes(m[0]))
+			.map(m => `  "${m[2]}" -> ${m[1]}`)
+		report.push(`${slug} (+${linksAdded}, já tinha ${existing})\n${inserted.join('\n')}`)
 		if (apply) {
 			await db.updateTable('dual_blog_posts')
 				.set({ content: html, updated_date: new Date() })
@@ -52,11 +64,14 @@ async function main() {
 		}
 	}
 
+	fs.writeFileSync(REPORT_FILE, report.join('\n\n') + '\n')
 	console.log(`\n${apply ? 'Gravado' : 'Dry-run'}: ${touched} posts, ${totalAdded} links novos.`)
-	await db.destroy()
+	console.log(`Relatório link a link em ${REPORT_FILE}`)
 }
 
-main().catch((err) => {
-	console.error(err)
-	process.exit(1)
-})
+main()
+	.catch((err) => {
+		console.error(err)
+		process.exitCode = 1
+	})
+	.finally(() => db.destroy().catch(() => {}))
