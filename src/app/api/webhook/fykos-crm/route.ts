@@ -1,122 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { Insertable } from 'kysely'
+import type { Insertable, Updateable } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
-
-// Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
+import { verifyCrmSignature, mergeCardV2 } from '@/lib/crm-webhook'
 
 export const dynamic = 'force-dynamic'
 
-// Ingestão do CRM: o Fykos empurra o estado dos leads para cá e o painel
-// exibe em modo somente leitura (nenhuma ação manual no admin).
+// Receptor do CRM (Fykos) — contrato v2 (2026-07): upsert por id, ordenado por
+// atualizado_em (evento atrasado é ignorado), campo ausente mantém / null limpa,
+// extras vão pro JSONB `dados`. Lógica pura em src/lib/crm-webhook.ts.
 //
-// Auth: header X-Webhook-Secret = FYKOS_CRM_SECRET (env).
-// Config: defina FYKOS_CRM_SECRET no `.env.local` (arquivo gitignored —
-// não versionado de propósito, NUNCA commitar o valor) e no ambiente de
-// produção. Sem a env configurada, o webhook responde 500 e nada é gravado.
+// Auth (uma das duas):
+//   1. v2: X-CRM-Signature = HMAC-SHA256(corpo bruto, CRM_SITE_WEBHOOK_SECRET)
+//      (fallback de secret: FYKOS_CRM_SECRET, para emissor que já usa o mesmo)
+//   2. v1 (transição): X-Webhook-Secret = FYKOS_CRM_SECRET
+// Etapas v1 recebidas são normalizadas para v2 no ingest.
 //
-// Etapas fixas do funil (contrato com o backend Python/Fykos):
-//   aguardando_vendedor | em_atendimento | sem_atualizacao |
-//   encerrado_sucesso | encerrado_perdido
-// Extras esperados no JSONB `dados` (exibidos no modal de detalhes do admin):
-//   atribuido_em, encerrado_em, observacoes_alerta,
-//   ultima_resposta_vendedor: { texto, em }
-//
-// Payload aceito (um objeto ou lista em `cards`):
-//   { "id": "123", "etapa": "negociacao", "nome": "...", "telefone": "...",
-//     "email": "...", "veiculo": "...", "valor": 929000, "origem": "...",
-//     "vendedor": "...", ...extras }
-// Campos extras são preservados em `dados`. Para remover cards:
-//   { "remover": ["id1", "id2"] }
-
-interface CardIn {
-  id: string | number
-  etapa?: string
-  nome?: string
-  telefone?: string
-  email?: string
-  veiculo?: string
-  valor?: number | string
-  origem?: string
-  vendedor?: string
-  [k: string]: unknown
-}
+// Payload: um card no corpo, ou lote em `cards[]`. `{ "remover": [ids] }`
+// continua suportado (lead saiu do funil no emissor).
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.FYKOS_CRM_SECRET
-  if (!secret) {
-    return NextResponse.json({ error: 'FYKOS_CRM_SECRET não configurada no servidor' }, { status: 500 })
-  }
-  if (request.headers.get('x-webhook-secret') !== secret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+	const secretV2 = process.env.CRM_SITE_WEBHOOK_SECRET || process.env.FYKOS_CRM_SECRET
+	const secretV1 = process.env.FYKOS_CRM_SECRET
+	if (!secretV2 && !secretV1) {
+		return NextResponse.json({ error: 'Webhook sem secret configurado no servidor' }, { status: 500 })
+	}
 
-  let body: Record<string, unknown>
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
-  }
+	const rawBody = await request.text()
+	const assinaturaOk = !!secretV2 && verifyCrmSignature(rawBody, request.headers.get('x-crm-signature'), secretV2)
+	const legadoOk = !!secretV1 && request.headers.get('x-webhook-secret') === secretV1
+	if (!assinaturaOk && !legadoOk) {
+		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+	}
 
-  const agora = new Date()
+	let body: Record<string, unknown>
+	try {
+		body = JSON.parse(rawBody)
+	} catch {
+		return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+	}
 
-  // Remoções (lead saiu do funil no Fykos)
-  const remover = Array.isArray(body.remover) ? body.remover.map(String) : []
-  if (remover.length > 0) {
-    try {
-      await db.deleteFrom('crm_cards').where('id', 'in', remover).execute()
-    } catch (error) {
-      return NextResponse.json({ error: `Falha ao remover: ${error instanceof Error ? error.message : error}` }, { status: 500 })
-    }
-  }
+	// Remoções (legado; no v2 o lead é encerrado, não removido)
+	const remover = Array.isArray(body.remover) ? body.remover.map(String) : []
+	if (remover.length > 0) {
+		try {
+			await db.deleteFrom('crm_cards').where('id', 'in', remover).execute()
+		} catch (error) {
+			return NextResponse.json({ error: `Falha ao remover: ${error instanceof Error ? error.message : error}` }, { status: 500 })
+		}
+	}
 
-  // Upserts
-  const lista: CardIn[] = Array.isArray(body.cards)
-    ? (body.cards as CardIn[])
-    : (body.id !== undefined ? [body as unknown as CardIn] : [])
+	const lista: Record<string, unknown>[] = Array.isArray(body.cards)
+		? (body.cards as Record<string, unknown>[])
+		: (body.id !== undefined ? [body] : [])
 
-  const invalidos = lista.filter(c => c.id === undefined || c.id === null || !c.etapa)
-  if (invalidos.length > 0) {
-    return NextResponse.json({ error: 'Todo card precisa de id e etapa' }, { status: 400 })
-  }
+	if (lista.some(c => c.id === undefined || c.id === null || String(c.id) === '')) {
+		return NextResponse.json({ error: 'Todo card precisa de id' }, { status: 400 })
+	}
 
-  if (lista.length > 0) {
-    const rows = lista.map(c => {
-      const { id, etapa, nome, telefone, email, veiculo, valor, origem, vendedor, ...extras } = c
-      return {
-        id: String(id),
-        etapa: String(etapa),
-        nome: nome ?? null,
-        telefone: telefone ?? null,
-        email: email ?? null,
-        veiculo: veiculo ?? null,
-        valor: valor !== undefined && valor !== null && valor !== '' ? Number(valor) : null,
-        origem: origem ?? null,
-        vendedor: vendedor ?? null,
-        dados: Object.keys(extras).length > 0 ? extras : null,
-        atualizado_em: agora,
-      }
-    }) as Insertable<Database['crm_cards']>[]
-    try {
-      await db.insertInto('crm_cards').values(rows)
-        .onConflict((oc) => oc.column('id').doUpdateSet((eb) => ({
-          etapa: eb.ref('excluded.etapa'),
-          nome: eb.ref('excluded.nome'),
-          telefone: eb.ref('excluded.telefone'),
-          email: eb.ref('excluded.email'),
-          veiculo: eb.ref('excluded.veiculo'),
-          valor: eb.ref('excluded.valor'),
-          origem: eb.ref('excluded.origem'),
-          vendedor: eb.ref('excluded.vendedor'),
-          dados: eb.ref('excluded.dados'),
-          atualizado_em: eb.ref('excluded.atualizado_em'),
-        })))
-        .execute()
-    } catch (error) {
-      return NextResponse.json({ error: `Falha no upsert: ${error instanceof Error ? error.message : error}` }, { status: 500 })
-    }
-  }
+	let upserts = 0
+	let ignorados = 0
+	try {
+		for (const card of lista) {
+			const id = String(card.id)
+			const existing = await db.selectFrom('crm_cards')
+				.select(['atualizado_em', 'dados'])
+				.where('id', '=', id)
+				.executeTakeFirst()
 
-  console.log(`[FykosCRM] upserts=${lista.length} remoções=${remover.length}`)
-  return NextResponse.json({ success: true, upserts: lista.length, remocoes: remover.length })
+			const r = mergeCardV2(
+				existing
+					? { atualizado_em: existing.atualizado_em as Date, dados: existing.dados as Record<string, unknown> | null }
+					: null,
+				card,
+			)
+			if (r.action === 'skip') { ignorados++; continue }
+			if (r.action === 'insert') {
+				await db.insertInto('crm_cards')
+					.values(r.row as unknown as Insertable<Database['crm_cards']>)
+					.execute()
+			} else {
+				const { id: _id, ...mudancas } = r.row
+				void _id
+				await db.updateTable('crm_cards')
+					.set(mudancas as unknown as Updateable<Database['crm_cards']>)
+					.where('id', '=', id)
+					.execute()
+			}
+			upserts++
+		}
+	} catch (error) {
+		return NextResponse.json({ error: `Falha no upsert: ${error instanceof Error ? error.message : error}` }, { status: 500 })
+	}
+
+	console.log(`[FykosCRM] upserts=${upserts} ignorados=${ignorados} remoções=${remover.length} auth=${assinaturaOk ? 'hmac-v2' : 'legado-v1'}`)
+	return NextResponse.json({ success: true, upserts, ignorados, remocoes: remover.length })
 }
