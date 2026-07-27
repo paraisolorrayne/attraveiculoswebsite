@@ -1,7 +1,7 @@
 import type { DualBlogPost } from '@/types'
 import { getBlogPosts } from '@/lib/blog-api'
 
-interface LinkTarget {
+export interface LinkTarget {
   url: string
   term: string
   priority: number
@@ -18,7 +18,7 @@ function escapeRegex(s: string): string {
  * Build a list of link targets from published posts.
  * Priority: car review brand+model > category > title > slug words
  */
-function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[] {
+export function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[] {
   const targets: LinkTarget[] = []
   const seen = new Set<string>()
 
@@ -60,7 +60,7 @@ function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): LinkTarget[
  * Replace first occurrence of each term in HTML with an internal link,
  * skipping content inside protected tags (existing links, headings, code).
  */
-function linkifyHtml(html: string, targets: LinkTarget[]): { html: string; linksAdded: number } {
+export function linkifyHtml(html: string, targets: LinkTarget[], maxLinks: number = MAX_INTERNAL_LINKS): { html: string; linksAdded: number } {
   if (targets.length === 0) return { html, linksAdded: 0 }
 
   // Build a list of [start, end] ranges for protected regions
@@ -81,7 +81,7 @@ function linkifyHtml(html: string, targets: LinkTarget[]): { html: string; links
   const usedTerms = new Set<string>()
 
   for (const t of targets) {
-    if (linksAdded >= MAX_INTERNAL_LINKS) break
+    if (linksAdded >= maxLinks) break
     if (usedTerms.has(t.term.toLowerCase())) continue
 
     // Match whole-word, case-insensitive, with word boundaries
