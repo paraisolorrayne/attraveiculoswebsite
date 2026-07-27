@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildLinkIndex, linkifyHtml } from '@/lib/blog-ai/internal-linker'
+import { ANCHOR_POST_SLUGS } from '@/lib/constants'
 import type { DualBlogPost } from '@/types'
 
 function post(partial: Record<string, unknown>): DualBlogPost {
@@ -31,5 +32,19 @@ describe('linkifyHtml (backfill)', () => {
 		const targets = buildLinkIndex(acervo, 'outro-post')
 		const { linksAdded } = linkifyHtml('<p>Porsche 911 e procedência de supercarro.</p>', targets, 1)
 		expect(linksAdded).toBe(1)
+	})
+})
+
+describe('boost de âncora', () => {
+	it('âncora vence empate contra termo de mesmo comprimento', () => {
+		const anchorSlug = ANCHOR_POST_SLUGS[0]
+		const posts = [
+			post({ slug: anchorSlug, post_type: 'educativo', educativo: { seo_keyword: 'baixa quilometragem' } }),
+			post({ slug: 'comum', post_type: 'educativo', educativo: { seo_keyword: 'alta quilometragem' } }),
+		]
+		const targets = buildLinkIndex(posts, 'x')
+		const anchorTarget = targets.find(t => t.url === `/blog/${anchorSlug}`)!
+		const commonTarget = targets.find(t => t.url === '/blog/comum')!
+		expect(anchorTarget.priority).toBeGreaterThan(commonTarget.priority)
 	})
 })

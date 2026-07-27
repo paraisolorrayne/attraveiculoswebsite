@@ -1,5 +1,6 @@
 import type { DualBlogPost } from '@/types'
 import { getBlogPosts } from '@/lib/blog-api'
+import { ANCHOR_POST_SLUGS } from '@/lib/constants'
 
 export interface LinkTarget {
   url: string
@@ -25,18 +26,20 @@ export function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): Link
   for (const post of posts) {
     if (post.slug === excludeSlug) continue
     const url = `/blog/${post.slug}`
+    // Conteúdo âncora (safra "Comprar bem") vence empates de prioridade
+    const anchorBoost = ANCHOR_POST_SLUGS.includes(post.slug) ? 20 : 0
 
     if (post.post_type === 'car_review' && post.car_review) {
       const cr = post.car_review
       const brandModel = `${cr.brand} ${cr.model}`.trim()
       if (brandModel.length > 3 && !seen.has(brandModel.toLowerCase())) {
-        targets.push({ term: brandModel, url, priority: 10 })
+        targets.push({ term: brandModel, url, priority: 10 + anchorBoost })
         seen.add(brandModel.toLowerCase())
       }
       if (cr.version) {
         const full = `${brandModel} ${cr.version}`.trim()
         if (!seen.has(full.toLowerCase())) {
-          targets.push({ term: full, url, priority: 11 })
+          targets.push({ term: full, url, priority: 11 + anchorBoost })
           seen.add(full.toLowerCase())
         }
       }
@@ -45,7 +48,7 @@ export function buildLinkIndex(posts: DualBlogPost[], excludeSlug: string): Link
     if (post.educativo?.seo_keyword) {
       const kw = post.educativo.seo_keyword.trim()
       if (kw.length > 4 && !seen.has(kw.toLowerCase())) {
-        targets.push({ term: kw, url, priority: 7 })
+        targets.push({ term: kw, url, priority: 7 + anchorBoost })
         seen.add(kw.toLowerCase())
       }
     }
