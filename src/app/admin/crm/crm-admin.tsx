@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { ETAPAS_KANBAN, ETAPA_DESCONHECIDA, situacaoInfo, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
+import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 
 interface CrmCard {
 	id: string
@@ -149,8 +150,10 @@ export function CrmAdmin() {
 	const cardsFiltrados = cards.filter(c => {
 		if (filtroVendedor && c.vendedor !== filtroVendedor) return false
 		if (filtroDias > 0) {
-			// Base do período: MOVIMENTAÇÃO (atualizado_em) — ver InfoDica do filtro
-			const t = new Date(c.atualizado_em).getTime()
+			// Ativos: movimentação (atualizado_em). Encerrados: data EFETIVA do
+			// encerramento — o lote v1 carimbava atualizado_em e fazia venda de
+			// semanas atrás aparecer como "ganho do período".
+			const t = new Date(dataReferenciaPeriodo(c)).getTime()
 			if (Number.isNaN(t) || agora - t > filtroDias * 86_400_000) return false
 		}
 		return true
@@ -197,8 +200,9 @@ export function CrmAdmin() {
 							))}
 						</select>
 						<InfoDica>
-							Filtra pela data da última movimentação do lead (qualquer atualização vinda do CRM).
-							&ldquo;Hoje&rdquo; = últimas 24h; Semana = 7 dias; Quinzena = 15; Mês = 30.
+							Leads ativos: filtra pela última movimentação. Encerrados: pela data em que
+							foram ganhos/perdidos de fato. &ldquo;Hoje&rdquo; = últimas 24h; Semana = 7 dias;
+							Quinzena = 15; Mês = 30.
 						</InfoDica>
 					</span>
 					{vendedores.length > 0 && (
@@ -313,7 +317,7 @@ export function CrmAdmin() {
 															{fmtValor(c.valor)}
 														</span>
 													) : <span />}
-													<span className="text-[11px] text-foreground-secondary">{fmtQuando(c.atualizado_em)}</span>
+													<span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span>
 												</div>
 												{/* Veículo de interesse + troca */}
 												{c.veiculo && (
@@ -423,10 +427,10 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 	]
 
 	const linhaDoTempo: { rotulo: string; valor: string | null }[] = [
-		{ rotulo: 'Atribuído em', valor: card.atribuido_em ? fmtDataHora(card.atribuido_em) : null },
+		{ rotulo: 'Atribuído em', valor: (card.atribuido_em || dadoStr(card.dados, 'atribuido_em')) ? fmtDataHora(card.atribuido_em || dadoStr(card.dados, 'atribuido_em')!) : null },
 		{ rotulo: 'Primeiro contato', valor: card.primeiro_contato_em ? fmtDataHora(card.primeiro_contato_em) : null },
 		{ rotulo: 'Atualizado em', valor: fmtDataHora(card.atualizado_em) },
-		{ rotulo: 'Encerrado em', valor: card.encerrado_em ? fmtDataHora(card.encerrado_em) : null },
+		{ rotulo: 'Encerrado em', valor: dataEncerramento(card) ? fmtDataHora(dataEncerramento(card)!) : null },
 	]
 
 	return (
