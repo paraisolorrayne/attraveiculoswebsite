@@ -2,38 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-	Loader2, RefreshCw, Phone, Car, X,
-	AlertTriangle, CalendarClock, ArrowLeftRight, MessageSquareQuote,
+	Loader2, RefreshCw, X,
+	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
-import { ETAPAS_KANBAN, ETAPA_DESCONHECIDA, situacaoInfo, FONTES_EVENTO, PERIODOS } from './crm-constants'
+import { ETAPAS_KANBAN, ETAPA_DESCONHECIDA, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
-
-interface CrmCard {
-	id: string
-	etapa: string
-	nome: string | null
-	telefone: string | null
-	email: string | null
-	veiculo: string | null
-	valor: number | null
-	origem: string | null
-	vendedor: string | null
-	fonte_evento: string | null
-	situacao: string | null
-	andamento: string | null
-	impedimento: string | null
-	proxima_acao: string | null
-	proxima_acao_em: string | null
-	motivo_encerramento: string | null
-	veiculo_troca: string | null
-	atribuido_em: string | null
-	primeiro_contato_em: string | null
-	encerrado_em: string | null
-	criado_em: string | null
-	atualizado_em: string
-	dados: Record<string, unknown> | null
-}
+import {
+	type CrmCard, CardKanban, BadgeSituacao,
+	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
+} from './crm-card'
 
 const etapaLabel = (e: string) => {
 	const fixa = ETAPAS_KANBAN.find(f => f.id === e)
@@ -46,55 +24,10 @@ const etapaEstilo = (e: string) =>
 
 const ENCERRADAS = ['encerrado_ganho', 'encerrado_perdido']
 
-const fmtValor = (v: number | null) =>
-	v === null ? null : 'R$ ' + Number(v).toLocaleString('pt-BR')
-
-const fmtQuando = (iso: string) => {
-	const diffMs = Date.now() - new Date(iso).getTime()
-	const min = Math.floor(diffMs / 60_000)
-	if (min < 60) return `${min}min`
-	const h = Math.floor(min / 60)
-	if (h < 48) return `${h}h`
-	return `${Math.floor(h / 24)}d`
-}
-
 const fmtDataHora = (iso: string) => {
 	const d = new Date(iso)
 	if (isNaN(d.getTime())) return iso
 	return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-}
-
-const fmtDataCurta = (iso: string) => {
-	const d = new Date(iso)
-	if (isNaN(d.getTime())) return iso
-	return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-// Leitura defensiva do JSONB `dados` (campos legados do contrato v1)
-const dadoStr = (dados: Record<string, unknown> | null, chave: string): string | null => {
-	const v = dados?.[chave]
-	return typeof v === 'string' && v.trim() !== '' ? v : null
-}
-
-// Enquanto o emissor não envia motivo_encerramento (v2), a maioria dos
-// encerrados traz só o enum legado `resultado` nos extras — humanizado aqui.
-// Nota ao emissor: docs/crm/nota-emissor-webhook-2026-07-31.md
-const RESULTADOS_LEGADO: Record<string, string> = {
-	encerrado_por_inatividade: 'Encerrado por inatividade',
-	corrigido_auto_atribuicao_indevida: 'Correção do gestor: atribuição indevida',
-	fechado_sem_venda_vendedor: 'Fechado sem venda pelo vendedor',
-	perdido_proposta_muito_baixa: 'Proposta muito baixa',
-	descartado_invalido_vendedor: 'Lead inválido (descartado pelo vendedor)',
-	alerta_rejeitado: 'Alerta rejeitado',
-	nao_genuino_crianca: 'Lead não genuíno',
-	venda: 'Venda concluída',
-}
-
-const motivoDoCard = (c: CrmCard): string | null => {
-	if (c.motivo_encerramento) return c.motivo_encerramento
-	const r = dadoStr(c.dados, 'resultado')
-	if (!r) return null
-	return RESULTADOS_LEGADO[r] ?? r.replace(/_/g, ' ')
 }
 
 const ultimaResposta = (
@@ -107,14 +40,49 @@ const ultimaResposta = (
 	return { texto: o.texto, em: typeof o.em === 'string' ? o.em : null }
 }
 
-function BadgeSituacao({ situacao }: { situacao: string }) {
-	const s = situacaoInfo(situacao)
-	return (
-		<span className={`inline-flex text-[10px] border rounded-full px-2 py-0.5 whitespace-nowrap ${s.classe}`}>
-			{s.label}
-		</span>
-	)
-}
+// Fixtures do modo demo (?demo=1): valida o redesign sem banco/webhook.
+// Cobrem: card completo, card mínimo (slots com "–"), perdido com motivo
+// legado e card com impedimento + próxima ação atrasada.
+const DEMO_CARDS: CrmCard[] = [
+	{
+		id: 'demo-1', etapa: 'em_negociacao', nome: 'Ricardo Almeida', telefone: '34999887766',
+		email: 'ricardo@example.com', veiculo: 'Porsche 911 Carrera GTS 2024', valor: 1250000,
+		origem: 'patrocinado', vendedor: 'Ana Souza', fonte_evento: 'reporte', situacao: 'negociando',
+		andamento: 'Cliente pediu simulação com 50% de entrada, aguardando retorno do banco.',
+		impedimento: null, proxima_acao: 'Enviar simulação', proxima_acao_em: new Date(Date.now() + 86_400_000).toISOString(),
+		motivo_encerramento: null, veiculo_troca: 'BMW X5 2021', atribuido_em: null,
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 3_600_000).toISOString(), dados: null,
+	},
+	{
+		id: 'demo-2', etapa: 'novo', nome: null, telefone: null, email: null, veiculo: null,
+		valor: null, origem: null, vendedor: null, fonte_evento: 'alerta', situacao: null,
+		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
+		motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 600_000).toISOString(), dados: null,
+	},
+	{
+		id: 'demo-3', etapa: 'encerrado_perdido', nome: 'Marcelo P.', telefone: '11988776655',
+		email: null, veiculo: 'Mercedes-Benz GLE63s Coupé', valor: 849000, origem: 'site',
+		vendedor: 'Carlos Lima', fonte_evento: 'perda', situacao: 'comprou_outro',
+		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
+		motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
+		primeiro_contato_em: null, encerrado_em: new Date(Date.now() - 86_400_000).toISOString(),
+		criado_em: null, atualizado_em: new Date(Date.now() - 86_400_000).toISOString(),
+		dados: { resultado: 'encerrado_por_inatividade' },
+	},
+	{
+		id: 'demo-4', etapa: 'em_atendimento', nome: 'Fernanda Torres', telefone: '31977665544',
+		email: null, veiculo: 'Range Rover Sport 2023', valor: null, origem: 'organico',
+		vendedor: 'Ana Souza', fonte_evento: 'cobranca', situacao: 'aguardando_cliente',
+		andamento: null, impedimento: 'Cliente viaja até dia 10 — sem contato.',
+		proxima_acao: 'Retomar contato', proxima_acao_em: new Date(Date.now() - 172_800_000).toISOString(),
+		motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 7_200_000).toISOString(), dados: null,
+	},
+]
 
 export function CrmAdmin() {
 	const [cards, setCards] = useState<CrmCard[]>([])
@@ -125,6 +93,13 @@ export function CrmAdmin() {
 	const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = tudo
 
 	const load = useCallback(async () => {
+		// Modo demo (?demo=1): fixtures locais, sem tocar na API — validação
+		// visual do redesign em ambientes sem banco.
+		if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1') {
+			setCards(DEMO_CARDS)
+			setLoading(false)
+			return
+		}
 		setLoading(true)
 		setErro(null)
 		try {
@@ -184,7 +159,9 @@ export function CrmAdmin() {
 	const kpiTotal = cardsFiltrados.length
 	const kpiNovos = cardsFiltrados.filter(c => c.etapa === 'novo').length
 	const kpiNegociacao = cardsFiltrados.filter(c => c.etapa === 'em_negociacao').length
-	const kpiGanhos = cardsFiltrados.filter(c => c.etapa === 'encerrado_ganho').length
+	const ganhosFiltrados = cardsFiltrados.filter(c => c.etapa === 'encerrado_ganho')
+	const kpiGanhos = ganhosFiltrados.length
+	const somaGanhos = ganhosFiltrados.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
 	const kpiPerdidos = cardsFiltrados.filter(c => c.etapa === 'encerrado_perdido').length
 	const kpiValorAberto = cardsFiltrados
 		.filter(c => !ENCERRADAS.includes(c.etapa) && c.valor !== null)
@@ -194,7 +171,7 @@ export function CrmAdmin() {
 		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Total de leads que se movimentaram no período selecionado (todas as colunas), já com o filtro de vendedor aplicado.' },
 		{ rotulo: 'Novos', valor: String(kpiNovos), dica: 'Leads na coluna Novo: chegaram e ainda não foram assumidos por um vendedor.' },
 		{ rotulo: 'Em negociação', valor: String(kpiNegociacao), dica: 'Leads com proposta, valores ou troca em discussão — os mais quentes do funil.' },
-		{ rotulo: 'Ganhos', valor: String(kpiGanhos), dica: 'Vendas concluídas no período (coluna Encerrado — Ganho).' },
+		{ rotulo: 'Ganhos', valor: somaGanhos > 0 ? `${kpiGanhos} · ${fmtValorAbrev(somaGanhos)}` : String(kpiGanhos), dica: 'Vendas concluídas no período (coluna Encerrado — Ganho): quantidade e soma dos valores.' },
 		{ rotulo: 'Perdidos', valor: String(kpiPerdidos), dica: 'Leads encerrados sem venda no período. O motivo aparece em cada card.' },
 		{ rotulo: 'R$ em aberto', valor: kpiValorAberto > 0 ? 'R$ ' + kpiValorAberto.toLocaleString('pt-BR') : '—', dica: 'Soma dos valores dos leads ainda ativos (Novo + Em atendimento + Em negociação). É o potencial de venda na mesa.' },
 	]
@@ -294,122 +271,31 @@ export function CrmAdmin() {
 						const daEtapa = cardsFiltrados.filter(c => c.etapa === etapa)
 						const estilo = etapaEstilo(etapa)
 						const encerrada = ENCERRADAS.includes(etapa)
+						const somaEtapa = daEtapa.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
 						return (
 							<div key={etapa} className="flex-shrink-0 w-80">
-								<div className="flex items-center justify-between px-1 mb-3">
-									<h2 className="flex items-center gap-2 text-sm font-semibold text-foreground uppercase tracking-wide">
+								{/* Faixa tingida na cor da etapa: label + contagem + soma dos valores */}
+								<div className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 mb-3 ${estilo.badge}`}>
+									<h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide min-w-0">
 										<span className={`w-2 h-2 rounded-full flex-shrink-0 ${estilo.dot}`} />
-										{etapaLabel(etapa)}
+										<span className="truncate">{etapaLabel(etapa)}</span>
 										<InfoDica>{estilo.descricao}</InfoDica>
 									</h2>
-									<span className={`text-xs border rounded-full px-2 py-0.5 ${estilo.badge}`}>
+									<span className="text-xs whitespace-nowrap">
 										{daEtapa.length}
+										<span className="opacity-70"> · {somaEtapa > 0 ? fmtValorAbrev(somaEtapa) : '–'}</span>
 									</span>
 								</div>
 								<div className="space-y-3">
-									{daEtapa.map(c => {
-										const proximaAtrasada = !!c.proxima_acao_em && new Date(c.proxima_acao_em).getTime() < agora
-										return (
-											<div
-												key={c.id}
-												role="button"
-												tabIndex={0}
-												onClick={() => setSelecionado(c)}
-												onKeyDown={e => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														e.preventDefault()
-														setSelecionado(c)
-													}
-												}}
-												className="p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-foreground-secondary/40 transition-colors"
-											>
-												{/* Nome + situação */}
-												<div className="flex items-start justify-between gap-2">
-													<div className="font-medium text-foreground text-sm truncate">
-														{c.nome || 'Sem nome'}
-													</div>
-													{c.situacao && <BadgeSituacao situacao={c.situacao} />}
-												</div>
-												{/* Valor + tempo */}
-												<div className="mt-1 flex items-center justify-between gap-2">
-													{c.valor !== null ? (
-														<span className="text-base font-semibold text-foreground whitespace-nowrap">
-															{fmtValor(c.valor)}
-														</span>
-													) : <span />}
-													<span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span>
-												</div>
-												{/* Veículo de interesse + troca */}
-												{c.veiculo && (
-													<div className="mt-2 flex items-center gap-1.5 text-xs text-foreground-secondary">
-														<Car className="w-3.5 h-3.5 flex-shrink-0" />
-														<span className="truncate">{c.veiculo}</span>
-													</div>
-												)}
-												{c.veiculo_troca && (
-													<div className="mt-1 flex items-center gap-1.5 text-xs text-foreground-secondary">
-														<ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0" />
-														<span className="truncate">Na troca: {c.veiculo_troca}</span>
-													</div>
-												)}
-												{/* Andamento — a última fala do vendedor */}
-												{c.andamento && (
-													<div className="mt-2 border-l-2 border-blue-400/60 pl-2 text-xs italic text-foreground line-clamp-3">
-														{c.andamento}
-													</div>
-												)}
-												{/* Impedimento */}
-												{c.impedimento && (
-													<div className="mt-2 flex items-start gap-1.5 bg-red-500/10 text-red-600 dark:text-red-400 rounded px-2 py-1 text-xs">
-														<AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-														<span className="line-clamp-2">{c.impedimento}</span>
-													</div>
-												)}
-												{/* Próxima ação (mostra também quando só a data veio) */}
-												{(c.proxima_acao || c.proxima_acao_em) && (
-													<div className={`mt-2 flex items-start gap-1.5 text-xs ${proximaAtrasada ? 'text-amber-600 dark:text-amber-400' : 'text-foreground-secondary'}`}>
-														<CalendarClock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-														<span className="line-clamp-2">
-															{c.proxima_acao || 'Próxima ação'}
-															{c.proxima_acao_em && ` · ${fmtDataCurta(c.proxima_acao_em)}`}
-															{proximaAtrasada && ' (atrasada)'}
-														</span>
-													</div>
-												)}
-												{/* Motivo do encerramento (com fallback pro resultado legado) */}
-												{encerrada && motivoDoCard(c) && (
-													<div className="mt-2 text-xs text-foreground-secondary">
-														<span className="font-medium text-foreground">Motivo:</span> {motivoDoCard(c)}
-													</div>
-												)}
-												{/* Rodapé: contato + vendedor + origem */}
-												<div className="mt-2 flex items-center justify-between">
-													{c.telefone ? (
-														<a
-															href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}`}
-															target="_blank"
-															rel="noopener noreferrer"
-															onClick={e => e.stopPropagation()}
-															className="flex items-center gap-1 text-xs text-green-600 hover:underline"
-														>
-															<Phone className="w-3 h-3" />
-															{c.telefone}
-														</a>
-													) : <span />}
-													{c.origem && (
-														<span className="text-[10px] uppercase tracking-wide text-foreground-secondary">
-															{c.origem}
-														</span>
-													)}
-												</div>
-												{c.vendedor && (
-													<div className="mt-1.5 text-[11px] text-foreground-secondary">
-														Vendedor: {c.vendedor}
-													</div>
-												)}
-											</div>
-										)
-									})}
+									{daEtapa.map(c => (
+										<CardKanban
+											key={c.id}
+											card={c}
+											encerrada={encerrada}
+											agora={agora}
+											onSelect={setSelecionado}
+										/>
+									))}
 								</div>
 							</div>
 						)
