@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-	Loader2, RefreshCw, Phone, Car, ExternalLink, X,
+	Loader2, RefreshCw, Phone, Car, X,
 	AlertTriangle, CalendarClock, ArrowLeftRight, MessageSquareQuote,
 } from 'lucide-react'
 import { ETAPAS_KANBAN, ETAPA_DESCONHECIDA, situacaoInfo, FONTES_EVENTO, PERIODOS } from './crm-constants'
@@ -74,6 +74,27 @@ const fmtDataCurta = (iso: string) => {
 const dadoStr = (dados: Record<string, unknown> | null, chave: string): string | null => {
 	const v = dados?.[chave]
 	return typeof v === 'string' && v.trim() !== '' ? v : null
+}
+
+// Enquanto o emissor não envia motivo_encerramento (v2), a maioria dos
+// encerrados traz só o enum legado `resultado` nos extras — humanizado aqui.
+// Nota ao emissor: docs/crm/nota-emissor-webhook-2026-07-31.md
+const RESULTADOS_LEGADO: Record<string, string> = {
+	encerrado_por_inatividade: 'Encerrado por inatividade',
+	corrigido_auto_atribuicao_indevida: 'Correção do gestor: atribuição indevida',
+	fechado_sem_venda_vendedor: 'Fechado sem venda pelo vendedor',
+	perdido_proposta_muito_baixa: 'Proposta muito baixa',
+	descartado_invalido_vendedor: 'Lead inválido (descartado pelo vendedor)',
+	alerta_rejeitado: 'Alerta rejeitado',
+	nao_genuino_crianca: 'Lead não genuíno',
+	venda: 'Venda concluída',
+}
+
+const motivoDoCard = (c: CrmCard): string | null => {
+	if (c.motivo_encerramento) return c.motivo_encerramento
+	const r = dadoStr(c.dados, 'resultado')
+	if (!r) return null
+	return RESULTADOS_LEGADO[r] ?? r.replace(/_/g, ' ')
 }
 
 const ultimaResposta = (
@@ -355,10 +376,10 @@ export function CrmAdmin() {
 														</span>
 													</div>
 												)}
-												{/* Motivo do encerramento */}
-												{encerrada && c.motivo_encerramento && (
+												{/* Motivo do encerramento (com fallback pro resultado legado) */}
+												{encerrada && motivoDoCard(c) && (
 													<div className="mt-2 text-xs text-foreground-secondary">
-														<span className="font-medium text-foreground">Motivo:</span> {c.motivo_encerramento}
+														<span className="font-medium text-foreground">Motivo:</span> {motivoDoCard(c)}
 													</div>
 												)}
 												{/* Rodapé: contato + vendedor + origem */}
@@ -519,12 +540,12 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 						</div>
 					)}
 
-					{card.motivo_encerramento && (
+					{motivoDoCard(card) && (
 						<div>
 							<h3 className="text-[11px] uppercase tracking-wide text-foreground-secondary mb-1">
 								Motivo do encerramento
 							</h3>
-							<p className="text-sm text-foreground whitespace-pre-wrap">{card.motivo_encerramento}</p>
+							<p className="text-sm text-foreground whitespace-pre-wrap">{motivoDoCard(card)}</p>
 						</div>
 					)}
 
