@@ -23,7 +23,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { label: 'Blog', href: '/admin/blog', description: 'Posts e insights do blog', Icon: FileText },
   { label: 'Marketing', href: '/admin/marketing', description: 'Estratégias, campanhas e tarefas', Icon: Megaphone },
   { label: 'Newsletter', href: '/admin/newsletter/campaigns', description: 'Campanhas e inscritos', Icon: MailOpen },
-  { label: 'CRM', href: '/admin/crm', description: 'Funil de leads (Fykos)', Icon: KanbanSquare },
+  { label: 'CRM', href: '/admin/crm', description: 'Funil de leads', Icon: KanbanSquare },
   { label: 'Visitantes', href: '/admin/visitors', description: 'Rastreamento e métricas de visita', Icon: BarChart3 },
   { label: 'Usuários', href: '/admin/usuarios', description: 'Contas e papéis do painel', Icon: Users },
   { label: 'Configurações', href: '/admin/settings', description: 'Ajustes gerais do site', Icon: Settings },

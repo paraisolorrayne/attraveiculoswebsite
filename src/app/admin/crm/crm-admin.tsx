@@ -184,8 +184,8 @@ export function CrmAdmin() {
 				<div>
 					<h1 className="text-2xl font-bold text-foreground">CRM</h1>
 					<p className="text-sm text-foreground-secondary mt-1">
-						Espelho do funil do Fykos — somente leitura. Para agir num lead,
-						use o Fykos: as mudanças aparecem aqui automaticamente.
+						Espelho do funil de vendas — somente leitura. As atualizações dos
+						vendedores aparecem aqui automaticamente.
 					</p>
 				</div>
 				<div className="flex items-center gap-3 flex-wrap justify-end">
@@ -258,8 +258,7 @@ export function CrmAdmin() {
 				<div className="max-w-7xl mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
 					<p className="text-foreground font-medium">Nenhum lead ainda</p>
 					<p className="text-sm text-foreground-secondary mt-2">
-						O CRM alimenta este painel via webhook
-						(<code>POST /api/webhook/fykos-crm</code>). Assim que o primeiro
+						Este painel é alimentado automaticamente. Assim que o primeiro
 						lead for enviado, ele aparece aqui.
 					</p>
 				</div>
@@ -401,9 +400,8 @@ export function CrmAdmin() {
 				<DetalhesModal card={selecionado} onClose={() => setSelecionado(null)} />
 			)}
 
-			<p className="max-w-7xl mx-auto mt-6 text-xs text-foreground-secondary flex items-center gap-1">
-				<ExternalLink className="w-3 h-3" />
-				Fonte: Fykos (app.fykos.com.br) · contrato v2 · atualização automática a cada 60s
+			<p className="max-w-7xl mx-auto mt-6 text-xs text-foreground-secondary">
+				Atualização automática a cada 60s
 			</p>
 		</div>
 	)
