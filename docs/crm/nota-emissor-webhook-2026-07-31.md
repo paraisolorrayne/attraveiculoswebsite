@@ -66,3 +66,36 @@ formato v1. O contrato v2 tem colunas próprias para datas
 Receptor: `POST /api/webhook/fykos-crm` (contrato v2 — upsert por `id`,
 ordenado por `atualizado_em`; campo ausente mantém, `null` limpa).
 Dúvidas sobre o contrato: ver `src/lib/crm-webhook.ts` no repo do site.
+
+---
+
+## Adendo — resposta do time do webhook (2026-07-31)
+
+Diagnóstico corrigido pelo emissor após análise:
+
+1. **Motivo ausente ≠ formato**: o encerramento por inatividade
+   (`encerra_atribuicao_inativa`) era um **gatilho mudo** — fechava
+   atribuição/cronômetro/estado sem emitir card. Os 164
+   `encerrado_por_inatividade` chegaram só pelo backfill antigo (sem
+   motivo). Encerramento com reporte do vendedor já envia
+   `motivo_encerramento` (daí os 7).
+2. **Item 4 da nota parcialmente incorreto**: `atribuido_em`/`encerrado_em`
+   já são colunas v2 no receptor; `resultado` e `ultima_resposta_vendedor`
+   caem em `dados` por design do próprio receptor. Os problemas reais:
+   `situacao` faltando na perda e `encerrado_em = agora()` em vez do
+   timestamp persistido da atribuição.
+3. `veiculo_interesse` nunca foi populado por gatilho algum (todos mandam
+   o `veiculo` v1 — que o receptor também aceita); o card de venda tinha
+   `motivo_encerramento` hardcoded "Venda fechada.".
+
+**Correção em curso** (branch `fix/crm-webhook-campos-v2` do emissor):
+motivo real do vendedor na venda; card novo no encerramento por
+inatividade com motivo honesto; veículo+valor enriquecidos via
+atribuição/negociação em todos os gatilhos; origem na cobrança semanal;
+`encerrado_em` persistido; `situacao=perdido` na perda.
+
+**Prontidão do site**: `situacao=perdido` ganhou badge vermelho no
+vocabulário (`crm-constants.ts`); o motivo novo de inatividade é texto
+livre e será exibido direto; o fallback do `resultado` legado permanece
+para o histórico do backfill. Após o deploy do emissor, revalidar com a
+query de completude por etapa desta nota.
