@@ -5,7 +5,7 @@ import {
 	Loader2, RefreshCw, X,
 	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
-import { ETAPAS_KANBAN, ETAPA_DESCONHECIDA, FONTES_EVENTO, PERIODOS } from './crm-constants'
+import { COLUNAS_KANBAN, colunaDoCard, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 import {
@@ -13,14 +13,8 @@ import {
 	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
 } from './crm-card'
 
-const etapaLabel = (e: string) => {
-	const fixa = ETAPAS_KANBAN.find(f => f.id === e)
-	if (fixa) return fixa.label
-	return e.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-const etapaEstilo = (e: string) =>
-	ETAPAS_KANBAN.find(f => f.id === e) ?? ETAPA_DESCONHECIDA
+const colunaInfo = (c: { etapa: string; fonte_evento: string | null }) =>
+	COLUNAS_KANBAN.find(col => col.id === colunaDoCard(c)) ?? COLUNAS_KANBAN[0]
 
 const ENCERRADAS = ['encerrado_ganho', 'encerrado_perdido']
 
@@ -41,8 +35,9 @@ const ultimaResposta = (
 }
 
 // Fixtures do modo demo (?demo=1): valida o redesign sem banco/webhook.
-// Cobrem: card completo, card mínimo (slots com "–"), perdido com motivo
-// legado e card com impedimento + próxima ação atrasada.
+// Cobrem as 4 colunas da visão do gestor: movimentando (reporte completo),
+// assumido mínimo (slots com "–"), perdido com motivo legado e assumido
+// via cobrança com impedimento + próxima ação atrasada.
 const DEMO_CARDS: CrmCard[] = [
 	{
 		id: 'demo-1', etapa: 'em_negociacao', nome: 'Ricardo Almeida', telefone: '34999887766',
@@ -55,8 +50,8 @@ const DEMO_CARDS: CrmCard[] = [
 		atualizado_em: new Date(Date.now() - 3_600_000).toISOString(), dados: null,
 	},
 	{
-		id: 'demo-2', etapa: 'novo', nome: null, telefone: null, email: null, veiculo: null,
-		valor: null, origem: null, vendedor: null, fonte_evento: 'alerta', situacao: null,
+		id: 'demo-2', etapa: 'em_atendimento', nome: null, telefone: null, email: null, veiculo: null,
+		valor: null, origem: null, vendedor: null, fonte_evento: 'aceite', situacao: null,
 		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
 		motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
 		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
@@ -131,19 +126,19 @@ export function CrmAdmin() {
 		return () => window.removeEventListener('keydown', onKey)
 	}, [selecionado])
 
-	// Colunas fixas sempre visíveis, na ordem do contrato; desconhecidas no fim
-	const etapas: string[] = ETAPAS_KANBAN.map(f => f.id)
-	for (const c of cards) if (!etapas.includes(c.etapa)) etapas.push(c.etapa)
+	// Visão do gestor: leads ainda não assumidos (etapa `novo`) ficam fora
+	// do painel — a história começa no aceite do vendedor.
+	const cardsBase = cards.filter(c => c.etapa !== 'novo')
 
 	// Vendedores únicos (pro filtro). Alguns nomes não são vendedores — ocultos.
 	const VENDEDORES_OCULTOS = ['guilherme']
 	const vendedorOculto = (v: string) => VENDEDORES_OCULTOS.some(o => v.toLowerCase().includes(o))
-	const vendedores = [...new Set(cards.map(c => c.vendedor).filter((v): v is string => !!v))]
+	const vendedores = [...new Set(cardsBase.map(c => c.vendedor).filter((v): v is string => !!v))]
 		.filter(v => !vendedorOculto(v))
 		.sort()
 
 	const agora = Date.now()
-	const cardsFiltrados = cards.filter(c => {
+	const cardsFiltrados = cardsBase.filter(c => {
 		if (filtroVendedor && c.vendedor !== filtroVendedor) return false
 		if (filtroDias > 0) {
 			// Ativos: movimentação (atualizado_em). Encerrados: data EFETIVA do
@@ -155,25 +150,25 @@ export function CrmAdmin() {
 		return true
 	})
 
-	// KPIs sobre o conjunto filtrado
+	// KPIs sobre o conjunto filtrado (visão do gestor)
 	const kpiTotal = cardsFiltrados.length
-	const kpiNovos = cardsFiltrados.filter(c => c.etapa === 'novo').length
-	const kpiNegociacao = cardsFiltrados.filter(c => c.etapa === 'em_negociacao').length
-	const ganhosFiltrados = cardsFiltrados.filter(c => c.etapa === 'encerrado_ganho')
+	const kpiAssumidos = cardsFiltrados.filter(c => colunaDoCard(c) === 'assumido').length
+	const kpiMovimentando = cardsFiltrados.filter(c => colunaDoCard(c) === 'movimentando').length
+	const ganhosFiltrados = cardsFiltrados.filter(c => colunaDoCard(c) === 'ganho')
 	const kpiGanhos = ganhosFiltrados.length
 	const somaGanhos = ganhosFiltrados.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
-	const kpiPerdidos = cardsFiltrados.filter(c => c.etapa === 'encerrado_perdido').length
+	const kpiPerdidos = cardsFiltrados.filter(c => colunaDoCard(c) === 'perdido').length
 	const kpiValorAberto = cardsFiltrados
 		.filter(c => !ENCERRADAS.includes(c.etapa) && c.valor !== null)
 		.reduce((s, c) => s + Number(c.valor), 0)
 
 	const kpis: { rotulo: string; valor: string; dica: string }[] = [
-		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Total de leads que se movimentaram no período selecionado (todas as colunas), já com o filtro de vendedor aplicado.' },
-		{ rotulo: 'Novos', valor: String(kpiNovos), dica: 'Leads na coluna Novo: chegaram e ainda não foram assumidos por um vendedor.' },
-		{ rotulo: 'Em negociação', valor: String(kpiNegociacao), dica: 'Leads com proposta, valores ou troca em discussão — os mais quentes do funil.' },
-		{ rotulo: 'Ganhos', valor: somaGanhos > 0 ? `${kpiGanhos} · ${fmtValorAbrev(somaGanhos)}` : String(kpiGanhos), dica: 'Vendas concluídas no período (coluna Encerrado — Ganho): quantidade e soma dos valores.' },
+		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Total de leads assumidos por vendedor que se movimentaram no período selecionado, já com o filtro de vendedor aplicado. Leads ainda sem vendedor não entram no painel.' },
+		{ rotulo: 'Assumidos', valor: String(kpiAssumidos), dica: 'O vendedor aceitou o lead e confirmou o contato, mas ainda não reportou movimentação nas cobranças.' },
+		{ rotulo: 'Movimentando', valor: String(kpiMovimentando), dica: 'Leads cujo último evento é um reporte do vendedor — a conversa está andando de fato.' },
+		{ rotulo: 'Ganhos', valor: somaGanhos > 0 ? `${kpiGanhos} · ${fmtValorAbrev(somaGanhos)}` : String(kpiGanhos), dica: 'Vendas concluídas no período: quantidade e soma dos valores.' },
 		{ rotulo: 'Perdidos', valor: String(kpiPerdidos), dica: 'Leads encerrados sem venda no período. O motivo aparece em cada card.' },
-		{ rotulo: 'R$ em aberto', valor: kpiValorAberto > 0 ? 'R$ ' + kpiValorAberto.toLocaleString('pt-BR') : '—', dica: 'Soma dos valores dos leads ainda ativos (Novo + Em atendimento + Em negociação). É o potencial de venda na mesa.' },
+		{ rotulo: 'R$ em aberto', valor: kpiValorAberto > 0 ? 'R$ ' + kpiValorAberto.toLocaleString('pt-BR') : '—', dica: 'Soma dos valores dos leads ainda ativos (Assumidos + Movimentando). É o potencial de venda na mesa.' },
 	]
 
 	return (
@@ -267,31 +262,29 @@ export function CrmAdmin() {
 				</div>
 			) : (
 				<div className="flex gap-4 overflow-x-auto pb-4 max-w-7xl mx-auto">
-					{etapas.map(etapa => {
-						const daEtapa = cardsFiltrados.filter(c => c.etapa === etapa)
-						const estilo = etapaEstilo(etapa)
-						const encerrada = ENCERRADAS.includes(etapa)
-						const somaEtapa = daEtapa.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
+					{COLUNAS_KANBAN.map(col => {
+						const daColuna = cardsFiltrados.filter(c => colunaDoCard(c) === col.id)
+						const somaColuna = daColuna.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
 						return (
-							<div key={etapa} className="flex-shrink-0 w-80">
-								{/* Faixa tingida na cor da etapa: label + contagem + soma dos valores */}
-								<div className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 mb-3 ${estilo.badge}`}>
+							<div key={col.id} className="flex-shrink-0 w-80">
+								{/* Faixa tingida na cor da coluna: label + contagem + soma dos valores */}
+								<div className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 mb-3 ${col.badge}`}>
 									<h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide min-w-0">
-										<span className={`w-2 h-2 rounded-full flex-shrink-0 ${estilo.dot}`} />
-										<span className="truncate">{etapaLabel(etapa)}</span>
-										<InfoDica>{estilo.descricao}</InfoDica>
+										<span className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
+										<span className="truncate">{col.label}</span>
+										<InfoDica>{col.descricao}</InfoDica>
 									</h2>
 									<span className="text-xs whitespace-nowrap">
-										{daEtapa.length}
-										<span className="opacity-70"> · {somaEtapa > 0 ? fmtValorAbrev(somaEtapa) : '–'}</span>
+										{daColuna.length}
+										<span className="opacity-70"> · {somaColuna > 0 ? fmtValorAbrev(somaColuna) : '–'}</span>
 									</span>
 								</div>
 								<div className="space-y-3">
-									{daEtapa.map(c => (
+									{daColuna.map(c => (
 										<CardKanban
 											key={c.id}
 											card={c}
-											encerrada={encerrada}
+											encerrada={col.encerrada}
 											agora={agora}
 											onSelect={setSelecionado}
 										/>
@@ -316,7 +309,7 @@ export function CrmAdmin() {
 
 // Modal de detalhes — 100% somente leitura (nenhuma ação/edição)
 function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }) {
-	const estilo = etapaEstilo(card.etapa)
+	const estilo = colunaInfo(card)
 	// Campos legados do v1, mantidos se ainda vierem no JSONB
 	const observacoes = dadoStr(card.dados, 'observacoes_alerta')
 	const resposta = ultimaResposta(card.dados)
@@ -356,7 +349,7 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 						<div className="flex items-center gap-2 mt-1.5 flex-wrap">
 							<span className={`inline-flex items-center gap-1.5 text-xs border rounded-full px-2 py-0.5 ${estilo.badge}`}>
 								<span className={`w-1.5 h-1.5 rounded-full ${estilo.dot}`} />
-								{etapaLabel(card.etapa)}
+								{estilo.label}
 							</span>
 							{card.situacao && <BadgeSituacao situacao={card.situacao} />}
 						</div>
