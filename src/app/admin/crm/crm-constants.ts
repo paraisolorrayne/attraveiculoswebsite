@@ -1,36 +1,39 @@
 // Vocabulário do contrato v2 do CRM + estilos e textos dos tooltips (i).
-export const ETAPAS_KANBAN = [
+//
+// Colunas na VISÃO DO GESTOR (spec 2026-07-31-crm-colunas-visao-gestor):
+// a etapa do CRM (em_atendimento/em_negociacao) é vocabulário de vendedor e
+// vira dado interno; a coluna é derivada do último evento (fonte_evento).
+// Leads na etapa `novo` (sem vendedor) não aparecem no painel.
+export const COLUNAS_KANBAN = [
 	{
-		id: 'novo', label: 'Novo', dot: 'bg-amber-500',
-		badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
-		descricao: 'Lead chegou e ainda não foi assumido por um vendedor. Meta: primeiro contato o quanto antes.',
-	},
-	{
-		id: 'em_atendimento', label: 'Em atendimento', dot: 'bg-blue-500',
+		id: 'assumido', label: 'Assumido pelo vendedor', encerrada: false, dot: 'bg-blue-500',
 		badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
-		descricao: 'Um vendedor assumiu e está conversando com o cliente. Ainda não há proposta na mesa.',
+		descricao: 'O vendedor aceitou o lead e confirmou que chamou o cliente, mas ainda não reportou movimentação nas cobranças diária/semanal/mensal.',
 	},
 	{
-		id: 'em_negociacao', label: 'Em negociação', dot: 'bg-purple-500',
+		id: 'movimentando', label: 'Movimentando', encerrada: false, dot: 'bg-purple-500',
 		badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
-		descricao: 'Proposta, valores ou troca em discussão. É o lead mais quente do funil.',
+		descricao: 'O último evento é um reporte do vendedor: a conversa está andando de fato — andamento, impedimento e próxima ação aparecem no card.',
 	},
 	{
-		id: 'encerrado_ganho', label: 'Encerrado — Ganho', dot: 'bg-green-500',
+		id: 'ganho', label: 'Encerrado — Ganho', encerrada: true, dot: 'bg-green-500',
 		badge: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30',
 		descricao: 'Venda concluída.',
 	},
 	{
-		id: 'encerrado_perdido', label: 'Encerrado — Perdido', dot: 'bg-red-500',
+		id: 'perdido', label: 'Encerrado — Perdido', encerrada: true, dot: 'bg-red-500',
 		badge: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30',
 		descricao: 'Encerrado sem venda. O motivo aparece no card.',
 	},
 ] as const
 
-export const ETAPA_DESCONHECIDA = {
-	dot: 'bg-zinc-400',
-	badge: 'bg-background text-foreground-secondary border-border',
-	descricao: 'Etapa fora do contrato v2 — verificar o emissor.',
+export type ColunaKanban = (typeof COLUNAS_KANBAN)[number]
+
+/** Coluna do card na visão do gestor — derivada do último evento, não da etapa. */
+export function colunaDoCard(c: { etapa: string; fonte_evento: string | null }): ColunaKanban['id'] {
+	if (c.etapa === 'encerrado_ganho') return 'ganho'
+	if (c.etapa === 'encerrado_perdido') return 'perdido'
+	return c.fonte_evento === 'reporte' ? 'movimentando' : 'assumido'
 }
 
 export const SITUACOES: Record<string, { label: string; classe: string }> = {
