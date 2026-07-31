@@ -46,6 +46,9 @@ export const SITUACOES: Record<string, { label: string; classe: string }> = {
 	nao_responde:       { label: 'Não responde',       classe: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30' },
 	desistiu:           { label: 'Desistiu',           classe: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' },
 	sem_atualizacao:    { label: 'Sem atualização',    classe: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30' },
+	// O emissor passará a enviar situacao=perdido no evento de perda
+	// (fix/crm-webhook-campos-v2 do time do webhook, 2026-07-31)
+	perdido:            { label: 'Perdido',            classe: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' },
 }
 
 export function situacaoInfo(s: string): { label: string; classe: string } {
