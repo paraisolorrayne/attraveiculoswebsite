@@ -3,7 +3,8 @@ import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 import type { Insertable } from 'kysely'
-import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
+import { checkRateLimit, getClientIP } from '@/lib/rate-limit'
+import { TRACKING_RATE_LIMIT } from '@/lib/visitor-tracking'
 
 // Tracking roda com acesso total ao banco (rota server-side, sem auth de user).
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
@@ -31,11 +32,65 @@ async function getOrCreateSession(
   return existing?.id ?? null
 }
 
+// =====================================================
+// Fechamento derivado de sessões ociosas
+// O beacon de saída do cliente não é garantido (app morto no mobile, crash,
+// bateria), então ended_at não pode depender só dele. A cada sessão nova
+// varremos as que estão paradas há mais de 30 min e as fechamos com o último
+// heartbeat conhecido. Throttle em memória para não rodar a cada request.
+//
+// A varredura NÃO calcula duração. Quem mantém duration_seconds é o heartbeat
+// (/api/tracking/page-time), que acumula o tempo real ping a ping. A versão
+// anterior gravava aqui duration = last_activity_at - started_at, e isso
+// fabricava zeros em massa: last_activity_at nasceu com DEFAULT NOW() na
+// migration 20260226 e o heartbeat nunca chegou a rodar, então em toda linha
+// criada desde fevereiro last_activity_at é IGUAL a started_at — a conta dava
+// exatamente 0. Na primeira varredura depois do deploy, ~500 sessões (2 dias de
+// tráfego) ganhariam duração 0, o painel trocaria o travessão honesto por uma
+// média puxada por centenas de zeros inventados, e no período "Tudo" isso
+// ficaria para sempre.
+//
+// Daí as duas travas: só fechamos sessão com heartbeat DE VERDADE
+// (last_activity_at > started_at) e não escrevemos duração nenhuma.
+// =====================================================
+const IDLE_SESSION_MINUTES = 30
+const SWEEP_THROTTLE_MS = 5 * 60_000
+let lastSweepAt = 0
+
+async function closeIdleSessions(): Promise<void> {
+  if (Date.now() - lastSweepAt < SWEEP_THROTTLE_MS) return
+  lastSweepAt = Date.now()
+
+  try {
+    await db
+      .updateTable('visitor_sessions')
+      .set({ ended_at: sql<Date>`last_activity_at` })
+      .where('ended_at', 'is', null)
+      // Só sessões que realmente bateram heartbeat. Onde last_activity_at é
+      // igual a started_at, ninguém pingou: não sabemos quando a visita
+      // terminou e inventar um fim (com duração 0) é pior do que deixar aberta.
+      .where(sql<boolean>`last_activity_at > started_at`)
+      .where(sql<boolean>`last_activity_at < NOW() - INTERVAL '${sql.raw(String(IDLE_SESSION_MINUTES))} minutes'`)
+      // Janela curta de propósito: sessões antigas (anteriores ao heartbeat)
+      // têm last_activity_at preenchido pelo DEFAULT NOW() da migration, não
+      // por atividade real — fechá-las inventaria durações absurdas. Backfill
+      // histórico, se um dia for feito, é decisão à parte.
+      .where(sql<boolean>`started_at > NOW() - INTERVAL '2 days'`)
+      .execute()
+  } catch (error) {
+    // Manutenção não pode derrubar a criação da sessão
+    console.error('[Tracking] Idle session sweep error:', error)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
+    // Rate limiting — bucket próprio das rotas de tracking (ver
+    // TRACKING_RATE_LIMIT). Dividindo o bucket geral da API com o heartbeat, a
+    // criação de sessão era a primeira vítima do 429: o visitante ficava sem
+    // NENHUM tracking naquele carregamento.
     const clientIP = getClientIP(request)
-    const rateLimitResult = checkRateLimit(clientIP, RATE_LIMIT_PRESETS.api)
+    const rateLimitResult = checkRateLimit(clientIP, TRACKING_RATE_LIMIT)
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Rate limit exceeded' },
@@ -131,6 +186,9 @@ export async function POST(request: NextRequest) {
       ttclid: click_ids?.ttclid || null,
       ip_address: ip,
     })
+
+    // Fecha sessões ociosas sem segurar a resposta do cliente
+    void closeIdleSessions()
 
     return NextResponse.json({
       success: true,
