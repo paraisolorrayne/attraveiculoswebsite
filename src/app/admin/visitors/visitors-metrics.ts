@@ -128,3 +128,28 @@ export function larguraRelativa(valor: number, maximo: number): string {
 	if (maximo <= 0 || valor <= 0) return '0%'
 	return `${Math.max(2, Math.min(100, (valor / maximo) * 100))}%`
 }
+
+const PALAVRAS_MINUSCULAS = new Set(['de', 'da', 'do', 'e'])
+
+/**
+ * Nome legível do veículo a partir do slug, para quando marca e modelo não
+ * vieram da API — o caso de toda a base histórica, cuja única identificação é
+ * o próprio caminho da página. "lamborghini-urus-2025-949287" vira
+ * "Lamborghini Urus 2025": o id interno sai, o ano fica (é ele que distingue
+ * dois anúncios do mesmo modelo). Slug irreconhecível volta como veio.
+ */
+export function nomeDoSlug(slug: string): string {
+	const semId = slug.replace(/-(\d{4})-\d+$/, '-$1').replace(/-\d{5,}$/, '')
+	const palavras = semId.split('-').filter(Boolean)
+	if (palavras.length === 0) return slug
+	return palavras
+		.map((p, i) => {
+			if (i > 0 && PALAVRAS_MINUSCULAS.has(p)) return p
+			if (/^\d/.test(p)) return p
+			// Sigla de versão (GT, GTS, AMG, SF90, GLC): sem vogal e curta —
+			// "Gt" e "Sf90" ficariam errados numa tela de diretoria.
+			if (p.length <= 5 && !/[aeiou]/.test(p)) return p.toUpperCase()
+			return p.charAt(0).toUpperCase() + p.slice(1)
+		})
+		.join(' ')
+}

@@ -10,6 +10,7 @@ import {
 	fmtNum,
 	fmtPct,
 	larguraRelativa,
+	nomeDoSlug,
 	taxa,
 	VOLUME_MINIMO,
 	type LinhaCampanha,
@@ -293,7 +294,7 @@ export function ListaVeiculos({
 						<li key={v.slug}>
 							<div className="flex items-baseline justify-between gap-3">
 								<span className="text-sm text-foreground truncate" title={v.slug}>
-									{v.marca || v.modelo ? `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() : v.slug}
+									{v.marca || v.modelo ? `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() : nomeDoSlug(v.slug)}
 								</span>
 								<span className="text-sm tabular-nums text-foreground-secondary shrink-0">
 									{fmtNum(v.views)} <span className="text-xs">aberturas</span>
