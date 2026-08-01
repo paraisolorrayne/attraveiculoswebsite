@@ -142,7 +142,9 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 		>
 			{/* Nome + situação */}
 			<div className="flex items-start justify-between gap-2">
-				<div className="font-medium text-foreground text-sm truncate">
+				{/* min-w-0: sem isso o nome não encolhe dentro do flex e empurra o
+				    badge para fora do card em vez de cortar com reticências */}
+				<div className="font-medium text-foreground text-sm truncate min-w-0">
 					{c.nome || <Traco />}
 				</div>
 				{c.situacao && <BadgeSituacao situacao={c.situacao} />}
@@ -159,12 +161,12 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 			{/* Veículo de interesse (slot fixo) + troca (condicional) */}
 			<div className="mt-2 flex items-center gap-1.5 text-xs text-foreground-secondary">
 				<Car className="w-3.5 h-3.5 flex-shrink-0" />
-				{c.veiculo ? <span className="truncate">{c.veiculo}</span> : <Traco />}
+				{c.veiculo ? <span className="truncate min-w-0" title={c.veiculo}>{c.veiculo}</span> : <Traco />}
 			</div>
 			{c.veiculo_troca && (
 				<div className="mt-1 flex items-center gap-1.5 text-xs text-foreground-secondary">
 					<ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0" />
-					<span className="truncate">Na troca: {c.veiculo_troca}</span>
+					<span className="truncate min-w-0" title={c.veiculo_troca}>Na troca: {c.veiculo_troca}</span>
 				</div>
 			)}
 
@@ -197,7 +199,7 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 
 			{/* Motivo do encerramento (com fallback pro resultado legado) */}
 			{motivo && (
-				<div className="mt-2 text-xs text-foreground-secondary">
+				<div className="mt-2 text-xs text-foreground-secondary line-clamp-2" title={motivo}>
 					<span className="font-medium text-foreground">Motivo:</span> {motivo}
 				</div>
 			)}
@@ -210,7 +212,7 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 						target="_blank"
 						rel="noopener noreferrer"
 						onClick={e => e.stopPropagation()}
-						className="flex items-center gap-1 text-green-600 hover:underline whitespace-nowrap"
+						className="flex items-center gap-1 text-green-600 hover:underline whitespace-nowrap flex-shrink-0"
 					>
 						<Phone className="w-3 h-3" />
 						{c.telefone}
@@ -221,7 +223,9 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 						<Traco />
 					</span>
 				)}
-				<span className="text-[10px] uppercase tracking-wide text-foreground-secondary truncate">
+				{/* A origem é a única do rodapé que pode encolher: telefone cortado
+				    fica inútil e o vendedor já tem o avatar como âncora */}
+				<span className="text-[10px] uppercase tracking-wide text-foreground-secondary truncate min-w-0">
 					{c.origem || <Traco />}
 				</span>
 				<span className="flex items-center gap-1.5 min-w-0">
