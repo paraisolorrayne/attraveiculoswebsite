@@ -252,7 +252,15 @@ export async function sendFykosLead(input: FykosLeadInput): Promise<{ success: b
       reason: null,
       store: null,
       creates_rescue_lead: null,
-      lead_id: sessionDbId,
+      // lead_id NÃO carrega mais o id da sessão. O endpoint receptor herda o
+      // formato da integração Webmotors, onde este campo é um inteiro — mandar
+      // um UUID aqui derruba a validação do payload INTEIRO, perdendo o lead e
+      // não só o identificador (confirmado pelo time do CRM em 01/08/2026).
+      lead_id: null,
+      // Id da sessão do site em nome próprio, sem colidir com o contrato do
+      // receptor. Se for ignorado, não faz mal: o caminho que hoje entrega
+      // atribuição de verdade é o marcador [ref: ...] na mensagem do WhatsApp.
+      site_session_id: sessionDbId,
       codigo_lead: null,
       cockpit_url: null,
       user_res: null,

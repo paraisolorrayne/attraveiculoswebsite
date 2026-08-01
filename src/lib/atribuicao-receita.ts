@@ -1,9 +1,14 @@
 /**
  * Ponte entre o TRÁFEGO do site (`visitor_sessions`) e a RECEITA do CRM (`crm_cards`).
  *
- * O site já manda o identificador da sessão para o CRM em dois lugares:
- *   - `lead_id` no payload do lead de formulário (`src/lib/fykos.ts` → `visitor_sessions.id`);
- *   - `[ref: <session_id>]` no texto da mensagem do WhatsApp (`src/lib/whatsapp-ref.ts`).
+ * O site manda o identificador da sessão para o CRM por dois caminhos, de valor MUITO diferente:
+ *   - `[ref: <session_id>]` no texto da mensagem do WhatsApp (`src/lib/whatsapp-ref.ts`). É o
+ *     único que comprovadamente chega: o time do CRM confirmou em 01/08/2026 que o recebe
+ *     intacto e passará a devolvê-lo. Primeiro lead com marcador: 23/07/2026 — nada anterior
+ *     a essa data é atribuível, e não adianta esperar.
+ *   - `site_session_id` no payload do lead de formulário (`src/lib/fykos.ts`). Vai por garantia;
+ *     o receptor pode nem ter uma entrada para esse payload. Até 01/08/2026 esse id viajava em
+ *     `lead_id`, onde o receptor espera INTEIRO — o UUID derrubava o payload inteiro.
  * O que NÃO existe hoje é o caminho de volta: o receptor `/api/webhook/fykos-crm` nunca recebe
  * nenhum dos dois de volta. Qualquer campo desconhecido que o emissor mandar cai no JSONB
  * `dados` do card — por isso este arquivo PROCURA o identificador lá, em vez de assumir que ele
