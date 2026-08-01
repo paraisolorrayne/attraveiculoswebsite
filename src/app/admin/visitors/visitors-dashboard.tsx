@@ -117,7 +117,7 @@ export function VisitorsDashboard(props: Props) {
 				? 'Tempo médio de permanência no período.'
 				: temDuracao
 					? 'Tempo médio de permanência, contando só as visitas que já foram encerradas.'
-					: 'O site não registrava o tempo de permanência: a falha foi corrigida agora e o dado começa a valer daqui para frente. Traço no lugar de um número inventado.',
+					: 'Nenhuma visita encerrada no período selecionado ainda. O traço evita mostrar uma média que não existe.',
 		},
 	]
 
@@ -221,7 +221,7 @@ export function VisitorsDashboard(props: Props) {
 						<SecaoReceitaPorCanal dias={dias} />
 
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-							<ListaVeiculos veiculos={metricas.veiculos} cobertura={metricas.veiculos_cobertura} />
+							<ListaVeiculos veiculos={metricas.veiculos} />
 							<ListaCidades cidades={metricas.cidades} />
 						</div>
 					</>

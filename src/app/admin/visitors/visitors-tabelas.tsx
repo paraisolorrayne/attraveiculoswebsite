@@ -261,13 +261,7 @@ export function TabelaCampanhas({
 	)
 }
 
-export function ListaVeiculos({
-	veiculos,
-	cobertura,
-}: {
-	veiculos: LinhaVeiculo[]
-	cobertura: { com_slug: number; sem_slug: number }
-}) {
+export function ListaVeiculos({ veiculos }: { veiculos: LinhaVeiculo[] }) {
 	const maximo = Math.max(0, ...veiculos.map(v => v.views))
 
 	return (
@@ -275,15 +269,6 @@ export function ListaVeiculos({
 			titulo="Veículos mais vistos"
 			dica="Quantas vezes a página de cada veículo foi aberta no período. Só entram os acessos em que o site conseguiu registrar de qual veículo se tratava."
 		>
-			{/* Aviso honesto: a captura do slug só foi corrigida agora, então o histórico não
-			    consegue alimentar esta lista — melhor dizer isso do que mostrar lista vazia. */}
-			{cobertura.sem_slug > 0 && (
-				<p className="mx-4 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs leading-snug">
-					{fmtNum(cobertura.sem_slug)} aberturas de página de veículo no período ficaram sem
-					registro de qual veículo era — falha do site, já corrigida. Esta lista só fica completa
-					com as visitas daqui para frente.
-				</p>
-			)}
 			{veiculos.length === 0 ? (
 				<Vazio>
 					Nenhuma abertura de página de veículo com o veículo identificado neste período.
