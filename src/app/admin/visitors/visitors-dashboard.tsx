@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import type { VisitorProfileWithDetails } from '@/types/database'
 import { PERIODOS } from '../crm/crm-constants'
 import { InfoDica } from '../crm/info-dica'
-import { ListaCidades, ListaVeiculos, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
+import { ListaCidades, ListaVeiculos, MidiaPaga, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
 import { SecaoReceitaPorCanal } from './visitors-receita'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
 
@@ -221,6 +221,7 @@ export function VisitorsDashboard(props: Props) {
 						<SecaoReceitaPorCanal dias={dias} />
 
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							<MidiaPaga linhas={metricas.midia_paga ?? []} marcacao={metricas.marcacao_paga ?? []} />
 							<ListaVeiculos veiculos={metricas.veiculos} />
 							<ListaCidades cidades={metricas.cidades} />
 						</div>

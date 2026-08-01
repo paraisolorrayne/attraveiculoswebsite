@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
 			group by pv.session_id
 		`
 
-		const [grupos, totaisExtras, veiculos, coberturaVeiculos, cidades] = await Promise.all([
+		const [grupos, totaisExtras, veiculos, coberturaVeiculos, cidades, midiaPaga, marcacaoPaga] = await Promise.all([
 			sql<GrupoAtribuicao>`
 				with veic as (${veiculosPorSessao})
 				select
@@ -242,6 +242,46 @@ export async function GET(request: NextRequest) {
 				group by 1
 				order by sessoes desc
 				limit ${LIMITE_LISTAS}
+			`.execute(db),
+
+			// Detalhe da mídia paga: campanha → grupo/anúncio → termo. É o recorte que
+			// o time de mídia usa para decidir o que pausar; o nível de campanha
+			// sozinho não diz QUAL anúncio traz conversa.
+			sql<{ canal_fonte: string; campanha: string; conteudo: string; termo: string; sessoes: number; whatsapp: number }>`
+				select
+					lower(btrim(coalesce(s.utm_source, ''))) as canal_fonte,
+					coalesce(nullif(btrim(s.utm_campaign), ''), '(não marcada)') as campanha,
+					coalesce(nullif(btrim(s.utm_content), ''), '(não marcado)') as conteudo,
+					coalesce(nullif(btrim(s.utm_term), ''), '(não marcado)') as termo,
+					count(*)::int as sessoes,
+					(count(*) filter (where s.contacted_whatsapp))::int as whatsapp
+				from visitor_sessions s
+				where ${noPeriodo}
+				  and (s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
+				       or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)
+				group by 1, 2, 3, 4
+				order by sessoes desc
+				limit ${LIMITE_LISTAS}
+			`.execute(db),
+
+			// Diagnóstico da MARCAÇÃO por plataforma: quantas visitas pagas chegam sem
+			// nome de campanha. É isso que revela um modelo de rastreamento mal
+			// configurado (ex.: custom parameter do Google Ads não definido na campanha,
+			// que chega vazio e joga tudo em "(não marcada)").
+			sql<{ fonte: string; sessoes: number; com_campanha: number; com_conteudo: number; com_termo: number; com_id: number }>`
+				select
+					coalesce(nullif(lower(btrim(s.utm_source)), ''), '(sem fonte)') as fonte,
+					count(*)::int as sessoes,
+					(count(*) filter (where nullif(btrim(s.utm_campaign), '') is not null))::int as com_campanha,
+					(count(*) filter (where nullif(btrim(s.utm_content), '') is not null))::int as com_conteudo,
+					(count(*) filter (where nullif(btrim(s.utm_term), '') is not null))::int as com_termo,
+					(count(*) filter (where nullif(btrim(s.utm_id), '') is not null))::int as com_id
+				from visitor_sessions s
+				where ${noPeriodo}
+				  and (s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
+				       or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)
+				group by 1
+				order by sessoes desc
 			`.execute(db),
 		])
 
@@ -356,6 +396,8 @@ export async function GET(request: NextRequest) {
 			// Diagnóstico do Top veículos: enquanto `sem_slug` for a maioria, a lista é parcial.
 			veiculos_cobertura: coberturaVeiculos.rows[0] ?? { com_slug: 0, sem_slug: 0 },
 			cidades: cidades.rows,
+			midia_paga: midiaPaga.rows,
+			marcacao_paga: marcacaoPaga.rows,
 		})
 	} catch (error) {
 		console.error('[Visitors Metrics API] Error:', error)
