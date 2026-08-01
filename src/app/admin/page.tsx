@@ -12,7 +12,7 @@ export default async function AdminHome() {
   if (!admin) redirect('/admin/login')
 
   const role = (isAdminRole(admin.role) ? admin.role : 'gerente') as AdminRole
-  const sections = sectionsForRole(role)
+  const sections = sectionsForRole(role, admin.secoes)
   const firstName = (admin.name || admin.email.split('@')[0]).split(' ')[0]
 
   return (

@@ -1,22 +1,24 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, User, UserPlus, KeyRound, Loader2, Power } from 'lucide-react'
+import { Shield, User, UserPlus, KeyRound, Loader2, Power, SlidersHorizontal } from 'lucide-react'
+import { ADMIN_ROLES, ROLE_LABELS, canAccessRoute, AREAS_SO_ADMIN, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
+import { ADMIN_SECTIONS } from '@/lib/admin-sections'
 
 interface AdminUserRow {
   id: string
   email: string
   name: string | null
-  role: 'admin' | 'gerente'
+  role: AdminRole
   is_active: boolean
   last_login_at: string | null
   created_at: string
+  secoes_extras?: SecoesExtras | null
 }
 
-const roleLabels: Record<string, string> = {
-  admin: 'Administrador',
-  gerente: 'Marketing',
-}
+// Rótulos vêm da fonte única de papéis; a lista antiga só conhecia dois dos
+// cinco papéis reais e rebaixava quem fosse editado por esta tela.
+const roleLabels = ROLE_LABELS
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'nunca'
@@ -36,7 +38,8 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
   const [showForm, setShowForm] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'admin' | 'gerente'>('gerente')
+  const [role, setRole] = useState<AdminRole>('marketing')
+  const [editandoPermissoes, setEditandoPermissoes] = useState<AdminUserRow | null>(null)
   const [password, setPassword] = useState('')
 
   const load = useCallback(async () => {
@@ -84,7 +87,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
       body: JSON.stringify({ email, name, role, password }),
     }, `Usuário ${email} criado`)
     if (ok) {
-      setEmail(''); setName(''); setPassword(''); setRole('gerente'); setShowForm(false)
+      setEmail(''); setName(''); setPassword(''); setRole('marketing'); setShowForm(false)
     }
   }
 
@@ -94,6 +97,15 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !u.is_active }),
     }, `${u.email} ${u.is_active ? 'desativado' : 'reativado'}`)
+  }
+
+  async function salvarPermissoes(u: AdminUserRow, secoes: SecoesExtras) {
+    await callApi(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secoes_extras: secoes }),
+    }, `Permissões de ${u.email} atualizadas`)
+    setEditandoPermissoes(null)
   }
 
   async function resetPassword(u: AdminUserRow) {
@@ -147,10 +159,11 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground-secondary mb-1">Papel</label>
-              <select value={role} onChange={e => setRole(e.target.value as 'admin' | 'gerente')}
+              <select value={role} onChange={e => setRole(e.target.value as AdminRole)}
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground">
-                <option value="gerente">Marketing (funções básicas)</option>
-                <option value="admin">Administrador (acesso total)</option>
+                {ADMIN_ROLES.map(r => (
+                  <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -208,6 +221,13 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
                         className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background transition-colors disabled:opacity-50">
                         <KeyRound className="w-4 h-4" />
                       </button>
+                      {u.id !== currentAdminId && u.role !== 'admin' && (
+                        <button onClick={() => setEditandoPermissoes(u)} disabled={busy}
+                          title="Editar acesso às seções"
+                          className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background transition-colors disabled:opacity-50">
+                          <SlidersHorizontal className="w-4 h-4" />
+                        </button>
+                      )}
                       {u.id !== currentAdminId && (
                         <button onClick={() => toggleActive(u)} disabled={busy}
                           title={u.is_active ? 'Desativar' : 'Reativar'}
@@ -227,9 +247,137 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
       </div>
 
       <p className="mt-4 text-xs text-foreground-secondary">
-        Contas usam e-mail + senha. &quot;Marketing&quot; acessa Marketing, Criativos, Blog,
-        Notícias e Newsletter. Não é possível desativar o último administrador ativo.
+        Contas usam e-mail + senha. O papel define o acesso padrão; use o botão de
+        permissões para liberar ou bloquear seções de uma pessoa específica sem
+        mudar o papel dela. Não é possível desativar o último administrador ativo.
       </p>
+
+      {editandoPermissoes && (
+        <PainelPermissoes
+          usuario={editandoPermissoes}
+          busy={busy}
+          onFechar={() => setEditandoPermissoes(null)}
+          onSalvar={secoes => salvarPermissoes(editandoPermissoes, secoes)}
+        />
+      )}
     </div>
   )
+}
+
+/**
+ * Edição das exceções de acesso de UMA pessoa.
+ *
+ * Cada seção tem três estados: seguir o padrão do papel, liberar ou bloquear.
+ * O padrão é mostrado com o que ele significa na prática ("padrão: liberado" /
+ * "padrão: sem acesso") para o admin não precisar decorar a matriz de papéis.
+ * A gestão de usuários aparece somente-leitura: nenhuma exceção a concede.
+ */
+function PainelPermissoes({
+	usuario,
+	busy,
+	onFechar,
+	onSalvar,
+}: {
+	usuario: AdminUserRow
+	busy: boolean
+	onFechar: () => void
+	onSalvar: (secoes: SecoesExtras) => void
+}) {
+	const [secoes, setSecoes] = useState<SecoesExtras>(usuario.secoes_extras ?? {})
+
+	const definir = (href: string, valor: 'padrao' | 'liberar' | 'bloquear') => {
+		setSecoes(atual => {
+			const proximo = { ...atual }
+			if (valor === 'padrao') delete proximo[href]
+			else proximo[href] = valor === 'liberar'
+			return proximo
+		})
+	}
+
+	const estado = (href: string): 'padrao' | 'liberar' | 'bloquear' => {
+		if (!(href in secoes)) return 'padrao'
+		return secoes[href] ? 'liberar' : 'bloquear'
+	}
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onFechar}>
+			<div
+				className="bg-background-card border border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+				onClick={e => e.stopPropagation()}
+			>
+				<div className="p-4 border-b border-border">
+					<h2 className="text-lg font-semibold text-foreground">Acesso de {usuario.name || usuario.email}</h2>
+					<p className="text-xs text-foreground-secondary mt-1">
+						Papel atual: {ROLE_LABELS[usuario.role]}. As exceções abaixo valem só para esta pessoa.
+					</p>
+				</div>
+
+				<div className="p-4 overflow-y-auto space-y-2">
+					{ADMIN_SECTIONS.map(secao => {
+						const soAdmin = AREAS_SO_ADMIN.some(p => secao.href.startsWith(p))
+						const padraoLibera = canAccessRoute(usuario.role, secao.href)
+						const atual = estado(secao.href)
+						return (
+							<div key={secao.href} className="flex items-center justify-between gap-3 py-2 border-b border-border/60 last:border-0">
+								<div className="min-w-0">
+									<div className="text-sm text-foreground truncate">{secao.label}</div>
+									<div className="text-[11px] text-foreground-secondary">
+										{soAdmin
+											? 'Exclusivo do Administrador'
+											: `Padrão do papel: ${padraoLibera ? 'liberado' : 'sem acesso'}`}
+									</div>
+								</div>
+								{soAdmin ? (
+									<span className="text-[11px] text-foreground-secondary whitespace-nowrap">—</span>
+								) : (
+									<div className="flex gap-1 flex-shrink-0">
+										{([
+											['padrao', 'Padrão'],
+											['liberar', 'Liberar'],
+											['bloquear', 'Bloquear'],
+										] as const).map(([valor, rotulo]) => (
+											<button
+												key={valor}
+												type="button"
+												onClick={() => definir(secao.href, valor)}
+												className={`px-2 py-1 rounded-md text-[11px] border transition-colors ${
+													atual === valor
+														? valor === 'liberar'
+															? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/40'
+															: valor === 'bloquear'
+																? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/40'
+																: 'bg-background text-foreground border-foreground-secondary/40'
+														: 'border-border text-foreground-secondary hover:text-foreground'
+												}`}
+											>
+												{rotulo}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+						)
+					})}
+				</div>
+
+				<div className="p-4 border-t border-border flex items-center justify-end gap-2">
+					<button
+						type="button"
+						onClick={onFechar}
+						className="px-4 py-2 rounded-lg text-sm text-foreground-secondary hover:text-foreground transition-colors"
+					>
+						Cancelar
+					</button>
+					<button
+						type="button"
+						disabled={busy}
+						onClick={() => onSalvar(secoes)}
+						className="px-4 py-2 rounded-lg text-sm bg-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+					>
+						Salvar
+					</button>
+				</div>
+			</div>
+		</div>
+	)
 }

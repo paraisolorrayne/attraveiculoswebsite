@@ -524,6 +524,9 @@ export interface AdminUsersTable {
   is_active: Generated<boolean>
   last_login_at: Timestamp | null
   password_hash: string | null // bcrypt (Auth.js Credentials) — Fase 5
+  // Exceções de acesso por usuário: { '<prefixo>': true|false }. Ver
+  // canAccessRoute em src/lib/auth/roles.ts.
+  secoes_extras: Generated<Record<string, boolean>>
   created_at: Timestamp
   updated_at: Timestamp
 }

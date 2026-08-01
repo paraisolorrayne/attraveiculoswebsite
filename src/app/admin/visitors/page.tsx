@@ -15,10 +15,10 @@ export default async function VisitorsPage() {
     redirect('/admin/login')
   }
 
-  // Only admin role can access visitor intelligence
-  if (admin.role !== 'admin') {
-    redirect('/admin')
-  }
+  // O acesso por seção é decidido no layout do admin (src/app/admin/layout.tsx),
+  // que considera papel + exceções por usuário. A regra fixa que existia aqui
+  // ("só admin") contradizia a própria matriz — nem o operador, que a matriz
+  // libera, entrava — e impediria conceder a seção a alguém por exceção.
 
   return (
     <Suspense fallback={<div className="p-8 text-center">Carregando...</div>}>

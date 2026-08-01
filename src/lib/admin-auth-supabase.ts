@@ -9,7 +9,7 @@
 
 import { auth, signIn, signOut as authSignOut } from '@/auth'
 import { db } from '@/lib/db'
-import { canAccessRoute as canAccessRouteForRole, type AdminRole } from '@/lib/auth/roles'
+import { canAccessRoute as canAccessRouteForRole, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
 
 export type { AdminRole }
 
@@ -17,6 +17,8 @@ export interface AdminUser {
   id: string
   email: string
   role: AdminRole
+  /** Exceções de acesso por seção; vazio = só o papel decide. */
+  secoes: SecoesExtras
   name: string | null
   is_active: boolean
   last_login_at: string | null
@@ -65,7 +67,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
   if (process.env.NODE_ENV === 'development' && process.env.ADMIN_AUTH_BYPASS === 'true') {
     const now = new Date().toISOString()
     return {
-      id: 'dev-admin-bypass', email: 'dev@localhost', role: 'admin',
+      id: 'dev-admin-bypass', email: 'dev@localhost', role: 'admin', secoes: {},
       name: 'Dev Admin', is_active: true, last_login_at: now, created_at: now, updated_at: now,
     }
   }
@@ -82,6 +84,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     id: row.id,
     email: row.email,
     role: row.role as AdminRole,
+    secoes: (row.secoes_extras ?? {}) as SecoesExtras,
     name: row.name,
     is_active: row.is_active,
     last_login_at: iso(row.last_login_at),
@@ -106,7 +109,7 @@ export async function hasRole(requiredRole: AdminRole): Promise<boolean> {
 export async function canAccessRoute(pathname: string): Promise<boolean> {
   const admin = await getCurrentAdmin()
   if (!admin) return false
-  return canAccessRouteForRole(admin.role, pathname)
+  return canAccessRouteForRole(admin.role, pathname, admin.secoes)
 }
 
 /**
