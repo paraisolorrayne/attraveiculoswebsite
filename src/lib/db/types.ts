@@ -28,6 +28,8 @@ type JsonNullable = ColumnType<Record<string, unknown> | null, unknown, unknown>
 export interface VisitorFingerprintsTable {
   id: Generated<string>
   visitor_id: string
+  /** 'aleatorio' identifica UMA pessoa; 'aparelho' é o esquema antigo, colidido. */
+  origem_id: Generated<string>
   browser_name: string | null
   browser_version: string | null
   os_name: string | null

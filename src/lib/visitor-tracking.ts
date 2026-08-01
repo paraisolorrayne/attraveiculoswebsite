@@ -512,42 +512,48 @@ function getDeviceType(): string {
   return 'desktop'
 }
 
-// Create a simple hash for fingerprinting (no external dependencies)
-export async function createVisitorFingerprint(): Promise<string> {
-  const data = collectDeviceData()
-  if (!data) return generateId()
+/**
+ * Marcador do esquema que gerou o `visitor_id`. Vai junto na criação da sessão
+ * para o servidor saber se pode confiar naquele id ao ligar uma pessoa às suas
+ * visitas. Ids antigos (derivados do aparelho) não mandam nada e são tratados
+ * como não confiáveis.
+ */
+export const ORIGEM_ID_ALEATORIO = 'aleatorio'
 
-  // Create fingerprint string from device characteristics
-  const components = [
-    data.browser_name,
-    data.os_name,
-    data.screen_resolution,
-    data.timezone,
-    data.language,
-    data.color_depth,
-    data.pixel_ratio,
-    data.touch_support,
-    data.hardware_concurrency,
-    data.platform,
-  ].filter(Boolean).join('|')
+/**
+ * Identificador do visitante — ALEATÓRIO, persistido no localStorage.
+ *
+ * Antes era o hash das características do aparelho (navegador, sistema,
+ * resolução, fuso, idioma, densidade de pixels, núcleos…). Sem nenhum
+ * componente aleatório, dois aparelhos iguais com mesmo idioma e fuso geravam o
+ * MESMO id — e como o banco faz upsert por `visitor_id`, pessoas distintas
+ * viravam a mesma linha. Medido na produção em 01/08/2026: um único
+ * "dispositivo" com 1.705 sessões, outros com 1.106 e 1.079.
+ *
+ * Isso inviabilizava a pergunta "de onde veio ESTA pessoa": ao puxar as sessões
+ * de um lead vinham centenas de sessões de estranhos, e a campanha atribuída
+ * era a de qualquer um deles.
+ *
+ * O id não precisa vir do aparelho — ele já é guardado no navegador da própria
+ * pessoa. Aleatório elimina a colisão sem perder nada: os dados de aparelho
+ * continuam sendo enviados à parte, para os campos informativos.
+ */
+/**
+ * Reconhece o id no formato ANTIGO (SHA-256 do aparelho: 64 dígitos hex) para
+ * trocá-lo por um aleatório. Sem isso, quem já visitou o site continuaria
+ * carregando para sempre o id compartilhado com estranhos.
+ */
+export function ehIdDerivadoDoAparelho(id: string): boolean {
+  return /^[0-9a-f]{64}$/i.test(id.trim())
+}
 
-  // Create hash using SubtleCrypto if available
-  if (window.crypto?.subtle) {
-    const encoder = new TextEncoder()
-    const dataBuffer = encoder.encode(components)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+export function createVisitorFingerprint(): string {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID()
   }
-
-  // Fallback: simple hash
-  let hash = 0
-  for (let i = 0; i < components.length; i++) {
-    const char = components.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
-  }
-  return Math.abs(hash).toString(36)
+  // Sem randomUUID: tempo + aleatório, mesmo esquema do id de sessão — que tem
+  // zero colisões em 16.283 registros reais de produção.
+  return `${generateId()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 // Track page view
