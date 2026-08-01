@@ -1,6 +1,6 @@
 'use client'
 
-import { Phone, Car, AlertTriangle, CalendarClock, ArrowLeftRight } from 'lucide-react'
+import { Phone, Car, AlertTriangle, CalendarClock, ArrowLeftRight, Megaphone } from 'lucide-react'
 import { situacaoInfo } from './crm-constants'
 import { dataReferenciaPeriodo } from '@/lib/crm-datas'
 
@@ -32,6 +32,8 @@ export interface CrmCard {
 	criado_em: string | null
 	atualizado_em: string
 	dados: Record<string, unknown> | null
+	/** Campanha que trouxe o lead ao site; null quando não dá para afirmar. */
+	origem_campanha?: { campanha: string; canal: string; metodo: 'certa' | 'provavel' } | null
 }
 
 /* ---------- formatadores compartilhados ---------- */
@@ -167,6 +169,26 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 				<div className="mt-1 flex items-center gap-1.5 text-xs text-foreground-secondary">
 					<ArrowLeftRight className="w-3.5 h-3.5 flex-shrink-0" />
 					<span className="truncate min-w-0" title={c.veiculo_troca}>Na troca: {c.veiculo_troca}</span>
+				</div>
+			)}
+
+			{/* Campanha que trouxe o lead ao site. Só aparece quando dá para
+			    afirmar: sem ligação confiável entre a visita e o lead não se
+			    mostra nada, porque um palpite aqui vira decisão de verba errada. */}
+			{c.origem_campanha && (
+				<div className="mt-1 flex items-center gap-1.5 text-xs text-foreground-secondary">
+					<Megaphone className="w-3.5 h-3.5 flex-shrink-0" />
+					<span className="truncate min-w-0" title={`${c.origem_campanha.canal} · ${c.origem_campanha.campanha}`}>
+						{c.origem_campanha.campanha}
+					</span>
+					{c.origem_campanha.metodo === 'provavel' && (
+						<span
+							className="text-[10px] text-foreground-secondary/70 flex-shrink-0"
+							title="Ligação provável, feita pelo telefone do lead"
+						>
+							(provável)
+						</span>
+					)}
 				</div>
 			)}
 

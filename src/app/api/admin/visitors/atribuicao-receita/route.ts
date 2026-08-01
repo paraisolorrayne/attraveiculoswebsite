@@ -210,16 +210,26 @@ export async function GET(request: NextRequest) {
 			// depois de limpar cookie). `resolved_profile_id` guarda a resolução atual do
 			// fingerprint; `identity_events` guarda o histórico. A união dos dois é o conjunto real
 			// de dispositivos daquela pessoa.
+			// SÓ dispositivos com identificador confiável (aleatório). O esquema
+			// antigo derivava o id das características do aparelho, sem nada de
+			// aleatório: aparelhos iguais viravam a MESMA linha, e um único
+			// "dispositivo" acumulou 1.705 sessões de pessoas diferentes. Usar isso
+			// aqui não deixaria a atribuição imprecisa — deixaria ERRADA, creditando
+			// a venda à campanha que trouxe um estranho.
 			const ids = [...perfisAlvo]
 			const resultado = await sql<SessaoOrigem & { profile_id: string }>`
 				with fps as (
 					select f.id as fingerprint_id, f.resolved_profile_id as profile_id
 					from visitor_fingerprints f
 					where f.resolved_profile_id::text = any(${ids})
+					  and f.origem_id = 'aleatorio'
 					union
 					select ie.fingerprint_id, ie.profile_id
 					from identity_events ie
-					where ie.profile_id::text = any(${ids}) and ie.fingerprint_id is not null
+					join visitor_fingerprints f2 on f2.id = ie.fingerprint_id
+					where ie.profile_id::text = any(${ids})
+					  and ie.fingerprint_id is not null
+					  and f2.origem_id = 'aleatorio'
 				)
 				select
 					fps.profile_id::text as profile_id,

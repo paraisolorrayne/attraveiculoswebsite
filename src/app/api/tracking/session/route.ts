@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       visitor_id,
+      origem_id,
       session_id,
       device_data,
       utm_params,
@@ -133,6 +134,10 @@ export async function POST(request: NextRequest) {
       .insertInto('visitor_fingerprints')
       .values({
         visitor_id,
+        // 'aleatorio' = id que identifica UMA pessoa; 'aparelho' = esquema
+        // antigo, compartilhado entre aparelhos iguais (ver migration
+        // 20260801_fingerprint_origem_id.sql).
+        origem_id: origem_id === 'aleatorio' ? 'aleatorio' : 'aparelho',
         browser_name: device_data?.browser_name || null,
         browser_version: device_data?.browser_version || null,
         os_name: device_data?.os_name || null,
@@ -155,6 +160,9 @@ export async function POST(request: NextRequest) {
           screen_resolution: (eb) => eb.ref('excluded.screen_resolution'),
           timezone: (eb) => eb.ref('excluded.timezone'),
           language: (eb) => eb.ref('excluded.language'),
+          // Um id antigo nunca vira confiável; um novo, uma vez aleatório, não
+          // regride se um cliente em cache mandar o formato velho.
+          origem_id: sql`case when excluded.origem_id = 'aleatorio' then 'aleatorio' else visitor_fingerprints.origem_id end`,
           last_seen_at: now,
           total_visits: sql`visitor_fingerprints.total_visits + 1`,
           updated_at: now,

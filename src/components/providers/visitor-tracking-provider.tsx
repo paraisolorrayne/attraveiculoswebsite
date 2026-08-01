@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useRef, useCallback, ReactNode, u
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   createVisitorFingerprint,
+  ehIdDerivadoDoAparelho,
+  ORIGEM_ID_ALEATORIO,
   collectDeviceData,
   collectUTMParams,
   collectClickIds,
@@ -158,9 +160,11 @@ export function VisitorTrackingProvider({ children }: Props) {
 
     const init = async () => {
       // Get or create visitor ID (fingerprint)
+      // Id no formato antigo (hash do aparelho) é TROCADO: ele é compartilhado
+      // com todos os aparelhos iguais, e mantê-lo perpetuaria a colisão.
       let visitorId = getStoredVisitorId()
-      if (!visitorId) {
-        visitorId = await createVisitorFingerprint()
+      if (!visitorId || ehIdDerivadoDoAparelho(visitorId)) {
+        visitorId = createVisitorFingerprint()
         setStoredVisitorId(visitorId)
       }
       visitorIdRef.current = visitorId
@@ -208,6 +212,9 @@ export function VisitorTrackingProvider({ children }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             visitor_id: visitorId,
+            // Diz ao servidor que este id é aleatório (confiável para ligar uma
+            // pessoa às visitas dela). Cliente antigo não manda nada.
+            origem_id: ORIGEM_ID_ALEATORIO,
             session_id: sessionId,
             device_data: collectedDeviceData,
             utm_params: collectedUtmParams,
