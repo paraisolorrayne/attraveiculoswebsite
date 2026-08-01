@@ -92,20 +92,32 @@ não serve como ponto único de decisão:
   bloquearia o Eduardo mesmo depois da exceção concedida.
 - `/admin/blog/page.tsx` só verifica se está autenticado, sem papel.
 
-Por isso o **middleware é o ponto autoritativo** (ele já roda para todo
-`/admin/*` pelo matcher) e passa a chamar `canAccessRoute` com as
-exceções. Consequências tratadas:
+O ponto autoritativo passa a ser o **layout do admin**
+(`src/app/admin/layout.tsx`), que já roda para toda página de `/admin/*` e
+já consulta o banco via `getCurrentAdmin()`. Vantagens sobre as
+alternativas: é **um único lugar**, cobre inclusive as páginas que hoje
+não checam nada, e lê o estado **fresco** — permissão concedida vale na
+navegação seguinte, sem esperar novo login.
 
-1. **As exceções precisam existir no edge**, onde não há banco. Vão no
-   JWT da sessão. Para uma mudança não esperar o próximo login, o callback
-   `jwt` (que roda no servidor, com banco) recarrega as permissões quando
-   o carimbo no token tiver mais de 5 minutos. Na prática: efeito em até
-   5 minutos, sem consulta por request.
-2. **`/admin/visitors/page.tsx` deixa de ter regra própria** e passa a
-   usar o mesmo cálculo — senão a concessão não funcionaria.
-3. `src/lib/admin-sections.tsx` (`sectionsForRole`) passa a receber as
-   exceções, para o menu refletir o acesso real.
-4. `src/app/api/admin/users/*` valida que só `admin` altera e que ninguém
+Foi por isso que descartei colocar as exceções no JWT: o middleware roda
+no edge, sem banco, então o token ficaria desatualizado e o modo de falha
+seria o pior possível — bloquear um acesso que o admin acabou de conceder.
+
+Divisão de responsabilidade:
+
+1. **Middleware** (edge, JWT) — porta grossa: exige sessão válida com
+   papel de admin e barra `/admin/usuarios` para quem não é `admin`.
+   Decisão por seção sai dele, porque no edge ela não teria como estar
+   correta.
+2. **Layout do admin** (servidor, banco) — decisão por seção com
+   `canAccessRoute(role, path, secoes)`; sem acesso, redireciona para
+   `/admin`.
+3. **`/admin/visitors/page.tsx` perde a regra própria** (`role === 'admin'`
+   fixo), que hoje contradiz a matriz e bloquearia o Eduardo mesmo com a
+   exceção concedida.
+4. `sectionsForRole(role, secoes)` passa a considerar exceções, para o
+   menu refletir o acesso real.
+5. `src/app/api/admin/users/*` valida que só `admin` altera e que ninguém
    altera a si mesmo. As APIs de cada seção mantêm suas checagens.
 
 ## Fora de escopo

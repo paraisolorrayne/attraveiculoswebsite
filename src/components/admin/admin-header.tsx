@@ -29,7 +29,7 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
   const pathname = usePathname()
 
   const role: AdminRole = isAdminRole(admin.role) ? admin.role : 'gerente'
-  const sections = sectionsForRole(role)
+  const sections = sectionsForRole(role, admin.secoes)
   const isHigh = HIGH_ROLES.includes(role)
   const onHome = pathname === '/admin'
 

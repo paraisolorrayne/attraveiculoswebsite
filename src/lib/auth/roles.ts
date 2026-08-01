@@ -63,12 +63,57 @@ const ROUTE_ACCESS: Record<Exclude<AdminRole, 'admin'>, string[]> = {
 const ALWAYS_ALLOWED = ['/admin/login', '/admin/reset-password']
 
 /**
- * O papel pode acessar a rota? `admin` sempre; demais pela matriz.
- * Regras suportadas: '*' (tudo) e '!<prefixo>' (negação explícita).
+ * Gestão de usuários: exclusiva do papel `admin` e IMUNE a exceção.
+ * Conceder esta área a outro papel equivale a dar a ele o poder de editar
+ * papéis e permissões — ou seja, de se promover a admin.
  */
-export function canAccessRoute(role: AdminRole, pathname: string): boolean {
-  if (role === 'admin') return true
+export const AREAS_SO_ADMIN = ['/admin/usuarios', '/admin/users', '/api/admin/users']
+
+function ehAreaSoAdmin(pathname: string): boolean {
+  return AREAS_SO_ADMIN.some((p) => pathname.startsWith(p))
+}
+
+/**
+ * Exceções de acesso por usuário: `{ '<prefixo>': true | false }`.
+ * `true` concede uma seção que o papel não teria; `false` revoga uma que teria.
+ */
+export type SecoesExtras = Record<string, boolean>
+
+/** Só prefixos de rota do admin, para lixo no JSONB não virar regra. */
+function excecaoAplicavel(prefixo: string, pathname: string): boolean {
+  return prefixo.startsWith('/admin/') && pathname.startsWith(prefixo)
+}
+
+/**
+ * O usuário pode acessar a rota?
+ *
+ * Precedência, do mais forte para o mais fraco:
+ *   1. login/reset — sempre liberados;
+ *   2. `admin` — acesso total, e exceções NÃO se aplicam a ele (é quem
+ *      administra os demais e não pode se trancar para fora);
+ *   3. gestão de usuários — só `admin`, sem exceção que valha;
+ *   4. exceção do usuário (`false` revoga, `true` concede);
+ *   5. matriz do papel, como sempre foi.
+ *
+ * `secoes` é opcional: chamadas antigas de dois argumentos seguem válidas.
+ */
+export function canAccessRoute(
+  role: AdminRole,
+  pathname: string,
+  secoes?: SecoesExtras | null,
+): boolean {
   if (ALWAYS_ALLOWED.some((p) => pathname === p)) return true
+  if (role === 'admin') return true
+  if (ehAreaSoAdmin(pathname)) return false
+
+  if (secoes) {
+    // Prefixo mais específico ganha: uma exceção em /admin/blog/x deve pesar
+    // mais que outra, contrária, em /admin/blog.
+    const aplicaveis = Object.keys(secoes)
+      .filter((p) => excecaoAplicavel(p, pathname))
+      .sort((a, b) => b.length - a.length)
+    if (aplicaveis.length > 0) return secoes[aplicaveis[0]] === true
+  }
 
   const rules = ROUTE_ACCESS[role] ?? []
   // Negações têm prioridade

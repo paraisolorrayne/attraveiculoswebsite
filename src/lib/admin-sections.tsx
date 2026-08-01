@@ -8,7 +8,7 @@ import {
   KanbanSquare, BarChart3, Users, Settings,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { canAccessRoute, type AdminRole } from '@/lib/auth/roles'
+import { canAccessRoute, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
 
 export interface AdminSection {
   label: string
@@ -30,6 +30,6 @@ export const ADMIN_SECTIONS: AdminSection[] = [
 ]
 
 /** Seções que o papel pode acessar (usa a matriz real de rotas). */
-export function sectionsForRole(role: AdminRole): AdminSection[] {
-  return ADMIN_SECTIONS.filter((s) => canAccessRoute(role, s.href))
+export function sectionsForRole(role: AdminRole, secoes?: SecoesExtras | null): AdminSection[] {
+  return ADMIN_SECTIONS.filter((s) => canAccessRoute(role, s.href, secoes))
 }

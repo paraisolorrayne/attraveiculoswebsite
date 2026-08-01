@@ -5,7 +5,7 @@ import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
-import { isAdminRole } from '@/lib/auth/roles'
+import { isAdminRole, AREAS_SO_ADMIN } from '@/lib/auth/roles'
 
 // Migrado do Supabase GoTrue → Auth.js/Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
@@ -59,6 +59,32 @@ export async function PATCH(
   if (typeof body.name === 'string' && body.name.trim()) updates.name = body.name.trim()
   if (isAdminRole(body.role)) updates.role = body.role
   if (typeof body.is_active === 'boolean') updates.is_active = body.is_active
+
+  // Exceções de acesso por seção. Duas travas:
+  //  - ninguém edita as próprias permissões (nem o admin), senão a tela vira
+  //    caminho de autoconcessão;
+  //  - a gestão de usuários é filtrada aqui, além de ser ignorada em
+  //    canAccessRoute: dado inválido não deve nem chegar ao banco.
+  if (body.secoes_extras !== undefined) {
+    if (id === admin.id) {
+      return NextResponse.json(
+        { error: 'Não é possível editar as próprias permissões' },
+        { status: 400 },
+      )
+    }
+    const entrada: unknown = body.secoes_extras
+    if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) {
+      return NextResponse.json({ error: 'secoes_extras inválido' }, { status: 400 })
+    }
+    const limpo: Record<string, boolean> = {}
+    for (const [prefixo, valor] of Object.entries(entrada as Record<string, unknown>)) {
+      if (typeof valor !== 'boolean') continue
+      if (!prefixo.startsWith('/admin/')) continue
+      if (AREAS_SO_ADMIN.some((p) => prefixo.startsWith(p))) continue
+      limpo[prefixo] = valor
+    }
+    updates.secoes_extras = JSON.stringify(limpo)
+  }
 
   if (Object.keys(updates).length > 0) {
     try {

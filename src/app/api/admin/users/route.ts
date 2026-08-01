@@ -19,7 +19,7 @@ export async function GET() {
 
   try {
     const data = await db.selectFrom('admin_users')
-      .select(['id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'created_at'])
+      .select(['id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'created_at', 'secoes_extras'])
       .orderBy('created_at', 'asc')
       .execute()
     return NextResponse.json({ users: data })
