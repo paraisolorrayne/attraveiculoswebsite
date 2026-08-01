@@ -2,6 +2,22 @@
 
 **Data:** 2026-08-01 · Complementa `nota-emissor-webhook-2026-07-31.md`
 
+> **CORRIGIDO EM 01/08 pela resposta do time do CRM.** O pedido abaixo partia
+> de uma premissa errada nossa: a de que o POST do lead de formulário chegava
+> até eles com o identificador em `lead_id`. Não chega — eles não têm entrada
+> para esse payload, e no endpoint mais parecido `lead_id` é tipado como
+> inteiro, então o UUID derrubaria o payload inteiro (perdendo o lead, não só
+> o identificador). Já corrigimos o nosso lado: o id saiu de `lead_id` e passou
+> a viajar em `site_session_id`.
+>
+> **O caminho que funciona é o marcador `[ref: ...]` na mensagem do WhatsApp.**
+> Ele chega intacto e passará a ser devolvido a partir do merge deles.
+>
+> **As 7 vendas citadas abaixo não serão atribuídas.** Só 3 leads têm o
+> marcador, todos de 23/07 em diante; as 7 vendas fecharam em 12/07 e 21/07, e
+> nenhum webhook guardou o payload cru. Confirmamos as datas no nosso banco.
+> O número serve como motivação do pedido, não como promessa de recuperação.
+
 ## Resumo em uma linha
 
 O site já manda o identificador da visita junto do lead, no campo `lead_id`.
