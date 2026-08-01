@@ -9,6 +9,8 @@ import {
   collectClickIds,
   collectIdentityFromURL,
   getPageType,
+  getVehicleSlugFromPath,
+  getTrustedVehicleIdFromSlug,
   getSessionId,
   getStoredVisitorId,
   setStoredVisitorId,
@@ -20,6 +22,10 @@ import {
   updateLastPageDwell,
   getAndIncrementVisitCount,
   setIdentifiedContact,
+  shouldSendHeartbeat,
+  activeSegmentMs,
+  activeDwellSeconds,
+  HEARTBEAT_INTERVAL_MS,
   type InteractionType,
   type ClickIds,
 } from '@/lib/visitor-tracking'
@@ -77,10 +83,19 @@ export function VisitorTrackingProvider({ children }: Props) {
   const fingerprintDbIdRef = useRef<string | null>(null)
   const sessionDbIdRef = useRef<string | null>(null)
   const lastPathRef = useRef<string>('')
-  const pageStartTimeRef = useRef<number>(Date.now())
+  // Preenchido no primeiro efeito (Date.now() durante o render é impuro). Só é
+  // lido depois que um page view define lastPathRef, então o 0 nunca vaza.
+  const pageStartTimeRef = useRef<number>(0)
+  // Tempo já acumulado nesta página em trechos ANTERIORES (o visitante escondeu
+  // a aba e voltou). pageStartTimeRef marca só o trecho atual, para que o tempo
+  // fora não seja contado como permanência — e nem perdido.
+  const pageActiveMsRef = useRef<number>(0)
   const initialized = useRef(false)
   const scrollDepthRef = useRef<number>(0)
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Última interação REAL do visitante (scroll, clique, tecla, troca de página,
+  // volta para a aba). É o que separa "está lendo" de "aba esquecida aberta".
+  const lastInteractionAtRef = useRef<number>(0)
 
   // Abandoned lead detection refs
   const hasFilledFormRef = useRef(false)
@@ -89,6 +104,16 @@ export function VisitorTrackingProvider({ children }: Props) {
   const geolocationRef = useRef<GeolocationData | null>(null)
 
   // State for enriched data (exposed via context)
+  // sessionDbId precisa ser ESTADO (não só ref): os efeitos de pageview e de
+  // heartbeat dependem dele e refs não disparam re-render, então antes eles
+  // rodavam uma única vez com o valor null da montagem e nunca mais.
+  const [sessionDbId, setSessionDbIdState] = useState<string | null>(null)
+  // fingerprintDbId também é estado, e pela mesma razão: o efeito de page view
+  // depende dos DOIS ids. Se só um deles disparasse re-render, o efeito podia
+  // rodar num momento em que o outro ainda era null e nunca mais voltar.
+  const [fingerprintDbId, setFingerprintDbIdState] = useState<string | null>(null)
+  const [visitorId, setVisitorIdState] = useState<string | null>(null)
+  const [sessionId, setSessionIdState] = useState<string | null>(null)
   const [geolocation, setGeolocation] = useState<GeolocationData | null>(null)
   const [deviceData, setDeviceData] = useState<ReturnType<typeof collectDeviceData> | null>(null)
   const [utmParams, setUtmParams] = useState<Record<string, string | null> | null>(null)
@@ -96,10 +121,40 @@ export function VisitorTrackingProvider({ children }: Props) {
   const referrerRef = useRef<string | null>(null)
   const landingPageRef = useRef<string | null>(null)
 
+  // Fila para interações disparadas antes da sessão estar pronta (corrida
+  // entre init /api/tracking/session e o primeiro clique do usuário).
+  // Drena quando session_db_id fica disponível.
+  const pendingInteractionsRef = useRef<Array<{ type: InteractionType; metadata?: Record<string, unknown>; page_path: string }>>([])
+
+  const flushPendingInteractions = useCallback(() => {
+    if (!fingerprintDbIdRef.current || !sessionDbIdRef.current) return
+    const queued = pendingInteractionsRef.current
+    if (queued.length === 0) return
+    pendingInteractionsRef.current = []
+    for (const ev of queued) {
+      fetch('/api/tracking/interaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fingerprint_db_id: fingerprintDbIdRef.current,
+          session_db_id: sessionDbIdRef.current,
+          type: ev.type,
+          page_path: ev.page_path,
+          metadata: ev.metadata,
+        }),
+      }).catch(() => {})
+    }
+  }, [])
+
   // Initialize fingerprint and session
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true
+
+    // Relógio da primeira página (não pode ser inicializado no render)
+    pageStartTimeRef.current = Date.now()
+    // Abrir a página já conta como presença; o ócio começa a contar daqui.
+    lastInteractionAtRef.current = Date.now()
 
     const init = async () => {
       // Get or create visitor ID (fingerprint)
@@ -109,14 +164,25 @@ export function VisitorTrackingProvider({ children }: Props) {
         setStoredVisitorId(visitorId)
       }
       visitorIdRef.current = visitorId
+      setVisitorIdState(visitorId)
 
       // Get session ID
       const sessionId = getSessionId()
       sessionIdRef.current = sessionId
+      setSessionIdState(sessionId)
 
-      // Get stored DB IDs
-      fingerprintDbIdRef.current = getFingerprintDbId()
-      sessionDbIdRef.current = getSessionDbId()
+      // Ids já conhecidos (localStorage/sessionStorage) HIDRATAM o estado, não
+      // só os refs. Os efeitos de page view e de heartbeat dependem do estado;
+      // se ele só fosse preenchido dentro do `if (response.ok)` abaixo, um 429
+      // ou um 500 na criação da sessão deixaria sessionDbId null para sempre
+      // naquele carregamento — nenhum page view em nenhuma navegação e nenhum
+      // heartbeat — mesmo com um id perfeitamente válido guardado aqui.
+      const storedFingerprintDbId = getFingerprintDbId()
+      const storedSessionDbId = getSessionDbId()
+      fingerprintDbIdRef.current = storedFingerprintDbId
+      sessionDbIdRef.current = storedSessionDbId
+      if (storedFingerprintDbId) setFingerprintDbIdState(storedFingerprintDbId)
+      if (storedSessionDbId) setSessionDbIdState(storedSessionDbId)
       console.log('[VisitorTracking] Initial fingerprintDbId from localStorage:', fingerprintDbIdRef.current)
 
       // Collect device data, UTM params, and click IDs
@@ -156,11 +222,15 @@ export function VisitorTrackingProvider({ children }: Props) {
           if (data.fingerprint_db_id) {
             setFingerprintDbId(data.fingerprint_db_id)
             fingerprintDbIdRef.current = data.fingerprint_db_id
+            setFingerprintDbIdState(data.fingerprint_db_id)
             console.log('[VisitorTracking] fingerprintDbId set:', data.fingerprint_db_id)
           }
           if (data.session_db_id) {
             setSessionDbId(data.session_db_id)
             sessionDbIdRef.current = data.session_db_id
+            // Destrava os efeitos que dependem da sessão (pageview da landing
+            // page e heartbeat), que só rodam de novo com um re-render.
+            setSessionDbIdState(data.session_db_id)
             // Drena interações enfileiradas antes da sessão existir
             flushPendingInteractions()
           }
@@ -260,17 +330,39 @@ export function VisitorTrackingProvider({ children }: Props) {
     }
 
     init()
+  }, [flushPendingInteractions])
+
+  // Tempo de permanência que dá para defender: soma dos trechos em que a aba
+  // esteve à frente, e cada trecho conta no máximo até HEARTBEAT_IDLE_TIMEOUT_MS
+  // depois da última interação real. Sem esses dois cortes, uma aba aberta e
+  // esquecida a noite toda voltaria como "8 horas na página" no evento de saída.
+  const elapsedActiveSeconds = useCallback((): number => {
+    return activeDwellSeconds({
+      now: Date.now(),
+      segmentStartedAt: pageStartTimeRef.current,
+      accumulatedMs: pageActiveMsRef.current,
+      lastInteractionAt: lastInteractionAtRef.current,
+    })
   }, [])
 
   // Track page views on navigation
   useEffect(() => {
+    // A rota /api/tracking/pageview exige fingerprint_db_id + session_db_id;
+    // sem eles o evento seria descartado com 400. Depender dos ESTADOS
+    // sessionDbId/fingerprintDbId faz o efeito rodar de novo assim que eles
+    // ficam disponíveis — seja porque a sessão acabou de nascer, seja porque
+    // vieram hidratados do sessionStorage/localStorage.
+    if (!sessionDbId || !fingerprintDbId) return
     if (!visitorIdRef.current || !sessionIdRef.current) return
     if (pathname === lastPathRef.current) return
 
-    // Calculate time on previous page
-    const timeOnPrevPage = lastPathRef.current
-      ? Math.round((Date.now() - pageStartTimeRef.current) / 1000)
-      : 0
+    // Calculate time on previous page — ANTES de marcar a navegação como
+    // interação, senão o corte por ociosidade seria empurrado para agora e a
+    // página anterior herdaria todo o tempo em que ninguém estava ali.
+    const timeOnPrevPage = lastPathRef.current ? elapsedActiveSeconds() : 0
+
+    // Navegar é interação real: o visitante está ali.
+    lastInteractionAtRef.current = Date.now()
 
     // Update previous page dwell time in behavioral signals
     if (lastPathRef.current && timeOnPrevPage > 0) {
@@ -280,7 +372,7 @@ export function VisitorTrackingProvider({ children }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_db_id: sessionDbIdRef.current,
+          session_db_id: sessionDbId,
           page_path: lastPathRef.current,
           time_on_page_seconds: timeOnPrevPage,
         }),
@@ -293,32 +385,55 @@ export function VisitorTrackingProvider({ children }: Props) {
     // Record page visit in behavioral signal history
     recordPageVisit(pathname, pageType)
 
+    // Slug e ID do veículo saem do PRÓPRIO pathname (/veiculo/<slug>, e o slug
+    // do AutoConf termina no ID). Isso elimina a corrida com o contexto do
+    // veículo — que é montado por um componente filho e pode não estar
+    // preenchido no instante da troca de rota. Marca/modelo/preço são
+    // completados no servidor a partir do slug.
+    const vehicleSlug = getVehicleSlugFromPath(pathname)
+
     fetch('/api/tracking/pageview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fingerprint_db_id: fingerprintDbIdRef.current,
-        session_db_id: sessionDbIdRef.current,
+        // Os valores do ESTADO, os mesmos que a guarda acima já validou —
+        // assim não há como enviar um id que a guarda não aprovou.
+        fingerprint_db_id: fingerprintDbId,
+        session_db_id: sessionDbId,
         page_url: window.location.href,
         page_path: pathname,
         page_title: document.title,
         page_type: pageType,
+        // ID confiável apenas: em slug legado/malformado ("gol-1-6-2020") o
+        // último número é o ANO, e mandá-lo como vehicle_id colocava dados de
+        // outro carro no evento.
+        ...(vehicleSlug
+          ? { vehicle_slug: vehicleSlug, vehicle_id: getTrustedVehicleIdFromSlug(vehicleSlug) }
+          : {}),
       }),
     }).catch(() => {})
 
     lastPathRef.current = pathname
     pageStartTimeRef.current = Date.now()
+    pageActiveMsRef.current = 0
     scrollDepthRef.current = 0
-  }, [pathname, searchParams])
+  }, [pathname, searchParams, sessionDbId, fingerprintDbId, elapsedActiveSeconds])
 
-  // --- Heartbeat (15s) + visibilitychange + beforeunload ---
-  // Ensures time_on_page is captured even for the LAST page visited
+  // --- Heartbeat + visibilitychange + pagehide ---
+  // Garante time_on_page da ÚLTIMA página e, principalmente, o encerramento da
+  // sessão: cada ping atualiza last_activity_at e o servidor SOMA o intervalo
+  // desde o ping anterior em duration_seconds. Assim, mesmo que o cliente suma
+  // sem avisar (app morto no mobile, crash, bateria), a duração fica coerente
+  // até o último heartbeat em vez de NULL.
   useEffect(() => {
-    if (!sessionDbIdRef.current) return
+    if (!sessionDbId) return
 
     const sendPageTime = (isExit = false) => {
-      const elapsed = Math.round((Date.now() - pageStartTimeRef.current) / 1000)
-      if (elapsed < 1 || !sessionDbIdRef.current || !lastPathRef.current) return
+      const elapsed = elapsedActiveSeconds()
+      if (!sessionDbIdRef.current || !lastPathRef.current) return
+      // No heartbeat não vale a pena gastar request com menos de 1s; na saída
+      // mandamos sempre, senão um bounce rápido nunca fecharia a sessão.
+      if (!isExit && elapsed < 1) return
 
       const payload = JSON.stringify({
         session_db_id: sessionDbIdRef.current,
@@ -330,7 +445,13 @@ export function VisitorTrackingProvider({ children }: Props) {
 
       // Use sendBeacon for exit events (survives page unload)
       if (isExit && navigator.sendBeacon) {
-        navigator.sendBeacon('/api/tracking/page-time', payload)
+        // Blob com content-type explícito: sem isso o beacon vai como
+        // text/plain e o request.json() da rota ainda funciona, mas o Content-Type
+        // correto evita surpresa em proxies/CDN.
+        navigator.sendBeacon(
+          '/api/tracking/page-time',
+          new Blob([payload], { type: 'application/json' }),
+        )
       } else {
         fetch('/api/tracking/page-time', {
           method: 'POST',
@@ -341,30 +462,88 @@ export function VisitorTrackingProvider({ children }: Props) {
       }
     }
 
-    // Heartbeat every 15s — updates last_activity_at + partial time_on_page
-    heartbeatIntervalRef.current = setInterval(() => sendPageTime(false), 15_000)
+    // Heartbeat — exige aba visível E interação recente.
+    //
+    // Só "visível" não bastava: document.visibilityState continua 'visible'
+    // com a janela atrás de outra janela e com a tela do desktop desligada.
+    // A aba do carro deixada aberta a noite toda batia heartbeat a noite
+    // inteira e a sessão aparecia no painel com horas de permanência,
+    // contaminando a média do dia inteiro. Sem scroll, clique, tecla ou troca
+    // de página por HEARTBEAT_IDLE_TIMEOUT_MS, paramos de pingar; a duração
+    // congela no último sinal de vida real e volta sozinha quando o visitante
+    // volta.
+    heartbeatIntervalRef.current = setInterval(() => {
+      const podeContar = shouldSendHeartbeat({
+        visible: document.visibilityState === 'visible',
+        lastInteractionAt: lastInteractionAtRef.current,
+        now: Date.now(),
+      })
+      if (podeContar) sendPageTime(false)
+    }, HEARTBEAT_INTERVAL_MS)
 
-    // Tab hidden → flush current dwell time
+    // Tab hidden → flush current dwell time.
+    // Voltar para a aba é interação real (o visitante escolheu voltar), e o
+    // relógio da página recomeça: o tempo em que ele esteve fora não é
+    // permanência.
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') sendPageTime(true)
+      if (document.visibilityState === 'hidden') {
+        sendPageTime(true)
+        // Fecha o trecho atual: o que vier depois só conta quando a aba voltar.
+        pageActiveMsRef.current += activeSegmentMs({
+          now: Date.now(),
+          segmentStartedAt: pageStartTimeRef.current,
+          lastInteractionAt: lastInteractionAtRef.current,
+        })
+        pageStartTimeRef.current = Date.now()
+        return
+      }
+      lastInteractionAtRef.current = Date.now()
+      pageStartTimeRef.current = Date.now()
     }
 
-    // Page unload → final beacon
-    const onBeforeUnload = () => sendPageTime(true)
+    // pagehide (e não beforeunload) é o sinal confiável em mobile: iOS Safari
+    // frequentemente não dispara beforeunload, e beforeunload ainda atrapalha o
+    // bfcache. visibilitychange + pagehide cobrem troca de app, lock de tela e
+    // fechamento de aba.
+    const onPageHide = () => sendPageTime(true)
 
     document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('beforeunload', onBeforeUnload)
+    window.addEventListener('pagehide', onPageHide)
 
     return () => {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('beforeunload', onBeforeUnload)
+      window.removeEventListener('pagehide', onPageHide)
     }
-  }, [sessionDbIdRef.current])
+  }, [sessionDbId, elapsedActiveSeconds])
+
+  // --- Sinais de presença real ---
+  // Alimenta lastInteractionAtRef, que é quem autoriza o heartbeat a continuar
+  // contando permanência. Só ouvimos e anotamos o horário — nada é enviado.
+  useEffect(() => {
+    const markInteraction = () => {
+      lastInteractionAtRef.current = Date.now()
+    }
+
+    const options = { passive: true, capture: true } as const
+    document.addEventListener('pointerdown', markInteraction, options)
+    document.addEventListener('keydown', markInteraction, options)
+    document.addEventListener('touchstart', markInteraction, options)
+
+    return () => {
+      document.removeEventListener('pointerdown', markInteraction, options)
+      document.removeEventListener('keydown', markInteraction, options)
+      document.removeEventListener('touchstart', markInteraction, options)
+    }
+  }, [])
 
   // --- Scroll depth tracking (25/50/75/100%) ---
   useEffect(() => {
     const onScroll = () => {
+      // Rolar a página é presença real — conta mesmo em página sem barra de
+      // rolagem útil (o early return abaixo).
+      lastInteractionAtRef.current = Date.now()
+
       const scrollTop = window.scrollY || document.documentElement.scrollTop
       const docHeight = Math.max(
         document.body.scrollHeight,
@@ -418,31 +597,6 @@ export function VisitorTrackingProvider({ children }: Props) {
       },
     }
   }, [geolocation, deviceData, utmParams, clickIds])
-
-  // Fila para interações disparadas antes da sessão estar pronta (corrida
-  // entre init /api/tracking/session e o primeiro clique do usuário).
-  // Drena quando session_db_id fica disponível.
-  const pendingInteractionsRef = useRef<Array<{ type: InteractionType; metadata?: Record<string, unknown>; page_path: string }>>([])
-
-  const flushPendingInteractions = useCallback(() => {
-    if (!fingerprintDbIdRef.current || !sessionDbIdRef.current) return
-    const queued = pendingInteractionsRef.current
-    if (queued.length === 0) return
-    pendingInteractionsRef.current = []
-    for (const ev of queued) {
-      fetch('/api/tracking/interaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fingerprint_db_id: fingerprintDbIdRef.current,
-          session_db_id: sessionDbIdRef.current,
-          type: ev.type,
-          page_path: ev.page_path,
-          metadata: ev.metadata,
-        }),
-      }).catch(() => {})
-    }
-  }, [])
 
   // Track interactions (WhatsApp clicks, form submits, etc.)
   // Also pushes to dataLayer for analytics sync
@@ -691,8 +845,10 @@ export function VisitorTrackingProvider({ children }: Props) {
   return (
     <VisitorTrackingContext.Provider
       value={{
-        visitorId: visitorIdRef.current,
-        sessionId: sessionIdRef.current,
+        // Estado, não ref: lendo o ref durante o render os consumidores
+        // recebiam null para sempre (o ref é preenchido depois, sem re-render).
+        visitorId,
+        sessionId,
         geolocation,
         deviceData,
         utmParams,

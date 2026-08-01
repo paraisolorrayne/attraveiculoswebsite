@@ -49,6 +49,96 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
 }
 
+// =====================================================
+// Parâmetros do heartbeat de sessão
+// Ficam aqui — e não espalhados entre provider e rota — porque cliente e
+// servidor precisam concordar: o servidor tolera um intervalo entre pings de
+// até MAX_HEARTBEAT_GAP_SECONDS, e quem produz esse intervalo é o cliente.
+// =====================================================
+
+/** Intervalo entre pings de heartbeat. */
+export const HEARTBEAT_INTERVAL_MS = 30_000
+
+/**
+ * Sem NENHUMA interação real (scroll, clique, tecla, troca de página, voltar
+ * para a aba) por esse tempo, o heartbeat para. É o que impede a aba esquecida
+ * aberta a noite toda de virar "8 horas de permanência".
+ */
+export const HEARTBEAT_IDLE_TIMEOUT_MS = 5 * 60_000
+
+/**
+ * Máximo de segundos que UM ping pode somar à duração da sessão. O servidor
+ * acumula o tempo entre pings; um intervalo maior que isso significa que o
+ * visitante não estava ali (aba escondida, notebook fechado) e não pode ser
+ * creditado como permanência. Vale ~3x o intervalo do heartbeat, para absorver
+ * timers estrangulados pelo navegador em segundo plano.
+ */
+export const MAX_HEARTBEAT_GAP_SECONDS = 90
+
+/** Teto absoluto de duração de uma sessão (4h), como rede de segurança. */
+export const MAX_SESSION_DURATION_SECONDS = 4 * 60 * 60
+
+/**
+ * Bucket de rate limit exclusivo das rotas de tracking.
+ *
+ * Antes elas dividiam o bucket "api" (60 req/min por IP) com o resto da API.
+ * Com o heartbeat funcionando, cada aba consome ~2 req/min; ~13 abas atrás do
+ * mesmo IP (wi-fi da loja, CGNAT de operadora móvel) estouravam o limite e
+ * derrubavam TODO o tracking daquele IP — inclusive a criação de sessão. São
+ * escritas baratas e idempotentes, então ganham um bucket próprio e folgado:
+ * 300/min ≈ 100 abas simultâneas por IP, mantendo o teto contra abuso.
+ */
+export const TRACKING_RATE_LIMIT = {
+  limit: 300,
+  windowMs: 60_000,
+  prefix: 'tracking',
+} as const
+
+/**
+ * O heartbeat pode continuar contando permanência agora?
+ *
+ * Aba visível não é suficiente: document.visibilityState continua 'visible'
+ * com a janela atrás de outra e com a tela do desktop desligada. Sem nenhum
+ * sinal de vida (scroll, clique, tecla, troca de página, volta para a aba)
+ * dentro da janela de ociosidade, paramos de contar.
+ */
+export function shouldSendHeartbeat(params: {
+  visible: boolean
+  lastInteractionAt: number
+  now: number
+}): boolean {
+  if (!params.visible) return false
+  return params.now - params.lastInteractionAt <= HEARTBEAT_IDLE_TIMEOUT_MS
+}
+
+/**
+ * Milissegundos do trecho ATUAL na página que contam como permanência: do
+ * início do trecho até no máximo HEARTBEAT_IDLE_TIMEOUT_MS depois da última
+ * interação real.
+ */
+export function activeSegmentMs(params: {
+  now: number
+  segmentStartedAt: number
+  lastInteractionAt: number
+}): number {
+  const cutoff = Math.min(params.now, params.lastInteractionAt + HEARTBEAT_IDLE_TIMEOUT_MS)
+  return Math.max(0, cutoff - params.segmentStartedAt)
+}
+
+/**
+ * Permanência na página em segundos: o que já foi acumulado em trechos
+ * anteriores (o visitante escondeu a aba e voltou) mais o trecho atual. O tempo
+ * com a aba escondida não entra — e o que foi lido antes não se perde.
+ */
+export function activeDwellSeconds(params: {
+  now: number
+  segmentStartedAt: number
+  accumulatedMs: number
+  lastInteractionAt: number
+}): number {
+  return Math.round((params.accumulatedMs + activeSegmentMs(params)) / 1000)
+}
+
 // Get or create session ID (resets after 30 min inactivity)
 export function getSessionId(): string {
   if (typeof window === 'undefined') return ''
@@ -286,14 +376,73 @@ export function collectIdentityFromURL(): { email?: string; phone?: string } | n
   return Object.keys(result).length > 0 ? result : null
 }
 
+// Slug da página de DETALHE de veículo. A rota real é /veiculo/<slug>
+// (SINGULAR — src/app/(main)/veiculo/[slug]/page.tsx); /veiculos (plural) é a
+// LISTAGEM. Retorna null quando o path não é uma página de detalhe.
+export function getVehicleSlugFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/veiculo\/([^/?#]+)/)
+  if (!match) return null
+  const slug = match[1].trim()
+  return slug.length > 0 ? slug : null
+}
+
+// O slug do AutoConf é "marca-modelo-ano-ID" e termina no ID numérico do
+// veículo (ex.: ferrari-296-2025-1005112 → 1005112). Extrair daqui deixa o
+// pageview independente do contexto React do veículo, que pode ainda não estar
+// montado quando a troca de rota dispara o evento.
+export function getVehicleIdFromSlug(slug: string): string | null {
+  const match = slug.match(/-(\d+)$/)
+  return match ? match[1] : null
+}
+
+// Ano de modelo plausível (o slug canônico traz o ano logo antes do ID).
+function isPlausibleModelYear(value: string): boolean {
+  if (!/^\d{4}$/.test(value)) return false
+  const year = Number(value)
+  return year >= 1900 && year <= 2100
+}
+
+/**
+ * ID do veículo em que dá para CONFIAR — o único que pode ser gravado no banco
+ * ou usado para consultar a AutoConf.
+ *
+ * getVehicleIdFromSlug acima é um extrator cru: ele devolve o último número do
+ * slug, seja ele o que for. Em slugs legados ou malformados como
+ * "gol-1-6-2020" isso devolve "2020", que é o ANO — e um ano é um id
+ * perfeitamente válido na AutoConf. O resultado era marca/modelo/preço de
+ * OUTRO carro entrando silenciosamente no page view.
+ *
+ * O slug canônico é "marca-modelo-ANO-ID", então só confiamos no número final
+ * quando ele vem precedido de um ano de 4 dígitos ("...-2025-1005112"), ou
+ * quando o próprio número não poderia ser um ano.
+ */
+export function getTrustedVehicleIdFromSlug(slug: string): string | null {
+  const raw = getVehicleIdFromSlug(slug)
+  if (!raw) return null
+  // Nenhum id da AutoConf tem esse tamanho — número absurdo não é id.
+  if (raw.length > 10) return null
+
+  const withYear = /-(\d{4})-(\d+)$/.exec(slug)
+  if (withYear && isPlausibleModelYear(withYear[1])) return withYear[2]
+
+  // Sem ano antes do número: só aceitamos se ele não puder ser um ano.
+  return isPlausibleModelYear(raw) ? null : raw
+}
+
 // Determine page type from URL
 export function getPageType(pathname: string): string {
-  if (pathname === '/') return 'home'
-  if (pathname.startsWith('/veiculos/') && pathname.split('/').length > 2) return 'vehicle'
-  if (pathname === '/veiculos') return 'vehicles'
-  if (pathname.startsWith('/blog')) return 'blog'
-  if (pathname.startsWith('/contato')) return 'contact'
-  if (pathname.startsWith('/sobre') || pathname.startsWith('/quem-somos')) return 'about'
+  // Barra final normalizada para que /veiculos/ caia no mesmo ramo de /veiculos
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+
+  if (path === '/') return 'home'
+  // Detalhe do veículo antes da listagem: o teste antigo era '/veiculos/'
+  // (plural), rota que não existe, e por isso NENHUM page view era classificado
+  // como 'vehicle' — vehicles_viewed ficava zerado em todas as sessões.
+  if (getVehicleSlugFromPath(path)) return 'vehicle'
+  if (path === '/veiculo' || path === '/veiculos' || path.startsWith('/veiculos/')) return 'vehicles'
+  if (path.startsWith('/blog')) return 'blog'
+  if (path.startsWith('/contato')) return 'contact'
+  if (path.startsWith('/sobre') || path.startsWith('/quem-somos')) return 'about'
   return 'other'
 }
 
