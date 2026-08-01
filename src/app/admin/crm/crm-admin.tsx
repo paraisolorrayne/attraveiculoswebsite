@@ -191,7 +191,7 @@ export function CrmAdmin() {
 
 	return (
 		<div className="max-w-full px-4 sm:px-6 py-8">
-			<div className="flex items-center justify-between mb-4 max-w-7xl mx-auto flex-wrap gap-3">
+			<div className="flex items-center justify-between mb-4 max-w-[1600px] mx-auto flex-wrap gap-3">
 				<div>
 					<h1 className="text-2xl font-bold text-foreground">CRM</h1>
 					<p className="text-sm text-foreground-secondary mt-1">
@@ -242,7 +242,7 @@ export function CrmAdmin() {
 
 			{/* KPIs do período */}
 			{cards.length > 0 && (
-				<div className="max-w-7xl mx-auto mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+				<div className="max-w-[1600px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 					{kpis.map(k => (
 						<div key={k.rotulo} className="p-3 bg-background-card border border-border rounded-xl">
 							<div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
@@ -256,7 +256,7 @@ export function CrmAdmin() {
 			)}
 
 			{erro && (
-				<div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-red-500/10 text-red-500 border border-red-500/30">
+				<div className="max-w-[1600px] mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-red-500/10 text-red-500 border border-red-500/30">
 					Não foi possível carregar os leads agora. Tente atualizar em instantes.
 				</div>
 			)}
@@ -266,7 +266,7 @@ export function CrmAdmin() {
 					<Loader2 className="w-6 h-6 animate-spin mx-auto" />
 				</div>
 			) : cards.length === 0 && !erro ? (
-				<div className="max-w-7xl mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
+				<div className="max-w-[1600px] mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
 					<p className="text-foreground font-medium">Nenhum lead ainda</p>
 					<p className="text-sm text-foreground-secondary mt-2">
 						Este painel é alimentado automaticamente. Assim que o primeiro
@@ -274,17 +274,21 @@ export function CrmAdmin() {
 					</p>
 				</div>
 			) : cardsFiltrados.length === 0 ? (
-				<div className="max-w-7xl mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
+				<div className="max-w-[1600px] mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
 					<p className="text-foreground font-medium">Nenhum lead para os filtros selecionados</p>
 					<p className="text-sm text-foreground-secondary mt-2">Ajuste o período ou o vendedor no topo.</p>
 				</div>
 			) : (
-				<div className="flex gap-4 overflow-x-auto pb-4 max-w-7xl mx-auto">
+				<div className="flex gap-4 overflow-x-auto pb-4 max-w-[1600px] mx-auto">
 					{COLUNAS_KANBAN.map(col => {
 						const daColuna = cardsFiltrados.filter(c => colunaDoCard(c) === col.id)
 						const somaColuna = daColuna.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
 						return (
-							<div key={col.id} className="flex-shrink-0 w-80">
+							// As colunas dividem a largura disponível em vez de terem 320px
+							// fixos: com 4 colunas fixas a soma estourava o container e a
+							// última ficava cortada mesmo em tela larga. O min-width mantém
+							// o scroll horizontal em telas estreitas.
+							<div key={col.id} className="flex-1 min-w-[19rem] max-w-[26rem]">
 								{/* Faixa tingida na cor da coluna: label + contagem + soma dos valores */}
 								<div className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 mb-3 ${col.badge}`}>
 									<h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide min-w-0">
@@ -318,7 +322,7 @@ export function CrmAdmin() {
 				<DetalhesModal card={selecionado} onClose={() => setSelecionado(null)} />
 			)}
 
-			<p className="max-w-7xl mx-auto mt-6 text-xs text-foreground-secondary">
+			<p className="max-w-[1600px] mx-auto mt-6 text-xs text-foreground-secondary">
 				{ocultosSemInfo > 0 && (
 					<>
 						{ocultosSemInfo === 1
