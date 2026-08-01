@@ -336,3 +336,107 @@ export function ListaCidades({ cidades }: { cidades: LinhaCidade[] }) {
 		</Secao>
 	)
 }
+
+export interface LinhaMidiaPaga {
+	canal_fonte: string
+	campanha: string
+	conteudo: string
+	termo: string
+	sessoes: number
+	whatsapp: number
+}
+
+export interface LinhaMarcacao {
+	fonte: string
+	sessoes: number
+	com_campanha: number
+	com_conteudo: number
+	com_termo: number
+	com_id: number
+}
+
+/**
+ * Detalhe da mídia paga: campanha → grupo/anúncio → termo.
+ *
+ * O nível de campanha sozinho não responde "qual anúncio traz conversa", que é a
+ * pergunta de quem decide o que pausar. Vem acompanhado do diagnóstico de
+ * marcação, porque uma linha "(não marcada)" grande quase nunca é ausência de
+ * investimento — é modelo de rastreamento mal configurado na plataforma.
+ */
+export function MidiaPaga({
+	linhas,
+	marcacao,
+}: {
+	linhas: LinhaMidiaPaga[]
+	marcacao: LinhaMarcacao[]
+}) {
+	const media = taxa(
+		linhas.reduce((s, l) => s + l.whatsapp, 0),
+		linhas.reduce((s, l) => s + l.sessoes, 0),
+	)
+	// Plataforma cuja marcação de campanha falha na maioria das visitas pagas.
+	const comFalha = marcacao.filter(m => m.sessoes >= 50 && m.com_campanha / m.sessoes < 0.5)
+
+	return (
+		<Secao
+			titulo="Anúncios pagos — campanha, grupo e termo"
+			dica="Só visitas de mídia paga. «Grupo/anúncio» e «termo» vêm da marcação do link do anúncio: no Google Ads são os parâmetros de conteúdo e a palavra-chave; no Meta, o conjunto e o criativo. Compare pela taxa, não pelo volume."
+		>
+			{comFalha.length > 0 && (
+				<div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs leading-snug">
+					{comFalha.map(m => (
+						<div key={m.fonte}>
+							<strong className="font-medium">{m.fonte}</strong>: {fmtPct(taxa(m.sessoes - m.com_campanha, m.sessoes))} das
+							visitas pagas chegam sem nome de campanha ({fmtNum(m.sessoes - m.com_campanha)} de {fmtNum(m.sessoes)}).
+							O link do anúncio precisa enviar o nome da campanha — sem isso, o investimento aparece agrupado em
+							&ldquo;(não marcada)&rdquo; e não dá para comparar campanha com campanha.
+						</div>
+					))}
+				</div>
+			)}
+
+			{linhas.length === 0 ? (
+				<Vazio>Nenhuma visita de mídia paga no período selecionado.</Vazio>
+			) : (
+				<div className="overflow-x-auto">
+					<table className="w-full text-sm">
+						<thead>
+							<tr className="text-left text-[11px] uppercase tracking-wide text-foreground-secondary border-b border-border">
+								<th className="px-4 py-2 font-medium">Campanha</th>
+								<th className="px-4 py-2 font-medium">Grupo / anúncio</th>
+								<th className="px-4 py-2 font-medium">Termo</th>
+								<th className="px-4 py-2 font-medium text-right">Visitas</th>
+								<th className="px-4 py-2 font-medium text-right">Cliques no WhatsApp</th>
+								<th className="px-4 py-2 font-medium text-right">Taxa</th>
+							</tr>
+						</thead>
+						<tbody>
+							{linhas.map((l, i) => {
+								const t = taxa(l.whatsapp, l.sessoes)
+								return (
+									<tr key={`${l.campanha}|${l.conteudo}|${l.termo}|${i}`} className="border-b border-border/60 last:border-0">
+										<td className="px-4 py-2 max-w-[16rem]">
+											<div className="truncate text-foreground" title={l.campanha}>{l.campanha}</div>
+											<div className="text-[10px] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
+										</td>
+										<td className="px-4 py-2 max-w-[14rem]">
+											<span className="block truncate text-foreground-secondary" title={l.conteudo}>{l.conteudo}</span>
+										</td>
+										<td className="px-4 py-2 max-w-[12rem]">
+											<span className="block truncate text-foreground-secondary" title={l.termo}>{l.termo}</span>
+										</td>
+										<td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">{fmtNum(l.sessoes)}</td>
+										<td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">{fmtNum(l.whatsapp)}</td>
+										<td className={`px-4 py-2 text-right tabular-nums font-medium ${corTaxa(t, media, l.sessoes)}`}>
+											{fmtPct(t)}
+										</td>
+									</tr>
+								)
+							})}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</Secao>
+	)
+}

@@ -47,6 +47,8 @@ export interface LinhaCidade {
 	whatsapp: number
 }
 
+import type { LinhaMidiaPaga, LinhaMarcacao } from './visitors-tabelas'
+
 export interface MetricasVisitantes {
 	periodo: { dias: number; desde: string | null }
 	resumo: {
@@ -67,6 +69,8 @@ export interface MetricasVisitantes {
 	veiculos: LinhaVeiculo[]
 	veiculos_cobertura: { com_slug: number; sem_slug: number }
 	cidades: LinhaCidade[]
+	midia_paga: LinhaMidiaPaga[]
+	marcacao_paga: LinhaMarcacao[]
 }
 
 /** Volume mínimo para tratar uma taxa como sinal, e não como ruído estatístico. */
