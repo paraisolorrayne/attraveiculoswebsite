@@ -4,9 +4,19 @@ import { db } from '@/lib/db'
 // formulários do site, no mesmo formato dos leads Webmotors/iCarros
 // (diferenciados pelo campo `origem`).
 //
-// Endpoint configurável via FYKOS_WEBHOOK_URL; sem a env usa o padrão.
-const FYKOS_WEBHOOK_URL =
-  process.env.FYKOS_WEBHOOK_URL || 'https://app.fykos.com.br/webhooks/webmotors'
+// Endpoint do CRM para leads de formulário. SEM PADRÃO, de propósito.
+//
+// O padrão anterior apontava para /webhooks/webmotors, que é a entrada da
+// integração Webmotors e nunca aceitou o nosso payload — o time do CRM
+// confirmou em 01/08/2026 que não existe endpoint deles para este envio.
+// Ou seja: todo lead de formulário era postado num lugar que o rejeitava, e
+// o que se perdia não era atribuição, era o lead virar card. (Ninguém sumiu:
+// o formulário também captura por e-mail e pelo Avisa.)
+//
+// Manter um padrão que falha é pior do que não enviar: gasta tempo de request
+// e passa a impressão de que os leads chegam ao funil. Quando o CRM abrir uma
+// entrada de verdade, basta definir FYKOS_WEBHOOK_URL para religar.
+const FYKOS_WEBHOOK_URL = process.env.FYKOS_WEBHOOK_URL?.trim() || null
 
 // Atribuição de mídia do visitante (UTM + click IDs), capturada no browser
 // por src/lib/visitor-tracking.ts. Mesmos nomes camelCase do payload dos forms.
@@ -218,6 +228,12 @@ function buildFormVehicle(input: FykosLeadInput): FykosVehicle | null {
  * logada e o fluxo do formulário segue (email/Avisa são os canais garantidos).
  */
 export async function sendFykosLead(input: FykosLeadInput): Promise<{ success: boolean; error?: string }> {
+  if (!FYKOS_WEBHOOK_URL) {
+    // Log de uma linha por lead: é o registro de que existe um lead que o CRM
+    // não recebeu, para dimensionar o impacto enquanto a entrada não existe.
+    console.warn(`[CRM] Lead NÃO enviado (sem endpoint configurado): ${input.name} · ${input.phone}`)
+    return { success: false, error: 'CRM sem endpoint configurado (FYKOS_WEBHOOK_URL)' }
+  }
   try {
     const createAt = nowSaoPaulo()
     const message = input.message?.trim() || null
