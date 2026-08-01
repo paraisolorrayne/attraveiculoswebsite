@@ -29,6 +29,40 @@ export const COLUNAS_KANBAN = [
 
 export type ColunaKanban = (typeof COLUNAS_KANBAN)[number]
 
+const preenchido = (v: string | null | undefined) => !!v && v.trim() !== ''
+
+/**
+ * Card sem nada que sustente uma leitura: nem identificação do cliente, nem
+ * negócio, nem relato do vendedor — só etapa, situação e data.
+ *
+ * Não é hipótese: dos 325 cards recebidos até 01/08, 16 chegaram assim, todos
+ * de eventos automáticos de cobrança (`cobranca_semanal` ou sem fonte), e
+ * nenhum deles tinha veículo, valor ou vendedor. No quadro viravam cartões em
+ * branco que só ocupam espaço e sujam a contagem das colunas.
+ *
+ * O critério é deliberadamente conservador: basta UM sinal — telefone, e-mail,
+ * veículo, valor, vendedor ou qualquer relato — para o card continuar visível.
+ * Some só o que não tem nada.
+ */
+export function cardSemInformacao(c: {
+	nome: string | null
+	telefone: string | null
+	email: string | null
+	veiculo: string | null
+	valor: number | null
+	vendedor: string | null
+	andamento: string | null
+	impedimento: string | null
+	proxima_acao: string | null
+	motivo_encerramento: string | null
+}): boolean {
+	if (preenchido(c.nome) || preenchido(c.telefone) || preenchido(c.email)) return false
+	if (preenchido(c.veiculo) || c.valor !== null || preenchido(c.vendedor)) return false
+	if (preenchido(c.andamento) || preenchido(c.impedimento)) return false
+	if (preenchido(c.proxima_acao) || preenchido(c.motivo_encerramento)) return false
+	return true
+}
+
 /** Coluna do card na visão do gestor — derivada do último evento, não da etapa. */
 export function colunaDoCard(c: { etapa: string; fonte_evento: string | null }): ColunaKanban['id'] {
 	if (c.etapa === 'encerrado_ganho') return 'ganho'

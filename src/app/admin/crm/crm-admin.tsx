@@ -5,7 +5,7 @@ import {
 	Loader2, RefreshCw, X,
 	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
-import { COLUNAS_KANBAN, colunaDoCard, FONTES_EVENTO, PERIODOS } from './crm-constants'
+import { COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 import {
@@ -50,7 +50,9 @@ const DEMO_CARDS: CrmCard[] = [
 		atualizado_em: new Date(Date.now() - 3_600_000).toISOString(), dados: null,
 	},
 	{
-		id: 'demo-2', etapa: 'em_atendimento', nome: null, telefone: null, email: null, veiculo: null,
+		// Card quase vazio: só telefone. Continua VISÍVEL (um sinal basta) e
+		// demonstra os slots fixos exibindo "–".
+		id: 'demo-2', etapa: 'em_atendimento', nome: null, telefone: '34988776655', email: null, veiculo: null,
 		valor: null, origem: null, vendedor: null, fonte_evento: 'aceite', situacao: null,
 		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
 		motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
@@ -66,6 +68,16 @@ const DEMO_CARDS: CrmCard[] = [
 		primeiro_contato_em: null, encerrado_em: new Date(Date.now() - 86_400_000).toISOString(),
 		criado_em: null, atualizado_em: new Date(Date.now() - 86_400_000).toISOString(),
 		dados: { resultado: 'encerrado_por_inatividade' },
+	},
+	{
+		// Card em branco vindo de cobrança automática: deve ser OCULTADO do
+		// quadro e contado no aviso do rodapé.
+		id: 'demo-5', etapa: 'em_atendimento', nome: null, telefone: null, email: null,
+		veiculo: null, valor: null, origem: null, vendedor: null, fonte_evento: 'cobranca_semanal',
+		situacao: 'sem_atualizacao', andamento: null, impedimento: null, proxima_acao: null,
+		proxima_acao_em: null, motivo_encerramento: null, veiculo_troca: null, atribuido_em: null,
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 1_800_000).toISOString(), dados: null,
 	},
 	{
 		id: 'demo-4', etapa: 'em_atendimento', nome: 'Fernanda Torres', telefone: '31977665544',
@@ -128,7 +140,13 @@ export function CrmAdmin() {
 
 	// Visão do gestor: leads ainda não assumidos (etapa `novo`) ficam fora
 	// do painel — a história começa no aceite do vendedor.
-	const cardsBase = cards.filter(c => c.etapa !== 'novo')
+	const cardsAssumidos = cards.filter(c => c.etapa !== 'novo')
+
+	// Cards em branco (só etapa, situação e data) saem do quadro: não dá para
+	// agir sobre eles e ainda inflavam a contagem das colunas. O total some é
+	// informado abaixo do quadro, para o número não desaparecer calado.
+	const cardsBase = cardsAssumidos.filter(c => !cardSemInformacao(c))
+	const ocultosSemInfo = cardsAssumidos.length - cardsBase.length
 
 	// Vendedores únicos (pro filtro). Alguns nomes não são vendedores — ocultos.
 	const VENDEDORES_OCULTOS = ['guilherme']
@@ -239,7 +257,7 @@ export function CrmAdmin() {
 
 			{erro && (
 				<div className="max-w-7xl mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-red-500/10 text-red-500 border border-red-500/30">
-					{erro} — confira se a migration <code>20260727_crm_v2.sql</code> foi aplicada.
+					Não foi possível carregar os leads agora. Tente atualizar em instantes.
 				</div>
 			)}
 
@@ -301,6 +319,19 @@ export function CrmAdmin() {
 			)}
 
 			<p className="max-w-7xl mx-auto mt-6 text-xs text-foreground-secondary">
+				{ocultosSemInfo > 0 && (
+					<>
+						{ocultosSemInfo === 1
+							? '1 lead sem nenhuma informação foi ocultado'
+							: `${ocultosSemInfo} leads sem nenhuma informação foram ocultados`}
+						<InfoDica>
+							Chegaram do CRM só com etapa e data, sem nome, telefone, veículo,
+							valor ou relato do vendedor — não há o que ler nem o que fazer com
+							eles. Continuam no CRM; some apenas do quadro.
+						</InfoDica>
+						{' · '}
+					</>
+				)}
 				Atualização automática a cada 60s
 			</p>
 		</div>
