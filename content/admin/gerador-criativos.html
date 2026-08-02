@@ -71,6 +71,7 @@
   .estq-thumb{width:86px; height:64px; object-fit:cover; border-radius:6px;
     border:1px solid var(--line); cursor:pointer;}
   .estq-thumb:hover{border-color:var(--red);}
+  .estq-thumb.usada{outline:2px solid var(--red); outline-offset:1px;}
   .btn{
     background:var(--red); color:#fff; border:none; border-radius:10px;
     padding:16px 20px; font-size:15px; font-weight:700; letter-spacing:1px;
@@ -145,6 +146,18 @@
           <button class="btn secondary" id="estoquebtn" type="button" style="width:100%; padding:11px 10px; font-size:12px">BUSCAR</button></div>
       </div>
       <div id="estoqueresultados"></div>
+      <div id="fichaslots" style="display:none; margin-top:10px">
+        <label style="margin-bottom:6px">Clicar numa foto abaixo aplica em:</label>
+        <div class="types" id="fichaslotbtns">
+          <button class="slotbtn typebtn active" data-slot="foto1" type="button">Principal<small>foto grande</small></button>
+          <button class="slotbtn typebtn" data-slot="foto2" type="button">Detalhe 1<small>tira, esquerda</small></button>
+          <button class="slotbtn typebtn" data-slot="foto3" type="button">Detalhe 2<small>tira, meio</small></button>
+          <button class="slotbtn typebtn" data-slot="foto4" type="button">Detalhe 3<small>tira, direita</small></button>
+        </div>
+        <div class="hint">O destino avança sozinho a cada foto escolhida, então dá para clicar
+          nas quatro em sequência. Fora da Ficha, vale o atalho antigo: clique = principal,
+          Shift+clique = foto 2.</div>
+      </div>
       <div id="estoquefotos"></div>
       <div class="hint">Selecionar um veículo preenche os campos abaixo (tudo continua editável na mão).
         Clique numa foto para usá-la como <strong>Foto principal</strong>; com Shift, vira a <strong>Foto 2</strong>.</div>
@@ -180,9 +193,16 @@
     <fieldset id="sec-ficha" style="display:none">
       <legend>Ficha do veículo</legend>
       <div class="row">
-        <div><label>Cor externa</label><input type="text" id="corext" placeholder="Ex.: BLU ELETTRICO" value="PRETO"></div>
-        <div><label>Cor interna</label><input type="text" id="corint" placeholder="Ex.: CUOIO" value="CARAMELO"></div>
+        <div><label>Rótulo da 1ª linha</label><input type="text" id="rot1" placeholder="Ex.: EXTERIOR" value="EXTERIOR"></div>
+        <div><label>Conteúdo da 1ª linha</label><input type="text" id="corext" placeholder="Ex.: BLU ELETTRICO" value="PRETO"></div>
       </div>
+      <div class="row" style="margin-top:10px">
+        <div><label>Rótulo da 2ª linha</label><input type="text" id="rot2" placeholder="Ex.: INTERIOR" value="INTERIOR"></div>
+        <div><label>Conteúdo da 2ª linha</label><input type="text" id="corint" placeholder="Ex.: CUOIO" value="CARAMELO"></div>
+      </div>
+      <div class="hint">As duas linhas não precisam ser cor: sirvam para o que a peça pedir
+        (BLINDAGEM, MOTOR, PROCEDÊNCIA…). Rótulo vazio mostra só o conteúdo, sem os dois-pontos;
+        conteúdo vazio some com a linha inteira.</div>
       <label style="margin-top:12px">Selo do rodapé (garantia, programa)</label>
       <input type="text" id="garantia" placeholder="Ex.: 2 ANOS DE GARANTIA" value="2 ANOS DE GARANTIA">
       <div class="hint">As três fotos de detalhe são as “Foto de baixo” da seção Fotos (interior, banco, roda).
@@ -299,6 +319,7 @@ const state = {
   foto1Url: null,   // URL pública da foto (estoque → rembg sem upload)
   edRot: 0,         // rotação do carro recortado no Editorial (graus)
   pisoTipo: 'perola', // fundo da área de texto do Clássico
+  slotFoto: 'foto1',  // destino do clique na galeria do estoque (Ficha)
 };
 
 /* ---------- logos oficiais embutidas ---------- */
@@ -1299,21 +1320,36 @@ function renderFicha(){
   }
 
   // Cores: rótulo fino + valor forte, com tracejado embaixo
+  // Rótulo é editável: a linha serve para qualquer informação, não só cor.
+  // Sem rótulo, mostra só o conteúdo (sem dois-pontos soltos).
   const cores = [
-    { rotulo: 'EXTERIOR:', valor: val('corext').toUpperCase() },
-    { rotulo: 'INTERIOR:', valor: val('corint').toUpperCase() },
-  ].filter(c => c.valor);
+    { rotulo: val('rot1').toUpperCase(), valor: val('corext').toUpperCase() },
+    { rotulo: val('rot2').toUpperCase(), valor: val('corint').toUpperCase() },
+  ].filter(c => c.valor).map(c => ({ ...c, rotulo: c.rotulo ? c.rotulo + ':' : '' }));
   let cy = 500;
   for(const c of cores){
-    ctx.font = '500 38px Montserrat, sans-serif';
-    const wRot = ctx.measureText(c.rotulo + ' ').width;
-    ctx.font = '800 38px Montserrat, sans-serif';
+    // Sem rótulo não entra o espaço separador, senão a linha fica deslocada.
+    const prefixo = c.rotulo ? c.rotulo + ' ' : '';
+    // A fonte encolhe até a linha caber: conteúdo pode ser longo
+    // ("Preto Magno, fosca de fábrica") e antes vazava pelas laterais.
+    let fs = 38;
+    const larguraDe = (tam) => {
+      ctx.font = `500 ${tam}px Montserrat, sans-serif`;
+      const r = ctx.measureText(prefixo).width;
+      ctx.font = `800 ${tam}px Montserrat, sans-serif`;
+      return r + ctx.measureText(c.valor).width;
+    };
+    while(fs > 22 && larguraDe(fs) > W - 2*M) fs -= 1;
+
+    ctx.font = `500 ${fs}px Montserrat, sans-serif`;
+    const wRot = ctx.measureText(prefixo).width;
+    ctx.font = `800 ${fs}px Montserrat, sans-serif`;
     const wVal = ctx.measureText(c.valor).width;
     const x0 = W/2 - (wRot + wVal)/2;
     ctx.fillStyle = '#111114';
-    ctx.font = '500 38px Montserrat, sans-serif';
-    ctx.fillText(c.rotulo + ' ', x0, cy);
-    ctx.font = '800 38px Montserrat, sans-serif';
+    ctx.font = `500 ${fs}px Montserrat, sans-serif`;
+    ctx.fillText(prefixo, x0, cy);
+    ctx.font = `800 ${fs}px Montserrat, sans-serif`;
     ctx.fillText(c.valor, x0 + wRot, cy);
     linhaTracejada(x0 - 10, cy + 16, x0 + wRot + wVal + 10, RED);
     cy += 66;
@@ -1448,8 +1484,12 @@ $('clearlogo').addEventListener('click', () => {
   state.logo = null; localStorage.removeItem('attra_logo'); $('logofile').value = ''; render();
 });
 
+// Campos da Ficha (rótulos, valores e selo) entram AQUI. Sem isso eles só
+// apareciam quando outra ação forçava um render — o que fazia a cor interna e
+// o selo parecerem "chapados", como se não fossem editáveis.
 ['marca','modelo','ano','preco','km','kmextra','b1','b2','b3',
- 'selo','et1','et2','corte','pisoy'].forEach(id =>
+ 'selo','et1','et2','corte','pisoy',
+ 'rot1','corext','rot2','corint','garantia'].forEach(id =>
   $(id).addEventListener('input', render));
 
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
@@ -1474,6 +1514,7 @@ function updateVisibility(){
   $('sec-destaques').style.display = t === 'classico' ? '' : 'none';
   $('sec-specs').style.display     = t === 'destaque' ? '' : 'none';
   $('sec-ficha').style.display     = t === 'ficha' ? '' : 'none';
+  $('fichaslots').style.display    = t === 'ficha' ? '' : 'none';
   $('sec-fotos').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-estoque').style.display   = t === 'estoque' ? '' : 'none';
   $('kmextra-wrap').style.display  = t === 'classico' ? '' : 'none';
@@ -1603,13 +1644,20 @@ function montarFotosEstoque(v){
     const t = document.createElement('img');
     t.src = '/_next/image?url=' + encodeURIComponent(u) + '&w=256&q=60';
     t.className = 'estq-thumb';
-    t.title = 'Clique: Foto principal · Shift+clique: Foto 2';
+    t.title = state.tipo === 'ficha'
+      ? 'Clique: aplica no destino selecionado acima'
+      : 'Clique: Foto principal · Shift+clique: Foto 2';
     t.addEventListener('click', ev => {
+      // Na Ficha a tira usa foto2, foto3 e foto4, e o atalho antigo (clique /
+      // Shift+clique) só alcançava as duas primeiras — as outras duas ficavam
+      // sem caminho de seleção. Aqui o destino vem do seletor de slot.
+      const destino = state.tipo === 'ficha'
+        ? state.slotFoto
+        : (ev.shiftKey ? 'foto2' : 'foto1');
       const img = new Image();
       img.onload = () => {
-        if(ev.shiftKey){ state.foto2 = img; }
-        else {
-          state.foto1 = img;
+        state[destino] = img;
+        if(destino === 'foto1'){
           // foto do estoque: o rembg recebe a URL pública (sem upload)
           state.foto1Url = u;
           state.foto1Data = null;
@@ -1617,6 +1665,8 @@ function montarFotosEstoque(v){
           $('rembg-status').textContent = 'Foto do estoque selecionada — clique em REMOVER FUNDO para recortar.';
           autoFrameFoto1(img);
         }
+        marcarThumbUsada(t, destino);
+        if(state.tipo === 'ficha') avancarSlot();
         render();
       };
       img.src = '/_next/image?url=' + encodeURIComponent(u) + '&w=1080&q=85';
@@ -1624,6 +1674,40 @@ function montarFotosEstoque(v){
     wrap.appendChild(t);
   }
 }
+
+/* ---------- destino da foto escolhida na galeria do estoque (Ficha) ---------- */
+const SLOTS_FICHA = ['foto1', 'foto2', 'foto3', 'foto4'];
+
+function pintarSlotAtivo(){
+  document.querySelectorAll('.slotbtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.slot === state.slotFoto);
+  });
+}
+
+/** Passa para o próximo destino, para dar pra clicar nas quatro em sequência. */
+function avancarSlot(){
+  const i = SLOTS_FICHA.indexOf(state.slotFoto);
+  state.slotFoto = SLOTS_FICHA[(i + 1) % SLOTS_FICHA.length];
+  pintarSlotAtivo();
+}
+
+/** Marca visualmente qual miniatura foi usada e em qual destino. */
+function marcarThumbUsada(thumb, destino){
+  const rotulos = { foto1: 'P', foto2: '1', foto3: '2', foto4: '3' };
+  document.querySelectorAll('.estq-thumb').forEach(el => {
+    if(el.dataset.destino === destino){ el.classList.remove('usada'); delete el.dataset.destino; }
+  });
+  thumb.classList.add('usada');
+  thumb.dataset.destino = destino;
+  thumb.title = 'Aplicada em: ' + (rotulos[destino] === 'P' ? 'Principal' : 'Detalhe ' + rotulos[destino]);
+}
+
+document.querySelectorAll('.slotbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.slotFoto = btn.dataset.slot;
+    pintarSlotAtivo();
+  });
+});
 
 /* ---------- recorte de fundo via IA (Replicate, rota do admin) ---------- */
 document.querySelectorAll('.pisobtn').forEach(btn => {
