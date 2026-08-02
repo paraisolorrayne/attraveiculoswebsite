@@ -1,5 +1,5 @@
 import type { Vehicle } from '@/types'
-import { SITE_URL, ADDRESS, PHONE_NUMBER, EMAIL } from './constants'
+import { SITE_URL } from './constants'
 
 interface SchemaContext {
   baseUrl: string
@@ -10,25 +10,9 @@ function getContext(): SchemaContext {
   return { baseUrl: baseUrl.replace(/\/$/, '') }
 }
 
+// A entidade AutoDealer é declarada uma única vez, no layout raiz. Aqui só
+// referenciamos por @id (ver `seller` em buildVehicleSchema/ProductSchema).
 const ORGANIZATION_ID = '#organization'
-
-function autoDealerNode(baseUrl: string) {
-  return {
-    '@type': 'AutoDealer',
-    '@id': `${baseUrl}/${ORGANIZATION_ID}`,
-    name: 'Attra Veículos',
-    url: baseUrl,
-    telephone: PHONE_NUMBER,
-    email: EMAIL,
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: ADDRESS.street,
-      addressLocality: ADDRESS.city,
-      addressRegion: ADDRESS.state,
-      addressCountry: ADDRESS.country === 'Brasil' ? 'BR' : ADDRESS.country,
-    },
-  }
-}
 
 export function availabilityFromStatus(status: Vehicle['status']): string {
   switch (status) {
@@ -194,14 +178,6 @@ export function buildVehicleFAQSchema(faqs: { question: string; answer: string }
       name: f.question,
       acceptedAnswer: { '@type': 'Answer', text: f.answer },
     })),
-  }
-}
-
-export function buildVehicleAutoDealerSchema() {
-  const { baseUrl } = getContext()
-  return {
-    '@context': 'https://schema.org',
-    ...autoDealerNode(baseUrl),
   }
 }
 

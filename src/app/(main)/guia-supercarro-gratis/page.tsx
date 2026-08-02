@@ -2,9 +2,10 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { LeadMagnetForm } from './lead-magnet-form'
 import { Shield, FileText, CheckCircle, Car, BookOpen, TrendingUp } from 'lucide-react'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
-  title: 'Guia Definitivo para Comprar Supercarros com Segurança | Attra Veículos',
+  title: 'Guia Definitivo para Comprar Supercarros com Segurança',
   description: 'Baixe gratuitamente o guia completo com 8 páginas de dicas exclusivas para comprar supercarros e veículos de luxo com total segurança. Curadoria Attra Veículos.',
   keywords: 'guia supercarros, como comprar supercarro, comprar ferrari, comprar lamborghini, guia veículos de luxo, dicas compra carro premium',
   openGraph: {
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['/images/guia-supercarro-cover.jpg'],
   },
+  alternates: { canonical: canonicalUrl('/guia-supercarro-gratis') },
 }
 
 const guideFeatures = [

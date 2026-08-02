@@ -3,10 +3,12 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { Search, Check, Globe, Shield } from 'lucide-react'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
   title: 'Solicitar Veículo',
   description: 'Não encontrou o veículo que procura? A Attra Veículos busca para você. Serviço personalizado e sem compromisso.',
+  alternates: { canonical: canonicalUrl('/solicitar-veiculo') },
 }
 
 const features = [

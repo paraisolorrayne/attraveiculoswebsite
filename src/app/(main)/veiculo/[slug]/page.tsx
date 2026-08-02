@@ -25,6 +25,7 @@ import { formatPrice, formatMileage } from '@/lib/utils'
 import { buildVehiclePageSchemas } from '@/lib/vehicle-schema'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL } from '@/lib/constants'
+import { pageTitle } from '@/lib/seo/page-metadata'
 import { Vehicle } from '@/types'
 
 /** Generate dynamic FAQ items based on vehicle data for SEO */
@@ -99,7 +100,8 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 
 	if (!vehicle) {
 		return {
-			title: 'Veículo não encontrado | Attra Veículos',
+			// Sem a marca: o `title.template` do layout raiz já a acrescenta.
+			title: 'Veículo não encontrado',
 			description: 'O veículo solicitado não foi encontrado em nosso estoque.',
 		}
 	}
@@ -111,7 +113,9 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	const ogImages = (vehicle.photos ?? []).slice(0, 4).map(u => ({ url: u, alt: fullName }))
 
 	return {
-		title: vehicle.seo_title || `${fullName} | Attra Veículos`,
+		// `pageTitle` remove o sufixo de marca: o template do layout raiz o
+		// reaplica, e `seo_title` pode vir do banco já com a marca gravada.
+		title: pageTitle(vehicle.seo_title || fullName),
 		description: vehicle.seo_description || summary,
 		keywords: [
 			vehicle.brand,
@@ -250,6 +254,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				<CinematicGallery
 					photos={vehicle.photos}
 					vehicleName={joinNonEmpty([vehicle.brand, vehicle.model]) || 'Veículo'}
+					vehicleYear={vehicle.year_model}
 				/>
 			) : (
 				<div className="h-[40vh] bg-background-soft flex items-center justify-center">
@@ -266,20 +271,29 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				<div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Left column - Main info */}
 					<div className="lg:col-span-2 space-y-8">
-						{/* Title and price - mobile visible */}
+						{/* Título e preço - visível no mobile.
+						    Este é o ÚNICO h1 do documento (o título da sidebar desktop virou h2).
+						    Marca, modelo, versão e ano ficam DENTRO do h1, em spans que herdam o
+						    estilo que antes estava nos <p> irmãos: o texto do h1 passa a
+						    identificar o veículo inteiro em vez do modelo curto ("911"), que era
+						    sinal de entidade ambíguo para buscador e LLM. O Tailwind zera
+						    font-size/weight de h1 no preflight, então o render fica idêntico.
+						    O Googlebot renderiza em viewport mobile: é este bloco que ele lê. */}
 						<div className="lg:hidden">
-							{vehicle.brand && (
-								<p className="text-primary text-sm font-medium uppercase tracking-wider mb-1">
-									{vehicle.brand}
-								</p>
-							)}
-							<h1 className="text-3xl font-bold text-foreground mb-2">
-								{vehicle.model || vehicle.brand || 'Veículo premium'}
+							<h1 className="mb-4">
+								{vehicle.brand && (
+									<span className="block text-primary text-sm font-medium uppercase tracking-wider mb-1">
+										{vehicle.brand}
+									</span>
+								)}
+								<span className="block text-3xl font-bold text-foreground mb-2">
+									{vehicle.model || vehicle.brand || 'Veículo premium'}
+								</span>
+								<span className="block text-foreground-secondary">
+									{vehicle.version && `${vehicle.version} • `}
+									{vehicle.year_manufacture}/{vehicle.year_model}
+								</span>
 							</h1>
-							<p className="text-foreground-secondary mb-4">
-								{vehicle.version && `${vehicle.version} • `}
-								{vehicle.year_manufacture}/{vehicle.year_model}
-							</p>
 							<p className="text-3xl font-bold text-foreground">
 								{formatPrice(vehicle.price)}
 							</p>

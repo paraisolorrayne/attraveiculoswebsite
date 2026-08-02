@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useRef, useCallback } from 'react'
 import { replaceInstagramMarkersWithComponents } from '@/lib/instagram-processor'
+import { demoteContentH1 } from '@/lib/blog-headings'
 import { InstagramEmbed } from './instagram-embed'
 
 interface BlogContentRendererProps {
@@ -21,9 +22,11 @@ export function BlogContentRenderer({
 }: BlogContentRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Processar marcadores de Instagram e dividir conteúdo
+  // Processar marcadores de Instagram e dividir conteúdo. O h1 do corpo é
+  // rebaixado a h2 antes de tudo: o template do post já emite o h1 da página,
+  // e o useMemo roda também no SSR, então o HTML bruto já sai com um h1 só.
   const parts = useMemo(() => {
-    return replaceInstagramMarkersWithComponents(content)
+    return replaceInstagramMarkersWithComponents(demoteContentH1(content))
   }, [content])
 
   // Tratar imagens quebradas no conteúdo HTML

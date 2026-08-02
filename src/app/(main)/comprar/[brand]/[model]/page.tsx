@@ -10,6 +10,7 @@ import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
 import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 
 interface ModelPageProps {
@@ -344,7 +345,7 @@ export default async function ModelPage({ params }: ModelPageProps) {
 										price: v.price,
 										priceCurrency: 'BRL',
 										availability: availabilityFromStatus(v.status),
-										seller: { '@type': 'AutoDealer', name: 'Attra Veículos', url: SITE_URL },
+										seller: organizationRef(),
 										itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
 									},
 								},
@@ -363,11 +364,8 @@ export default async function ModelPage({ params }: ModelPageProps) {
 								vehicleTransmission: datasheet.transmission,
 							}),
 						},
-						provider: {
-							'@type': 'AutoDealer',
-							name: 'Attra Veículos',
-							url: SITE_URL,
-						},
+						// Referencia a entidade canônica do layout raiz.
+						provider: organizationRef(),
 					}),
 				}}
 			/>

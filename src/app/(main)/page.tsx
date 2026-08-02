@@ -15,6 +15,7 @@ import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
 import { getLatestAttraVideo } from '@/lib/youtube-feed'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 import { Vehicle } from '@/types'
 
 // Pool mínimo de R$500k. Veículos abaixo disso nunca entram no hero,
@@ -58,7 +59,9 @@ export const metadata: Metadata = {
     'carros exclusivos alto desempenho',
     'loja de supercarros brasil',
   ],
+  alternates: { canonical: canonicalUrl('/') },
   openGraph: {
+    url: canonicalUrl('/'),
     title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
     description:
       'Curadoria de supercarros e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz e mais. Entrega nacional.',
@@ -144,50 +147,9 @@ export default async function Home() {
       {/* 10. Localização e contato */}
       <LocationSection />
 
-      {/* Organization JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'AutoDealer',
-            name: 'Attra Veículos',
-            description:
-              'Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
-            url: 'https://attraveiculos.com.br',
-            telephone: '+55-34-3014-3232',
-            address: {
-              '@type': 'PostalAddress',
-              streetAddress: 'Av. Rondon Pacheco, 1670',
-              addressLocality: 'Uberlândia',
-              addressRegion: 'MG',
-              postalCode: '38408-343',
-              addressCountry: 'BR',
-            },
-            geo: {
-              '@type': 'GeoCoordinates',
-              latitude: -18.9186,
-              longitude: -48.2772,
-            },
-            openingHoursSpecification: [
-              {
-                '@type': 'OpeningHoursSpecification',
-                dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                opens: '08:00',
-                closes: '18:00',
-              },
-              {
-                '@type': 'OpeningHoursSpecification',
-                dayOfWeek: 'Saturday',
-                opens: '08:00',
-                closes: '13:00',
-              },
-            ],
-            priceRange: '$$$',
-            brand: ['Porsche', 'BMW', 'Mercedes-Benz', 'Audi', 'Land Rover', 'Ferrari', 'Lamborghini'],
-          }),
-        }}
-      />
+      {/* A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o
+          nó canônico com @id em todo documento. Este bloco declarava um segundo
+          AutoDealer, com endereço e coordenadas divergentes do nó canônico. */}
     </>
   )
 }

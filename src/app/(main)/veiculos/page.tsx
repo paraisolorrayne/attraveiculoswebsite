@@ -6,6 +6,7 @@ import { AdvancedFilters, CinematicVehicleCard, VehiclePagination, FeaturedVehic
 import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
+import { canonicalUrl, listingRobots } from '@/lib/seo/page-metadata'
 import { getCachedHeroAsset } from '@/lib/vehicle-hero-asset'
 import { Vehicle } from '@/types'
 import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
@@ -46,9 +47,26 @@ function getSimilarBrands(brand: string): string[] {
   return Array.from(similar)
 }
 
-export const metadata: Metadata = {
-  title: 'Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia | Attra Veículos',
-  description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
+// Só a marca tem demanda de busca própria; as outras cinco dimensões de filtro
+// e a ordenação só produzem recortes do mesmo estoque.
+const FILTROS_INDEXAVEIS = ['marca'] as const
+
+const VEICULOS_PATH = '/veiculos'
+
+export async function generateMetadata({ searchParams }: VeiculosPageProps): Promise<Metadata> {
+  const params = await searchParams
+
+  return {
+    title: 'Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia',
+    description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
+    // Toda combinação de filtro consolida na listagem limpa: o conteúdo é o
+    // mesmo estoque recortado, e o canonical evita que o espaço combinatório
+    // de 6 filtros mais ordenação vire URL indexada.
+    alternates: { canonical: canonicalUrl(VEICULOS_PATH) },
+    robots: listingRobots(params, FILTROS_INDEXAVEIS),
+    // og:url apontava para a home, contradizendo o canonical.
+    openGraph: { url: canonicalUrl(VEICULOS_PATH) },
+  }
 }
 
 interface VeiculosPageProps {

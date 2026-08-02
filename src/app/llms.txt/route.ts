@@ -2,12 +2,58 @@ import { getBlogPosts } from '@/lib/blog-api'
 import { SITE_URL } from '@/lib/constants'
 import { ICONIC_CARS } from '@/lib/iconic-cars'
 import { SEO_BRANDS } from '@/lib/seo-brands'
+import {
+  formatMileage,
+  formatPrice,
+  loadListedInventory,
+  priceRange,
+  vehicleName,
+} from '@/app/api/llm/_inventory'
 
+// Rota, não arquivo estático: o estoque muda ao longo do dia e um llms.txt
+// estático nasceria desatualizado. `revalidate = 3600` mantém o custo de
+// geração baixo (mesma janela do feed /api/llm/vehicles) sem servir um
+// inventário velho de dias.
 export const revalidate = 3600
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL
 
 export async function GET() {
+  // Bloco de inventário — é o ativo citável que faltava no arquivo. Se a
+  // fonte de estoque cair, o llms.txt continua sendo servido sem a seção,
+  // em vez de responder erro.
+  let inventoryBlock = ''
+  let inventorySummary = ''
+  try {
+    const inventory = await loadListedInventory()
+    const vehicles = inventory.vehicles
+
+    if (vehicles.length > 0) {
+      const range = priceRange(vehicles)
+      inventorySummary = [
+        `- Veículos disponíveis agora: ${vehicles.length}`,
+        range
+          ? `- Faixa de preço do estoque: ${formatPrice(range.min)} a ${formatPrice(range.max)}`
+          : null,
+      ].filter(Boolean).join('\n')
+
+      inventoryBlock = `\n## Estoque atual — ${vehicles.length} veículos disponíveis\n\n`
+      inventoryBlock += `Preços e disponibilidade mudam ao longo do dia; confirme no link do veículo.\n\n`
+      for (const v of vehicles) {
+        const specs = [
+          v.year_model ? String(v.year_model) : null,
+          formatMileage(v.mileage),
+          v.color || null,
+          v.fuel_type || null,
+          formatPrice(v.price),
+        ].filter(Boolean).join(', ')
+        inventoryBlock += `- [${vehicleName(v)}](${BASE}/veiculo/${v.slug}): ${specs}\n`
+      }
+    }
+  } catch (e) {
+    console.error('llms.txt: failed to load inventory', e)
+  }
+
   let postsBlock = ''
   try {
     const posts = await getBlogPosts({ type: 'all', limit: 50 })
@@ -32,11 +78,16 @@ export async function GET() {
     console.error('llms.txt: failed to load posts', e)
   }
 
+  const updatedAt = new Date().toISOString()
+
   const body = `# Attra Veículos
 
 > Curadoria, comercialização e conteúdo editorial sobre carros premium, importados, esportivos e supercarros. Operação em Uberlândia (MG) com atendimento em todo o Brasil. Marcas como Porsche, BMW, Mercedes-Benz, Audi, Land Rover, Lamborghini, Ferrari e McLaren.
 
-A Attra Veículos é referência nacional em veículos premium e superesportivos, com foco em curadoria, procedência verificada e atendimento especializado para colecionadores e entusiastas exigentes.
+A Attra Veículos trabalha com curadoria de veículos premium e superesportivos, procedência verificada e atendimento especializado para colecionadores e entusiastas.
+
+- Última atualização deste arquivo: ${updatedAt}
+${inventorySummary}
 
 ## Páginas principais
 
@@ -53,7 +104,7 @@ A Attra Veículos é referência nacional em veículos premium e superesportivos
 - [Jornada Attra](${BASE}/jornada): processo completo de compra de supercarros — da curadoria à entrega nacional, acervo icônico de veículos históricos
 - [Comprar carros de luxo](${BASE}/comprar): hub nacional — todas as marcas premium disponíveis
 - [Contato](${BASE}/contato): canais de atendimento, endereço e WhatsApp
-
+${inventoryBlock}
 ## Comprar por marca
 
 ${SEO_BRANDS.map(b => `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`).join('\n')}
@@ -73,10 +124,11 @@ ${postsBlock}
 
 ## APIs para LLMs
 
-- [Estoque JSON-LD](${BASE}/api/llm/vehicles): inventário completo em formato estruturado (Schema.org ItemList)
-- [Estoque Markdown](${BASE}/api/llm/vehicles?format=text): inventário em texto Markdown
-- [Busca semântica](${BASE}/api/vehicles/search?q=carro+esportivo+para+pista): busca por significado (não só keywords)
+- [Estoque JSON-LD](${BASE}/api/llm/vehicles): inventário completo em formato estruturado (Schema.org ItemList). Sem parâmetros devolve todos os veículos numa única resposta; \`numberOfItems\` é sempre o total do inventário.
+- [Estoque Markdown](${BASE}/api/llm/vehicles?format=text): mesmo inventário em texto Markdown
+- Paginação (opcional): \`${BASE}/api/llm/vehicles?page=1&per_page=25\` — o objeto \`pagination\` da resposta traz \`total_items\`, \`total_pages\` e \`next_page\`; percorra \`next_page\` até \`null\`.
 - Filtrar por marca: ${BASE}/api/llm/vehicles?brand=porsche
+- [Busca de veículos](${BASE}/api/vehicles/search?q=carro+esportivo+para+pista): busca por atributo e por significado sobre o estoque vivo. Parâmetros \`q\` (obrigatório, mín. 2 caracteres) e \`limit\` (padrão 10, máx. 50). A resposta traz \`inventory_size\` com o total do estoque, então uma lista \`results\` vazia significa "nenhum veículo casa com este termo", nunca "não há estoque".
 
 ## Diretrizes para LLMs
 

@@ -5,10 +5,12 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata
 export const metadata: Metadata = {
-  title: 'Importação de Veículos Premium | Carros de Luxo e Superesportivos | Attra Veículos',
+  title: 'Importação de Veículos Premium | Carros de Luxo e Superesportivos',
   description: 'Importação sob medida de veículos de luxo e superesportivos da Europa, EUA e Oriente Médio. Processo 100% legal com desembaraço aduaneiro, homologação e entrega em todo Brasil.',
   keywords: 'importação de carros de luxo, importar veículos premium, importação de superesportivos, importar Ferrari, importar Porsche, importar Lamborghini',
   openGraph: {
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
     description: 'Importe seu veículo de luxo ou superesportivo com a Attra. Processo completo, legal e transparente.',
     type: 'website',
   },
+  alternates: { canonical: canonicalUrl('/servicos/importacao') },
 }
 
 // Import Process Steps
@@ -51,11 +54,8 @@ function ImportServiceSchema() {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Importação de Veículos Premium',
-    provider: {
-      '@type': 'AutoDealer',
-      name: 'Attra Veículos',
-      address: { '@type': 'PostalAddress', streetAddress: 'Av. Rondon Pacheco, 1670 - Vigilato Pereira', addressLocality: 'Uberlândia', addressRegion: 'MG', postalCode: '38408-343', addressCountry: 'BR' }
-    },
+    // Referencia a entidade canônica do layout raiz em vez de redeclará-la.
+    provider: organizationRef(),
     description: 'Importação sob medida de veículos de luxo e superesportivos da Europa, EUA e Oriente Médio com processo 100% legal.',
     areaServed: 'BR',
     serviceType: 'Importação de Veículos'

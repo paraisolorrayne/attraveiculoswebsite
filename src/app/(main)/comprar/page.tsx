@@ -6,6 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { SEO_BRANDS } from '@/lib/seo-brands'
 import { getVehicles } from '@/lib/autoconf-api'
 import { SITE_URL } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, Globe, Truck, Search } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -206,11 +207,8 @@ export default async function ComprarHubPage() {
 								name: `Comprar ${brand.displayName} no Brasil`,
 							})),
 						},
-						provider: {
-							'@type': 'AutoDealer',
-							name: 'Attra Veículos',
-							url: SITE_URL,
-						},
+						// Referencia a entidade canônica do layout raiz.
+						provider: organizationRef(),
 					}),
 				}}
 			/>

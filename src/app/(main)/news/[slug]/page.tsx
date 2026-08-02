@@ -10,6 +10,7 @@ import { db } from '@/lib/db'
 import { getVehicles } from '@/lib/autoconf-api'
 import { VehicleCard } from '@/components/vehicles/vehicle-card'
 import { Vehicle } from '@/types'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 interface NewsArticle {
   id: string
@@ -48,17 +49,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!article) {
     return {
-      title: 'Notícia não encontrada | Attra Veículos',
+      title: 'Notícia não encontrada',
       description: 'A notícia solicitada não foi encontrada.',
     }
   }
 
+  const url = canonicalUrl(`/news/${slug}`)
+
   return {
     title: `${article.title} | Notícias Attra`,
     description: article.description || 'Leia a notícia completa no portal Attra Veículos.',
+    alternates: { canonical: url },
     openGraph: {
       title: article.title,
       description: article.description || undefined,
+      url,
       images: article.image_url ? [{ url: article.image_url }] : [],
     },
   }

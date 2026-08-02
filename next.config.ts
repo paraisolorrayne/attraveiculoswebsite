@@ -106,6 +106,21 @@ const nextConfig: NextConfig = {
         destination: '/veiculos',
         permanent: true,
       },
+      // Landing de importação descontinuada: a URL segue indexada no Google
+      // (auditoria SEO/GEO de 01/08/2026, item P1.10) e hoje responde 404, então
+      // o 301 devolve o sinal para a página viva de importação.
+      // O :path* cobre a variante com barra final e qualquer sufixo herdado
+      // que ainda apareça em links externos (ex.: /lp-importacao/obrigado).
+      {
+        source: '/lp-importacao',
+        destination: '/importacao-de-veiculos-de-luxo',
+        permanent: true,
+      },
+      {
+        source: '/lp-importacao/:path*',
+        destination: '/importacao-de-veiculos-de-luxo',
+        permanent: true,
+      },
       // Old brand pages → vehicles filter
       {
         source: '/marca/:brand',

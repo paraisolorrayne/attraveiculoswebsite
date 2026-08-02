@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { findConfianca } from '@/lib/seo'
+import { pageTitle } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck } from 'lucide-react'
 
 const data = findConfianca('garantia-e-procedencia')!
 
 export const metadata: Metadata = {
-	title: data.metaTitle,
+	title: pageTitle(data.metaTitle),
 	description: data.metaDescription,
 	keywords: data.keywords,
 	alternates: { canonical: `${SITE_URL}/garantia-e-procedencia` },

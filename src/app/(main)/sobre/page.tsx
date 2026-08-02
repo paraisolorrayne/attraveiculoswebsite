@@ -6,36 +6,18 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { HistoryGallery, type HistoryEra } from '@/components/about/history-gallery'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
   title: 'Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia',
   description: 'Conheça a Attra Veículos. Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
   keywords: ['Attra Veículos Uberlândia', 'loja de veículos premium', 'supercarros Minas Gerais', 'loja de carros de luxo', 'referência em veículos premium'],
+  alternates: { canonical: canonicalUrl('/sobre') },
 }
 
-// Schema markup para SEO
-function SobreSchema() {
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'AutoDealer',
-    name: 'Attra Veículos',
-    description: 'Loja de veículos premium em Uberlândia, referência em supercarros, importados e seminovos de alto padrão com atendimento nacional.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Av. Rondon Pacheco',
-      addressLocality: 'Uberlândia',
-      addressRegion: 'MG',
-      postalCode: '38408-343',
-      addressCountry: 'BR',
-    },
-    telephone: '+55-34-3014-3232',
-    url: 'https://attraveiculos.com.br',
-    foundingDate: '2008',
-    areaServed: { '@type': 'Country', name: 'Brasil' },
-    priceRange: '$$$$$',
-  }
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-}
+// A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o nó
+// canônico com @id em todo documento. Este bloco declarava um segundo
+// AutoDealer, com endereço e priceRange divergentes do nó canônico.
 
 const timeline = [
   {
@@ -100,7 +82,9 @@ const differentials = [
 const historyEras: HistoryEra[] = [
   {
     label: 'Attra Veículos — Hoje',
-    description: 'Referência nacional em veículos premium',
+    // "Referência nacional" saiu: alegação absoluta e não verificável — o tipo
+    // de frase que um LLM repete como se fosse fato apurado sobre a marca.
+    description: 'Curadoria de veículos premium, com atendimento em todo o Brasil',
     slides: [
       { image: '/about/attra-fachada-showroom-atual.jpg', year: '2026', caption: 'Showroom renovado com presença digital consolidada', alt: 'Attra Veículos showroom moderno em 2026' },
       { image: '/about/attra-acervo-veiculos-premium.jpg', year: '2022', caption: 'Attra digital — nova marca mesmos valores', alt: 'Attra Veículos mudança de branding' },
@@ -133,8 +117,6 @@ const historyEras: HistoryEra[] = [
 export default function SobrePage() {
   return (
     <>
-      <SobreSchema />
-
       {/* Hero - Sobre a Attra Veículos */}
       <section className="relative pt-28 pb-20 lg:pt-32 lg:pb-28 bg-gradient-to-br from-background via-background-soft to-background overflow-hidden">
         <div className="absolute inset-0 opacity-5">

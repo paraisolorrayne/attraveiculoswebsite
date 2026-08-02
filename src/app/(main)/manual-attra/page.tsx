@@ -7,6 +7,7 @@ import {
   manualAttraCategories,
   type ManualAttraCategory,
 } from '@/lib/manual-attra-data'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 import { BookOpen, ArrowRight, Wrench } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -20,8 +21,9 @@ export const metadata: Metadata = {
     description:
       'Curadoria técnica de termos e tecnologias do universo automotivo premium.',
     type: 'website',
-    url: '/manual-attra',
+    url: canonicalUrl('/manual-attra'),
   },
+  alternates: { canonical: canonicalUrl('/manual-attra') },
 }
 
 const categoryOrder: ManualAttraCategory[] = [

@@ -9,6 +9,7 @@ import {
   manualAttraCategories,
   manualAttraTerms,
 } from '@/lib/manual-attra-data'
+import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
 import { ArrowLeft, ArrowRight, Wrench } from 'lucide-react'
 
 interface ManualAttraTermPageProps {
@@ -24,16 +25,22 @@ export async function generateMetadata({ params }: ManualAttraTermPageProps): Pr
   const term = getManualAttraTermBySlug(slug)
   if (!term) return { title: 'Termo não encontrado | Manual Attra' }
 
+  const url = canonicalUrl(`/manual-attra/${term.slug}`)
+
   return {
-    title: term.seo.title,
+    title: pageTitle(term.seo.title),
     description: term.seo.metaDescription,
     openGraph: {
       title: term.seo.title,
       description: term.seo.metaDescription,
       type: 'article',
-      url: `/manual-attra/${term.slug}`,
+      url,
     },
-    ...(term.seo.canonical ? { alternates: { canonical: term.seo.canonical } } : {}),
+    // Canonical autorreferente por padrão. O cluster inteiro de 99 verbetes
+    // ficava sem a tag porque `seo.canonical` é opcional e quase nunca vem
+    // preenchido; o valor explícito do dado continua com precedência, para o
+    // verbete que um dia precise consolidar em outra URL.
+    alternates: { canonical: term.seo.canonical ?? url },
   }
 }
 

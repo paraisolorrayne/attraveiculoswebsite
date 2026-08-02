@@ -133,7 +133,9 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
     videos: null,
     options: uniqueOptions.length > 0 ? uniqueOptions : null,
     description: generateDescription(autoconfVehicle),
-    seo_title: `${seoBase} | Attra Veículos`,
+    // Sem o sufixo de marca: o `title.template` do layout raiz já
+    // acrescenta ' | Attra Veículos' a todo título de página.
+    seo_title: seoBase,
     seo_description: `${seoBase}${km > 0 ? ` com ${km.toLocaleString('pt-BR')} km` : ''}. Compre com a Attra Veículos.`,
     status: 'available',
     is_featured: (autoconfVehicle.prioridade_veiculo ?? 0) > 0,

@@ -25,11 +25,15 @@ export async function GET() {
 		{ loc: `${BASE}/contato`, lastmod, changefreq: 'monthly', priority: 0.8 },
 		{ loc: `${BASE}/financiamento`, lastmod, changefreq: 'monthly', priority: 0.8 },
 		{ loc: `${BASE}/servicos/consignado`, lastmod, changefreq: 'monthly', priority: 0.7 },
+		// Estavam indexadas e fora de todos os sitemaps (auditoria SEO/GEO 01/08/2026, P1.11).
+		{ loc: `${BASE}/servicos/importacao`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/compramos-seu-carro`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/solicitar-veiculo`, lastmod, changefreq: 'monthly', priority: 0.6 },
 		{ loc: `${BASE}/blog`, lastmod, changefreq: 'daily', priority: 0.8 },
 		{ loc: `${BASE}/blog/arquivo`, lastmod, changefreq: 'daily', priority: 0.6 },
 		{ loc: `${BASE}/videos`, lastmod, changefreq: 'daily', priority: 0.7 },
+		// Índice de notícias: revalida a cada ciclo semanal de ingestão, daí o changefreq weekly.
+		{ loc: `${BASE}/news`, lastmod, changefreq: 'weekly', priority: 0.6 },
 		{ loc: `${BASE}/guia-supercarro-gratis`, lastmod, changefreq: 'monthly', priority: 0.6 },
 		{ loc: `${BASE}/jornada`, lastmod, changefreq: 'monthly', priority: 0.5 },
 		{ loc: `${BASE}/glossario-automotivo`, lastmod, changefreq: 'weekly', priority: 0.5 },

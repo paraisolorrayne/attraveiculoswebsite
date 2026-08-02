@@ -6,10 +6,12 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata - Hub de Serviços (3 serviços principais)
 export const metadata: Metadata = {
-  title: 'Serviços Automotivos Premium | Importação, Financiamento e Consignado | Attra Veículos Uberlândia',
+  title: 'Serviços Automotivos Premium | Importação, Financiamento e Consignado',
   description: 'Serviços premium para veículos nacionais, importados, seminovos premium e supercarros: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
   keywords: 'serviços automotivos premium, importação de carros de luxo, financiamento de veículos premium, consignado de carros, venda consignada veículos, Attra Veículos Uberlândia',
   openGraph: {
@@ -17,6 +19,7 @@ export const metadata: Metadata = {
     description: 'Soluções completas para veículos premium: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
     type: 'website',
   },
+  alternates: { canonical: canonicalUrl('/servicos') },
 }
 
 // 3 Main Services - LLMO optimized with complete sentences
@@ -124,36 +127,24 @@ const importSteps = [
   { number: '06', title: 'Entrega VIP', time: '1-3 dias' },
 ]
 
-// Schema markup for Multiple Services
+// Catálogo de serviços. Antes este bloco redeclarava a entidade AutoDealer
+// inteira só para pendurar o hasOfferCatalog; agora emite o próprio
+// OfferCatalog e aponta para o nó canônico do layout raiz via @id.
 function ServicesSchema() {
   const schema = {
     '@context': 'https://schema.org',
-    '@type': 'AutoDealer',
-    name: 'Attra Veículos',
-    description: 'Concessionária premium especializada em veículos importados, nacionais e superesportivos em Uberlândia-MG.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Av. Rondon Pacheco, 4600 - Tibery',
-      addressLocality: 'Uberlândia',
-      addressRegion: 'MG',
-      postalCode: '38408-343',
-      addressCountry: 'BR'
-    },
-    telephone: '+55-34-3014-3232',
-    url: 'https://attraveiculos.com.br',
-    hasOfferCatalog: {
-      '@type': 'OfferCatalog',
-      name: 'Serviços Automotivos Premium',
-      itemListElement: mainServices.map((service, index) => ({
-        '@type': 'Offer',
-        itemOffered: {
-          '@type': 'Service',
-          name: service.title,
-          description: service.description
-        },
-        position: index + 1
-      }))
-    }
+    '@type': 'OfferCatalog',
+    name: 'Serviços Automotivos Premium',
+    provider: organizationRef(),
+    itemListElement: mainServices.map((service, index) => ({
+      '@type': 'Offer',
+      itemOffered: {
+        '@type': 'Service',
+        name: service.title,
+        description: service.description
+      },
+      position: index + 1
+    }))
   }
 
   return (

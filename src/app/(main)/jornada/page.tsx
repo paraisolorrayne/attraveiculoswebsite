@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { MapPin, Award, Clock, Star, Users, Truck, Search, FileCheck, CheckCircle, Phone, MessageCircle, ArrowRight, Shield, Handshake, Eye, FileText, CreditCard, HeadphonesIcon, Play, Youtube, Trophy, Sparkles, Car } from 'lucide-react'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
 import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
   title: 'Jornada Attra | Curadoria de Supercarros, Acervo Icônico e Entrega Nacional',
   description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra — Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
   keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil', 'carros icônicos Attra', 'histórico supercarros'],
+  alternates: { canonical: canonicalUrl('/jornada') },
 }
 
 // Schema markup para SEO
@@ -20,11 +23,8 @@ function JornadaSchema() {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Jornada Attra - Curadoria Premium de Veículos',
-    provider: {
-      '@type': 'AutoDealer',
-      name: 'Attra Veículos',
-      address: { '@type': 'PostalAddress', addressLocality: 'Uberlândia', addressRegion: 'MG', addressCountry: 'BR' },
-    },
+    // Referencia a entidade canônica do layout raiz em vez de redeclará-la.
+    provider: organizationRef(),
     description: 'Jornada completa de compra de veículos premium: curadoria personalizada, vistoria técnica, logística nacional e entrega na sua garagem.',
     areaServed: { '@type': 'Country', name: 'Brasil' },
     serviceType: ['Curadoria de Veículos Premium', 'Logística Nacional', 'Vistoria Técnica', 'Consultoria Automotiva'],

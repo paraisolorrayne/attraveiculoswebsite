@@ -5,13 +5,14 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { SectionKicker, SectionHeading } from '@/components/ui/brand'
 import { IMPORTACAO_MAIN, IMPORTACAO_MARCAS } from '@/lib/seo'
+import { pageTitle } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, ChevronDown, MessageCircle, Globe, Check, ShieldCheck } from 'lucide-react'
 
 const data = IMPORTACAO_MAIN
 
 export const metadata: Metadata = {
-	title: data.metaTitle,
+	title: pageTitle(data.metaTitle),
 	description: data.metaDescription,
 	keywords: data.keywords,
 	alternates: { canonical: `${SITE_URL}/importacao-de-veiculos-de-luxo` },
