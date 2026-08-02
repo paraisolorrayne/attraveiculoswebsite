@@ -1,0 +1,37 @@
+name: CI
+
+# Verificações que rodam a cada push e pull request. O objetivo é pegar antes do
+# merge o que hoje só apareceria em produção.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      # Guarda do gerador de criativos: o .ts gerado precisa bater com o HTML
+      # fonte. Já houve divergência de 72 linhas em produção, e quem
+      # regenerasse teria revertido a mudança sem perceber.
+      - name: Gerador de criativos em dia com o fonte
+        run: node scripts/check-gerador-criativos.mjs
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # O build acessa banco e API de estoque; sem credencial ele usa
+          # fallback e conclui, que é o que interessa aqui.
+          NEXT_PUBLIC_SITE_URL: https://attraveiculos.com.br
