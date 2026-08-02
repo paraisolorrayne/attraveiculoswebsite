@@ -20,6 +20,9 @@
 
 .blog-prose h1 { font-size: 2.5rem; margin-top: 3rem; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
 .blog-prose h2 { font-size: 2rem; margin-top: 3rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
+/* h1 do corpo do post rebaixado a h2 para haver um único h1 por documento. O
+   rebaixamento é semântico: aqui mantemos a aparência que o h1 tinha. */
+.blog-prose h2[data-demoted-h1] { font-size: 2.5rem; padding-bottom: 0; border-bottom: 0; letter-spacing: -0.02em; }
 .blog-prose h3 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1.25rem; }
 .blog-prose h4 { font-size: 1.125rem; margin-top: 2rem; margin-bottom: 0.875rem; font-weight: 600; }
 .blog-prose h5 { font-size: 1.0625rem; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600; }
@@ -86,6 +89,7 @@
   .blog-prose { font-size: 1rem; line-height: 1.8; max-width: 100%; padding: 0 1rem; }
   .blog-prose h1 { font-size: 1.875rem; margin-top: 2rem; margin-bottom: 1rem; }
   .blog-prose h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.75rem; }
+  .blog-prose h2[data-demoted-h1] { font-size: 1.875rem; padding-bottom: 0; }
   .blog-prose h3 { font-size: 1.25rem; margin-top: 1.75rem; margin-bottom: 1rem; }
   .blog-prose h4 { font-size: 1.0625rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
   .blog-prose p { margin-bottom: 1.5rem; line-height: 1.8; }

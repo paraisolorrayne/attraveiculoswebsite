@@ -55,10 +55,13 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
         </div>
       )}
 
-      {/* Title */}
-      <h1 className="text-2xl font-bold text-foreground mb-1">
+      {/* Título da sidebar (visível só em desktop). É h2, não h1: o h1 único da
+          ficha vive no bloco de título da página. Classes inalteradas — o
+          Tailwind zera font-size/weight de h2 no preflight, então o visual é
+          idêntico ao que era com h1. */}
+      <h2 className="text-2xl font-bold text-foreground mb-1">
         {vehicle.brand} {vehicle.model}
-      </h1>
+      </h2>
       <p className="text-foreground-secondary mb-6">
         {vehicle.version && `${vehicle.version} • `}
         {vehicle.year_manufacture}/{vehicle.year_model}

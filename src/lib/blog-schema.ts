@@ -1,5 +1,8 @@
 import type { DualBlogPost } from '@/types'
-import { SITE_URL, ADDRESS, PHONE_NUMBER, EMAIL } from './constants'
+import {
+  SITE_URL, ADDRESS, PHONE_NUMBER, PHONE_NUMBER_2, CELLPHONE_NUMBER,
+  EMAIL, OPENING_HOURS, PERFIS_OFICIAIS,
+} from './constants'
 
 interface SchemaContext {
   baseUrl: string
@@ -25,18 +28,48 @@ function organization(baseUrl: string) {
     email: EMAIL,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: ADDRESS.street,
+      // Bairro entra no logradouro: PostalAddress não tem campo próprio para
+      // ele, e é assim que o endereço brasileiro é escrito (e como o rodapé
+      // publica).
+      streetAddress: `${ADDRESS.street} - ${ADDRESS.neighborhood}`,
       addressLocality: ADDRESS.city,
       addressRegion: ADDRESS.state,
+      postalCode: ADDRESS.postalCode,
       addressCountry: ADDRESS.country === 'Brasil' ? 'BR' : ADDRESS.country,
     },
+    // Os três números que o rodapé publica: `telephone` fica com o comercial
+    // principal e os outros dois entram como pontos de contato, para nenhum se
+    // perder nem competir pelo mesmo campo.
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        contactType: 'sales',
+        telephone: PHONE_NUMBER_2,
+        areaServed: 'BR',
+        availableLanguage: 'Portuguese',
+      },
+      {
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        telephone: CELLPHONE_NUMBER,
+        areaServed: 'BR',
+        availableLanguage: 'Portuguese',
+      },
+    ],
+    openingHoursSpecification: OPENING_HOURS.map(faixa => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: [...faixa.days],
+      opens: faixa.opens,
+      closes: faixa.closes,
+    })),
     areaServed: {
       '@type': 'Country',
       name: 'Brasil',
     },
-    sameAs: [
-      'https://www.instagram.com/attra.veiculos',
-    ],
+    sameAs: [...PERFIS_OFICIAIS],
+    // SEM `geo` e SEM `priceRange`: as coordenadas não foram confirmadas e a
+    // faixa de preço é decisão comercial. Pino errado no mapa é pior que
+    // nenhum pino.
   }
 }
 
@@ -60,7 +93,9 @@ export function buildArticleSchema(post: DualBlogPost) {
       name: post.author?.name || 'Attra Veículos',
       ...(post.author?.bio ? { description: post.author.bio } : {}),
     },
-    publisher: organization(baseUrl),
+    // Referência por @id, não o nó inteiro: inlinar a organização aqui fazia o
+    // post sair com dois blocos AutoDealer (este e o do layout raiz).
+    publisher: { '@id': `${baseUrl}/${ORGANIZATION_ID}` },
     keywords: post.seo?.keywords?.join(', '),
     articleSection: post.educativo?.category,
     ...(post.post_type === 'car_review' && post.car_review

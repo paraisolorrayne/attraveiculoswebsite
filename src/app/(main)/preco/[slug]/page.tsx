@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { PRECOS, findPreco } from '@/lib/seo'
+import { pageTitle } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, DollarSign, TrendingUp } from 'lucide-react'
 import { EstoqueAoVivo } from '@/components/vehicles/estoque-ao-vivo'
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 	if (!data) return {}
 
 	return {
-		title: data.metaTitle,
+		title: pageTitle(data.metaTitle),
 		description: data.metaDescription,
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/preco/${slug}` },

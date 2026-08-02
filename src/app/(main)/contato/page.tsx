@@ -6,40 +6,18 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { ContactForm } from '@/components/forms/contact-form'
 import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY } from '@/lib/constants'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
-  title: 'Contato | Attra Veículos Uberlândia - Atendimento Nacional',
+  title: 'Contato | Showroom em Uberlândia e Atendimento Nacional',
   description: 'Entre em contato com a Attra Veículos. Showroom de 5.000m² em Uberlândia com atendimento nacional para colecionadores de todo o Brasil. WhatsApp, telefone e visita agendada.',
   keywords: ['contato Attra Veículos', 'showroom Uberlândia', 'loja de carros premium', 'atendimento nacional veículos'],
+  alternates: { canonical: canonicalUrl('/contato') },
 }
 
-// Schema markup para LocalBusiness
-function ContatoSchema() {
-  const schema = {
-    '@context': 'https://schema.org',
-    '@type': 'AutoDealer',
-    name: 'Attra Veículos',
-    description: 'Loja de veículos premium em Uberlândia, referência em supercarros, importados e seminovos de alto padrão com atendimento nacional.',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: 'Av. Rondon Pacheco',
-      addressLocality: 'Uberlândia',
-      addressRegion: 'MG',
-      postalCode: '38408-343',
-      addressCountry: 'BR',
-    },
-    telephone: '+55-34-3014-3232',
-    email: 'faleconosco@attraveiculos.com.br',
-    url: 'https://attraveiculos.com.br',
-    openingHoursSpecification: [
-      { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:00', closes: '18:00' },
-      { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Saturday', opens: '08:00', closes: '13:00' },
-    ],
-    areaServed: { '@type': 'Country', name: 'Brasil' },
-    priceRange: '$$$$$',
-  }
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-}
+// A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o nó
+// canônico com @id em todo documento. Este bloco declarava um segundo
+// AutoDealer, com endereço e horário divergentes do nó canônico.
 
 const locations = [
   {
@@ -102,8 +80,6 @@ const nationalReach = [
 export default function ContatoPage() {
   return (
     <>
-      <ContatoSchema />
-
       {/* Hero */}
       <section className="relative pt-28 pb-20 lg:pt-32 lg:pb-28 bg-gradient-to-br from-background via-background-soft to-background overflow-hidden">
         <div className="absolute inset-0 opacity-5">

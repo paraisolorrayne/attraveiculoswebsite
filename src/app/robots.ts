@@ -10,6 +10,20 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://attraveiculos.com.
  * - Protection of admin and API routes
  * - Proper sitemap reference
  */
+/**
+ * Endpoints públicos destinados a consumo por LLM.
+ *
+ * `/api/vehicles/search` só funciona com querystring (`?q=`), e a regra
+ * `Disallow: /*?*` abaixo casa com ela. Google e Bing resolvem o conflito pela
+ * regra mais longa, então o Allow precisa incluir o `?q=` para vencer — sem
+ * isso o endpoint fica anunciado no llms.txt e bloqueado no robots.txt.
+ */
+const LLM_ENDPOINT_ALLOWS = [
+  '/api/llm/',
+  '/api/vehicles/search',
+  '/api/vehicles/search?q=',
+]
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -17,8 +31,7 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: [
           '/',
-          '/api/llm/',
-          '/api/vehicles/search',
+          ...LLM_ENDPOINT_ALLOWS,
         ],
         disallow: [
           '/admin/',
@@ -32,10 +45,16 @@ export default function robots(): MetadataRoute.Robots {
           '/*?*', // Prevent crawling of query parameters (optional, can be removed if needed)
         ],
       },
-      // Googlebot specific rules (more permissive)
+      // Googlebot specific rules (more permissive).
+      // Os grupos por user-agent substituem o grupo `*` inteiro — sem repetir
+      // o allow dos endpoints de LLM aqui, o `Disallow: /api/` bloqueava
+      // /api/llm/* e /api/vehicles/search para o Googlebot.
       {
         userAgent: 'Googlebot',
-        allow: '/',
+        allow: [
+          '/',
+          ...LLM_ENDPOINT_ALLOWS,
+        ],
         disallow: [
           '/admin/',
           '/api/',
@@ -57,10 +76,13 @@ export default function robots(): MetadataRoute.Robots {
           '/api/',
         ],
       },
-      // Bingbot
+      // Bingbot — mesma razão do Googlebot acima.
       {
         userAgent: 'Bingbot',
-        allow: '/',
+        allow: [
+          '/',
+          ...LLM_ENDPOINT_ALLOWS,
+        ],
         disallow: [
           '/admin/',
           '/api/',

@@ -1,61 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getVehicles } from '@/lib/autoconf-api'
 import { SITE_URL } from '@/lib/constants'
+import {
+	formatMileage,
+	formatPrice,
+	loadListedInventory,
+	priceRange,
+	vehicleName,
+} from '@/app/api/llm/_inventory'
+import type { Vehicle } from '@/types'
 
 export const revalidate = 3600
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL
 
 /**
+ * Teto por página quando o consumidor pede paginação explícita. Sem `per_page`
+ * na URL o estoque inteiro é devolvido — o padrão anterior era 50, e como o
+ * estoque tem ~70 veículos isso escondia ~20 carros de qualquer LLM.
+ */
+const MAX_PER_PAGE = 250
+
+function offerAvailability(status: Vehicle['status']): string {
+	if (status === 'available' || status === 'highlight') return 'https://schema.org/InStock'
+	if (status === 'reserved') return 'https://schema.org/LimitedAvailability'
+	return 'https://schema.org/OutOfStock'
+}
+
+/**
  * GET /api/llm/vehicles
  *
- * Structured endpoint optimised for LLM consumption (ChatGPT, Perplexity,
- * Gemini, etc.). Returns the full inventory in a clean JSON-LD-like format
- * that LLMs can ingest and cite directly.
+ * Endpoint estruturado para consumo por LLM (ChatGPT, Perplexity, Gemini...).
+ * Devolve o inventário completo num formato JSON-LD que o modelo pode citar.
  *
  * Query params:
- *   - brand: filter by brand name (case-insensitive)
- *   - limit: max results (default 50, max 200)
- *   - format: "json" (default) or "text" for Markdown
+ *   - brand:    filtra por marca (case-insensitive)
+ *   - page:     página, começando em 1 (padrão 1)
+ *   - per_page: itens por página (padrão: todos; máximo 250)
+ *   - format:   "json" (padrão) ou "text" para Markdown
+ *
+ * Sem `per_page` a resposta traz o estoque inteiro numa única chamada, e
+ * `numberOfItems` é sempre o total do inventário — não o tamanho da página.
  */
 export async function GET(request: NextRequest) {
-	const brand = request.nextUrl.searchParams.get('brand')
-	const limit = Math.min(Number(request.nextUrl.searchParams.get('limit') ?? 50) || 50, 200)
-	const format = request.nextUrl.searchParams.get('format') ?? 'json'
+	const params = request.nextUrl.searchParams
+	const brand = params.get('brand')
+	const format = params.get('format') ?? 'json'
 
 	try {
-		const result = await getVehicles({
-			tipo: 'carros',
-			registros_por_pagina: 200,
-		})
+		const inventory = await loadListedInventory()
 
-		let vehicles = result.vehicles.filter(v => v.status === 'available' || v.status === 'highlight')
-
+		let vehicles = inventory.vehicles
 		if (brand) {
 			const brandLower = brand.toLowerCase()
 			vehicles = vehicles.filter(v => (v.brand || '').toLowerCase().includes(brandLower))
 		}
 
-		vehicles = vehicles.slice(0, limit)
+		const totalItems = vehicles.length
+
+		// `limit` continua aceito por compatibilidade com quem já consome o
+		// endpoint, mas deixou de ter valor padrão: omitido = tudo.
+		const rawPerPage = params.get('per_page') ?? params.get('limit')
+		const perPage = rawPerPage
+			? Math.max(1, Math.min(Number(rawPerPage) || MAX_PER_PAGE, MAX_PER_PAGE))
+			: Math.max(totalItems, 1)
+		const totalPages = Math.max(1, Math.ceil(totalItems / perPage))
+		const page = Math.max(1, Math.min(Number(params.get('page')) || 1, totalPages))
+		const offset = (page - 1) * perPage
+		const pageVehicles = vehicles.slice(offset, offset + perPage)
+
+		const pageUrl = (n: number) => {
+			const u = new URL(`${BASE}/api/llm/vehicles`)
+			if (brand) u.searchParams.set('brand', brand)
+			if (format !== 'json') u.searchParams.set('format', format)
+			u.searchParams.set('page', String(n))
+			u.searchParams.set('per_page', String(perPage))
+			return u.toString()
+		}
+
+		const pagination = {
+			page,
+			per_page: perPage,
+			total_pages: totalPages,
+			total_items: totalItems,
+			returned: pageVehicles.length,
+			complete: pageVehicles.length === totalItems,
+			next_page: page < totalPages ? pageUrl(page + 1) : null,
+			previous_page: page > 1 ? pageUrl(page - 1) : null,
+			documentation: 'Omita per_page para receber o inventário inteiro numa ' +
+				'única resposta. Com per_page, percorra next_page até null. ' +
+				'numberOfItems é sempre o total do inventário, não o da página.',
+		}
+
+		const updatedAt = new Date().toISOString()
 
 		if (format === 'text') {
+			const range = priceRange(vehicles)
 			const lines = [
-				`# Attra Veículos — Estoque Atual (${vehicles.length} veículos)`,
+				`# Attra Veículos — Estoque Atual`,
 				'',
-				'> Curadoria de supercarros, importados e veículos premium com procedência verificada.',
-				'> Entrega em todo o Brasil. WhatsApp: (34) 99944-4747',
+				`> Curadoria de supercarros, importados e veículos premium com procedência verificada.`,
+				`> Entrega em todo o Brasil. WhatsApp: (34) 99944-4747`,
 				'',
+				`- Total de veículos disponíveis: ${totalItems}`,
+				`- Nesta resposta: ${pageVehicles.length} (página ${page} de ${totalPages})`,
+				range
+					? `- Faixa de preço do estoque: ${formatPrice(range.min)} a ${formatPrice(range.max)}`
+					: `- Faixa de preço do estoque: sob consulta`,
+				`- Atualizado em: ${updatedAt}`,
 			]
+			if (pagination.next_page) lines.push(`- Próxima página: ${pagination.next_page}`)
+			lines.push('')
 
-			for (const v of vehicles) {
-				const name = [v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')
-				const price = v.price > 0 ? `R$ ${v.price.toLocaleString('pt-BR')}` : 'Sob consulta'
-				const km = v.mileage === 0 ? '0 km' : `${v.mileage.toLocaleString('pt-BR')} km`
-				lines.push(`## ${name}`)
-				lines.push(`- Preço: ${price}`)
-				lines.push(`- Quilometragem: ${km}`)
+			for (const v of pageVehicles) {
+				lines.push(`## ${vehicleName(v)}`)
+				lines.push(`- Preço: ${formatPrice(v.price)}`)
+				lines.push(`- Quilometragem: ${formatMileage(v.mileage)}`)
+				if (v.year_model) lines.push(`- Ano: ${v.year_model}`)
 				if (v.color) lines.push(`- Cor: ${v.color}`)
 				if (v.fuel_type) lines.push(`- Combustível: ${v.fuel_type}`)
+				if (v.transmission) lines.push(`- Câmbio: ${v.transmission}`)
 				if (v.engine) lines.push(`- Motor: ${v.engine}`)
 				if (v.horsepower) lines.push(`- Potência: ${v.horsepower} cv`)
 				lines.push(`- Link: ${BASE}/veiculo/${v.slug}`)
@@ -76,7 +139,11 @@ export async function GET(request: NextRequest) {
 			name: 'Attra Veículos — Estoque de Supercarros e Veículos Premium',
 			description: 'Curadoria de supercarros, importados e veículos premium com procedência verificada. Entrega em todo o Brasil.',
 			url: `${BASE}/veiculos`,
-			numberOfItems: vehicles.length,
+			// Total do inventário (após o filtro de marca, quando houver) — não
+			// o tamanho da página. É o número que precisa bater com o
+			// /sitemap-estoque.xml.
+			numberOfItems: totalItems,
+			dateModified: updatedAt,
 			provider: {
 				'@type': 'AutoDealer',
 				name: 'Attra Veículos',
@@ -84,36 +151,31 @@ export async function GET(request: NextRequest) {
 				telephone: '+55-34-99944-4747',
 				areaServed: { '@type': 'Country', name: 'Brasil' },
 			},
-			itemListElement: vehicles.map((v, i) => {
-				const name = [v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')
-				return {
-					'@type': 'ListItem',
-					position: i + 1,
-					item: {
-						'@type': 'Vehicle',
-						name,
-						url: `${BASE}/veiculo/${v.slug}`,
-						brand: v.brand ? { '@type': 'Brand', name: v.brand } : undefined,
-						model: v.model,
-						vehicleModelDate: String(v.year_model),
-						color: v.color || undefined,
-						fuelType: v.fuel_type || undefined,
-						vehicleEngine: v.engine ? { '@type': 'EngineSpecification', name: v.engine } : undefined,
-						mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' },
-						image: v.photos?.[0],
-						offers: {
-							'@type': 'Offer',
-							price: v.price,
-							priceCurrency: 'BRL',
-							availability: v.status === 'available' || v.status === 'highlight'
-								? 'https://schema.org/InStock'
-								: v.status === 'reserved'
-									? 'https://schema.org/LimitedAvailability'
-									: 'https://schema.org/OutOfStock',
-						},
+			pagination,
+			itemListElement: pageVehicles.map((v, i) => ({
+				'@type': 'ListItem',
+				position: offset + i + 1,
+				item: {
+					'@type': 'Vehicle',
+					name: vehicleName(v),
+					url: `${BASE}/veiculo/${v.slug}`,
+					brand: v.brand ? { '@type': 'Brand', name: v.brand } : undefined,
+					model: v.model,
+					vehicleModelDate: String(v.year_model),
+					color: v.color || undefined,
+					fuelType: v.fuel_type || undefined,
+					vehicleTransmission: v.transmission || undefined,
+					vehicleEngine: v.engine ? { '@type': 'EngineSpecification', name: v.engine } : undefined,
+					mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' },
+					image: v.photos?.[0],
+					offers: {
+						'@type': 'Offer',
+						price: v.price,
+						priceCurrency: 'BRL',
+						availability: offerAvailability(v.status),
 					},
-				}
-			}),
+				},
+			})),
 		}
 
 		return NextResponse.json(structured, {

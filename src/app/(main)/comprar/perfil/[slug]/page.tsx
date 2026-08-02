@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { PERFIS_COMPRADOR, findPerfil } from '@/lib/seo'
+import { pageTitle } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, User, MessageCircle, AlertTriangle, Check, X } from 'lucide-react'
 
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 	if (!data) return {}
 
 	return {
-		title: data.metaTitle,
+		title: pageTitle(data.metaTitle),
 		description: data.metaDescription,
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/perfil/${slug}` },

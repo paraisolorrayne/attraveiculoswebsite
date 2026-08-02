@@ -8,7 +8,23 @@ import { cn } from '@/lib/utils'
 
 interface CinematicGalleryProps {
   photos: string[]
+  /** Marca + modelo já concatenados pela ficha (ex.: "Chevrolet Corvette Z06"). */
   vehicleName: string
+  /**
+   * Ano do modelo. Opcional porque só a ficha tem esse dado: quando vem
+   * preenchido o `alt` deixa de ser genérico e passa a identificar a unidade
+   * exata (marca + modelo + ano), que é o que um buscador ou um LLM consegue citar.
+   */
+  vehicleYear?: string | number
+}
+
+/**
+ * Rótulo usado em todos os `alt` da galeria. Só entra no texto o que veio do
+ * estoque — nada é inventado quando o ano não é informado.
+ */
+function buildVehicleLabel(vehicleName: string, vehicleYear?: string | number): string {
+  const year = vehicleYear != null ? String(vehicleYear).trim() : ''
+  return year ? `${vehicleName} ${year}` : vehicleName
 }
 
 // Skeleton loading component
@@ -20,18 +36,14 @@ function ImageSkeleton() {
   )
 }
 
-export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps) {
+export function CinematicGallery({ photos, vehicleName, vehicleYear }: CinematicGalleryProps) {
+  const vehicleLabel = buildVehicleLabel(vehicleName, vehicleYear)
+  const totalPhotos = photos.length
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set())
   const [errorImages, setErrorImages] = useState<Set<number>>(new Set())
   const [fullscreenLoaded, setFullscreenLoaded] = useState<Set<number>>(new Set())
-  const [mounted, setMounted] = useState(false)
-
-  // Track if component is mounted (for Portal SSR compatibility)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Mark image as loaded
   const handleImageLoad = useCallback((index: number) => {
@@ -122,10 +134,18 @@ export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps)
                 ) : (
                   <Image
                     src={photo}
-                    alt={`${vehicleName} - Imagem ${index + 1}`}
-                    fill
+                    alt={`${vehicleLabel} — foto ${index + 1} de ${totalPhotos} do veículo em estoque na Attra Veículos`}
+                    // width/height declarados no lugar de `fill` só para que os
+                    // atributos existam no HTML bruto (era o que faltava para o CLS
+                    // no mobile). O tamanho real continua vindo do CSS
+                    // `.hero-vehicle-image`, que força width/height 100% com
+                    // object-fit contain — o resultado visual é o mesmo do `fill`.
+                    width={1920}
+                    height={1080}
                     className={cn(
-                      "hero-vehicle-image transition-opacity duration-300",
+                      // `block` porque sem `fill` a imagem volta a ser inline e
+                      // ganharia o vão de baseline embaixo.
+                      "block hero-vehicle-image transition-opacity duration-300",
                       loadedImages.has(index) ? "opacity-100" : "opacity-0"
                     )}
                     priority={index === 0 || index === currentIndex}
@@ -187,11 +207,14 @@ export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps)
                 index === currentIndex ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
               )}
             >
+              {/* O botão não tem texto: o `alt` da miniatura é o nome acessível
+                  dele, por isso descreve a ação e o veículo, e não fica vazio. */}
               <Image
                 src={photo}
-                alt=""
-                fill
-                className="object-cover"
+                alt={`Ver foto ${index + 1} de ${totalPhotos} do ${vehicleLabel}`}
+                width={80}
+                height={56}
+                className="block h-full w-full object-cover"
                 sizes="80px"
                 quality={60}
               />
@@ -200,8 +223,10 @@ export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps)
         </div>
       </div>
 
-      {/* Fullscreen Modal - rendered via Portal to ensure it's above everything including header */}
-      {isFullscreen && mounted && createPortal(
+      {/* Fullscreen Modal - rendered via Portal to ensure it's above everything including header.
+          Não precisa de guarda de "mounted": `isFullscreen` só vira true a partir de um
+          handler de clique/teclado, que nunca roda no servidor — logo, aqui `document` existe. */}
+      {isFullscreen && createPortal(
         <div
           className="fixed inset-0 z-[9999] bg-black overflow-hidden"
           style={{
@@ -254,10 +279,13 @@ export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps)
                 <Loader2 className="w-10 h-10 text-white/60 animate-spin" />
               </div>
             )}
+            {/* eslint-disable-next-line @next/next/no-img-element -- o lightbox existe
+                justamente para mostrar a foto em resolução original; passar pelo
+                otimizador do next/image limitaria a largura aos deviceSizes. */}
             <img
               key={currentIndex}
               src={photos[currentIndex]}
-              alt={`${vehicleName} - Imagem ${currentIndex + 1}`}
+              alt={`${vehicleLabel} — foto ${currentIndex + 1} de ${totalPhotos} em tela cheia`}
               className={cn(
                 "max-w-full max-h-full object-contain transition-opacity duration-300",
                 fullscreenLoaded.has(currentIndex) ? "opacity-100" : "opacity-0"
@@ -284,10 +312,17 @@ export function CinematicGallery({ photos, vehicleName }: CinematicGalleryProps)
                       : 'border-white/20 opacity-40 hover:opacity-80'
                   )}
                 >
-                  <img
+                  {/* Mesmo caso da tira de miniaturas: o `alt` é o nome acessível do botão.
+                      A miniatura vive numa caixa fixa, então vai pelo next/image — antes
+                      cada uma baixava a foto em resolução original. */}
+                  <Image
                     src={photo}
-                    alt=""
-                    className="w-full h-full object-cover"
+                    alt={`Ver foto ${index + 1} de ${totalPhotos} do ${vehicleLabel}`}
+                    width={64}
+                    height={48}
+                    className="block w-full h-full object-cover"
+                    sizes="64px"
+                    quality={60}
                   />
                 </button>
               ))}

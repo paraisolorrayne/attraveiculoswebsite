@@ -15,13 +15,32 @@ export const PHONE_DISPLAY_2 = '(34) 3226-0202'
 export const CELLPHONE_NUMBER = '+5534999444747'
 export const CELLPHONE_DISPLAY = '(34) 99944-4747'
 
-// Endereço
+// Endereço — confirmado pela Attra em 02/08/2026 como fonte de verdade (é o
+// que o rodapé do site publica). O JSON-LD declarava antes "Av. Rondon
+// Pacheco, 4600 - Tibery" e um SEGUNDO endereço na Av. João Naves de Ávila com
+// o MESMO CEP — dois logradouros de bairros diferentes não compartilham CEP,
+// ou seja, havia endereço errado no ar.
 export const ADDRESS = {
-  street: 'Av. Rondon Pacheco',
+  street: 'Av. Rondon Pacheco, 1670',
+  neighborhood: 'Vigilato Pereira',
   city: 'Uberlândia',
   state: 'MG',
+  postalCode: '38408-343',
   country: 'Brasil',
 }
+
+/** Horário de atendimento no vocabulário do schema.org. Mesma fonte: o rodapé. */
+export const OPENING_HOURS = [
+  { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:00', closes: '18:00' },
+  { days: ['Saturday'], opens: '08:00', closes: '13:00' },
+] as const
+
+/** Perfis oficiais — apenas os que o próprio site linka no rodapé. */
+export const PERFIS_OFICIAIS = [
+  'https://instagram.com/attra.veiculos',
+  'https://facebook.com/attraveiculos',
+  'https://youtube.com/@attraveiculos',
+] as const
 
 // Email
 export const EMAIL = 'faleconosco@attraveiculos.com.br'

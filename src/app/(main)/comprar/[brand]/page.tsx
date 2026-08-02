@@ -9,6 +9,7 @@ import { getVehicles } from '@/lib/autoconf-api'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
 import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 
@@ -321,7 +322,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 											price: v.price,
 											priceCurrency: 'BRL',
 											availability: availabilityFromStatus(v.status),
-											seller: { '@type': 'AutoDealer', name: 'Attra Veículos', url: SITE_URL },
+											seller: organizationRef(),
 											itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
 										},
 									},
@@ -333,11 +334,8 @@ export default async function BrandPage({ params }: BrandPageProps) {
 									name: m.fullName,
 								})),
 						},
-						provider: {
-							'@type': 'AutoDealer',
-							name: 'Attra Veículos',
-							url: SITE_URL,
-						},
+						// Referencia a entidade canônica do layout raiz.
+						provider: organizationRef(),
 					}),
 				}}
 			/>

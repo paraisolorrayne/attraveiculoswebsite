@@ -5,10 +5,12 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata
 export const metadata: Metadata = {
-  title: 'Consignado Automotivo | Venda seu Veículo Premium com Segurança | Attra Veículos',
+  title: 'Consignado Automotivo | Venda seu Veículo Premium com Segurança',
   description: 'Venda seu veículo de luxo em consignação com a Attra. Exposição em showroom premium, avaliação profissional, precificação competitiva e zero burocracia. Atendemos todo o Brasil.',
   keywords: 'consignado automotivo, venda consignada de carros, consignação de veículos de luxo, vender carro premium, consignado Uberlândia',
   openGraph: {
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
     description: 'Venda seu veículo premium com segurança e praticidade. A Attra cuida de toda a negociação.',
     type: 'website',
   },
+  alternates: { canonical: canonicalUrl('/servicos/consignado') },
 }
 
 // Process Steps
@@ -51,11 +54,8 @@ function ConsignadoServiceSchema() {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Consignado Automotivo',
-    provider: {
-      '@type': 'AutoDealer',
-      name: 'Attra Veículos',
-      address: { '@type': 'PostalAddress', streetAddress: 'Av. Rondon Pacheco, 1670 - Vigilato Pereira', addressLocality: 'Uberlândia', addressRegion: 'MG', postalCode: '38408-343', addressCountry: 'BR' }
-    },
+    // Referencia a entidade canônica do layout raiz em vez de redeclará-la.
+    provider: organizationRef(),
     description: 'Venda seu veículo premium em consignação com exposição em showroom, avaliação profissional e zero burocracia.',
     areaServed: 'BR',
     serviceType: 'Consignado Automotivo'

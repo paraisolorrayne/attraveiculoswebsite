@@ -4,11 +4,13 @@ import { Camera, ArrowLeft, ArrowRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
-  title: 'Nossa História | Attra Veículos — De onde viemos, para onde vamos',
+  title: 'Nossa História — De onde viemos, para onde vamos',
   description: 'Conheça a evolução da Attra Veículos em imagens. Uma galeria documental que mostra o que éramos, o que construímos e o que estamos nos tornando.',
   keywords: ['história Attra Veículos', 'evolução Attra', 'galeria Attra', 'documentário Attra Veículos'],
+  alternates: { canonical: canonicalUrl('/nossa-historia') },
 }
 
 export default function NossaHistoriaPage() {

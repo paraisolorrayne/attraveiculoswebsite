@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JOBS=(attra-blog-ai attra-news-ingestion attra-hero-preprocess attra-cleanup-tracking)
+JOBS=(attra-blog-ai attra-news-ingestion attra-hero-preprocess attra-cleanup-tracking attra-embeddings-sync)
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "ERRO: rode como root (sudo) — escreve em /usr/local/bin e /etc/cron.d." >&2

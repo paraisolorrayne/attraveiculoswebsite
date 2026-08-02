@@ -2,10 +2,12 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Shield, Lock, Eye, FileText, UserCheck, MessageCircle, Share2, Mail } from 'lucide-react'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
-  title: 'Política de Privacidade | Attra Veículos',
+  title: 'Política de Privacidade',
   description: 'Na Attra Veículos, privacidade e segurança são prioridades. Saiba como coletamos, usamos e protegemos seus dados pessoais ao navegar em nosso site ou interagir via WhatsApp.',
+  alternates: { canonical: canonicalUrl('/politica-privacidade') },
 }
 
 const sections = [

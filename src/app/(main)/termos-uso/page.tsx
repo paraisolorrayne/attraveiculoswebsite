@@ -2,10 +2,12 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FileText, Scale, AlertTriangle, Ban, Copyright, RefreshCw, Gavel, Mail } from 'lucide-react'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
   title: 'Termos de Uso',
   description: 'Termos e Condições de Uso do site da Attra Veículos. Leia atentamente antes de utilizar nossos serviços.',
+  alternates: { canonical: canonicalUrl('/termos-uso') },
 }
 
 const sections = [

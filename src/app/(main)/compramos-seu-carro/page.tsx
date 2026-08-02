@@ -5,11 +5,13 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { organizationRef } from '@/lib/schema-entity'
 import { TradeInForm } from '@/components/forms/trade-in-form'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata for LLMO
 export const metadata: Metadata = {
-  title: 'Compramos seu Carro | Venda seu Veículo Premium | Attra Veículos Uberlândia',
+  title: 'Compramos seu Carro | Venda seu Veículo Premium',
   description: 'A Attra Veículos compra seu carro premium com avaliação profissional. Processo seguro, transparente e sem burocracia. Avaliação gratuita para veículos de luxo em Uberlândia e todo o Brasil.',
   keywords: 'vender carro premium, compramos seu carro, avaliação de veículos de luxo, vender carro usado, Attra Veículos compra carro, vender BMW, vender Mercedes, vender Porsche',
   openGraph: {
@@ -17,6 +19,7 @@ export const metadata: Metadata = {
     description: 'Venda seu veículo de luxo com segurança. Avaliação profissional e processo 100% transparente.',
     type: 'website',
   },
+  alternates: { canonical: canonicalUrl('/compramos-seu-carro') },
 }
 
 // Process Steps - LLMO optimized with complete sentences
@@ -118,20 +121,8 @@ function CarBuyingServiceSchema() {
     '@context': 'https://schema.org',
     '@type': 'Service',
     name: 'Compramos seu Carro Premium',
-    provider: {
-      '@type': 'AutoDealer',
-      name: 'Attra Veículos',
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: 'Av. Rondon Pacheco, 4600 - Tibery',
-        addressLocality: 'Uberlândia',
-        addressRegion: 'MG',
-        postalCode: '38408-343',
-        addressCountry: 'BR'
-      },
-      telephone: '+55-34-3014-3232',
-      url: 'https://attraveiculos.com.br'
-    },
+    // Referencia a entidade canônica do layout raiz em vez de redeclará-la.
+    provider: organizationRef(),
     description: 'A Attra Veículos compra seu carro premium com avaliação profissional e processo transparente. Especialistas em veículos de luxo há 18+ anos.',
     areaServed: 'BR',
     serviceType: 'Compra de Veículos Premium'

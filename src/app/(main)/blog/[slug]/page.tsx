@@ -4,6 +4,7 @@ import { getBlogPost } from '@/lib/blog-api'
 import { buildBlogPostSchemas } from '@/lib/blog-schema'
 import { EducativoTemplate, CarReviewTemplate } from '@/components/blog'
 import { InstagramEmbedProvider } from '@/components/blog/instagram-embed-provider'
+import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
 
 interface PageProps {
 	params: Promise<{ slug: string }>
@@ -19,11 +20,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 		}
 	}
 
-	const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.attra.com.br'
-	const url = `${baseUrl}/blog/${post.slug}`
+	// O fallback anterior era `https://www.attra.com.br`, domínio que não é o do
+	// site: sem NEXT_PUBLIC_SITE_URL o canonical apontava para fora.
+	const url = canonicalUrl(`/blog/${post.slug}`)
 
 	return {
-		title: post.seo.meta_title || post.title,
+		// `meta_title` vem do banco e boa parte da base foi gravada já com a
+		// marca no fim, que o template do layout raiz acrescenta de novo.
+		title: pageTitle(post.seo.meta_title || post.title),
 		description: post.seo.meta_description || post.excerpt,
 		keywords: post.seo.keywords,
 		openGraph: {

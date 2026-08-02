@@ -5,10 +5,12 @@ import { Container } from '@/components/ui/container'
 import { Badge } from '@/components/ui/badge'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Clock, ArrowRight, TrendingUp, Wrench, Sparkles, BookOpen } from 'lucide-react'
+import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
   title: 'Universe Attra | Conteúdo Exclusivo sobre Supercars',
   description: 'Mergulhe no universo dos supercarros. Análises, tendências de mercado, guias de manutenção e histórias exclusivas do mundo automotivo de luxo.',
+  alternates: { canonical: canonicalUrl('/universe') },
 }
 
 const categories = [
