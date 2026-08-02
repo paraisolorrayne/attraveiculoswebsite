@@ -123,6 +123,7 @@
         <button class="typebtn" data-tipo="destaque">2 · Destaque<small>claro, ficha técnica</small></button>
         <button class="typebtn" data-tipo="estoque">3 · Estoque<small>lista de até 4 carros</small></button>
         <button class="typebtn" data-tipo="editorial">4 · Editorial<small>luxo, minimalista</small></button>
+        <button class="typebtn" data-tipo="ficha">5 · Ficha<small>claro, 3 detalhes + destaque</small></button>
       </div>
     </fieldset>
 
@@ -176,6 +177,18 @@
         a fonte encolhe até caber e, se ainda passar, corta com "…". Seja direto.</div>
     </fieldset>
 
+    <fieldset id="sec-ficha" style="display:none">
+      <legend>Ficha do veículo</legend>
+      <div class="row">
+        <div><label>Cor externa</label><input type="text" id="corext" placeholder="Ex.: BLU ELETTRICO" value="PRETO"></div>
+        <div><label>Cor interna</label><input type="text" id="corint" placeholder="Ex.: CUOIO" value="CARAMELO"></div>
+      </div>
+      <label style="margin-top:12px">Selo do rodapé (garantia, programa)</label>
+      <input type="text" id="garantia" placeholder="Ex.: 2 ANOS DE GARANTIA" value="2 ANOS DE GARANTIA">
+      <div class="hint">As três fotos de detalhe são as “Foto de baixo” da seção Fotos (interior, banco, roda).
+        A foto principal entra grande embaixo, com o fundo original — sem recorte.</div>
+    </fieldset>
+
     <fieldset id="sec-specs" style="display:none">
       <legend>Diferenciais do carro</legend>
       <label>Separe por vírgula (viram pílulas vermelhas)</label>
@@ -221,9 +234,21 @@
       <div id="fotos-extra" style="display:none">
         <label style="margin-top:16px">Foto de baixo 2 (opcional)</label>
         <input type="file" id="foto3" accept="image/*">
+        <div class="sliders">
+          <div><label>Zoom</label><input type="range" id="f3zoom" min="100" max="250" value="100"></div>
+          <div><label>Posição ↔</label><input type="range" id="f3x" min="0" max="100" value="50"></div>
+          <div><label>Posição ↕</label><input type="range" id="f3y" min="0" max="100" value="50"></div>
+        </div>
         <label style="margin-top:12px">Foto de baixo 3 (opcional)</label>
         <input type="file" id="foto4" accept="image/*">
-        <div class="hint">Com 1 foto o rodapé fica inteiro; com 3, vira uma tríade lado a lado — o layout se ajusta sozinho.</div>
+        <div class="sliders">
+          <div><label>Zoom</label><input type="range" id="f4zoom" min="100" max="250" value="100"></div>
+          <div><label>Posição ↔</label><input type="range" id="f4x" min="0" max="100" value="50"></div>
+          <div><label>Posição ↕</label><input type="range" id="f4y" min="0" max="100" value="50"></div>
+        </div>
+        <div class="hint">No Destaque, com 1 foto o rodapé fica inteiro e com 3 vira uma tríade.
+          Na Ficha, as três entram na tira do topo — como as fotos do estoque são horizontais e a
+          caixa é mais alta que larga, use o zoom e a posição para escolher o trecho que aparece.</div>
       </div>
     </fieldset>
 
@@ -266,6 +291,8 @@ const state = {
   foto1: null, foto2: null, foto3: null, foto4: null, logo: null,
   f1: {zoom:1, x:.5, y:.5},
   f2: {zoom:1, x:.5, y:.5},
+  f3: {zoom:1, x:.5, y:.5},
+  f4: {zoom:1, x:.5, y:.5},
   estFotos: [null, null, null, null],
   foto1Cut: null,   // foto principal com fundo removido (Editorial)
   foto1Data: null,  // dataURL da foto original (upload manual → rembg)
@@ -624,39 +651,20 @@ function renderClassico(){
   // Fundo da área de texto: Pérola (sólido), Concreto ou Asfalto
   // (texturas reais fundidas dentro da foto por máscara de alpha).
   const piso = state.pisoTipo || 'perola';
-  // fusão curta: entra só 56px na foto — o suficiente pro chão da foto
-  // dissolver no piso, sem nunca alcançar rodas/carroceria
-  const FUSAO_H = 56;
+  // sem fusão no topo: a dissolvência de 56px invadia as rodas em carros
+  // baixos. A divisa fica seca e a continuidade vem do véu (abaixo), como no
+  // tratamento manual do Photoshop.
+  const FUSAO_H = 0;
   // altura da divisa ajustável: posicionar SEMPRE abaixo do veículo
   const pisoShift = parseInt($('pisoy').value, 10) || 0;
   const PISO_TOP = PHOTO1_H + pisoShift;
 
-  if(piso === 'perola'){
-    g = ctx.createLinearGradient(0, PISO_TOP, 0, DIAG_L);
-    g.addColorStop(0, '#fafeff'); g.addColorStop(1, '#f2f6f7');
-    ctx.fillStyle = g;
-    areaPath(); ctx.fill();
-    ctx.save(); areaPath(); ctx.clip();
-    const meioY = PISO_TOP + (CUT - PISO_TOP) * .40;
-    const luz = ctx.createRadialGradient(W/2, meioY, 60, W/2, meioY, 860);
-    luz.addColorStop(0, 'rgba(255,255,255,.14)');
-    luz.addColorStop(.6, 'rgba(255,255,255,.05)');
-    luz.addColorStop(1, 'rgba(110,118,120,.03)');
-    ctx.fillStyle = luz;
-    ctx.fillRect(0, PISO_TOP, W, DIAG_L - PISO_TOP);
-    ctx.globalAlpha = .025;
-    ctx.drawImage(grainCanvas(), 0, PISO_TOP, W, DIAG_L - PISO_TOP);
-    ctx.globalAlpha = 1;
-    ctx.restore();
-    // fusão foto→bloco na cor do pérola
-    g = ctx.createLinearGradient(0, PISO_TOP-44, 0, PISO_TOP);
-    g.addColorStop(0, 'rgba(250,254,255,0)');
-    g.addColorStop(1, 'rgba(250,254,255,1)');
-    ctx.fillStyle = g; ctx.fillRect(0, PISO_TOP-44, W, 44);
-  } else {
-    const img = pisoImgs[piso];
-    // FIX da faixa escura: o overlap dentro da foto tem o MESMO tamanho da
-    // máscara — a textura chega na divisa já 100% opaca
+  {
+    // Pérola/Concreto/Asfalto = piso texturizado REAL (imagem embutida).
+    // Pérola reusa a textura do concreto com um véu pérola por cima: clareia
+    // até um tom pérola limpo mantendo o grão real — como piso polido do Photoshop.
+    const img = pisoImgs[piso === 'perola' ? 'concreto' : piso];
+    // overlap dentro da foto = tamanho da máscara → textura chega 100% opaca na divisa
     const bandTop = PISO_TOP - FUSAO_H;
     const bandH = DIAG_L - bandTop;
     ctx.save();
@@ -671,17 +679,21 @@ function renderClassico(){
       const ps = Math.max(W / img.width, bandH / img.height);
       ox.drawImage(img, (W - img.width*ps)/2, (bandH - img.height*ps)/2,
                    img.width*ps, img.height*ps);
-      const mg = ox.createLinearGradient(0, 0, 0, FUSAO_H);
-      mg.addColorStop(0, 'rgba(0,0,0,0)');
-      mg.addColorStop(1, 'rgba(0,0,0,1)');
-      ox.globalCompositeOperation = 'destination-in';
-      ox.fillStyle = mg;
-      ox.fillRect(0, 0, W, bandH);
-      ox.globalCompositeOperation = 'source-over';
       ctx.drawImage(osc, 0, bandTop);
     } else {
-      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : '#eceeed';
+      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : (piso === 'perola' ? '#eef1f2' : '#eceeed');
       ctx.fillRect(0, bandTop, W, bandH);
+    }
+    // véu pérola: clareia a textura do concreto até o tom pérola, sem perder o grão
+    if(piso === 'perola'){
+      // fade-in do véu na zona de fusão (bandTop..PISO_TOP) → sem divisa nítida
+      // Continuidade: o véu entra no MESMO tom em que o da foto terminou
+      // (.42) e encorpa piso adentro, então não há degrau na divisa.
+      const veu = ctx.createLinearGradient(0, bandTop, 0, DIAG_L);
+      veu.addColorStop(0, 'rgba(246,248,249,.42)');
+      veu.addColorStop(Math.min(1, 160/bandH), 'rgba(246,248,249,.78)');
+      veu.addColorStop(1, 'rgba(236,240,242,.68)');
+      ctx.fillStyle = veu; ctx.fillRect(0, bandTop, W, bandH);
     }
     // sombras internas discretas (intensidade conforme o tom do piso)
     const sa = piso === 'asfalto' ? .14 : .07;
@@ -696,19 +708,33 @@ function renderClassico(){
     ctx.restore();
   }
 
+  // Continuidade do piso (só pérola): o véu branco começa a subir ainda no
+  // CHÃO DA FOTO, 110px antes da divisa, emendando sem degrau no véu da banda.
+  // Sem isso a passagem foto→piso lia como uma linha dura sobre foto clara.
+  if(piso === 'perola'){
+    const veuFoto = ctx.createLinearGradient(0, PISO_TOP - 110, 0, PISO_TOP);
+    veuFoto.addColorStop(0, 'rgba(246,248,249,0)');
+    veuFoto.addColorStop(1, 'rgba(246,248,249,.42)');
+    ctx.fillStyle = veuFoto;
+    ctx.fillRect(0, PISO_TOP - 110, W, 110);
+  }
+
   // paleta dos textos conforme o fundo
-  const tx = piso === 'asfalto'
-    ? { preco: '#e8e8ec', km: '#b9b9c0', bullet: '#f4f4f6', icone: '#e4e4e9' }
-    : { preco: '#5a5a5f', km: '#6f6f74', bullet: '#161618', icone: '#1c1c1e' };
+  const dark = piso === 'asfalto';
+  // fundo escuro: branco puro + sombra pra legibilidade; claro: cinza-grafite
+  const tx = dark
+    ? { preco: '#ffffff', km: '#dfe0e6', bullet: '#ffffff', icone: '#f1f1f5' }
+    : { preco: '#35353b', km: '#6f6f74', bullet: '#141416', icone: '#1a1a1c' };
+  if(dark){ ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1; }
 
   const preco = val('preco').replace(/^R\$\s*/i, '');
-  if(preco) spacedText('R$ ' + preco, W/2, PISO_TOP + 62, '300 48px Montserrat, sans-serif', 10, tx.preco);
+  if(preco) spacedText('R$ ' + preco, W/2, PISO_TOP + 62, (dark ? '400' : '300') + ' 48px Montserrat, sans-serif', 10, tx.preco);
 
   const kmParts = [];
   if(val('km')) kmParts.push(val('km') + ' KM');
   if(val('kmextra')) kmParts.push(val('kmextra').toUpperCase());
   if(kmParts.length)
-    spacedText(kmParts.join('  |  '), W/2, PISO_TOP + 118, '500 24px Montserrat, sans-serif', 5, tx.km);
+    spacedText(kmParts.join('  |  '), W/2, PISO_TOP + 118, (dark ? '600' : '500') + ' 24px Montserrat, sans-serif', 5, tx.km);
 
   // Máximo 3 destaques, UMA linha cada: a fonte encolhe até caber (mín. 25px)
   // e em último caso o texto é cortado com "…" — nunca quebra de linha.
@@ -744,6 +770,7 @@ function renderClassico(){
     ctx.fillText(it.text, textX, by);
     by += lineH + gap;
   }
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   ctx.save();
   ctx.beginPath();
@@ -769,7 +796,7 @@ function renderClassico(){
 
   // sombra de acomodação: o piso projeta penumbra suave no topo da foto
   // (só nos pisos de textura; no pérola a divisa limpa é a estética)
-  if((state.pisoTipo || 'perola') !== 'perola'){
+  { // acomodação da base em todos os pisos (agora todos texturizados)
     const acomA = (state.pisoTipo === 'asfalto') ? .42 : .22;
     g = ctx.createLinearGradient(0, DIAG_R - 2, 0, DIAG_L + 78);
     g.addColorStop(0, `rgba(0,0,0,${acomA})`);
@@ -1156,6 +1183,195 @@ function renderEditorial(){
   }
 }
 
+/* ================================================================
+   TIPO 5 — FICHA (claro: 3 detalhes + foto principal grande)
+
+   Sem recorte de fundo. As fotos do estoque são todas feitas no mesmo
+   lugar (fachada de vidro da loja, vegetação em cima, piso de concreto
+   claro embaixo, carro em 3/4), então em vez de "flutuar" o carro no
+   branco — o que exigiria recorte — as fotos entram EMOLDURADAS: cantos
+   arredondados e sombra suave. O fundo real vira parte da composição.
+================================================================ */
+function cantoArredondado(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+/**
+ * Foto emoldurada em ASPECT FIT: a imagem entra INTEIRA, sem corte, e a moldura
+ * se ajusta a ela em vez do contrário.
+ *
+ * A versão anterior preenchia a caixa (aspect fill) e descartava as bordas —
+ * numa foto 1920x1440 dentro de uma caixa mais alta que larga isso jogava fora
+ * quase metade da largura, cortando justamente a lateral do carro. Aqui a caixa
+ * é o ESPAÇO MÁXIMO: a foto é reduzida até caber por inteiro e a sombra
+ * acompanha o retângulo real da foto, então não sobra moldura vazia.
+ *
+ * `opt.zoom > 1` continua valendo para quem quiser fechar num detalhe — aí sim
+ * o corte é intencional, e a moldura volta a ser a caixa cheia.
+ */
+function fotoEmMoldura(img, x, y, w, h, opt, raio){
+  const r = raio === undefined ? 18 : raio;
+  const zoom = opt && opt.zoom ? opt.zoom : 1;
+
+  let fx = x, fy = y, fw = w, fh = h, recortar = true;
+  if(img && zoom <= 1.001){
+    // Aspect fit: encolhe até caber e centraliza no espaço disponível.
+    const escala = Math.min(w / img.width, h / img.height);
+    fw = img.width * escala;
+    fh = img.height * escala;
+    fx = x + (w - fw)/2;
+    fy = y + (h - fh)/2;
+    recortar = false;
+  }
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.18)';
+  ctx.shadowBlur = 26;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#e9e9ec';
+  cantoArredondado(fx, fy, fw, fh, r); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  cantoArredondado(fx, fy, fw, fh, r); ctx.clip();
+  if(img){
+    if(recortar) drawPhoto(img, fx, fy, fw, fh, opt);
+    else ctx.drawImage(img, fx, fy, fw, fh);
+  } else {
+    ctx.fillStyle = '#dcdce1'; ctx.fillRect(fx, fy, fw, fh);
+    ctx.fillStyle = 'rgba(0,0,0,.32)';
+    ctx.font = '600 22px Montserrat, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FOTO', fx + fw/2, fy + fh/2 + 8);
+    ctx.textAlign = 'left';
+  }
+  ctx.restore();
+}
+
+/** Linha tracejada — assinatura do layout de referência. */
+function linhaTracejada(x1, y, x2, cor){
+  ctx.save();
+  ctx.strokeStyle = cor; ctx.lineWidth = 2;
+  ctx.setLineDash([7, 6]);
+  ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+  ctx.restore();
+}
+
+function renderFicha(){
+  const M = 64;                    // margem lateral
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+
+  // Logo da casa no topo (a preta, porque o fundo é claro)
+  drawLogoBlack(W/2, 132, 300);
+
+  const marca  = val('marca').toUpperCase();
+  const modelo = val('modelo').toUpperCase();
+  const ano    = val('ano');
+  const km     = val('km');
+
+  if(marca) spacedText(marca, W/2, 250, '600 30px Montserrat, sans-serif', 14, RED);
+
+  let msize = 96;
+  while(msize > 44 && spacedWidth(modelo, `800 ${msize}px Montserrat, sans-serif`, 2) > W - 2*M){
+    msize -= 3;
+  }
+  if(modelo) spacedText(modelo, W/2, 340, `800 ${msize}px Montserrat, sans-serif`, 2, '#111114');
+
+  // Ano • km dentro de caixa tracejada
+  const anoKm = [ano, km ? km + 'km' : ''].filter(Boolean).join('  •  ');
+  if(anoKm){
+    ctx.font = '600 30px Montserrat, sans-serif';
+    const larg = ctx.measureText(anoKm).width + 56;
+    const cx = W/2 - larg/2, cy = 372, alt = 58;
+    ctx.save();
+    ctx.strokeStyle = RED; ctx.lineWidth = 2; ctx.setLineDash([7, 6]);
+    cantoArredondado(cx, cy, larg, alt, 8); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#111114'; ctx.textAlign = 'center';
+    ctx.fillText(anoKm, W/2, cy + 39);
+    ctx.textAlign = 'left';
+  }
+
+  // Cores: rótulo fino + valor forte, com tracejado embaixo
+  const cores = [
+    { rotulo: 'EXTERIOR:', valor: val('corext').toUpperCase() },
+    { rotulo: 'INTERIOR:', valor: val('corint').toUpperCase() },
+  ].filter(c => c.valor);
+  let cy = 500;
+  for(const c of cores){
+    ctx.font = '500 38px Montserrat, sans-serif';
+    const wRot = ctx.measureText(c.rotulo + ' ').width;
+    ctx.font = '800 38px Montserrat, sans-serif';
+    const wVal = ctx.measureText(c.valor).width;
+    const x0 = W/2 - (wRot + wVal)/2;
+    ctx.fillStyle = '#111114';
+    ctx.font = '500 38px Montserrat, sans-serif';
+    ctx.fillText(c.rotulo + ' ', x0, cy);
+    ctx.font = '800 38px Montserrat, sans-serif';
+    ctx.fillText(c.valor, x0 + wRot, cy);
+    linhaTracejada(x0 - 10, cy + 16, x0 + wRot + wVal + 10, RED);
+    cy += 66;
+  }
+
+  // ---- Tira de 3 detalhes (recortes verticais das fotos horizontais) ----
+  // Caixa quase quadrada de propósito: as fotos do estoque são horizontais
+  // (1920x1440) e uma caixa alta como a da referência descartaria quase metade
+  // da largura. Com 330 o corte cai de ~46% para ~30%, e o resto o operador
+  // escolhe pelo zoom/posição de cada foto.
+  // A caixa acompanha a proporção REAL da foto (4:3 do estoque): assim o aspect
+  // fit não deixa faixa vazia dentro da moldura. Largura da coluna x 3/4.
+  const tiraY = cy + 24, gap = 10;
+  const larguraColuna = (W - 2*M - 2*gap) / 3;
+  const tiraH = Math.round(larguraColuna * 3 / 4);
+  const larguraCol = larguraColuna;
+  const detalhes = [state.foto2, state.foto3, state.foto4];
+  const optDet = [state.f2, state.f3, state.f4];
+  for(let i = 0; i < 3; i++){
+    fotoEmMoldura(detalhes[i], M + i*(larguraCol + gap), tiraY, larguraCol, tiraH, optDet[i], 14);
+  }
+
+  // ---- Foto principal, grande, com o fundo original ----
+  // Herói também em 4:3 da largura útil: preenche a coluna inteira sem sobrar
+  // margem lateral e sem cortar a foto.
+  const heroY = tiraY + tiraH + 22, heroH = Math.round((W - 2*M) * 3 / 4);
+  fotoEmMoldura(state.foto1, M, heroY, W - 2*M, heroH, state.f1, 20);
+
+  // ---- Rodapé: selo + valor ----
+  let py = heroY + heroH + 92;
+  const selo = val('garantia').toUpperCase();
+  if(selo){
+    ctx.font = '800 40px Montserrat, sans-serif';
+    ctx.fillStyle = '#111114'; ctx.textAlign = 'center';
+    ctx.fillText(selo, W/2, py);
+    const ws = ctx.measureText(selo).width;
+    linhaTracejada(W/2 - ws/2 - 12, py + 18, W/2 + ws/2 + 12, RED);
+    ctx.textAlign = 'left';
+    py += 80;
+  }
+
+  const preco = val('preco').replace(/^R\$\s*/i, '');
+  if(preco){
+    ctx.textAlign = 'center';
+    ctx.font = '500 40px Montserrat, sans-serif';
+    const wRot = ctx.measureText('VALOR: ').width;
+    ctx.font = '800 46px Montserrat, sans-serif';
+    const wVal = ctx.measureText('R$ ' + preco).width;
+    const x0 = W/2 - (wRot + wVal)/2;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#111114';
+    ctx.font = '500 40px Montserrat, sans-serif';
+    ctx.fillText('VALOR: ', x0, py);
+    ctx.font = '800 46px Montserrat, sans-serif';
+    ctx.fillText('R$ ' + preco, x0 + wRot, py);
+  }
+}
+
 function render(){
   ctx.clearRect(0, 0, W, H);
   ctx.imageSmoothingEnabled = true;
@@ -1164,6 +1380,7 @@ function render(){
   if(state.tipo === 'destaque') renderDestaque();
   else if(state.tipo === 'estoque') renderEstoque();
   else if(state.tipo === 'editorial') renderEditorial();
+  else if(state.tipo === 'ficha') renderFicha();
   else renderClassico();
 }
 
@@ -1236,7 +1453,9 @@ $('clearlogo').addEventListener('click', () => {
   $(id).addEventListener('input', render));
 
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
- ['f2zoom','f2','zoom'],['f2x','f2','x'],['f2y','f2','y']]
+ ['f2zoom','f2','zoom'],['f2x','f2','x'],['f2y','f2','y'],
+ ['f3zoom','f3','zoom'],['f3x','f3','x'],['f3y','f3','y'],
+ ['f4zoom','f4','zoom'],['f4x','f4','x'],['f4y','f4','y']]
 .forEach(([id, obj, key]) => {
   $(id).addEventListener('input', e => {
     state[obj][key] = e.target.value/100;
@@ -1254,10 +1473,11 @@ function updateVisibility(){
   $('sec-veiculo').style.display   = t === 'estoque' ? 'none' : '';
   $('sec-destaques').style.display = t === 'classico' ? '' : 'none';
   $('sec-specs').style.display     = t === 'destaque' ? '' : 'none';
+  $('sec-ficha').style.display     = t === 'ficha' ? '' : 'none';
   $('sec-fotos').style.display     = t === 'estoque' ? 'none' : '';
   $('sec-estoque').style.display   = t === 'estoque' ? '' : 'none';
   $('kmextra-wrap').style.display  = t === 'classico' ? '' : 'none';
-  $('fotos-extra').style.display   = t === 'destaque' ? '' : 'none';
+  $('fotos-extra').style.display   = (t === 'destaque' || t === 'ficha') ? '' : 'none';
   $('foto2-label').textContent     = t === 'destaque'
     ? 'Foto de baixo 1 (interior / detalhe)' : 'Foto secundária (traseira / lateral — rodapé)';
 }
@@ -1273,7 +1493,7 @@ document.querySelectorAll('.typebtn[data-tipo]').forEach(btn => {
 });
 
 /* ---------- download ---------- */
-$('download').addEventListener('click', () => {
+(function(){ var cb=document.createElement('input'); cb.type='checkbox'; cb.id='sendPatrocinado'; cb.style.cssText='width:16px;height:16px;accent-color:var(--red)'; var l=document.createElement('label'); l.style.cssText='display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;color:var(--txt);cursor:pointer'; l.appendChild(cb); l.appendChild(document.createTextNode(' Enviar ao patrocinado (cria card no board do Marketing)')); var b=$('download'); if(b&&b.parentNode) b.parentNode.insertBefore(l,b); })(); $('download').addEventListener('click', () => {
   const clean = s => s.replace(/\s+/g, '-').replace(/[^\w\-\.]/g, '').replace(/-+/g,'-');
   let name;
   if(state.tipo === 'estoque') name = 'Attra-Estoque';
@@ -1293,7 +1513,7 @@ $('download').addEventListener('click', () => {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      if($('sendPatrocinado') && $('sendPatrocinado').checked){ var fd=new FormData(); fd.append('file', blob, name+'.png'); fd.append('vehicle_name', name); fetch('/api/admin/marketing/creatives',{method:'POST',body:fd}).then(function(r){ if(r.ok){ alert('Criativo enviado ao board de Marketing (patrocinado).'); var cb=$('sendPatrocinado'); if(cb) cb.checked=false; } else { r.json().then(function(d){ alert('Falha ao enviar ao patrocinado: '+(d.error||r.status)); }); } }).catch(function(e){ alert('Erro ao enviar ao patrocinado: '+e.message); }); } setTimeout(() => URL.revokeObjectURL(url), 4000);
     }, 'image/png');
   }catch(err){
     alert('Não foi possível exportar: ' + err.message);
@@ -1340,9 +1560,44 @@ function aplicarVeiculo(v){
   render();
 }
 
+/**
+ * Posições das fotos que a Ficha usa, dentro da galeria do MESMO carro.
+ * A foto 1 é sempre a principal (é a de capa do anúncio); 2, 11 e 15 são as
+ * que, no padrão de fotografia da Attra, costumam cair em ângulos e detalhes
+ * diferentes — evitam três recortes quase iguais do mesmo lado do carro.
+ */
+const FICHA_POSICOES = [1, 2, 11, 15];
+
+/** Carrega a galeria do carro nas fotos da Ficha, respeitando quantas existem. */
+function preSelecionarFotosDaFicha(fotos){
+  if(!fotos || fotos.length === 0) return;
+  const alvos = ['foto1', 'foto2', 'foto3', 'foto4'];
+  // Menos fotos que o esperado: distribui ao longo da galeria em vez de repetir
+  // as primeiras, que costumam ser variações do mesmo ângulo.
+  const posicoes = fotos.length >= FICHA_POSICOES[3]
+    ? FICHA_POSICOES
+    : [1, ...[1, 2, 3].map(i => Math.min(fotos.length, 1 + Math.round(i * (fotos.length - 1) / 3)))];
+
+  posicoes.forEach((pos, i) => {
+    const url = fotos[Math.min(pos, fotos.length) - 1];
+    if(!url) return;
+    const img = new Image();
+    img.onload = () => {
+      state[alvos[i]] = img;
+      if(i === 0){
+        state.foto1Url = url; state.foto1Data = null; state.foto1Cut = null;
+        autoFrameFoto1(img);
+      }
+      render();
+    };
+    img.src = '/_next/image?url=' + encodeURIComponent(url) + '&w=1080&q=85';
+  });
+}
+
 function montarFotosEstoque(v){
   const wrap = $('estoquefotos');
   wrap.innerHTML = '';
+  if(state.tipo === 'ficha') preSelecionarFotosDaFicha(v.photos);
   // /_next/image = proxy da própria origem → canvas continua exportável
   for(const u of (v.photos || [])){
     const t = document.createElement('img');
@@ -1399,10 +1654,18 @@ $('rembgbtn').addEventListener('click', async () => {
     });
     const d = await r.json().catch(() => ({}));
     if(!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    if(!d.accepted){
+      state.foto1Cut = null;
+      const nota = typeof d.score === 'number' ? d.score + '%' : '?';
+      st.textContent = 'Recorte incerto (' + nota + ') — usando a foto ORIGINAL pra preservar a qualidade. O carro aparece inteiro.';
+      render();
+      return;
+    }
     const img = new Image();
     img.onload = () => {
       state.foto1Cut = img;
-      st.textContent = 'Fundo removido ✓ — ajuste zoom/posição nos sliders da Foto 1.';
+      const conf = typeof d.score === 'number' ? ' (confiança ' + d.score + '%)' : '';
+      st.textContent = 'Fundo removido ✓' + conf + ' — ajuste zoom/posição nos sliders da Foto 1.';
       render();
     };
     img.src = d.image;
