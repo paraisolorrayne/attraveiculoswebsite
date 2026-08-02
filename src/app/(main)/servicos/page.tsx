@@ -348,7 +348,12 @@ export default function ServicosPage() {
               </div>
 
               <Button asChild size="lg">
-                <Link href="https://attraveiculos.com.br/lp-importacao/?utm_source=site&utm_medium=servicos&utm_campaign=destaque_importacao" target="_blank">
+                {/* Aponta direto para o destino. Antes ia para /lp-importacao/,
+                    que agora redireciona: com a barra final eram DOIS saltos
+                    (normalização da barra e depois o redirect), gastos num link
+                    do próprio site. Também virou relativo — era absoluto e
+                    abria em nova aba para uma página nossa. */}
+                <Link href="/importacao-de-veiculos-de-luxo?utm_source=site&utm_medium=servicos&utm_campaign=destaque_importacao">
                   Quero Importar Meu Veículo
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
