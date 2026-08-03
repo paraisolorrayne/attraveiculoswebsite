@@ -141,6 +141,11 @@ export function CrmAdmin() {
 	// Visão do gestor: leads ainda não assumidos (etapa `novo`) ficam fora
 	// do painel — a história começa no aceite do vendedor.
 	const cardsAssumidos = cards.filter(c => c.etapa !== 'novo')
+	// Quantos ficaram de fora por ainda não terem sido aceitos. Eles somem em
+	// silêncio, e isso já custou uma investigação inteira: um card recém-emitido
+	// chegava certo ao banco e "não aparecia", sem nada na tela explicando por
+	// quê. O número aparece abaixo do quadro, como o dos cards sem informação.
+	const aguardandoAceite = cards.length - cardsAssumidos.length
 
 	// Cards em branco (só etapa, situação e data) saem do quadro: não dá para
 	// agir sobre eles e ainda inflavam a contagem das colunas. O total some é
@@ -323,6 +328,21 @@ export function CrmAdmin() {
 			)}
 
 			<p className="max-w-[1600px] mx-auto mt-6 text-xs text-foreground-secondary">
+				{aguardandoAceite > 0 && (
+					<>
+						{aguardandoAceite === 1
+							? '1 lead aguardando o aceite do vendedor não é exibido'
+							: `${aguardandoAceite} leads aguardando o aceite do vendedor não são exibidos`}
+						<InfoDica>
+							O quadro é a visão do gestor e começa no aceite: mostra o que o
+							vendedor confirmou que chamou, o que ele reportou e os encerrados.
+							Leads que o CRM acabou de atribuir chegam como
+							&ldquo;aguardando_vendedor&rdquo; e ficam fora até alguém aceitar —
+							estão no CRM, só não neste quadro.
+						</InfoDica>
+						{' · '}
+					</>
+				)}
 				{ocultosSemInfo > 0 && (
 					<>
 						{ocultosSemInfo === 1
