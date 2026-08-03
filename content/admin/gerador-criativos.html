@@ -124,7 +124,7 @@
         <button class="typebtn" data-tipo="destaque">2 · Destaque<small>claro, ficha técnica</small></button>
         <button class="typebtn" data-tipo="estoque">3 · Estoque<small>lista de até 4 carros</small></button>
         <button class="typebtn" data-tipo="editorial">4 · Editorial<small>luxo, minimalista</small></button>
-        <button class="typebtn" data-tipo="ficha">5 · Ficha<small>claro, 3 detalhes + destaque</small></button>
+        <button class="typebtn" data-tipo="ficha">5 · Ficha<small>claro, 2 detalhes + destaque</small></button>
       </div>
     </fieldset>
 
@@ -151,8 +151,7 @@
         <div class="types" id="fichaslotbtns">
           <button class="slotbtn typebtn active" data-slot="foto1" type="button">Principal<small>foto grande</small></button>
           <button class="slotbtn typebtn" data-slot="foto2" type="button">Detalhe 1<small>tira, esquerda</small></button>
-          <button class="slotbtn typebtn" data-slot="foto3" type="button">Detalhe 2<small>tira, meio</small></button>
-          <button class="slotbtn typebtn" data-slot="foto4" type="button">Detalhe 3<small>tira, direita</small></button>
+          <button class="slotbtn typebtn" data-slot="foto3" type="button">Detalhe 2<small>tira, direita</small></button>
         </div>
         <div class="hint">O destino avança sozinho a cada foto escolhida, então dá para clicar
           nas quatro em sequência. Fora da Ficha, vale o atalho antigo: clique = principal,
@@ -252,23 +251,24 @@
           pra esquerda em carros baixos (mais espaço pros destaques).</div>
       </div>
       <div id="fotos-extra" style="display:none">
-        <label style="margin-top:16px">Foto de baixo 2 (opcional)</label>
+        <label style="margin-top:16px">Foto de baixo 2 (Detalhe 2 na Ficha)</label>
         <input type="file" id="foto3" accept="image/*">
         <div class="sliders">
           <div><label>Zoom</label><input type="range" id="f3zoom" min="100" max="250" value="100"></div>
           <div><label>Posição ↔</label><input type="range" id="f3x" min="0" max="100" value="50"></div>
           <div><label>Posição ↕</label><input type="range" id="f3y" min="0" max="100" value="50"></div>
         </div>
-        <label style="margin-top:12px">Foto de baixo 3 (opcional)</label>
-        <input type="file" id="foto4" accept="image/*">
-        <div class="sliders">
-          <div><label>Zoom</label><input type="range" id="f4zoom" min="100" max="250" value="100"></div>
-          <div><label>Posição ↔</label><input type="range" id="f4x" min="0" max="100" value="50"></div>
-          <div><label>Posição ↕</label><input type="range" id="f4y" min="0" max="100" value="50"></div>
+        <div id="foto4-wrap">
+          <label style="margin-top:12px">Foto de baixo 3 (opcional)</label>
+          <input type="file" id="foto4" accept="image/*">
+          <div class="sliders">
+            <div><label>Zoom</label><input type="range" id="f4zoom" min="100" max="250" value="100"></div>
+            <div><label>Posição ↔</label><input type="range" id="f4x" min="0" max="100" value="50"></div>
+            <div><label>Posição ↕</label><input type="range" id="f4y" min="0" max="100" value="50"></div>
+          </div>
         </div>
         <div class="hint">No Destaque, com 1 foto o rodapé fica inteiro e com 3 vira uma tríade.
-          Na Ficha, as três entram na tira do topo — como as fotos do estoque são horizontais e a
-          caixa é mais alta que larga, use o zoom e a posição para escolher o trecho que aparece.</div>
+          Na Ficha são duas na tira do topo — a posição e o zoom escolhem o trecho de cada uma.</div>
       </div>
     </fieldset>
 
@@ -1236,12 +1236,21 @@ function cantoArredondado(x, y, w, h, r){
  * `opt.zoom > 1` continua valendo para quem quiser fechar num detalhe — aí sim
  * o corte é intencional, e a moldura volta a ser a caixa cheia.
  */
-function fotoEmMoldura(img, x, y, w, h, opt, raio){
+function fotoEmMoldura(img, x, y, w, h, opt, raio, preencher){
   const r = raio === undefined ? 18 : raio;
   const zoom = opt && opt.zoom ? opt.zoom : 1;
+  const px = opt && opt.x !== undefined ? opt.x : .5;
+  const py = opt && opt.y !== undefined ? opt.y : .5;
 
+  // O aspect fit mostra a foto INTEIRA — e por isso não há o que deslocar. Se
+  // ele valesse sempre, os controles de posição não fariam nada, que era
+  // exatamente o que acontecia. Então mexer na posição (ou no zoom) liga o modo
+  // recorte, onde o deslocamento passa a ser visível. `preencher` força o
+  // recorte para a foto ocupar a caixa toda — usado na foto principal, que
+  // precisa ficar alinhada com as de cima.
+  const moveu = Math.abs(px - .5) > 0.001 || Math.abs(py - .5) > 0.001;
   let fx = x, fy = y, fw = w, fh = h, recortar = true;
-  if(img && zoom <= 1.001){
+  if(img && zoom <= 1.001 && !moveu && !preencher){
     // Aspect fit: encolhe até caber e centraliza no espaço disponível.
     const escala = Math.min(w / img.width, h / img.height);
     fw = img.width * escala;
@@ -1362,24 +1371,14 @@ function renderFicha(){
   // escolhe pelo zoom/posição de cada foto.
   // A caixa acompanha a proporção REAL da foto (4:3 do estoque): assim o aspect
   // fit não deixa faixa vazia dentro da moldura. Largura da coluna x 3/4.
-  const tiraY = cy + 24, gap = 10;
-
-  // A tira se ADAPTA à quantidade de fotos preenchidas. Com 3 fotos 4:3 lado a
-  // lado cada uma fica com 233px de altura num canvas de 1920 — pequenas demais
-  // para ler um detalhe. Com 2 elas passam a 353px, metade maior. Quem quiser
-  // as três continua podendo: basta preencher o terceiro detalhe.
-  const preenchidas = [
+  // DUAS fotos no topo, sempre. Com três, cada uma ficava com 233px de altura
+  // num canvas de 1920 — pequenas demais para ler um detalhe.
+  const tiraY = cy + 24, gap = 26;
+  const detalhes = [
     { img: state.foto2, opt: state.f2 },
     { img: state.foto3, opt: state.f3 },
-    { img: state.foto4, opt: state.f4 },
-  ].filter(d => d.img);
-  // Sem nenhuma foto ainda, mostra 2 espaços — que é o padrão da peça.
-  const detalhes = preenchidas.length > 0
-    ? preenchidas
-    : [{ img: null, opt: null }, { img: null, opt: null }];
-
-  const n = detalhes.length;
-  const larguraCol = (W - 2*M - (n - 1)*gap) / n;
+  ];
+  const larguraCol = (W - 2*M - gap) / 2;
   const tiraH = Math.round(larguraCol * 3 / 4);
   detalhes.forEach((d, i) => {
     fotoEmMoldura(d.img, M + i*(larguraCol + gap), tiraY, larguraCol, tiraH, d.opt, 14);
@@ -1389,15 +1388,15 @@ function renderFicha(){
   // Em 4:3 da largura útil, MAS limitada pelo que sobra até o rodapé: com a
   // tira de 2 fotos (mais alta) o herói cheio empurraria o valor para fora do
   // canvas. O menor dos dois mantém a peça inteira sempre dentro.
-  const heroY = tiraY + tiraH + 22;
-  // Reserva do rodapé: selo + valor + respiro. Com 190 o conteúdo terminava a
-  // 11px da borda; 240 devolve uma margem parecida com a do topo (~60px).
+  const heroY = tiraY + tiraH + gap;
+  // Reserva do rodapé: selo + valor + respiro na base.
   const ALTURA_RODAPE = 240;
-  const heroH = Math.min(
-    Math.round((W - 2*M) * 3 / 4),
-    H - ALTURA_RODAPE - heroY,
-  );
-  fotoEmMoldura(state.foto1, M, heroY, W - 2*M, heroH, state.f1, 20);
+  const heroH = H - ALTURA_RODAPE - heroY;
+  // `preencher` = a foto principal ocupa a largura INTEIRA, alinhada com as
+  // bordas das duas de cima. Em aspect fit ela encolhia para caber na altura
+  // restante e ficava mais estreita que a tira, quebrando o alinhamento — o
+  // corte vertical de poucos por cento é preferível a esse desencontro.
+  fotoEmMoldura(state.foto1, M, heroY, W - 2*M, heroH, state.f1, 20, true);
 
   // ---- Rodapé: selo + valor ----
   let py = heroY + heroH + 92;
@@ -1513,6 +1512,18 @@ $('clearlogo').addEventListener('click', () => {
  'rot1','corext','rot2','corint','garantia'].forEach(id =>
   $(id).addEventListener('input', render));
 
+/**
+ * Zoom mínimo para o "posição" ter o que deslocar.
+ *
+ * As fotos do estoque são 4:3 (1920x1440) — exatamente a proporção das molduras.
+ * No zoom 100% a foto cabe inteira e não sobra NADA fora do quadro, então
+ * arrastar a posição não mudava um pixel: o controle parecia quebrado. Ao mexer
+ * na posição, o zoom sobe para 112% e passa a existir margem real para escolher
+ * o trecho que aparece. O slider de zoom acompanha, para o operador ver por que
+ * a foto cresceu.
+ */
+const ZOOM_MIN_POSICAO = 1.12;
+
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
  ['f2zoom','f2','zoom'],['f2x','f2','x'],['f2y','f2','y'],
  ['f3zoom','f3','zoom'],['f3x','f3','x'],['f3y','f3','y'],
@@ -1520,6 +1531,10 @@ $('clearlogo').addEventListener('click', () => {
 .forEach(([id, obj, key]) => {
   $(id).addEventListener('input', e => {
     state[obj][key] = e.target.value/100;
+    if((key === 'x' || key === 'y') && state[obj].zoom <= 1.001){
+      state[obj].zoom = ZOOM_MIN_POSICAO;
+      $(obj + 'zoom').value = Math.round(ZOOM_MIN_POSICAO * 100);
+    }
     render();
   });
 });
@@ -1540,6 +1555,9 @@ function updateVisibility(){
   $('sec-estoque').style.display   = t === 'estoque' ? '' : 'none';
   $('kmextra-wrap').style.display  = t === 'classico' ? '' : 'none';
   $('fotos-extra').style.display   = (t === 'destaque' || t === 'ficha') ? '' : 'none';
+  // A Ficha usa DUAS fotos na tira. Deixar a terceira no formulário só produzia
+  // um campo que não aparece em lugar nenhum da peça.
+  $('foto4-wrap').style.display    = t === 'ficha' ? 'none' : '';
   $('foto2-label').textContent     = t === 'destaque'
     ? 'Foto de baixo 1 (interior / detalhe)' : 'Foto secundária (traseira / lateral — rodapé)';
 }
@@ -1628,9 +1646,8 @@ function aplicarVeiculo(v){
  * fotografia da Attra, costumam cair em ângulos e detalhes bem diferentes —
  * evitam dois recortes quase iguais do mesmo lado do carro.
  *
- * São DUAS na tira de propósito: com três, cada foto 4:3 fica com 233px de
- * altura e não dá para ler um detalhe. Quem quiser a terceira é só escolher
- * pelo seletor de destino ("Detalhe 3") — a tira se ajusta sozinha.
+ * São DUAS na tira de propósito: com três, cada foto 4:3 ficava com 233px de
+ * altura e não dava para ler um detalhe.
  */
 const FICHA_POSICOES = [1, 2, 11];
 
@@ -1705,7 +1722,7 @@ function montarFotosEstoque(v){
 }
 
 /* ---------- destino da foto escolhida na galeria do estoque (Ficha) ---------- */
-const SLOTS_FICHA = ['foto1', 'foto2', 'foto3', 'foto4'];
+const SLOTS_FICHA = ['foto1', 'foto2', 'foto3'];
 
 function pintarSlotAtivo(){
   document.querySelectorAll('.slotbtn').forEach(b => {
@@ -1713,7 +1730,7 @@ function pintarSlotAtivo(){
   });
 }
 
-/** Passa para o próximo destino, para dar pra clicar nas quatro em sequência. */
+/** Passa para o próximo destino, para dar pra clicar nas três em sequência. */
 function avancarSlot(){
   const i = SLOTS_FICHA.indexOf(state.slotFoto);
   state.slotFoto = SLOTS_FICHA[(i + 1) % SLOTS_FICHA.length];
