@@ -90,6 +90,19 @@ export async function PATCH(
       await db.deleteFrom('campaign_vehicles').where('campaign_id', '=', id).execute()
 
       if (body.vehicles && body.vehicles.length > 0) {
+        // Este endpoint SUBSTITUI a lista (apaga e reinsere). Sem derivar o
+        // status aqui, todo veículo voltava com o default 'publicada' e uma
+        // simples edição da campanha ressuscitava no board anúncios que já
+        // tinham sido encerrados.
+        const statusDoVeiculo = (motivo?: string): string => {
+          if (!motivo) return 'publicada'
+          // 'ganho' e 'vendido_externo' são desfechos de venda; o resto é
+          // encerramento por desempenho.
+          return motivo === 'ganho' || motivo === 'vendido_externo'
+            ? 'encerrada_ganho'
+            : 'encerrada_desempenho'
+        }
+
         const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string; ended_date?: string; end_reason?: string }, i: number) => ({
           campaign_id: id,
           vehicle_name: v.vehicle_name,
@@ -98,6 +111,7 @@ export async function PATCH(
           display_order: i,
           ended_date: v.ended_date || null,
           end_reason: v.end_reason || null,
+          status: statusDoVeiculo(v.end_reason),
         }))
         try {
           await db.insertInto('campaign_vehicles').values(vehicleRows).execute()

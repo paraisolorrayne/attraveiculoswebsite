@@ -150,21 +150,29 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
     fetchData()
   }
 
-  const handleCampaignStatusChange = async (campaignId: string, newStatus: CampaignStatus) => {
+  // O card do board é o veículo, então quem muda de coluna é ele — e só ele.
+  // Antes isto movia a campanha inteira, arrastando junto todos os outros
+  // anúncios dela.
+  const handleVehicleStatusChange = async (vehicleId: string, newStatus: CampaignStatus) => {
     try {
-      const res = await fetch(`/api/admin/marketing/campaigns/${campaignId}`, {
+      const res = await fetch(`/api/admin/marketing/campaigns/vehicles/${vehicleId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
 
-      if (res.ok) {
-        setCampaigns(prev => prev.map(c =>
-          c.id === campaignId ? { ...c, status: newStatus } : c
-        ))
+      if (!res.ok) {
+        console.error('Falha ao mover o veículo:', await res.text())
+        return
       }
+
+      const { vehicle } = await res.json()
+      setCampaigns(prev => prev.map(c => ({
+        ...c,
+        vehicles: (c.vehicles ?? []).map(v => (v.id === vehicleId ? { ...v, ...vehicle } : v)),
+      })))
     } catch (error) {
-      console.error('Error updating campaign status:', error)
+      console.error('Error updating vehicle status:', error)
     }
   }
 
@@ -318,7 +326,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
           <CampaignsBoard
             campaigns={campaigns}
             onCampaignClick={handleCampaignClick}
-            onStatusChange={handleCampaignStatusChange}
+            onVehicleStatusChange={handleVehicleStatusChange}
             isAdmin={canManageCampaigns}
           />
         ) : viewMode === 'criativos' ? (

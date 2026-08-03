@@ -292,6 +292,10 @@ export interface Database {
           display_order: number
           ended_date: string | null
           end_reason: EndReason | null
+          // Coluna do board. Vive no veículo, não na campanha: as colunas
+          // descrevem o ciclo de um anúncio (vendeu / não performou), e antes
+          // mover um card arrastava todos os veículos da campanha junto.
+          status: CampaignStatus
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['campaign_vehicles']['Row'], 'id' | 'created_at'>

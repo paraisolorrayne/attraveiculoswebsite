@@ -451,6 +451,8 @@ export interface CampaignVehiclesTable {
   display_order: Generated<number>
   ended_date: string | null
   end_reason: string | null
+  /** Coluna do board: publicada | encerrada_ganho | encerrada_desempenho. */
+  status: Generated<string>
   created_at: Timestamp
 }
 
