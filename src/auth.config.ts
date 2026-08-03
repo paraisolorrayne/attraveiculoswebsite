@@ -17,6 +17,7 @@ export const authConfig = {
       if (user) {
         token.uid = user.id
         token.role = user.role
+        token.secoes = user.secoes ?? {}
       }
       return token
     },
@@ -24,6 +25,8 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.uid as string
         session.user.role = token.role!
+        // O middleware lê as exceções por aqui (req.auth.user.secoes).
+        session.user.secoes = token.secoes ?? {}
       }
       return session
     },
