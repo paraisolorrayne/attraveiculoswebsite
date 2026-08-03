@@ -34,6 +34,9 @@ export default async function AdminLayout({
   // do App Router não recebe a rota atual de outra forma.
   if (admin) {
     const pathname = (await headers()).get('x-pathname') ?? ''
+    // DIAGNOSTICO TEMPORARIO — remover depois
+    console.log('[layout-diag] x-pathname=' + JSON.stringify(pathname) +
+      ' role=' + admin.role + ' secoes=' + JSON.stringify(admin.secoes))
     const role: AdminRole = isAdminRole(admin.role) ? admin.role : 'gerente'
     if (pathname.startsWith('/admin/') && !canAccessRoute(role, pathname, admin.secoes)) {
       redirect('/admin')
