@@ -1,5 +1,8 @@
 import { getBlogPosts } from '@/lib/blog-api'
-import { SITE_URL } from '@/lib/constants'
+import {
+  SITE_URL, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2, CELLPHONE_DISPLAY,
+  EMAIL, OPENING_HOURS,
+} from '@/lib/constants'
 import { ICONIC_CARS } from '@/lib/iconic-cars'
 import { SEO_BRANDS } from '@/lib/seo-brands'
 import {
@@ -80,6 +83,21 @@ export async function GET() {
 
   const updatedAt = new Date().toISOString()
 
+  // Endereço, telefones e horário saem de src/lib/constants.ts — a mesma fonte
+  // que o rodapé e o JSON-LD usam. O endereço era escrito à mão aqui e saía sem
+  // número, bairro nem CEP: perguntado onde fica a loja, um LLM respondia
+  // "Av. Rondon Pacheco, Uberlândia - MG" e parava aí.
+  const NOMES_DIA: Record<string, string> = {
+    Monday: 'Seg', Tuesday: 'Ter', Wednesday: 'Qua', Thursday: 'Qui',
+    Friday: 'Sex', Saturday: 'Sáb', Sunday: 'Dom',
+  }
+  const horarioLegivel = OPENING_HOURS.map(faixa => {
+    const dias = faixa.days.length > 1
+      ? `${NOMES_DIA[faixa.days[0]]}-${NOMES_DIA[faixa.days[faixa.days.length - 1]]}`
+      : NOMES_DIA[faixa.days[0]]
+    return `${dias}: ${faixa.opens} às ${faixa.closes}`
+  }).join('; ')
+
   const body = `# Attra Veículos
 
 > Curadoria, comercialização e conteúdo editorial sobre carros premium, importados, esportivos e supercarros. Operação em Uberlândia (MG) com atendimento em todo o Brasil. Marcas como Porsche, BMW, Mercedes-Benz, Audi, Land Rover, Lamborghini, Ferrari e McLaren.
@@ -116,10 +134,12 @@ ${postsBlock}
 ## Informações da empresa
 
 - Nome: Attra Veículos
-- Localização: Av. Rondon Pacheco, Uberlândia - MG, Brasil
-- Telefone: (34) 3014-3232
-- WhatsApp: (34) 99944-4747
-- Email: faleconosco@attraveiculos.com.br
+- Endereço: ${ADDRESS.street} - ${ADDRESS.neighborhood}, ${ADDRESS.city} - ${ADDRESS.state}, CEP ${ADDRESS.postalCode}, ${ADDRESS.country}
+- Telefone: ${PHONE_DISPLAY}
+- Telefone 2: ${PHONE_DISPLAY_2}
+- WhatsApp: ${CELLPHONE_DISPLAY}
+- Email: ${EMAIL}
+- Horário de atendimento: ${horarioLegivel}
 - Instagram: @attra.veiculos
 
 ## APIs para LLMs
