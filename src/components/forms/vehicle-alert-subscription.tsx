@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { FormErrorFallback } from './form-error-fallback'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,6 +27,7 @@ const luxuryBrands = [
 
 export function VehicleAlertSubscription() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
 
@@ -44,11 +46,12 @@ export function VehicleAlertSubscription() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
+    setErroEnvio(false)
     try {
       const brandNames = data.brands.map(id => luxuryBrands.find(b => b.id === id)?.label).join(', ')
 
       // Notifica a loja por email + Avisa (sem telefone não vira lead Fykos)
-      await fetch('/api/contact', {
+      const resposta = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,9 +62,15 @@ export function VehicleAlertSubscription() {
           sourcePage: '/veiculos',
         }),
       })
+      // A API devolve 502 quando nenhum canal (e-mail, WhatsApp, webhook)
+      // recebeu o lead. Sem esta checagem o formulário anunciava sucesso
+      // para um envio que não chegou a ninguém.
+      if (!resposta.ok) throw new Error('lead não entregue')
+
 
       setIsSuccess(true)
     } catch (error) {
+      setErroEnvio(true)
       console.error('Error:', error)
     } finally {
       setIsSubmitting(false)
@@ -142,7 +151,8 @@ export function VehicleAlertSubscription() {
         <p className="text-xs text-foreground-secondary text-center">
           Prometemos enviar apenas novidades relevantes. Sem spam.
         </p>
-      </form>
+        {erroEnvio && <FormErrorFallback />}
+    </form>
     </div>
   )
 }

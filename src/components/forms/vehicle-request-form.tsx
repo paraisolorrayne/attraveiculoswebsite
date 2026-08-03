@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { FormErrorFallback } from './form-error-fallback'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,6 +27,7 @@ type FormData = z.infer<typeof schema>
 
 export function VehicleRequestForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const { trackFormSubmission } = useAnalytics()
   const { getVisitorContext, identifyVisitor } = useVisitorTracking()
@@ -36,13 +38,19 @@ export function VehicleRequestForm() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
+    setErroEnvio(false)
     try {
       const visitorContext = getVisitorContext()
-      await fetch('/api/contact', {
+      const resposta = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: '/solicitar-veiculo', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
       })
+      // A API devolve 502 quando nenhum canal (e-mail, WhatsApp, webhook)
+      // recebeu o lead. Sem esta checagem o formulário anunciava sucesso
+      // para um envio que não chegou a ninguém.
+      if (!resposta.ok) throw new Error('lead não entregue')
+
 
       // Track form submission in analytics with visitor context (includes geolocation)
       trackFormSubmission({
@@ -61,6 +69,7 @@ export function VehicleRequestForm() {
       setIsSuccess(true)
       reset()
     } catch (error) {
+      setErroEnvio(true)
       console.error('Error:', error)
     } finally {
       setIsSubmitting(false)
@@ -137,6 +146,7 @@ export function VehicleRequestForm() {
       <p className="text-xs text-foreground-secondary text-center">
         Ao enviar, você concorda com nossa política de privacidade.
       </p>
+      {erroEnvio && <FormErrorFallback />}
     </form>
   )
 }

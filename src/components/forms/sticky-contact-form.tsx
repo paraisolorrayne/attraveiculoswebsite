@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { FormErrorFallback } from './form-error-fallback'
 import { usePathname } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -51,6 +52,7 @@ export function StickyContactForm() {
 
   const [isVisible, setIsVisible] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
   // Persisted state via sessionStorage (survives SPA navigation AND refresh)
@@ -130,13 +132,14 @@ export function StickyContactForm() {
   // ── Form submission ──
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
+    setErroEnvio(false)
     try {
       const vehicleInfo = pageMode === 'vehicle' && vehicleName
         ? `, Veículo: ${vehicleName}`
         : ''
 
       const visitorContext = getVisitorContext()
-      await fetch('/api/contact', {
+      const resposta = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,6 +154,11 @@ export function StickyContactForm() {
           sessionId: visitorContext.sessionId,
         }),
       })
+      // A API devolve 502 quando nenhum canal (e-mail, WhatsApp, webhook)
+      // recebeu o lead. Sem esta checagem o formulário anunciava sucesso
+      // para um envio que não chegou a ninguém.
+      if (!resposta.ok) throw new Error('lead não entregue')
+
 
       // Notify the tracking provider that user converted
       trackInteraction('form_submit', {
@@ -165,6 +173,7 @@ export function StickyContactForm() {
       setIsSuccess(true)
       reset()
     } catch (error) {
+      setErroEnvio(true)
       console.error('[ExitIntent] Submit error:', error)
     } finally {
       setIsSubmitting(false)
@@ -230,6 +239,7 @@ export function StickyContactForm() {
                     errors={errors}
                     isSubmitting={isSubmitting}
                     onSubmit={handleSubmit(onSubmit)}
+                    erroEnvio={erroEnvio}
                   />
                 </div>
               </>
@@ -268,6 +278,7 @@ export function StickyContactForm() {
                   errors={errors}
                   isSubmitting={isSubmitting}
                   onSubmit={handleSubmit(onSubmit)}
+                    erroEnvio={erroEnvio}
                 />
               </>
             )}
@@ -308,6 +319,7 @@ export function StickyContactForm() {
                 errors={errors}
                 isSubmitting={isSubmitting}
                 onSubmit={handleSubmit(onSubmit)}
+                    erroEnvio={erroEnvio}
                 compact
               />
             </>
@@ -343,9 +355,10 @@ interface FormFieldsProps {
   isSubmitting: boolean
   onSubmit: () => void
   compact?: boolean
+  erroEnvio?: boolean
 }
 
-function FormFields({ register, errors, isSubmitting, onSubmit, compact }: FormFieldsProps) {
+function FormFields({ register, errors, isSubmitting, onSubmit, compact, erroEnvio }: FormFieldsProps) {
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit() }} className="space-y-3">
       <div>
@@ -386,6 +399,7 @@ function FormFields({ register, errors, isSubmitting, onSubmit, compact }: FormF
       <p className="text-[10px] text-foreground-secondary text-center">
         Ao enviar, você concorda com nossa política de privacidade.
       </p>
+      {erroEnvio && <FormErrorFallback />}
     </form>
   )
 }
