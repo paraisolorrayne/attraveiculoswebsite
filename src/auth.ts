@@ -3,7 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { authConfig } from '@/auth.config'
 import { db } from '@/lib/db'
-import { isAdminRole } from '@/lib/auth/roles'
+import { isAdminRole, type SecoesExtras } from '@/lib/auth/roles'
 
 /**
  * Config completa do Auth.js (Node) — Credentials validando email+senha
@@ -26,7 +26,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null
 
         const user = await db.selectFrom('admin_users')
-          .select(['id', 'email', 'role', 'name', 'password_hash'])
+          .select(['id', 'email', 'role', 'name', 'password_hash', 'secoes_extras'])
           .where('email', '=', email)
           .where('is_active', '=', true)
           .executeTakeFirst()
@@ -42,7 +42,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .where('id', '=', user.id).execute()
           .catch((e) => console.error('[auth] last_login update failed:', e))
 
-        return { id: user.id, email: user.email, name: user.name, role: user.role }
+        return {
+          id: user.id, email: user.email, name: user.name, role: user.role,
+          secoes: (user.secoes_extras ?? {}) as SecoesExtras,
+        }
       },
     }),
   ],

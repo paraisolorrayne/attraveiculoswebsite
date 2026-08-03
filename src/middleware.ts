@@ -25,8 +25,11 @@ export default auth((req) => {
   // /admin puro → renderiza a landing (hub de cards). Todo papel autenticado vê.
   if (pathname === '/admin') return
 
-  // Gate por papel — sem acesso volta pro hub (nem todo papel acessa engine-sounds)
-  if (!canAccessRoute(role, pathname)) {
+  // Gate por papel MAIS as exceções por usuário. Sem o terceiro argumento, o
+  // middleware decidia só pela matriz do papel e barrava a rota antes do
+  // layout (que conhece as exceções) chegar a rodar — então conceder uma seção
+  // na tela de usuários não surtia efeito nenhum.
+  if (!canAccessRoute(role, pathname, req.auth?.user?.secoes ?? null)) {
     return NextResponse.redirect(new URL('/admin', req.url))
   }
 })
