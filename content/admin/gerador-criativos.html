@@ -1363,19 +1363,40 @@ function renderFicha(){
   // A caixa acompanha a proporção REAL da foto (4:3 do estoque): assim o aspect
   // fit não deixa faixa vazia dentro da moldura. Largura da coluna x 3/4.
   const tiraY = cy + 24, gap = 10;
-  const larguraColuna = (W - 2*M - 2*gap) / 3;
-  const tiraH = Math.round(larguraColuna * 3 / 4);
-  const larguraCol = larguraColuna;
-  const detalhes = [state.foto2, state.foto3, state.foto4];
-  const optDet = [state.f2, state.f3, state.f4];
-  for(let i = 0; i < 3; i++){
-    fotoEmMoldura(detalhes[i], M + i*(larguraCol + gap), tiraY, larguraCol, tiraH, optDet[i], 14);
-  }
+
+  // A tira se ADAPTA à quantidade de fotos preenchidas. Com 3 fotos 4:3 lado a
+  // lado cada uma fica com 233px de altura num canvas de 1920 — pequenas demais
+  // para ler um detalhe. Com 2 elas passam a 353px, metade maior. Quem quiser
+  // as três continua podendo: basta preencher o terceiro detalhe.
+  const preenchidas = [
+    { img: state.foto2, opt: state.f2 },
+    { img: state.foto3, opt: state.f3 },
+    { img: state.foto4, opt: state.f4 },
+  ].filter(d => d.img);
+  // Sem nenhuma foto ainda, mostra 2 espaços — que é o padrão da peça.
+  const detalhes = preenchidas.length > 0
+    ? preenchidas
+    : [{ img: null, opt: null }, { img: null, opt: null }];
+
+  const n = detalhes.length;
+  const larguraCol = (W - 2*M - (n - 1)*gap) / n;
+  const tiraH = Math.round(larguraCol * 3 / 4);
+  detalhes.forEach((d, i) => {
+    fotoEmMoldura(d.img, M + i*(larguraCol + gap), tiraY, larguraCol, tiraH, d.opt, 14);
+  });
 
   // ---- Foto principal, grande, com o fundo original ----
-  // Herói também em 4:3 da largura útil: preenche a coluna inteira sem sobrar
-  // margem lateral e sem cortar a foto.
-  const heroY = tiraY + tiraH + 22, heroH = Math.round((W - 2*M) * 3 / 4);
+  // Em 4:3 da largura útil, MAS limitada pelo que sobra até o rodapé: com a
+  // tira de 2 fotos (mais alta) o herói cheio empurraria o valor para fora do
+  // canvas. O menor dos dois mantém a peça inteira sempre dentro.
+  const heroY = tiraY + tiraH + 22;
+  // Reserva do rodapé: selo + valor + respiro. Com 190 o conteúdo terminava a
+  // 11px da borda; 240 devolve uma margem parecida com a do topo (~60px).
+  const ALTURA_RODAPE = 240;
+  const heroH = Math.min(
+    Math.round((W - 2*M) * 3 / 4),
+    H - ALTURA_RODAPE - heroY,
+  );
   fotoEmMoldura(state.foto1, M, heroY, W - 2*M, heroH, state.f1, 20);
 
   // ---- Rodapé: selo + valor ----
@@ -1603,21 +1624,29 @@ function aplicarVeiculo(v){
 
 /**
  * Posições das fotos que a Ficha usa, dentro da galeria do MESMO carro.
- * A foto 1 é sempre a principal (é a de capa do anúncio); 2, 11 e 15 são as
- * que, no padrão de fotografia da Attra, costumam cair em ângulos e detalhes
- * diferentes — evitam três recortes quase iguais do mesmo lado do carro.
+ * A 1 é sempre a principal (é a capa do anúncio); 2 e 11, no padrão de
+ * fotografia da Attra, costumam cair em ângulos e detalhes bem diferentes —
+ * evitam dois recortes quase iguais do mesmo lado do carro.
+ *
+ * São DUAS na tira de propósito: com três, cada foto 4:3 fica com 233px de
+ * altura e não dá para ler um detalhe. Quem quiser a terceira é só escolher
+ * pelo seletor de destino ("Detalhe 3") — a tira se ajusta sozinha.
  */
-const FICHA_POSICOES = [1, 2, 11, 15];
+const FICHA_POSICOES = [1, 2, 11];
 
 /** Carrega a galeria do carro nas fotos da Ficha, respeitando quantas existem. */
 function preSelecionarFotosDaFicha(fotos){
   if(!fotos || fotos.length === 0) return;
-  const alvos = ['foto1', 'foto2', 'foto3', 'foto4'];
+  const alvos = ['foto1', 'foto2', 'foto3'];
+  // O terceiro detalhe começa vazio: a tira de 2 é o padrão. Limpa também um
+  // carro anterior, senão a foto dele sobrava na peça do carro novo.
+  state.foto4 = null;
   // Menos fotos que o esperado: distribui ao longo da galeria em vez de repetir
   // as primeiras, que costumam ser variações do mesmo ângulo.
-  const posicoes = fotos.length >= FICHA_POSICOES[3]
+  const ultima = FICHA_POSICOES[FICHA_POSICOES.length - 1];
+  const posicoes = fotos.length >= ultima
     ? FICHA_POSICOES
-    : [1, ...[1, 2, 3].map(i => Math.min(fotos.length, 1 + Math.round(i * (fotos.length - 1) / 3)))];
+    : [1, ...[1, 2].map(i => Math.min(fotos.length, 1 + Math.round(i * (fotos.length - 1) / 2)))];
 
   posicoes.forEach((pos, i) => {
     const url = fotos[Math.min(pos, fotos.length) - 1];
