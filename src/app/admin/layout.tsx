@@ -35,7 +35,7 @@ export default async function AdminLayout({
   if (admin) {
     const pathname = (await headers()).get('x-pathname') ?? ''
     // DIAGNOSTICO TEMPORARIO — remover depois
-    console.log('[layout-diag] x-pathname=' + JSON.stringify(pathname) +
+    console.error('[layout-diag] x-pathname=' + JSON.stringify(pathname) +
       ' role=' + admin.role + ' secoes=' + JSON.stringify(admin.secoes))
     const role: AdminRole = isAdminRole(admin.role) ? admin.role : 'gerente'
     if (pathname.startsWith('/admin/') && !canAccessRoute(role, pathname, admin.secoes)) {
