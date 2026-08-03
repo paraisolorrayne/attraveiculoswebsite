@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authConfig } from '@/auth.config'
-import { AREAS_SO_ADMIN, isAdminRole } from '@/lib/auth/roles'
+import { canAccessRoute, isAdminRole } from '@/lib/auth/roles'
 
 // Auth.js edge-safe (sem providers/DB) só pra ler a sessão (JWT) no middleware.
 // Migrado do Supabase GoTrue → Auth.js (ver docs/MIGRACAO_POSTGRES_PURO.md).
@@ -40,10 +40,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/admin/login', req.url))
   }
 
-  // Gestão de usuários é exclusiva do `admin` e imune a exceção — quem a
-  // recebesse poderia editar papéis e se promover. Fica no gate mais externo
-  // porque a decisão depende só do papel, que o token sempre traz.
-  if (role !== 'admin' && AREAS_SO_ADMIN.some((p) => pathname.startsWith(p))) {
+  // Gate por papel + exceções do token. NÃO basta sozinho (o token congela as
+  // permissões do login), mas é o único gate que comprovadamente bloqueia:
+  // delegar tudo ao layout abriu /admin/crm para o papel marketing.
+  if (pathname !== '/admin' && !canAccessRoute(role, pathname, req.auth?.user?.secoes ?? null)) {
     return NextResponse.redirect(new URL('/admin', req.url))
   }
 
