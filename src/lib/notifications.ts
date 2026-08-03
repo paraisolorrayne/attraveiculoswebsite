@@ -19,6 +19,19 @@ function getResendClient(): Resend {
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'faleconosco@attraveiculos.com.br'
 
 /**
+ * Remetente das notificações de lead.
+ *
+ * Era fixo em `notificacoes@attraveiculos.com.br`, mas o domínio não está
+ * verificado na Resend e ela recusa o envio com 403. Deixar isso em env
+ * permite destravar a entrega sem novo deploy: ou verificando o domínio (e
+ * mantendo o remetente da marca), ou apontando temporariamente para o domínio
+ * de teste da própria Resend. Como estes e-mails são alertas internos para o
+ * faleconosco — e o `replyTo` continua sendo o do lead —, um remetente
+ * provisório é melhor que lead nenhum.
+ */
+const EMAIL_FROM = process.env.EMAIL_FROM || 'Attra Veículos <notificacoes@attraveiculos.com.br>'
+
+/**
  * Sanitiza o valor de uma tag do Resend.
  *
  * A API só aceita letras ASCII, números, `_` e `-` em nome e valor de tag, e
@@ -253,7 +266,7 @@ export async function sendEmailNotification(data: NotificationData): Promise<Ema
     console.log(`[Email] Sending ${data.type} notification to ${NOTIFICATION_EMAIL}`)
 
     const { data: result, error } = await getResendClient().emails.send({
-      from: 'Attra Veículos <notificacoes@attraveiculos.com.br>',
+      from: EMAIL_FROM,
       to: [NOTIFICATION_EMAIL],
       replyTo: data.senderEmail,
       subject,
