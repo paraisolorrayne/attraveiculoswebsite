@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql, type RawBuilder } from 'kysely'
 import { db } from '@/lib/db'
-import { getCurrentAdmin } from '@/lib/admin-auth'
+import { adminComAcessoA } from '@/lib/auth/guard-api'
 import {
 	chaveCampanha,
 	classificarCanal,
@@ -122,8 +122,9 @@ function maisFrequente(contagem: Map<string, number>, padrao: string): string {
 
 export async function GET(request: NextRequest) {
 	try {
-		const admin = await getCurrentAdmin()
-		if (!admin || admin.role !== 'admin') {
+		// Mesma regra da página: papel OU seção concedida ao usuário.
+		const admin = await adminComAcessoA('/admin/visitors')
+		if (!admin) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 

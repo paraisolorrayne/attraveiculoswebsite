@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
-import { getCurrentAdmin } from '@/lib/admin-auth'
+import { adminComAcessoA } from '@/lib/auth/guard-api'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // O embedding do PostgREST (profiles→fingerprints→sessions) virou LEFT JOIN +
@@ -9,8 +9,9 @@ import { getCurrentAdmin } from '@/lib/admin-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const admin = await getCurrentAdmin()
-    if (!admin || admin.role !== 'admin') {
+    // Mesma regra da página: papel OU seção concedida ao usuário.
+    const admin = await adminComAcessoA('/admin/visitors')
+    if (!admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
