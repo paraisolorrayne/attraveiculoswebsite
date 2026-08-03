@@ -315,7 +315,8 @@ export async function sendFykosLead(input: FykosLeadInput): Promise<{ success: b
       return { success: false, error: `HTTP ${response.status}` }
     }
 
-    console.log('[Fykos] Lead sent successfully')
+    // Preservado em produção pelo mesmo motivo do e-mail: é o comprovante.
+    console.warn('[CRM] Lead enviado com sucesso')
     return { success: true }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
