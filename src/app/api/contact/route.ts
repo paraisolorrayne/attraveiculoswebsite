@@ -181,6 +181,34 @@ export async function POST(request: NextRequest) {
         })
       : { success: false, error: 'sem telefone — não enviado ao Fykos' }
 
+    // A rota respondia 200 success:true mesmo com TODOS os canais falhando. Foi
+    // isso que escondeu, de 12/02/2026 a 03/08/2026, que nenhum e-mail de lead
+    // saía do site: o visitante via "enviado com sucesso", a loja não recebia
+    // nada e o log de erro não era lido. Se nenhum canal entregou, o lead não
+    // chegou a ninguém — e a resposta precisa dizer isso.
+    const entregue =
+      notificationResult.email.success ||
+      notificationResult.avisa.success ||
+      fykosResult.success
+
+    if (!entregue) {
+      console.error('[Contact API] NENHUM canal entregou o lead:', {
+        email: notificationResult.email.error,
+        avisa: notificationResult.avisa.error,
+        fykos: fykosResult.error,
+        senderEmail: data.email,
+        sourcePage: data.sourcePage,
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Não conseguimos registrar seu contato agora. Fale com a gente pelo WhatsApp.',
+          notifications: { email: false, avisa: false, fykos: false },
+        },
+        { status: 502 },
+      )
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Mensagem enviada com sucesso!',

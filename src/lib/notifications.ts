@@ -18,6 +18,26 @@ function getResendClient(): Resend {
 // Notification email destination
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'faleconosco@attraveiculos.com.br'
 
+/**
+ * Sanitiza o valor de uma tag do Resend.
+ *
+ * A API só aceita letras ASCII, números, `_` e `-` em nome e valor de tag, e
+ * REJEITA O E-MAIL INTEIRO quando algum caractere foge disso. Como o valor de
+ * `source` é a página de origem (`/contato`, `/financiamento`), a barra
+ * invalidava toda notificação de formulário: nenhum e-mail de lead saiu do
+ * site entre 12/02/2026 e 03/08/2026 — 68 tentativas, 25 leads distintos, zero
+ * entregas. O erro voltava da Resend depois do envio, então a rota respondia
+ * 200 e ninguém percebia.
+ *
+ * Tudo que não for permitido vira `_`. Preferimos uma tag imprecisa a um
+ * e-mail não entregue: a tag é telemetria, o e-mail é o lead.
+ */
+export function sanitizeResendTag(valor: string): string {
+  const limpo = valor.replace(/[^A-Za-z0-9_-]/g, '_')
+  // A Resend também limita o tamanho (256); corta com folga.
+  return limpo.slice(0, 200) || 'desconhecido'
+}
+
 // Lista de destinos para notificação de novos leads via WhatsApp.
 // Configurável via env ADMIN_WHATSAPP_NUMBERS (csv, somente dígitos com DDI).
 // Default: número comercial + número pessoal do responsável.
@@ -239,8 +259,8 @@ export async function sendEmailNotification(data: NotificationData): Promise<Ema
       subject,
       html,
       tags: [
-        { name: 'type', value: data.type },
-        { name: 'source', value: data.sourcePage || 'unknown' },
+        { name: 'type', value: sanitizeResendTag(data.type) },
+        { name: 'source', value: sanitizeResendTag(data.sourcePage || 'unknown') },
       ],
     })
 
