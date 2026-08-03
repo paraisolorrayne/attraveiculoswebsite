@@ -42,6 +42,17 @@ npm run build
 test -f .next/standalone/server.js || { echo "ERRO: server.js não gerado — build falhou"; exit 1; }
 
 echo "==> [4/7] restart"
+# `--update-env` copia o ambiente DO SHELL, não lê .env.production. Sem o
+# source abaixo, toda variável NOVA adicionada ao arquivo nunca chegava no
+# processo: o app seguia com o ambiente salvo pelo pm2 no primeiro start, e a
+# variável parecia ignorada sem nenhum erro. Foi o que aconteceu com
+# EMAIL_FROM em 03/08/2026.
+if [ -f .env.production ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env.production
+  set +a
+fi
 pm2 restart attra --update-env
 pm2 save
 
