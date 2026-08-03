@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isAuthenticated } from '@/lib/admin-auth'
+import { adminComAcessoA } from '@/lib/auth/guard-api'
 import { db } from '@/lib/db'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
@@ -82,8 +82,10 @@ function generateRecommendations(
 
 export async function GET(request: NextRequest) {
   try {
-    const authenticated = await isAuthenticated()
-    if (!authenticated) {
+    // Antes bastava estar autenticado: qualquer papel do admin lia sessão de
+    // visitante. Agora exige a mesma seção que a tela.
+    const admin = await adminComAcessoA('/admin/visitors')
+    if (!admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
