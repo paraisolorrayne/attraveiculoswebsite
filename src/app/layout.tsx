@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
 import { Geist, Geist_Mono, Outfit, Cormorant_Garamond, Montserrat } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
@@ -125,11 +124,18 @@ export default function RootLayout({
         <AnalyticsNoScript />
         <ThemeProvider>
           <ToastProvider>
-            <Suspense fallback={null}>
-              <VisitorTrackingProvider>
-                {children}
-              </VisitorTrackingProvider>
-            </Suspense>
+            {/*
+              SEM <Suspense> em volta de {children}.
+              O VisitorTrackingProvider lia a query com useSearchParams, e esse
+              hook faz o subtree do Suspense mais próximo abandonar a
+              renderização estática — com o boundary aqui, as 204 rotas
+              estáticas iam ao ar com o fallback (null) no lugar da página
+              inteira. O hook agora vive isolado dentro do provider, no próprio
+              Suspense dele, que não renderiza nada.
+            */}
+            <VisitorTrackingProvider>
+              {children}
+            </VisitorTrackingProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

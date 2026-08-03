@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useCallback, ReactNode, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useCallback, ReactNode, useState, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   createVisitorFingerprint,
@@ -77,9 +77,32 @@ interface Props {
   children: ReactNode
 }
 
+/**
+ * Observa a query string e avisa o provider quando ela muda.
+ *
+ * Existe para conter o `useSearchParams` num canto minúsculo. Esse hook faz o
+ * subtree do Suspense mais próximo ABANDONAR a renderização estática: o HTML
+ * prerenderizado sai com o fallback no lugar do conteúdo. Como o Suspense
+ * ficava no layout raiz envolvendo `{children}`, as 204 rotas estáticas do
+ * site iam ao ar sem NENHUMA tag renderizada — sem h1, sem h2, sem texto —,
+ * com todo o conteúdo só dentro do payload RSC, invisível para crawler que não
+ * executa JavaScript. Aqui o prejuízo se limita a este componente, que não
+ * renderiza nada.
+ *
+ * O valor da query nunca foi lido: `searchParams` era apenas dependência do
+ * efeito de pageview, para ele reexecutar quando a URL mudasse. É esse gatilho,
+ * e só ele, que este observador preserva.
+ */
+function ObservadorDeQuery({ aoMudar }: { aoMudar: (query: string) => void }) {
+  const searchParams = useSearchParams()
+  const query = searchParams.toString()
+  useEffect(() => { aoMudar(query) }, [query, aoMudar])
+  return null
+}
+
 export function VisitorTrackingProvider({ children }: Props) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [queryAtual, setQueryAtual] = useState('')
   const visitorIdRef = useRef<string | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const fingerprintDbIdRef = useRef<string | null>(null)
@@ -424,7 +447,7 @@ export function VisitorTrackingProvider({ children }: Props) {
     pageStartTimeRef.current = Date.now()
     pageActiveMsRef.current = 0
     scrollDepthRef.current = 0
-  }, [pathname, searchParams, sessionDbId, fingerprintDbId, elapsedActiveSeconds])
+  }, [pathname, queryAtual, sessionDbId, fingerprintDbId, elapsedActiveSeconds])
 
   // --- Heartbeat + visibilitychange + pagehide ---
   // Garante time_on_page da ÚLTIMA página e, principalmente, o encerramento da
@@ -865,6 +888,9 @@ export function VisitorTrackingProvider({ children }: Props) {
         identifyVisitor,
       }}
     >
+      <Suspense fallback={null}>
+        <ObservadorDeQuery aoMudar={setQueryAtual} />
+      </Suspense>
       {children}
     </VisitorTrackingContext.Provider>
   )
