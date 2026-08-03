@@ -282,7 +282,9 @@ export async function sendEmailNotification(data: NotificationData): Promise<Ema
       return { success: false, error: error.message }
     }
 
-    console.log(`[Email] Successfully sent, ID: ${result?.id}`)
+    // console.warn, não .log: o next.config remove log/info/debug do build de
+    // produção. Este é o comprovante de que o lead saiu — precisa sobreviver.
+    console.warn(`[Email] Successfully sent, ID: ${result?.id}`)
     return { success: true, emailId: result?.id }
 
   } catch (error) {
@@ -455,7 +457,7 @@ export function logNotificationEvent(
   }
 
   if (success) {
-    console.log('[Notification Event]', JSON.stringify(logEntry))
+    console.warn('[Notification Event]', JSON.stringify(logEntry))
   } else {
     console.error('[Notification Event - Failed]', JSON.stringify(logEntry))
   }
