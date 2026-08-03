@@ -48,7 +48,11 @@ async function gravarResumoMensal(): Promise<{ meses: number; linhas: number; ve
       group by session_id
     )
     select
-      to_char(date_trunc('month', s.started_at), 'YYYY-MM-DD') as mes,
+      -- O mês tem que fechar no fuso de BRASÍLIA. O Postgres da VPS roda em
+      -- Europe/Berlin, e date_trunc sem fuso corta o mês pelo relógio de lá:
+      -- uma sessão do dia 31 às 21h de Brasília já é dia 1º em Berlim e caía
+      -- no mês seguinte do resumo.
+      to_char(date_trunc('month', s.started_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM-DD') as mes,
       s.utm_source, s.utm_medium, s.utm_campaign,
       s.gclid, s.fbclid, s.ttclid, s.referrer_domain,
       count(*)::int as sessoes,
@@ -94,7 +98,7 @@ async function gravarResumoMensal(): Promise<{ meses: number; linhas: number; ve
   const veiculos = await sql<{ linhas: number }>`
     with base as (
       select
-        date_trunc('month', pv.viewed_at)::date as mes,
+        date_trunc('month', pv.viewed_at AT TIME ZONE 'America/Sao_Paulo')::date as mes,
         pv.vehicle_slug,
         count(*)::int as aberturas,
         count(distinct pv.session_id)::int as sessoes
