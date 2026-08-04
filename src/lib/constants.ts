@@ -29,6 +29,27 @@ export const ADDRESS = {
   country: 'Brasil',
 }
 
+/**
+ * Coordenadas da loja, tiradas da ficha do Google Meu Negócio da Attra
+ * (kgmid /g/11smhqv2fh) em 04/08/2026.
+ *
+ * Conferidas de forma independente antes de publicar: o Plus Code que o Google
+ * exibe para a ficha é `3PCF+69`, e reencodificar estas coordenadas em Open
+ * Location Code devolve exatamente `3PCF+69`. Pino errado no mapa manda o
+ * cliente para o lugar errado, então a coordenada só entra conferida.
+ */
+export const GEO = {
+  latitude: -18.9293967,
+  longitude: -48.2765108,
+} as const
+
+/**
+ * Ficha no Google Maps pelo CID da própria ficha (0x211fb2e704f9db01 em
+ * decimal), lido da URL canônica do Maps. Testado: abre a Attra, com o mesmo
+ * endereço, telefone e Plus Code do painel.
+ */
+export const MAPA_URL = 'https://maps.google.com/?cid=2386823032820325121'
+
 /** Horário de atendimento no vocabulário do schema.org. Mesma fonte: o rodapé. */
 export const OPENING_HOURS = [
   { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:00', closes: '18:00' },
