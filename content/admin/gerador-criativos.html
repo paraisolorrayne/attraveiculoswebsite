@@ -1512,29 +1512,24 @@ $('clearlogo').addEventListener('click', () => {
  'rot1','corext','rot2','corint','garantia'].forEach(id =>
   $(id).addEventListener('input', render));
 
-/**
- * Zoom mínimo para o "posição" ter o que deslocar.
- *
- * As fotos do estoque são 4:3 (1920x1440) — exatamente a proporção das molduras.
- * No zoom 100% a foto cabe inteira e não sobra NADA fora do quadro, então
- * arrastar a posição não mudava um pixel: o controle parecia quebrado. Ao mexer
- * na posição, o zoom sobe para 112% e passa a existir margem real para escolher
- * o trecho que aparece. O slider de zoom acompanha, para o operador ver por que
- * a foto cresceu.
- */
-const ZOOM_MIN_POSICAO = 1.12;
-
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
  ['f2zoom','f2','zoom'],['f2x','f2','x'],['f2y','f2','y'],
  ['f3zoom','f3','zoom'],['f3x','f3','x'],['f3y','f3','y'],
  ['f4zoom','f4','zoom'],['f4x','f4','x'],['f4y','f4','y']]
 .forEach(([id, obj, key]) => {
+  // Mexer na POSIÇÃO não mexe no zoom.
+  //
+  // Havia aqui um "zoom mínimo" que subia para 112% assim que o operador
+  // arrastava posição. A premissa era que sem zoom não sobrava o que deslocar —
+  // e ela é falsa: drawPhoto calcula o curso como
+  // `Math.max(dw - rw, rw*.6)`, garantindo 60% da caixa de deslocamento mesmo
+  // quando a foto cabe exata. A posição sempre funcionou sozinha.
+  //
+  // O efeito colateral era grave no Clássico: arrastar a posição vertical
+  // ampliava a foto em 12% e comia a margem em volta do carro, sem o operador
+  // ter pedido zoom nenhum.
   $(id).addEventListener('input', e => {
     state[obj][key] = e.target.value/100;
-    if((key === 'x' || key === 'y') && state[obj].zoom <= 1.001){
-      state[obj].zoom = ZOOM_MIN_POSICAO;
-      $(obj + 'zoom').value = Math.round(ZOOM_MIN_POSICAO * 100);
-    }
     render();
   });
 });
