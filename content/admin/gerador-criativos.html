@@ -220,9 +220,9 @@
       <label id="foto1-label">Foto principal (frente / 3-4)</label>
       <input type="file" id="foto1" accept="image/*">
       <div class="sliders">
-        <div><label>Zoom</label><input type="range" id="f1zoom" min="55" max="250" value="100"></div>
+        <div><label>Zoom</label><input type="range" id="f1zoom" min="55" max="250" value="88"></div>
         <div><label>Posição ↔</label><input type="range" id="f1x" min="0" max="100" value="50"></div>
-        <div><label>Posição ↕</label><input type="range" id="f1y" min="0" max="100" value="50"></div>
+        <div><label>Posição ↕</label><input type="range" id="f1y" min="0" max="100" value="18"></div>
       </div>
       <div class="hint" id="foto1-hint">A foto entra inteira — não precisa recortar o fundo. No Clássico, fotos horizontais são enquadradas automaticamente com o carro abaixo do título.</div>
       <label id="foto2-label" style="margin-top:16px">Foto secundária (traseira / lateral — rodapé)</label>
@@ -240,13 +240,13 @@
           <button class="pisobtn typebtn" data-piso="asfalto">Asfalto<small>piso escuro real</small></button>
         </div>
         <label style="margin-top:12px">Posição do piso (altura)</label>
-        <input type="range" id="pisoy" min="-60" max="160" value="0">
+        <input type="range" id="pisoy" min="-60" max="160" value="-18">
         <div class="hint">Desça o piso até a divisa ficar abaixo do veículo — a fusão nunca
           deve cobrir o carro. O preço e os destaques acompanham.</div>
       </div>
       <div id="corte-wrap">
         <label style="margin-top:12px">Altura do corte transversal (Clássico)</label>
-        <input type="range" id="corte" min="-160" max="200" value="0">
+        <input type="range" id="corte" min="-160" max="200" value="-32">
         <div class="hint">Arraste pra direita em carros ALTOS (mais área de foto);
           pra esquerda em carros baixos (mais espaço pros destaques).</div>
       </div>
@@ -309,7 +309,11 @@ const RED = '#9a1c1c';   // vermelho oficial Attra — R154 G28 B28
 const state = {
   tipo: 'classico',
   foto1: null, foto2: null, foto3: null, foto4: null, logo: null,
-  f1: {zoom:1, x:.5, y:.5},
+  // Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
+  // gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas
+  // bordas e sobe o corte para o veículo ficar abaixo do título. Tem que casar
+  // com os value= dos sliders, senão a peça abre diferente do que eles mostram.
+  f1: {zoom:.88, x:.5, y:.18},
   f2: {zoom:1, x:.5, y:.5},
   f3: {zoom:1, x:.5, y:.5},
   f4: {zoom:1, x:.5, y:.5},
@@ -476,12 +480,19 @@ function autoFrameFoto1(img){
   if(state.tipo !== 'classico' || img.width/img.height <= rw/rh + .05){
     state.f1 = {zoom:1, x:.5, y:.5};
   } else {
-    // largura inteira: sem sobras nas laterais (sem blur lateral)
-    const zoom = Math.max(.55, Math.min((rw/img.width)/base, 1));
-    const dh = img.height * base * zoom;
-    const rangeY = Math.max(dh - rh, rh*.6);
-    const y = .5 - (rh - dh)/(2*rangeY);
-    state.f1 = {zoom, x:.5, y:Math.max(0, Math.min(1, y))};
+    // Enquadramento padrão do Clássico para foto horizontal, calibrado pela
+    // Lorrayne no próprio gerador (04/08/2026).
+    //
+    // O cálculo anterior era "largura inteira, sem sobra nas laterais": dava
+    // zoom .84 e y .37 na foto de referência. Ela ajustou para .88 e .18 — um
+    // pouco mais fechado e com a foto mais baixa, deixando o carro abaixo do
+    // título em vez de encostar nele.
+    //
+    // É valor fixo, não fórmula: a calibração foi feita a olho sobre a peça
+    // pronta, e não há regra derivável dela. Em foto de proporção muito
+    // diferente da usual (~1,29) pode ser preciso ajustar na mão — os controles
+    // estão logo ali e não brigam mais com o operador.
+    state.f1 = {zoom: .88, x: .5, y: .18};
   }
   $('f1zoom').value = state.f1.zoom*100;
   $('f1x').value = state.f1.x*100;
@@ -518,9 +529,28 @@ function placeholder(rx, ry, rw, rh, label, dark){
   ctx.textAlign = 'left';
 }
 // desenha a foto com bordas suaves (topo e laterais se fundem com o fundo)
-function drawPhotoFeather(img, rx, ry, rw, rh, opt){
+/**
+ * `modo === 'fit'` mostra a FOTO INTEIRA; sem ele, preenche a caixa cortando.
+ *
+ * A foto do estoque é horizontal (~1,29) e a caixa do Clássico é quase quadrada
+ * (1080x1000 = 1,08). Preenchendo, a foto era ampliada até encher a ALTURA e
+ * perdia 205px de largura — 102 por lado —, o que come a frente e a traseira do
+ * carro e faz a peça abrir já com o veículo espremido nas bordas. Em fit o
+ * zoom 100% passa a significar "a foto inteira", que é o que o operador espera,
+ * e ele amplia a partir dali se quiser.
+ *
+ * NÃO está ligado no Clássico. Ligar sozinho piora: a foto passa a ocupar
+ * 1080x840 numa caixa de 1000 de altura, sobra faixa vazia embaixo, e o logo e
+ * o título — posicionados a partir de `topGap` — colidem com o letreiro que
+ * aparece na própria foto. O enquadramento do Clássico depende da caixa e da
+ * foto terem a mesma proporção; mudar isso é mexer no layout inteiro da peça,
+ * não num parâmetro.
+ */
+function drawPhotoFeather(img, rx, ry, rw, rh, opt, modo){
   opt = opt || {zoom:1, x:.5, y:.5};
-  const base  = Math.max(rw/img.width, rh/img.height);
+  const base  = modo === 'fit'
+    ? Math.min(rw/img.width, rh/img.height)
+    : Math.max(rw/img.width, rh/img.height);
   const scale = base * opt.zoom;
   const dw = img.width*scale, dh = img.height*scale;
   const rangeX = Math.max(dw - rw, rw*.6);
@@ -729,16 +759,14 @@ function renderClassico(){
     ctx.restore();
   }
 
-  // Continuidade do piso (só pérola): o véu branco começa a subir ainda no
-  // CHÃO DA FOTO, 110px antes da divisa, emendando sem degrau no véu da banda.
-  // Sem isso a passagem foto→piso lia como uma linha dura sobre foto clara.
-  if(piso === 'perola'){
-    const veuFoto = ctx.createLinearGradient(0, PISO_TOP - 110, 0, PISO_TOP);
-    veuFoto.addColorStop(0, 'rgba(246,248,249,0)');
-    veuFoto.addColorStop(1, 'rgba(246,248,249,.42)');
-    ctx.fillStyle = veuFoto;
-    ctx.fillRect(0, PISO_TOP - 110, W, 110);
-  }
+  // SEM véu sobre a foto.
+  //
+  // Havia aqui um degradê branco (até 42% de opacidade) pintado sobre os
+  // ÚLTIMOS 110px DA FOTO, para a passagem foto→piso não ler como linha dura.
+  // O custo era alto demais: essa faixa é justamente onde ficam os pneus e o
+  // chão sob o carro, e o véu lavava a borracha e a sombra de contato — o carro
+  // parecia flutuar. A divisa seca é preferível a estragar o veículo, que é o
+  // assunto da peça. (A fusão do topo do piso já era 0 pelo mesmo motivo.)
 
   // paleta dos textos conforme o fundo
   const dark = piso === 'asfalto';
@@ -1512,29 +1540,24 @@ $('clearlogo').addEventListener('click', () => {
  'rot1','corext','rot2','corint','garantia'].forEach(id =>
   $(id).addEventListener('input', render));
 
-/**
- * Zoom mínimo para o "posição" ter o que deslocar.
- *
- * As fotos do estoque são 4:3 (1920x1440) — exatamente a proporção das molduras.
- * No zoom 100% a foto cabe inteira e não sobra NADA fora do quadro, então
- * arrastar a posição não mudava um pixel: o controle parecia quebrado. Ao mexer
- * na posição, o zoom sobe para 112% e passa a existir margem real para escolher
- * o trecho que aparece. O slider de zoom acompanha, para o operador ver por que
- * a foto cresceu.
- */
-const ZOOM_MIN_POSICAO = 1.12;
-
 [['f1zoom','f1','zoom'],['f1x','f1','x'],['f1y','f1','y'],
  ['f2zoom','f2','zoom'],['f2x','f2','x'],['f2y','f2','y'],
  ['f3zoom','f3','zoom'],['f3x','f3','x'],['f3y','f3','y'],
  ['f4zoom','f4','zoom'],['f4x','f4','x'],['f4y','f4','y']]
 .forEach(([id, obj, key]) => {
+  // Mexer na POSIÇÃO não mexe no zoom.
+  //
+  // Havia aqui um "zoom mínimo" que subia para 112% assim que o operador
+  // arrastava posição. A premissa era que sem zoom não sobrava o que deslocar —
+  // e ela é falsa: drawPhoto calcula o curso como
+  // `Math.max(dw - rw, rw*.6)`, garantindo 60% da caixa de deslocamento mesmo
+  // quando a foto cabe exata. A posição sempre funcionou sozinha.
+  //
+  // O efeito colateral era grave no Clássico: arrastar a posição vertical
+  // ampliava a foto em 12% e comia a margem em volta do carro, sem o operador
+  // ter pedido zoom nenhum.
   $(id).addEventListener('input', e => {
     state[obj][key] = e.target.value/100;
-    if((key === 'x' || key === 'y') && state[obj].zoom <= 1.001){
-      state[obj].zoom = ZOOM_MIN_POSICAO;
-      $(obj + 'zoom').value = Math.round(ZOOM_MIN_POSICAO * 100);
-    }
     render();
   });
 });
