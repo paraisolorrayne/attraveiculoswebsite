@@ -64,8 +64,16 @@ export const OPENING_HOURS = [
   { days: ['Saturday'], opens: '09:00', closes: '12:30' },
 ] as const
 
-/** Rótulo curto de cada faixa, para exibição (rodapé). Domingo: fechado. */
-export const HORARIO_RESUMIDO = 'Seg-Sex: 8h30 às 18h · Sábado: 9h às 12h30'
+/**
+ * Rótulos de exibição do horário. O texto estava escrito à mão em QUATRO
+ * lugares além do rodapé (página de contato e seção de localização da home),
+ * e todos ficaram para trás quando o horário mudou. Quem for exibir horário
+ * usa uma destas constantes — não escreve de novo.
+ */
+export const HORARIO_SEMANA = 'Seg-Sex: 8h30 às 18h'
+export const HORARIO_SABADO = 'Sábado: 9h às 12h30'
+export const HORARIO_RESUMIDO = `${HORARIO_SEMANA} · ${HORARIO_SABADO}`
+export const HORARIO_UMA_LINHA = `${HORARIO_SEMANA} | Sáb: 9h às 12h30`
 
 /** Perfis oficiais — apenas os que o próprio site linka no rodapé. */
 export const PERFIS_OFICIAIS = [

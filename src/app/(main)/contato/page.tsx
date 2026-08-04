@@ -5,7 +5,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { ContactForm } from '@/components/forms/contact-form'
-import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY } from '@/lib/constants'
+import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ const locations = [
     phone: PHONE_DISPLAY,
     cellphone: CELLPHONE_DISPLAY,
     whatsapp: WHATSAPP_NUMBER,
-    hours: 'Seg a Sex: 8h às 18h | Sáb: 8h às 13h',
+    hours: HORARIO_UMA_LINHA,
     mapUrl: 'https://maps.app.goo.gl/wBpftykDQRQJmB1z8',
     features: ['Showroom climatizado', 'Estacionamento privativo', 'Ambiente exclusivo para negociação'],
   },
@@ -66,9 +66,9 @@ const contactChannels = [
   {
     icon: Clock,
     label: 'Horário',
-    value: 'Seg a Sex: 8h às 18h',
+    value: HORARIO_SEMANA,
     href: null,
-    description: 'Sábado: 8h às 13h',
+    description: HORARIO_SABADO,
     primary: false,
   },
 ]

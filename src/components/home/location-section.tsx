@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { HORARIO_UMA_LINHA } from '@/lib/constants'
 import Image from 'next/image'
 import { MapPin, Phone, Clock, ArrowRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
@@ -14,7 +15,7 @@ const locations = [
     state: 'MG',
     cep: '38408-343',
     phone: '(34) 3256-3200',
-    hours: 'Seg-Sex: 8h às 18h | Sáb: 8h às 13h',
+    hours: HORARIO_UMA_LINHA,
   },
 ]
 
