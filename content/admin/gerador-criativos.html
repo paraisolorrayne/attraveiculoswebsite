@@ -518,9 +518,28 @@ function placeholder(rx, ry, rw, rh, label, dark){
   ctx.textAlign = 'left';
 }
 // desenha a foto com bordas suaves (topo e laterais se fundem com o fundo)
-function drawPhotoFeather(img, rx, ry, rw, rh, opt){
+/**
+ * `modo === 'fit'` mostra a FOTO INTEIRA; sem ele, preenche a caixa cortando.
+ *
+ * A foto do estoque é horizontal (~1,29) e a caixa do Clássico é quase quadrada
+ * (1080x1000 = 1,08). Preenchendo, a foto era ampliada até encher a ALTURA e
+ * perdia 205px de largura — 102 por lado —, o que come a frente e a traseira do
+ * carro e faz a peça abrir já com o veículo espremido nas bordas. Em fit o
+ * zoom 100% passa a significar "a foto inteira", que é o que o operador espera,
+ * e ele amplia a partir dali se quiser.
+ *
+ * NÃO está ligado no Clássico. Ligar sozinho piora: a foto passa a ocupar
+ * 1080x840 numa caixa de 1000 de altura, sobra faixa vazia embaixo, e o logo e
+ * o título — posicionados a partir de `topGap` — colidem com o letreiro que
+ * aparece na própria foto. O enquadramento do Clássico depende da caixa e da
+ * foto terem a mesma proporção; mudar isso é mexer no layout inteiro da peça,
+ * não num parâmetro.
+ */
+function drawPhotoFeather(img, rx, ry, rw, rh, opt, modo){
   opt = opt || {zoom:1, x:.5, y:.5};
-  const base  = Math.max(rw/img.width, rh/img.height);
+  const base  = modo === 'fit'
+    ? Math.min(rw/img.width, rh/img.height)
+    : Math.max(rw/img.width, rh/img.height);
   const scale = base * opt.zoom;
   const dw = img.width*scale, dh = img.height*scale;
   const rangeX = Math.max(dw - rw, rw*.6);
@@ -573,6 +592,10 @@ function drawLogoBlack(cx, cy, maxW){
    TIPO 1 — CLÁSSICO (escuro, foto grande)
 ================================================================ */
 function renderClassico(){
+  // Tom do piso Pérola — um lugar só. Muda aqui e muda no sólido e no véu.
+  const PEROLA_HEX = '#B0B1AD';
+  const PEROLA_RGB = '176, 177, 173';
+
   const PHOTO1_H = 1000;
 
   // fachada da loja como fundo do topo — o letreiro ATTRA é o logo
@@ -702,19 +725,15 @@ function renderClassico(){
                    img.width*ps, img.height*ps);
       ctx.drawImage(osc, 0, bandTop);
     } else {
-      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : (piso === 'perola' ? '#eef1f2' : '#eceeed');
+      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : (piso === 'perola' ? PEROLA_HEX : '#eceeed');
       ctx.fillRect(0, bandTop, W, bandH);
     }
-    // véu pérola: clareia a textura do concreto até o tom pérola, sem perder o grão
+    // Véu pérola: leva a textura do concreto ao tom PEROLA_HEX sem matar o grão.
+    // Opacidade alta e uniforme — o objetivo é o piso LER como o tom pedido, e
+    // não como concreto levemente tingido. O grão sobrevive nos 12% restantes.
     if(piso === 'perola'){
-      // fade-in do véu na zona de fusão (bandTop..PISO_TOP) → sem divisa nítida
-      // Continuidade: o véu entra no MESMO tom em que o da foto terminou
-      // (.42) e encorpa piso adentro, então não há degrau na divisa.
-      const veu = ctx.createLinearGradient(0, bandTop, 0, DIAG_L);
-      veu.addColorStop(0, 'rgba(246,248,249,.42)');
-      veu.addColorStop(Math.min(1, 160/bandH), 'rgba(246,248,249,.78)');
-      veu.addColorStop(1, 'rgba(236,240,242,.68)');
-      ctx.fillStyle = veu; ctx.fillRect(0, bandTop, W, bandH);
+      ctx.fillStyle = `rgba(${PEROLA_RGB}, .88)`;
+      ctx.fillRect(0, bandTop, W, bandH);
     }
     // sombras internas discretas (intensidade conforme o tom do piso)
     const sa = piso === 'asfalto' ? .14 : .07;
