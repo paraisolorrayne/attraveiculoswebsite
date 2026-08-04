@@ -729,16 +729,14 @@ function renderClassico(){
     ctx.restore();
   }
 
-  // Continuidade do piso (só pérola): o véu branco começa a subir ainda no
-  // CHÃO DA FOTO, 110px antes da divisa, emendando sem degrau no véu da banda.
-  // Sem isso a passagem foto→piso lia como uma linha dura sobre foto clara.
-  if(piso === 'perola'){
-    const veuFoto = ctx.createLinearGradient(0, PISO_TOP - 110, 0, PISO_TOP);
-    veuFoto.addColorStop(0, 'rgba(246,248,249,0)');
-    veuFoto.addColorStop(1, 'rgba(246,248,249,.42)');
-    ctx.fillStyle = veuFoto;
-    ctx.fillRect(0, PISO_TOP - 110, W, 110);
-  }
+  // SEM véu sobre a foto.
+  //
+  // Havia aqui um degradê branco (até 42% de opacidade) pintado sobre os
+  // ÚLTIMOS 110px DA FOTO, para a passagem foto→piso não ler como linha dura.
+  // O custo era alto demais: essa faixa é justamente onde ficam os pneus e o
+  // chão sob o carro, e o véu lavava a borracha e a sombra de contato — o carro
+  // parecia flutuar. A divisa seca é preferível a estragar o veículo, que é o
+  // assunto da peça. (A fusão do topo do piso já era 0 pelo mesmo motivo.)
 
   // paleta dos textos conforme o fundo
   const dark = piso === 'asfalto';
