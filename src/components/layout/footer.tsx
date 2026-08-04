@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes'
 import { Phone, Smartphone, Mail, MapPin, Clock, Instagram, Facebook, Youtube } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { cn } from '@/lib/utils'
-import { PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY } from '@/lib/constants'
+import { PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY, HORARIO_RESUMIDO } from '@/lib/constants'
 
 const quickLinks = [
   { name: 'Veículos', href: '/veiculos' },
@@ -144,7 +144,11 @@ export function Footer() {
               <li>
                 <div className="flex items-start gap-2 text-foreground-secondary text-sm">
                   <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>Seg-Sex: 8h às 18h<br />Sábado: 8h às 13h</span>
+                  {/* Da mesma constante do JSON-LD e do llms.txt: horário
+                      escrito à mão aqui já divergia da ficha do Google. */}
+                  <span>{HORARIO_RESUMIDO.split(' · ').map((faixa, i) => (
+                    <span key={faixa}>{i > 0 && <br />}{faixa}</span>
+                  ))}</span>
                 </div>
               </li>
             </ul>
