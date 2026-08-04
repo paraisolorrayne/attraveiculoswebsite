@@ -603,10 +603,6 @@ function drawLogoBlack(cx, cy, maxW){
    TIPO 1 — CLÁSSICO (escuro, foto grande)
 ================================================================ */
 function renderClassico(){
-  // Tom do piso Pérola — um lugar só. Muda aqui e muda no sólido e no véu.
-  const PEROLA_HEX = '#A9B1B5';
-  const PEROLA_RGB = '169, 177, 181';
-
   const PHOTO1_H = 1000;
 
   // fachada da loja como fundo do topo — o letreiro ATTRA é o logo
@@ -736,15 +732,19 @@ function renderClassico(){
                    img.width*ps, img.height*ps);
       ctx.drawImage(osc, 0, bandTop);
     } else {
-      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : (piso === 'perola' ? PEROLA_HEX : '#eceeed');
+      ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : (piso === 'perola' ? '#eef1f2' : '#eceeed');
       ctx.fillRect(0, bandTop, W, bandH);
     }
-    // Véu pérola: leva a textura do concreto ao tom PEROLA_HEX sem matar o grão.
-    // Opacidade alta e uniforme — o objetivo é o piso LER como o tom pedido, e
-    // não como concreto levemente tingido. O grão sobrevive nos 12% restantes.
+    // véu pérola: clareia a textura do concreto até o tom pérola, sem perder o grão
     if(piso === 'perola'){
-      ctx.fillStyle = `rgba(${PEROLA_RGB}, .88)`;
-      ctx.fillRect(0, bandTop, W, bandH);
+      // fade-in do véu na zona de fusão (bandTop..PISO_TOP) → sem divisa nítida
+      // Continuidade: o véu entra no MESMO tom em que o da foto terminou
+      // (.42) e encorpa piso adentro, então não há degrau na divisa.
+      const veu = ctx.createLinearGradient(0, bandTop, 0, DIAG_L);
+      veu.addColorStop(0, 'rgba(246,248,249,.42)');
+      veu.addColorStop(Math.min(1, 160/bandH), 'rgba(246,248,249,.78)');
+      veu.addColorStop(1, 'rgba(236,240,242,.68)');
+      ctx.fillStyle = veu; ctx.fillRect(0, bandTop, W, bandH);
     }
     // sombras internas discretas (intensidade conforme o tom do piso)
     const sa = piso === 'asfalto' ? .14 : .07;
