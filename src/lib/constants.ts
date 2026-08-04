@@ -50,11 +50,22 @@ export const GEO = {
  */
 export const MAPA_URL = 'https://maps.google.com/?cid=2386823032820325121'
 
-/** Horário de atendimento no vocabulário do schema.org. Mesma fonte: o rodapé. */
+/**
+ * Horário de atendimento — FONTE ÚNICA (rodapé, JSON-LD e llms.txt leem daqui).
+ *
+ * Valores da ficha do Google Meu Negócio, conferida em 04/08/2026 e escolhida
+ * como fonte de verdade pela Lorrayne. O rodapé publicava "Seg-Sex 8h às 18h /
+ * Sábado 8h às 13h", que diverge do Google nos dois turnos — e no sábado a
+ * diferença é grande: abre uma hora depois e fecha meia hora antes. Quem
+ * confiasse no site chegaria com a loja fechada.
+ */
 export const OPENING_HOURS = [
-  { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:00', closes: '18:00' },
-  { days: ['Saturday'], opens: '08:00', closes: '13:00' },
+  { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '08:30', closes: '18:00' },
+  { days: ['Saturday'], opens: '09:00', closes: '12:30' },
 ] as const
+
+/** Rótulo curto de cada faixa, para exibição (rodapé). Domingo: fechado. */
+export const HORARIO_RESUMIDO = 'Seg-Sex: 8h30 às 18h · Sábado: 9h às 12h30'
 
 /** Perfis oficiais — apenas os que o próprio site linka no rodapé. */
 export const PERFIS_OFICIAIS = [
