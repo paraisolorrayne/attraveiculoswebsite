@@ -220,9 +220,9 @@
       <label id="foto1-label">Foto principal (frente / 3-4)</label>
       <input type="file" id="foto1" accept="image/*">
       <div class="sliders">
-        <div><label>Zoom</label><input type="range" id="f1zoom" min="55" max="250" value="100"></div>
+        <div><label>Zoom</label><input type="range" id="f1zoom" min="55" max="250" value="88"></div>
         <div><label>Posição ↔</label><input type="range" id="f1x" min="0" max="100" value="50"></div>
-        <div><label>Posição ↕</label><input type="range" id="f1y" min="0" max="100" value="50"></div>
+        <div><label>Posição ↕</label><input type="range" id="f1y" min="0" max="100" value="18"></div>
       </div>
       <div class="hint" id="foto1-hint">A foto entra inteira — não precisa recortar o fundo. No Clássico, fotos horizontais são enquadradas automaticamente com o carro abaixo do título.</div>
       <label id="foto2-label" style="margin-top:16px">Foto secundária (traseira / lateral — rodapé)</label>
@@ -240,13 +240,13 @@
           <button class="pisobtn typebtn" data-piso="asfalto">Asfalto<small>piso escuro real</small></button>
         </div>
         <label style="margin-top:12px">Posição do piso (altura)</label>
-        <input type="range" id="pisoy" min="-60" max="160" value="0">
+        <input type="range" id="pisoy" min="-60" max="160" value="-18">
         <div class="hint">Desça o piso até a divisa ficar abaixo do veículo — a fusão nunca
           deve cobrir o carro. O preço e os destaques acompanham.</div>
       </div>
       <div id="corte-wrap">
         <label style="margin-top:12px">Altura do corte transversal (Clássico)</label>
-        <input type="range" id="corte" min="-160" max="200" value="0">
+        <input type="range" id="corte" min="-160" max="200" value="-32">
         <div class="hint">Arraste pra direita em carros ALTOS (mais área de foto);
           pra esquerda em carros baixos (mais espaço pros destaques).</div>
       </div>
@@ -309,7 +309,11 @@ const RED = '#9a1c1c';   // vermelho oficial Attra — R154 G28 B28
 const state = {
   tipo: 'classico',
   foto1: null, foto2: null, foto3: null, foto4: null, logo: null,
-  f1: {zoom:1, x:.5, y:.5},
+  // Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
+  // gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas
+  // bordas e sobe o corte para o veículo ficar abaixo do título. Tem que casar
+  // com os value= dos sliders, senão a peça abre diferente do que eles mostram.
+  f1: {zoom:.88, x:.5, y:.18},
   f2: {zoom:1, x:.5, y:.5},
   f3: {zoom:1, x:.5, y:.5},
   f4: {zoom:1, x:.5, y:.5},
@@ -476,12 +480,19 @@ function autoFrameFoto1(img){
   if(state.tipo !== 'classico' || img.width/img.height <= rw/rh + .05){
     state.f1 = {zoom:1, x:.5, y:.5};
   } else {
-    // largura inteira: sem sobras nas laterais (sem blur lateral)
-    const zoom = Math.max(.55, Math.min((rw/img.width)/base, 1));
-    const dh = img.height * base * zoom;
-    const rangeY = Math.max(dh - rh, rh*.6);
-    const y = .5 - (rh - dh)/(2*rangeY);
-    state.f1 = {zoom, x:.5, y:Math.max(0, Math.min(1, y))};
+    // Enquadramento padrão do Clássico para foto horizontal, calibrado pela
+    // Lorrayne no próprio gerador (04/08/2026).
+    //
+    // O cálculo anterior era "largura inteira, sem sobra nas laterais": dava
+    // zoom .84 e y .37 na foto de referência. Ela ajustou para .88 e .18 — um
+    // pouco mais fechado e com a foto mais baixa, deixando o carro abaixo do
+    // título em vez de encostar nele.
+    //
+    // É valor fixo, não fórmula: a calibração foi feita a olho sobre a peça
+    // pronta, e não há regra derivável dela. Em foto de proporção muito
+    // diferente da usual (~1,29) pode ser preciso ajustar na mão — os controles
+    // estão logo ali e não brigam mais com o operador.
+    state.f1 = {zoom: .88, x: .5, y: .18};
   }
   $('f1zoom').value = state.f1.zoom*100;
   $('f1x').value = state.f1.x*100;
@@ -593,8 +604,8 @@ function drawLogoBlack(cx, cy, maxW){
 ================================================================ */
 function renderClassico(){
   // Tom do piso Pérola — um lugar só. Muda aqui e muda no sólido e no véu.
-  const PEROLA_HEX = '#B0B1AD';
-  const PEROLA_RGB = '176, 177, 173';
+  const PEROLA_HEX = '#A9B1B5';
+  const PEROLA_RGB = '169, 177, 181';
 
   const PHOTO1_H = 1000;
 
