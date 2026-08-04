@@ -1,7 +1,7 @@
 import type { DualBlogPost } from '@/types'
 import {
   SITE_URL, ADDRESS, PHONE_NUMBER, PHONE_NUMBER_2, CELLPHONE_NUMBER,
-  EMAIL, OPENING_HOURS, PERFIS_OFICIAIS,
+  EMAIL, OPENING_HOURS, PERFIS_OFICIAIS, GEO, MAPA_URL,
 } from './constants'
 
 interface SchemaContext {
@@ -66,10 +66,22 @@ function organization(baseUrl: string) {
       '@type': 'Country',
       name: 'Brasil',
     },
-    sameAs: [...PERFIS_OFICIAIS],
-    // SEM `geo` e SEM `priceRange`: as coordenadas não foram confirmadas e a
-    // faixa de preço é decisão comercial. Pino errado no mapa é pior que
-    // nenhum pino.
+    // A ficha do Google Meu Negócio entra no sameAs junto dos perfis sociais:
+    // é o que amarra esta entidade à ficha que já tem endereço, telefone e
+    // avaliações, ajudando buscador e LLM a reconciliar que são a mesma loja.
+    sameAs: [...PERFIS_OFICIAIS, MAPA_URL],
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: GEO.latitude,
+      longitude: GEO.longitude,
+    },
+    hasMap: MAPA_URL,
+    // Continua SEM `priceRange`: é decisão comercial, não dado técnico.
+    //
+    // E SEM `aggregateRating`. A ficha tem 4,9 com 84 avaliações, mas essas
+    // avaliações são do Google e não foram coletadas por este site — republicá-las
+    // como marcação própria é exatamente o "self-serving review" que as diretrizes
+    // de rich results proíbem, e o risco é penalizar o site inteiro.
   }
 }
 

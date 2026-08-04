@@ -1,7 +1,7 @@
 import { getBlogPosts } from '@/lib/blog-api'
 import {
   SITE_URL, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2, CELLPHONE_DISPLAY,
-  EMAIL, OPENING_HOURS,
+  EMAIL, OPENING_HOURS, GEO, MAPA_URL,
 } from '@/lib/constants'
 import { ICONIC_CARS } from '@/lib/iconic-cars'
 import { SEO_BRANDS } from '@/lib/seo-brands'
@@ -140,6 +140,8 @@ ${postsBlock}
 - WhatsApp: ${CELLPHONE_DISPLAY}
 - Email: ${EMAIL}
 - Horário de atendimento: ${horarioLegivel}
+- Coordenadas: ${GEO.latitude}, ${GEO.longitude}
+- Ficha no Google Maps: ${MAPA_URL}
 - Instagram: @attra.veiculos
 
 ## APIs para LLMs
