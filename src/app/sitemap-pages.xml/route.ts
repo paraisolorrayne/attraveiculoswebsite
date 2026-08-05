@@ -35,6 +35,11 @@ export async function GET() {
 		// Índice de notícias: revalida a cada ciclo semanal de ingestão, daí o changefreq weekly.
 		{ loc: `${BASE}/news`, lastmod, changefreq: 'weekly', priority: 0.6 },
 		{ loc: `${BASE}/guia-supercarro-gratis`, lastmod, changefreq: 'monthly', priority: 0.6 },
+		// Páginas de intenção criadas em 05/08/2026 para cobrir consultas em que a
+		// Attra não era citada nas respostas de LLM. Prioridade alta porque são as
+		// duas intenções que mais convertem no tráfego do site.
+		{ loc: `${BASE}/onde-comprar-carros-de-luxo`, lastmod, changefreq: 'monthly', priority: 0.9 },
+		{ loc: `${BASE}/carros-de-luxo-uberlandia`, lastmod, changefreq: 'monthly', priority: 0.9 },
 		{ loc: `${BASE}/jornada`, lastmod, changefreq: 'monthly', priority: 0.5 },
 		{ loc: `${BASE}/glossario-automotivo`, lastmod, changefreq: 'weekly', priority: 0.5 },
 		{ loc: `${BASE}/politica-privacidade`, lastmod, changefreq: 'yearly', priority: 0.3 },
