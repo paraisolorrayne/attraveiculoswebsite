@@ -5,9 +5,15 @@
  * à sessão do site → e à origem (utm/campanha/termo/gclid) já gravada em
  * `visitor_sessions`. Ver docs/MIGRACAO_POSTGRES_PURO.md (fatia de tracking).
  *
- * DB-agnóstico e puro — não depende de Supabase nem Postgres; sobrevive intacto
- * à migração. `appendWhatsAppRef` roda no client; `extractWhatsAppRef` no
- * handler do webhook `/api/webhook/fykos-crm`.
+ * ESTADO ATUAL (05/08/2026): `appendWhatsAppRef` NÃO é mais usado. O marcador
+ * saiu da mensagem por decisão de produto — era um identificador interno
+ * externalizado no texto que o cliente envia. A referência passou a viajar pelo
+ * registro do clique (`whatsapp_clicks` + `whatsapp-correlacao.ts`).
+ *
+ * `extractWhatsAppRef` CONTINUA necessário e não deve ser removido: todo lead
+ * anterior a esta data carrega o marcador, e a atribuição desses cards depende
+ * de continuar sabendo lê-lo. A função de escrita fica junto por simetria, caso
+ * a decisão seja revista.
  */
 
 /** Casa `[ref: <token>]` — token = caracteres de sessão (letras, dígitos, - _). */

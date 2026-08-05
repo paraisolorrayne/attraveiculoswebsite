@@ -6,7 +6,6 @@ import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGeoLocation, generateVehicleMessage } from '@/lib/webhook'
 import { WHATSAPP_NUMBER, isSeoPage } from '@/lib/constants'
-import { appendWhatsAppRef } from '@/lib/whatsapp-ref'
 import { GeoLocation } from '@/types'
 import { useVehicleContext } from '@/contexts/vehicle-context'
 import { useAnalytics } from '@/hooks/use-analytics'
@@ -156,10 +155,15 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       isSeoPage(currentPage) && !vehicleBrand
         ? context.message
         : generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
-    // Embute [ref: <session_id>] pra o Fykos ligar a conversa à origem
-    const message = appendWhatsAppRef(baseMessage, sessionId)
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
-  }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message, sessionId])
+    // SEM [ref: ...] na mensagem.
+    //
+    // O identificador de sessão viajava aqui dentro, no texto que o CLIENTE
+    // envia para a loja — atribuição funcionando às custas de externalizar um
+    // dado interno numa mensagem que não é nossa. A referência passou para o
+    // registro do clique (`whatsapp_clicks`), e a conversa é correlacionada no
+    // recebimento. A mensagem fica limpa.
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(baseMessage)}`
+  }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message])
 
   const IconComponent = vehicleBrand && vehicleModel ? Car : MessageCircle
 

@@ -442,6 +442,17 @@ export interface MarketingCreativesTable {
   created_at: Timestamp
 }
 
+export interface WhatsappClicksTable {
+  id: Generated<string>
+  session_db_id: string
+  clicked_at: Generated<Timestamp>
+  page_path: string | null
+  vehicle_id: string | null
+  /** Marcado quando uma conversa é atribuída a este clique — um clique, uma conversa. */
+  consumido_em: Timestamp | null
+  card_id: string | null
+}
+
 export interface CampaignVehiclesTable {
   id: Generated<string>
   campaign_id: string
@@ -567,6 +578,7 @@ export interface Database {
   marketing_campaigns: MarketingCampaignsTable
   marketing_creatives: MarketingCreativesTable
   campaign_vehicles: CampaignVehiclesTable
+  whatsapp_clicks: WhatsappClicksTable
   newsletter_campaigns: NewsletterCampaignsTable
   newsletter_subscribers: NewsletterSubscribersTable
   crm_cards: CrmCardsTable
