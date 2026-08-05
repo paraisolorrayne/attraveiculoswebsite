@@ -221,10 +221,6 @@ export function VisitorsDashboard(props: Props) {
 						    rota (o período é o mesmo seletor), por isso fica fora do fetch de métricas. */}
 						<SecaoReceitaPorCanal dias={dias} />
 
-						{/* Termos por conversão: qual busca traz gente que fala com a loja.
-						    Rota própria porque calcula o piso de confiança no servidor. */}
-						<SecaoTermosDeConversao dias={dias} />
-
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							<MidiaPaga linhas={metricas.midia_paga ?? []} marcacao={metricas.marcacao_paga ?? []} />
 							<ListaVeiculos veiculos={metricas.veiculos} />
@@ -232,6 +228,12 @@ export function VisitorsDashboard(props: Props) {
 						</div>
 					</>
 				) : null}
+
+				{/* Termos por conversão: qual busca traz gente que fala com a loja.
+				    Fica FORA do bloco de métricas de propósito — tem rota própria e não
+				    depende delas. Dentro, uma falha em /metrics levava junto uma leitura
+				    que continuaria funcionando sozinha. */}
+				<SecaoTermosDeConversao dias={dias} />
 
 				{/* Visitantes identificados — lista de perfis, independente do período acima */}
 				<Secao
