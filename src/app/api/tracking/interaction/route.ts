@@ -70,6 +70,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unknown interaction type' }, { status: 400 })
     }
 
+    // Registro do clique de WhatsApp — é o que substitui o marcador [ref: ...]
+    // que antes viajava dentro da mensagem do cliente.
+    //
+    // A mensagem do wa.me é o único canal entre o site e a loja, então a origem
+    // ia embutida no texto que o COMPRADOR envia. Tirando o marcador de lá, a
+    // referência passa a viver aqui: quem clicou (a sessão, que carrega
+    // utm/campanha/termo) e quando. A conversa é correlacionada depois, quando
+    // o CRM a entrega pelo webhook.
+    if (type === 'whatsapp_click') {
+      await db
+        .insertInto('whatsapp_clicks')
+        .values({
+          session_db_id,
+          page_path: page_path ?? null,
+          vehicle_id: typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null,
+        })
+        .execute()
+        // Falha aqui não pode derrubar a marcação da sessão, que é o sinal
+        // principal de conversão: a correlação é enriquecimento.
+        .catch((e: unknown) => console.warn('[Tracking] clique de WhatsApp não gravado:', e))
+    }
+
     // Marca o flag na sessão, se houver
     if (config.sessionFlag) {
       await db
