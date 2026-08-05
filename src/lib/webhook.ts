@@ -1,4 +1,5 @@
 import { GeoLocation } from '@/types'
+import { siglaDoEstado } from './uf'
 import {
   collectBehavioralSignals,
   getFingerprintDbId,
@@ -74,8 +75,12 @@ export function generateVehicleMessage(
     geoLocation.city !== 'Não identificada' &&
     geoLocation.region !== 'Não identificada'
 
+  // A sigla, e não o nome cru: a geolocalização devolve "Federal District" em
+  // inglês e mistura versões com e sem acento ("Goias"/"Goiás"). Sem isso o
+  // cliente de Brasília enviava "sou de Brasília/Federal District".
+  const uf = hasValidLocation ? siglaDoEstado(geoLocation.region) : ''
   const locationSuffix = hasValidLocation
-    ? `, sou de ${geoLocation.city}/${geoLocation.region}.`
+    ? `, sou de ${geoLocation.city}${uf ? `/${uf}` : ''}.`
     : '.'
 
   // When vehicle info is available, include it in the message

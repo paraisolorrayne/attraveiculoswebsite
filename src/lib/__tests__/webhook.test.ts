@@ -54,14 +54,16 @@ describe('generateVehicleMessage', () => {
   it('includes city/region when valid geolocation is provided', () => {
     const geo = { city: 'Itaguaí', region: 'Rio de Janeiro', country: 'Brasil', ip: '' }
     const msg = generateVehicleMessage('BMW', 'X5', 2024, geo)
-    expect(msg).toContain('Itaguaí/Rio de Janeiro')
+    // Sigla, não o nome por extenso: a mensagem é escrita pelo cliente.
+    expect(msg).toContain('Itaguaí/RJ')
     expect(msg).toContain('BMW X5 2024')
   })
 
   it('includes location in generic message when vehicle info is missing', () => {
     const geo = { city: 'São Paulo', region: 'São Paulo', country: 'Brasil', ip: '' }
     const msg = generateVehicleMessage(undefined, undefined, undefined, geo)
-    expect(msg).toContain('São Paulo/São Paulo')
+    // Antes saía 'São Paulo/São Paulo', com o nome repetido.
+    expect(msg).toContain('São Paulo/SP')
     expect(msg).toContain('veículos disponíveis')
     expect(msg).not.toContain('um veículo')
   })
@@ -102,13 +104,13 @@ describe('generateVehicleMessage', () => {
   it('handles no vehicle info WITH valid geolocation', () => {
     const geo = { city: 'Uberlândia', region: 'Minas Gerais', country: 'Brasil', ip: '' }
     const msg = generateVehicleMessage(undefined, undefined, undefined, geo)
-    expect(msg).toBe('Vim do site e gostaria de mais informações sobre os veículos disponíveis, sou de Uberlândia/Minas Gerais.')
+    expect(msg).toBe('Vim do site e gostaria de mais informações sobre os veículos disponíveis, sou de Uberlândia/MG.')
   })
 
   it('handles full vehicle info WITH valid geolocation', () => {
     const geo = { city: 'Uberlândia', region: 'Minas Gerais', country: 'Brasil', ip: '' }
     const msg = generateVehicleMessage('BMW', 'X5', 2024, geo)
-    expect(msg).toBe('Vim do site e tenho interesse no BMW X5 2024, sou de Uberlândia/Minas Gerais.')
+    expect(msg).toBe('Vim do site e tenho interesse no BMW X5 2024, sou de Uberlândia/MG.')
   })
 
   it('handles full vehicle info WITHOUT geolocation', () => {
