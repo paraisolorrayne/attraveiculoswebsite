@@ -8,6 +8,7 @@ import { PERIODOS } from '../crm/crm-constants'
 import { InfoDica } from '../crm/info-dica'
 import { ListaCidades, ListaVeiculos, MidiaPaga, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
 import { SecaoReceitaPorCanal } from './visitors-receita'
+import { SecaoTermosDeConversao } from './visitors-termos'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
 
 // Painel de visitantes — SOMENTE LEITURA.
@@ -219,6 +220,10 @@ export function VisitorsDashboard(props: Props) {
 						{/* Ciclo fechado: o que o tráfego acima virou de venda no CRM. Busca a própria
 						    rota (o período é o mesmo seletor), por isso fica fora do fetch de métricas. */}
 						<SecaoReceitaPorCanal dias={dias} />
+
+						{/* Termos por conversão: qual busca traz gente que fala com a loja.
+						    Rota própria porque calcula o piso de confiança no servidor. */}
+						<SecaoTermosDeConversao dias={dias} />
 
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							<MidiaPaga linhas={metricas.midia_paga ?? []} marcacao={metricas.marcacao_paga ?? []} />
