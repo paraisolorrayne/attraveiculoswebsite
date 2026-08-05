@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { redirect, permanentRedirect } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
@@ -103,6 +103,9 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 			// Sem a marca: o `title.template` do layout raiz já a acrescenta.
 			title: 'Veículo não encontrado',
 			description: 'O veículo solicitado não foi encontrado em nosso estoque.',
+			// Explícito, além do 404: se um slug inválido já tiver sido coletado
+			// antes desta correção, o noindex acelera a saída do índice.
+			robots: { index: false, follow: true },
 		}
 	}
 
@@ -156,14 +159,23 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 export default async function VehiclePage({ params }: VehiclePageProps) {
 	const { slug } = await params
 
+	// 404 DE VERDADE, não redirect.
+	//
+	// Antes isto redirecionava para /veiculos?veiculo_indisponivel=true, com um
+	// toast explicando a ausência. A intenção era boa, mas o redirect acontece
+	// durante o streaming e a resposta saía com HTTP 200 — logo QUALQUER slug
+	// inventado (/veiculo/xxxxx) virava página válida, e o site passava a ter
+	// infinitas URLs indexáveis e vazias, gastando o rastreamento que os robôs
+	// de busca e de LLM dedicam ao site. O not-found.tsx deste segmento mantém
+	// o visitante amparado, agora com o status certo.
 	if (!slug) {
-		redirect('/veiculos?veiculo_indisponivel=true')
+		notFound()
 	}
 
 	const vehicle = await getVehicleBySlug(slug)
 
 	if (!vehicle) {
-		redirect('/veiculos?veiculo_indisponivel=true')
+		notFound()
 	}
 
 	// Canonical redirect: if the URL slug differs from the regenerated canonical
