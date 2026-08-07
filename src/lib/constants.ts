@@ -75,11 +75,23 @@ export const HORARIO_SABADO = 'Sábado: 9h às 12h30'
 export const HORARIO_RESUMIDO = `${HORARIO_SEMANA} · ${HORARIO_SABADO}`
 export const HORARIO_UMA_LINHA = `${HORARIO_SEMANA} | Sáb: 9h às 12h30`
 
-/** Perfis oficiais — apenas os que o próprio site linka no rodapé. */
+/**
+ * Perfis oficiais da Attra em outras plataformas.
+ *
+ * Entram no `sameAs` do JSON-LD, que é como buscador e LLM confirmam que o
+ * site, a ficha do Google e os anúncios em marketplace são a MESMA empresa.
+ * Sem isso, cada presença é uma entidade solta e a reputação não se soma —
+ * era um dos pontos da auditoria de visibilidade em LLM.
+ *
+ * Só entra perfil VERIFICADO. O da OLX foi conferido em 05/08/2026: nome,
+ * cidade, telefone terminado em 9994 e veículos que batem com o estoque do
+ * site (a Ferrari 296 pelo mesmo valor).
+ */
 export const PERFIS_OFICIAIS = [
   'https://instagram.com/attra.veiculos',
   'https://facebook.com/attraveiculos',
   'https://youtube.com/@attraveiculos',
+  'https://www.olx.com.br/perfil/attra-veiculos-d0a2ec98',
 ] as const
 
 // Email
