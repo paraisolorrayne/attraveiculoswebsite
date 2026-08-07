@@ -40,6 +40,9 @@ export async function GET() {
 		// duas intenções que mais convertem no tráfego do site.
 		{ loc: `${BASE}/onde-comprar-carros-de-luxo`, lastmod, changefreq: 'monthly', priority: 0.9 },
 		{ loc: `${BASE}/carros-de-luxo-uberlandia`, lastmod, changefreq: 'monthly', priority: 0.9 },
+		// Ativo de confiança: o que REPROVA um veículo. Sustenta a palavra
+		// "procedência" que o site usa em todo anúncio.
+		{ loc: `${BASE}/criterios-de-selecao`, lastmod, changefreq: 'monthly', priority: 0.9 },
 		{ loc: `${BASE}/jornada`, lastmod, changefreq: 'monthly', priority: 0.5 },
 		{ loc: `${BASE}/glossario-automotivo`, lastmod, changefreq: 'weekly', priority: 0.5 },
 		{ loc: `${BASE}/politica-privacidade`, lastmod, changefreq: 'yearly', priority: 0.3 },

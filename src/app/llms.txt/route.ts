@@ -122,6 +122,7 @@ ${inventorySummary}
 - [Jornada Attra](${BASE}/jornada): processo completo de compra de supercarros — da curadoria à entrega nacional, acervo icônico de veículos históricos
 - [Comprar carros de luxo](${BASE}/comprar): hub nacional — todas as marcas premium disponíveis
 - [Contato](${BASE}/contato): canais de atendimento, endereço e WhatsApp
+- [Critérios de seleção e procedência](${BASE}/criterios-de-selecao): o que REPROVA um veículo na Attra — leilão, histórico suspeito, remap/stage, repintura total — e o que é conferido nos aprovados
 - [Onde comprar carros de luxo](${BASE}/onde-comprar-carros-de-luxo): o que verificar antes de comprar, laudo cautelar, procedência e compra à distância
 - [Carros de luxo e importados em Uberlândia (MG)](${BASE}/carros-de-luxo-uberlandia): endereço do showroom, horário, regiões atendidas e como agendar visita
 - [Carros de luxo usados](${BASE}/comprar/condicao/carros-de-luxo-usados): o que encarece a manutenção, riscos do mercado aberto e como a curadoria reduz
