@@ -11,7 +11,7 @@ export const homepageFAQs: FAQItem[] = [
   },
   {
     question: 'Que tipos de veículos premium e supercarros a Attra comercializa?',
-    answer: 'A Attra Veículos é especializada em veículos premium, carros de luxo, importados e supercarros. Trabalhamos com marcas como Ferrari, Lamborghini, Porsche, BMW, Mercedes-Benz, Audi, Land Rover, Cadillac e outros ícones do mercado automotivo de alto padrão. Todos os veículos passam por curadoria rigorosa e inspeção de 150 pontos.',
+    answer: 'A Attra Veículos é especializada em veículos premium, carros de luxo, importados e supercarros. Trabalhamos com marcas como Ferrari, Lamborghini, Porsche, BMW, Mercedes-Benz, Audi, Land Rover, Cadillac e outros ícones do mercado automotivo de alto padrão. Todos os veículos passam por curadoria rigorosa de documentação, mecânica e originalidade.',
   },
   {
     question: 'A Attra oferece financiamento para veículos premium e supercarros?',
@@ -43,7 +43,7 @@ export const veiculosFAQs: FAQItem[] = [
   },
   {
     question: 'Os veículos premium passam por inspeção antes de integrar o acervo?',
-    answer: 'Todos os veículos premium e supercarros passam por uma rigorosa inspeção de 150 pontos antes de integrar nosso acervo. Verificamos mecânica, elétrica, estrutura, documentação 100% verificada e histórico completo do veículo.',
+    answer: 'Passam por verificação de documentação, mecânica e originalidade. Notas de leilão, histórico suspeito e remaps não serão aceitos. A documentação vem primeiro: veículo com pendência não chega a ser avaliado mecanicamente.',
   },
   {
     question: 'A Attra aceita meu carro como parte do pagamento de um veículo premium?',
