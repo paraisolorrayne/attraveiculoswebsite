@@ -69,11 +69,17 @@ export function buildVehicleSchema(vehicle: Vehicle) {
     ...(vehicle.fuel_type ? { fuelType: vehicle.fuel_type } : {}),
     ...(vehicle.transmission ? { vehicleTransmission: vehicle.transmission } : {}),
     itemCondition: isNew ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-    ...(vehicle.engine
+    // A condição é `engine OU horsepower`, não só `engine`.
+    //
+    // O feed do estoque traz `engine` vazio nos 72 veículos e `horsepower`
+    // preenchido em 7. Com a porta só em `engine`, esses 7 perdiam a marcação de
+    // motor por causa de um campo que a fonte nunca preenche. `EngineSpecification`
+    // é válida com apenas a potência.
+    ...(vehicle.engine || vehicle.horsepower
       ? {
           vehicleEngine: {
             '@type': 'EngineSpecification',
-            name: vehicle.engine,
+            ...(vehicle.engine ? { name: vehicle.engine } : {}),
             ...(vehicle.horsepower
               ? { enginePower: { '@type': 'QuantitativeValue', value: vehicle.horsepower, unitCode: 'BHP' } }
               : {}),
