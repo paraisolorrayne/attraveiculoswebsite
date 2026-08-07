@@ -269,8 +269,8 @@ export default function JornadaPage() {
               },
               {
                 icon: CheckCircle,
-                title: 'Inspeção Técnica de 150 Pontos',
-                description: 'Cada carro de luxo é submetido a uma inspeção completa de 150 itens — mecânica, elétrica, estrutura, pintura e acabamento — antes de integrar nosso acervo.',
+                title: 'Inspeção Técnica e Documental',
+                description: 'A documentação vem primeiro: carro com pendência não chega a ser avaliado. Depois, mecânica, funilaria e originalidade — veículo de leilão, com histórico suspeito, remap ou repintura total não entra no acervo.',
               },
               {
                 icon: FileText,

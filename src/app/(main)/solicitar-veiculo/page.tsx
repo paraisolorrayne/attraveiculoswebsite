@@ -22,7 +22,7 @@ const faq = [
   { q: 'Quanto tempo leva para encontrar?', a: 'O prazo varia conforme a disponibilidade do modelo. Em média, de 7 a 30 dias.' },
   { q: 'Há algum custo pelo serviço?', a: 'Não! A busca é totalmente gratuita. Você só paga se decidir comprar o veículo.' },
   { q: 'Posso solicitar veículos de qualquer marca?', a: 'Sim, buscamos veículos de todas as marcas premium, nacionais e importados.' },
-  { q: 'Como funciona a garantia?', a: 'Todos os veículos passam por inspeção de 150 pontos e têm garantia de procedência.' },
+  { q: 'Como funciona a garantia?', a: 'Passam por verificação de documentação, mecânica e originalidade. Notas de leilão, histórico suspeito e remaps não serão aceitos.' },
 ]
 
 export default function SolicitarVeiculoPage() {
