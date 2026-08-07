@@ -494,7 +494,7 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
                       {[
                         { icon: Search, title: 'Busca Personalizada', description: 'Encontramos seu carro ideal' },
                         { icon: Globe, title: 'Rede Nacional', description: 'Buscamos em todo o Brasil' },
-                        { icon: Shield, title: 'Procedência Garantida', description: 'Inspeção de 150 pontos' },
+                        { icon: Shield, title: 'Procedência Garantida', description: 'Leilão e sinistro não entram no estoque' },
                         { icon: Check, title: 'Sem Compromisso', description: 'Serviço 100% gratuito' },
                       ].map((feature) => (
                         <div key={feature.title} className="text-center">
