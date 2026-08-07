@@ -83,15 +83,27 @@ export const HORARIO_UMA_LINHA = `${HORARIO_SEMANA} | Sáb: 9h às 12h30`
  * Sem isso, cada presença é uma entidade solta e a reputação não se soma —
  * era um dos pontos da auditoria de visibilidade em LLM.
  *
- * Só entra perfil VERIFICADO. O da OLX foi conferido em 05/08/2026: nome,
- * cidade, telefone terminado em 9994 e veículos que batem com o estoque do
- * site (a Ferrari 296 pelo mesmo valor).
+ * Só entra perfil VERIFICADO, e verificado significa: nome, cidade, telefone e
+ * estoque conferidos contra o site. Conferidos em 05–07/08/2026.
+ *
+ * FICARAM DE FORA, de propósito:
+ *
+ * - Mobiauto (attra-veiculos-multimarcas-1542): é a Attra — logo e telefone
+ *   batem —, mas publica OUTRO endereço (Av. João Pinheiro, 2564, CEP
+ *   38400-714) e está com zero veículo. Ligar a entidade a um perfil que
+ *   contradiz o endereço piora exatamente o sinal que o sameAs existe para
+ *   reforçar. Entra quando o cadastro for corrigido.
+ *
+ * - Wanderboat e agregadores do gênero: raspam dados do Google e a Attra não
+ *   os controla. São derivados da ficha que já linkamos direto, então não
+ *   somam autoridade — e não há como corrigir um erro publicado lá.
  */
 export const PERFIS_OFICIAIS = [
   'https://instagram.com/attra.veiculos',
   'https://facebook.com/attraveiculos',
   'https://youtube.com/@attraveiculos',
   'https://www.olx.com.br/perfil/attra-veiculos-d0a2ec98',
+  'https://www.webmotors.com.br/carros/mg/loja.attra-veiculos-3840973',
 ] as const
 
 // Email
