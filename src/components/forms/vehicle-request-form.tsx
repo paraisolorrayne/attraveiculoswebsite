@@ -26,7 +26,12 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export function VehicleRequestForm() {
+/**
+ * `origem` marca de onde o lead partiu (ex.: "/comprar/porsche"). Sem isso, um
+ * pedido vindo da página de marca chega indistinguível de um pedido genérico —
+ * e é justamente essa distinção que responde qual intenção gera negócio.
+ */
+export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erroEnvio, setErroEnvio] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -45,7 +50,7 @@ export function VehicleRequestForm() {
       const resposta = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: '/solicitar-veiculo', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
+        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: origem ?? '/solicitar-veiculo', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
       })
       // A API devolve 502 quando nenhum canal (e-mail, WhatsApp, webhook)
       // recebeu o lead. Sem esta checagem o formulário anunciava sucesso

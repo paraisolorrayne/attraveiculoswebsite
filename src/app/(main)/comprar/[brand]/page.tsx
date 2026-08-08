@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -252,6 +253,25 @@ export default async function BrandPage({ params }: BrandPageProps) {
 								<p className="text-xs text-foreground-secondary mt-1">{rb.tagline}</p>
 							</Link>
 						))}
+					</div>
+				</Container>
+			</section>
+
+			{/* Formulário na própria página.
+			    A LP de marca tinha WhatsApp, telefone, preço, quilometragem e
+			    financiamento, mas nenhum formulário — quem não quer abrir conversa
+			    no WhatsApp não tinha por onde deixar contato. Para tráfego pago isso
+			    é perda direta. O `origem` marca de qual marca veio o pedido. */}
+			<section className="py-12 lg:py-16 border-t border-border">
+				<Container>
+					<div className="max-w-2xl mx-auto">
+						<h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2 text-center">
+							Não encontrou o {brand.displayName} que procura?
+						</h2>
+						<p className="text-foreground-secondary text-center mb-8">
+							Diga o que você busca e um especialista procura no mercado para você.
+						</p>
+						<VehicleRequestForm origem={`/comprar/${brand.slug}`} />
 					</div>
 				</Container>
 			</section>
