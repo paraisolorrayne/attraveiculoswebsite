@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { medirOpenAI } from '@/components/analytics'
 import { usePathname } from 'next/navigation'
 import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -189,6 +190,14 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
         : undefined,
       visitorContext,
     )
+
+    // Conversão do OpenAI Ads. Vai aqui, no handler do clique, e não numa
+    // página inteira: é o ponto onde a ação realmente acontece.
+    medirOpenAI('whatsapp_click', {
+      type: 'customer_action',
+      amount: 0,
+      currency: 'BRL',
+    })
 
     // Marcação interna (visitor_page_views.whatsapp_clicked)
     trackInteraction('whatsapp_click', {
