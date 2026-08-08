@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { medirOpenAI } from '@/components/analytics'
 import { FormErrorFallback } from './form-error-fallback'
 import { usePathname } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -158,6 +159,15 @@ export function StickyContactForm() {
       // recebeu o lead. Sem esta checagem o formulário anunciava sucesso
       // para um envio que não chegou a ninguém.
       if (!resposta.ok) throw new Error('lead não entregue')
+
+      // Conversão do OpenAI Ads — DEPOIS do !resposta.ok, não antes.
+      // A rota devolve 502 quando nenhum canal recebeu o lead; medir antes
+      // contaria como conversão um envio que não chegou a ninguém.
+      medirOpenAI('lead_submitted', {
+        type: 'customer_action',
+        amount: 0,
+        currency: 'BRL',
+      })
 
 
       // Notify the tracking provider that user converted
