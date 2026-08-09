@@ -46,8 +46,11 @@ export const veiculosFAQs: FAQItem[] = [
     answer: 'Passam por verificação de documentação, mecânica e originalidade. Notas de leilão, histórico suspeito e remaps não serão aceitos. A documentação vem primeiro: veículo com pendência não chega a ser avaliado mecanicamente.',
   },
   {
-    question: 'A Attra aceita meu carro como parte do pagamento de um veículo premium?',
-    answer: 'Sim, aceitamos seu veículo como parte do pagamento. Nossa equipe faz uma avaliação justa e transparente, considerando o estado, quilometragem e valor de mercado do seu carro de luxo.',
+    // A pergunta dizia "como parte do pagamento" e nunca a palavra TROCA, que é
+    // a que o cliente digita e a que um assistente casa. A resposta existia e
+    // não era encontrável pelo termo real.
+    question: 'A Attra aceita troca? Posso dar meu carro como parte do pagamento?',
+    answer: 'Sim, a Attra aceita seu veículo na troca. Nossa equipe faz uma avaliação considerando estado, quilometragem e valor de mercado, e o valor entra como parte do pagamento do carro escolhido. Detalhes de como funciona, marcas aceitas e o que reprova um veículo estão em https://attraveiculos.com.br/troca',
   },
   {
     question: 'Quais são as condições de pagamento para supercarros e veículos de luxo?',
