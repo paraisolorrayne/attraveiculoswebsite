@@ -1,10 +1,11 @@
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { findSEOModel, getAllModelSlugs } from '@/lib/seo-brands'
+import { findSEOBrand, findSEOModel, getAllModelSlugs } from '@/lib/seo-brands'
+import { acharModeloDoEstoque, modelosDoEstoque, veiculosDoModelo } from '@/lib/seo/modelos-do-estoque'
 import { getVehicles } from '@/lib/autoconf-api'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
@@ -17,13 +18,33 @@ interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
 }
 
+/**
+ * Resolve o modelo para os metadados: curado primeiro, derivado do estoque
+ * depois. Duplicar a busca aqui e no corpo da página é intencional — o Next
+ * chama os dois separadamente, e `getVehicles` tem cache próprio.
+ */
+async function resolverModelo(brandSlug: string, modelSlug: string) {
+	const curado = findSEOModel(brandSlug, modelSlug)
+	if (curado) return curado
+	const { vehicles } = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
+	const derivado = acharModeloDoEstoque(vehicles, brandSlug, modelSlug)
+	const brand = findSEOBrand(brandSlug)
+	return derivado && brand ? { brand, model: derivado.model } : undefined
+}
+
 export async function generateStaticParams() {
-	return getAllModelSlugs()
+	// Curadas + derivadas do estoque. As derivadas existem enquanto houver
+	// unidade; quando o último carro do modelo sai, a rota deixa de ser gerada e
+	// o acesso é redirecionado para a marca (ver abaixo) em vez de dar 404 numa
+	// URL que pode estar indexada.
+	const { vehicles } = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
+	const doEstoque = modelosDoEstoque(vehicles).map(m => ({ brand: m.brandSlug, model: m.modelSlug }))
+	return [...getAllModelSlugs(), ...doEstoque]
 }
 
 export async function generateMetadata({ params }: ModelPageProps): Promise<Metadata> {
 	const { brand: brandSlug, model: modelSlug } = await params
-	const result = findSEOModel(brandSlug, modelSlug)
+	const result = await resolverModelo(brandSlug, modelSlug)
 	if (!result) return {}
 
 	const { model } = result
@@ -43,23 +64,34 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 
 export default async function ModelPage({ params }: ModelPageProps) {
 	const { brand: brandSlug, model: modelSlug } = await params
-	const result = findSEOModel(brandSlug, modelSlug)
-	if (!result) notFound()
-
-	const { brand, model } = result
-
 	const { vehicles: allVehicles } = await getVehicles({
 		tipo: 'carros',
 		registros_por_pagina: 100,
 	})
 
-	// Filter vehicles for this brand + model
-	const modelVehicles = allVehicles.filter(v => {
-		const vBrand = (v.brand || '').toLowerCase()
-		const vModel = (v.model || '').toLowerCase()
-		return vBrand === brand.name.toLowerCase() &&
-			vModel.includes(model.name.toLowerCase())
-	})
+	const curado = findSEOModel(brandSlug, modelSlug)
+	const derivado = curado ? undefined : acharModeloDoEstoque(allVehicles, brandSlug, modelSlug)
+
+	// Modelo sem página curada e sem estoque: manda para a marca em vez de 404.
+	// A URL pode ter sido indexada enquanto havia unidade, e um redirecionamento
+	// para onde há carro da mesma marca serve melhor a quem chegou do que um
+	// erro — para o buscador também.
+	if (!curado && !derivado) {
+		if (findSEOBrand(brandSlug)) redirect(`/comprar/${brandSlug}`)
+		notFound()
+	}
+
+	const brand = curado ? curado.brand : findSEOBrand(brandSlug)!
+	const model = curado ? curado.model : derivado!.model
+
+	// Filtra o estoque deste modelo.
+	//
+	// A comparação literal que havia aqui — `vBrand === brand.name` — nunca casava
+	// para a Mercedes: a página se chama "Mercedes-Benz" e o estoque diz
+	// "Mercedes". TODA página de modelo Mercedes mostrava zero carro, com nove
+	// deles no pátio. O nome do modelo tinha o mesmo problema, em outro eixo:
+	// "AMG GT" contra "GT", "G 63 AMG" contra "G-63".
+	const modelVehicles = veiculosDoModelo(allVehicles, brand.name, model.name)
 
 	// Get technical datasheet if available
 	const datasheet = findVehicleDatasheet(brand.name, model.name, '')

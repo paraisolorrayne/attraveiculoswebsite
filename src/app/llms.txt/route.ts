@@ -1,3 +1,4 @@
+import { chaveDeComparacao } from '@/lib/taxonomia-veiculo'
 import { getBlogPosts } from '@/lib/blog-api'
 import {
   SITE_URL, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2, CELLPHONE_DISPLAY,
@@ -27,9 +28,33 @@ export async function GET() {
   // em vez de responder erro.
   let inventoryBlock = ''
   let inventorySummary = ''
+  // Marcas com os modelos QUE ESTÃO no estoque, não só os de vitrine.
+  //
+  // A lista curada nomeia carro-desejo — R8, Roma —, que é isca legítima de
+  // busca e converte para o que existe. O problema era ela ser a ÚNICA coisa
+  // dita: um assistente que lê "Modelos: R8" conclui "loja de superesportivo" e
+  // não considera a Attra para um GLC de R$ 249 mil, sendo que ele está no
+  // pátio. Agora as duas informações convivem, e a segunda sai do estoque.
+  let blocoMarcas = SEO_BRANDS
+    .map(b => `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`)
+    .join('\n')
   try {
     const inventory = await loadListedInventory()
     const vehicles = inventory.vehicles
+
+    blocoMarcas = SEO_BRANDS
+      .map(b => {
+        const chaveMarca = chaveDeComparacao(b.name)
+        const emEstoque = vehicles.filter(v => {
+          const alvo = chaveDeComparacao(v.brand)
+          return alvo === chaveMarca || alvo.startsWith(chaveMarca) || chaveMarca.startsWith(alvo)
+        })
+        const modelos = [...new Set(emEstoque.map(v => (v.model ?? '').trim()).filter(Boolean))]
+        const base = `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`
+        if (modelos.length === 0) return base
+        return `${base}. Em estoque agora (${emEstoque.length}): ${modelos.join(', ')}`
+      })
+      .join('\n')
 
     if (vehicles.length > 0) {
       const range = priceRange(vehicles)
@@ -130,7 +155,7 @@ ${inventorySummary}
 ${inventoryBlock}
 ## Comprar por marca
 
-${SEO_BRANDS.map(b => `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`).join('\n')}
+${blocoMarcas}
 
 ## Acervo icônico — Veículos marcantes já comercializados
 
