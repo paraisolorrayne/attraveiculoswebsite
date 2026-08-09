@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { medirOpenAI } from '@/components/analytics'
 import { usePathname } from 'next/navigation'
 import { MessageCircle, X, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -191,13 +190,10 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       visitorContext,
     )
 
-    // Conversão do OpenAI Ads. Vai aqui, no handler do clique, e não numa
-    // página inteira: é o ponto onde a ação realmente acontece.
-    medirOpenAI('whatsapp_click', {
-      type: 'customer_action',
-      amount: 0,
-      currency: 'BRL',
-    })
+    // A conversão do OpenAI Ads NÃO é medida aqui. Quem mede é o ouvinte
+    // delegado em openai-pixel.tsx, que cobre os 37 pontos de WhatsApp do site
+    // — inclusive os 7 da ficha de veículo, que este handler não alcança.
+    // Medir também aqui contaria este botão duas vezes.
 
     // Marcação interna (visitor_page_views.whatsapp_clicked)
     trackInteraction('whatsapp_click', {

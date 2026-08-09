@@ -68,6 +68,48 @@ function PageViewTracker() {
   return null
 }
 
+/**
+ * Mede QUALQUER clique em link de WhatsApp do site, por delegação.
+ *
+ * Existem 37 arquivos com link de wa.me — botão flutuante, ficha de veículo,
+ * páginas de marca, guias, blog. Marcar um por um significa esquecer alguns
+ * hoje e todos os que forem criados depois; a ficha de veículo sozinha tem 7
+ * botões, e nenhum media até aqui.
+ *
+ * Um ouvinte na fase de captura resolve de uma vez e continua valendo para link
+ * novo. Roda antes de qualquer handler que pare a propagação, e mede ANTES da
+ * navegação — a aba do WhatsApp abre em seguida.
+ *
+ * O evento é o MESMO para todos os botões, de propósito: o que interessa ao
+ * anúncio é aprender que "conversa iniciada" é o resultado desejado, não de qual
+ * botão da página ela partiu. O contexto do veículo vai como parâmetro.
+ */
+function WhatsAppClickTracker() {
+  useEffect(() => {
+    const aoClicar = (e: MouseEvent) => {
+      const alvo = e.target as Element | null
+      const link = alvo?.closest?.('a[href*="wa.me"], a[href*="api.whatsapp.com"]')
+      if (!link) return
+
+      // Contexto do veículo, quando o clique parte de uma ficha. Vai o slug do
+      // anúncio — identificador de produto, não dado de pessoa.
+      const naFicha = window.location.pathname.match(/^\/veiculo\/([\w-]+)/)
+
+      medirOpenAI('whatsapp_click', {
+        type: 'customer_action',
+        amount: 0,
+        currency: 'BRL',
+        ...(naFicha ? { content_id: naFicha[1] } : {}),
+      })
+    }
+
+    document.addEventListener('click', aoClicar, { capture: true })
+    return () => document.removeEventListener('click', aoClicar, { capture: true })
+  }, [])
+
+  return null
+}
+
 export function OpenAIPixel() {
   if (!PIXEL_ID) return null
 
@@ -79,6 +121,7 @@ export function OpenAIPixel() {
         {`!function(w,d,s,u){if(w.oaiq)return;var q=function(){q.q.push(arguments)};q.q=[];w.oaiq=q;var j=d.createElement(s);j.async=1;j.src=u;var f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(j,f)}(window,document,"script","https://bzrcdn.openai.com/sdk/oaiq.min.js");oaiq("init",{pixelId:${JSON.stringify(PIXEL_ID)},debug:${debug}});`}
       </Script>
       <PageViewTracker />
+      <WhatsAppClickTracker />
     </>
   )
 }
