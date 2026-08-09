@@ -73,5 +73,24 @@ for entrada in "${FEEDS[@]}"; do
   fi
 done
 
+# A plataforma escreve um status.json no mesmo diretório com o resultado do
+# processamento. Ele é ASSÍNCRONO: sai alguns minutos depois do envio, então o
+# que se lê aqui é o veredito do ciclo ANTERIOR, não o deste. Serve como alarme
+# atrasado — "enviado com sucesso" só diz que o arquivo chegou, não que foi
+# aceito, e sem isto um feed recusado passaria despercebido indefinidamente.
+STATUS=$(curl -sS --max-time 60 \
+  -u "$OPENAI_FEED_SFTP_USER:$OPENAI_FEED_SFTP_PASS" \
+  "sftp://$OPENAI_FEED_SFTP_HOST:$OPENAI_FEED_SFTP_PORT/status.json" 2>/dev/null || echo '')
+
+if [ -n "$STATUS" ]; then
+  echo "status do ciclo anterior: $STATUS"
+  case "$STATUS" in
+    *'"status": "success"'*|*'"status":"success"'*) ;;
+    *) echo "ATENCAO: a plataforma NAO reportou sucesso no processamento anterior" ;;
+  esac
+else
+  echo "status.json indisponivel — sem veredito da plataforma nesta rodada"
+fi
+
 echo "===== $(date -Iseconds) — feed-openai done (falhas: $FALHAS) ====="
 [ "$FALHAS" -eq 0 ]
