@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { rotuloDevice, rotuloMatchType, rotuloNetwork } from '@/lib/parametros-anuncio'
 import { InfoDica } from '../crm/info-dica'
 import {
 	corBarraTaxa,
@@ -340,6 +341,7 @@ export function ListaCidades({ cidades }: { cidades: LinhaCidade[] }) {
 export interface LinhaMidiaPaga {
 	canal_fonte: string
 	campanha: string
+	grupo: string
 	conteudo: string
 	termo: string
 	sessoes: number
@@ -380,7 +382,7 @@ export function MidiaPaga({
 	return (
 		<Secao
 			titulo="Anúncios pagos — campanha, grupo e termo"
-			dica="Só visitas de mídia paga. «Grupo/anúncio» e «termo» vêm da marcação do link do anúncio: no Google Ads são os parâmetros de conteúdo e a palavra-chave; no Meta, o conjunto e o criativo. Compare pela taxa, não pelo volume."
+			dica="Só visitas de mídia paga. «Grupo» é o adgroup_id do Google ou o conjunto do Meta; «anúncio» é o utm_content (criativo); «termo» é a palavra-chave que acionou. Compare pela taxa, não pelo volume."
 		>
 			{comFalha.length > 0 && (
 				<div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs leading-snug">
@@ -403,7 +405,8 @@ export function MidiaPaga({
 						<thead>
 							<tr className="text-left text-[11px] uppercase tracking-wide text-foreground-secondary border-b border-border">
 								<th className="px-4 py-2 font-medium">Campanha</th>
-								<th className="px-4 py-2 font-medium">Grupo / anúncio</th>
+								<th className="px-4 py-2 font-medium">Grupo</th>
+								<th className="px-4 py-2 font-medium">Anúncio</th>
 								<th className="px-4 py-2 font-medium">Termo</th>
 								<th className="px-4 py-2 font-medium text-right">Visitas</th>
 								<th className="px-4 py-2 font-medium text-right">Cliques no WhatsApp</th>
@@ -414,12 +417,15 @@ export function MidiaPaga({
 							{linhas.map((l, i) => {
 								const t = taxa(l.whatsapp, l.sessoes)
 								return (
-									<tr key={`${l.campanha}|${l.conteudo}|${l.termo}|${i}`} className="border-b border-border/60 last:border-0">
+									<tr key={`${l.campanha}|${l.grupo}|${l.conteudo}|${l.termo}|${i}`} className="border-b border-border/60 last:border-0">
 										<td className="px-4 py-2 max-w-[16rem]">
 											<div className="truncate text-foreground" title={l.campanha}>{l.campanha}</div>
 											<div className="text-[10px] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
 										</td>
-										<td className="px-4 py-2 max-w-[14rem]">
+										<td className="px-4 py-2 max-w-[10rem]">
+											<span className="block truncate text-foreground-secondary" title={l.grupo}>{l.grupo}</span>
+										</td>
+										<td className="px-4 py-2 max-w-[12rem]">
 											<span className="block truncate text-foreground-secondary" title={l.conteudo}>{l.conteudo}</span>
 										</td>
 										<td className="px-4 py-2 max-w-[12rem]">
@@ -435,6 +441,105 @@ export function MidiaPaga({
 							})}
 						</tbody>
 					</table>
+				</div>
+			)}
+		</Secao>
+	)
+}
+
+export interface LinhaContextoClique {
+	dimensao: string
+	valor: string
+	sessoes: number
+	whatsapp: number
+}
+
+const TITULO_DIMENSAO: Record<string, string> = {
+	device: 'Dispositivo',
+	matchtype: 'Correspondência da palavra-chave',
+	network: 'Rede',
+}
+
+const EXPLICACAO_DIMENSAO: Record<string, string> = {
+	device: 'Em qual aparelho o anúncio foi clicado, segundo o Google Ads.',
+	matchtype: 'Quão livre foi a associação entre a busca da pessoa e a palavra-chave comprada. Ampla alcança mais gente e costuma converter menos.',
+	network: 'Onde o clique aconteceu: na busca do Google ou em sites parceiros.',
+}
+
+/**
+ * Contexto do clique pago — três recortes independentes.
+ *
+ * Não é o cruzamento das três dimensões: cruzado, viraria dezenas de linhas com
+ * duas sessões cada, onde nenhuma taxa sustenta decisão. Separado, cada bloco
+ * responde uma pergunta que muda verba.
+ */
+export function ContextoClique({ linhas }: { linhas: LinhaContextoClique[] }) {
+	const dimensoes = ['device', 'matchtype', 'network'].filter(d => linhas.some(l => l.dimensao === d))
+
+	const media = taxa(
+		linhas.filter(l => l.dimensao === 'device').reduce((s, l) => s + l.whatsapp, 0),
+		linhas.filter(l => l.dimensao === 'device').reduce((s, l) => s + l.sessoes, 0),
+	)
+
+	return (
+		<Secao
+			titulo="Contexto do clique pago — dispositivo, correspondência e rede"
+			dica="Vem do modelo de rastreamento do Google Ads. Se uma linha inteira aparecer como «(não informado)», o parâmetro correspondente não está no link do anúncio."
+		>
+			{dimensoes.length === 0 ? (
+				<Vazio>Nenhuma visita paga com esses parâmetros no período.</Vazio>
+			) : (
+				<div className="divide-y divide-border/60">
+					{dimensoes.map(dim => {
+						const doGrupo = linhas.filter(l => l.dimensao === dim)
+						const total = doGrupo.reduce((s, l) => s + l.sessoes, 0)
+						const semDado = doGrupo.find(l => l.valor === '(não informado)')
+						const naoMarcado = semDado && total > 0 && semDado.sessoes === total
+
+						return (
+							<div key={dim} className="px-4 py-3">
+								<div className="mb-1 flex items-baseline gap-2">
+									<h3 className="text-sm font-medium text-foreground">{TITULO_DIMENSAO[dim] ?? dim}</h3>
+									<span className="text-[11px] text-foreground-secondary">{EXPLICACAO_DIMENSAO[dim]}</span>
+								</div>
+
+								{naoMarcado ? (
+									<p className="text-xs text-amber-600 dark:text-amber-400">
+										Nenhuma visita paga trouxe este parâmetro. Falta <code>{dim}={'{'}{dim}{'}'}</code> no
+										modelo de rastreamento da campanha — sem ele esta leitura não existe.
+									</p>
+								) : (
+									<table className="w-full text-sm">
+										<tbody>
+											{doGrupo.map(l => {
+												const t = taxa(l.whatsapp, l.sessoes)
+												return (
+													<tr key={l.valor} className="border-b border-border/40 last:border-0">
+														<td className="py-1.5 pr-4 text-foreground">
+															{dim === 'device'
+																? rotuloDevice(l.valor)
+																: dim === 'matchtype'
+																	? rotuloMatchType(l.valor)
+																	: rotuloNetwork(l.valor)}
+														</td>
+														<td className="py-1.5 pr-4 text-right tabular-nums text-foreground-secondary w-24">
+															{fmtNum(l.sessoes)}
+														</td>
+														<td className="py-1.5 pr-4 text-right tabular-nums text-foreground-secondary w-28">
+															{fmtNum(l.whatsapp)}
+														</td>
+														<td className={`py-1.5 text-right tabular-nums font-medium w-20 ${corTaxa(t, media, l.sessoes)}`}>
+															{fmtPct(t)}
+														</td>
+													</tr>
+												)
+											})}
+										</tbody>
+									</table>
+								)}
+							</div>
+						)
+					})}
 				</div>
 			)}
 		</Secao>

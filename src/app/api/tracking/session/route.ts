@@ -189,6 +189,11 @@ export async function POST(request: NextRequest) {
       utm_id: utm_params?.utm_id || null,
       adset_id: utm_params?.adset_id || null,
       ad_id: utm_params?.ad_id || null,
+      // Já chegam normalizados do cliente; o `|| null` aqui é só para o caso de
+      // a chave nem existir no payload (versão antiga do script em cache).
+      match_type: utm_params?.matchtype || null,
+      ads_device: utm_params?.device || null,
+      ads_network: utm_params?.network || null,
       gclid: click_ids?.gclid || null,
       fbclid: click_ids?.fbclid || null,
       ttclid: click_ids?.ttclid || null,

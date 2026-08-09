@@ -70,6 +70,13 @@ export interface VisitorSessionsTable {
   utm_id: string | null
   adset_id: string | null
   ad_id: string | null
+  // Parâmetros do modelo de rastreamento do Google Ads (20260809). Valor CRU,
+  // em código de uma letra; a tradução para exibição vive em parametros-anuncio.
+  match_type: string | null
+  /** O que a PLATAFORMA informa. Não confundir com `device_type` do fingerprint,
+   *  que é o que o NAVEGADOR informa. */
+  ads_device: string | null
+  ads_network: string | null
   // Geo
   ip_address: string | null
   country_code: string | null

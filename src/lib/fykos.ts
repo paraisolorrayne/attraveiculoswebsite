@@ -29,6 +29,9 @@ export interface FykosTraffic {
   utmId?: string
   adsetId?: string
   adId?: string
+  matchType?: string
+  adsDevice?: string
+  adsNetwork?: string
   gclid?: string
   fbclid?: string
   ttclid?: string
@@ -77,6 +80,9 @@ export function buildFykosAttribution(
     utm_id:       traffic?.utmId,
     adset_id:     traffic?.adsetId,
     ad_id:        traffic?.adId,
+    match_type:   traffic?.matchType,
+    ads_device:   traffic?.adsDevice,
+    ads_network:  traffic?.adsNetwork,
     gclid:        traffic?.gclid,
     fbclid:       traffic?.fbclid,
     ttclid:       traffic?.ttclid,

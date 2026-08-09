@@ -619,6 +619,12 @@ export function VisitorTrackingProvider({ children }: Props) {
         utmId: utmParams?.utm_id || undefined,
         adsetId: utmParams?.adset_id || undefined,
         adId: utmParams?.ad_id || undefined,
+        // Contexto do clique pago. Vai junto do lead para o CRM: saber que a
+        // conversa veio de correspondência ampla no celular muda a leitura do
+        // resultado tanto quanto saber a campanha.
+        matchType: utmParams?.matchtype || undefined,
+        adsDevice: utmParams?.device || undefined,
+        adsNetwork: utmParams?.network || undefined,
         gclid: clickIds?.gclid || undefined,
         fbclid: clickIds?.fbclid || undefined,
         ttclid: clickIds?.ttclid || undefined,

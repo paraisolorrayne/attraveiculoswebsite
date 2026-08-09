@@ -3,6 +3,8 @@
  * Captures visitor data for lead intelligence
  */
 
+import { normalizarParametroAnuncio } from './parametros-anuncio'
+
 // Session storage keys
 const VISITOR_ID_KEY = 'attra_visitor_id'
 const SESSION_ID_KEY = 'attra_session_id'
@@ -272,7 +274,18 @@ const UTM_COOKIE_DAYS = 30
 // Google Ads URL template usa {campaignid} → geralmente plumbado como
 // campaignid/campaign_id; Meta usa campaign_id.
 const CAMPAIGN_ID_ALIASES = ['utm_id', 'campaign_id', 'campaignid'] as const
-const ADSET_ID_ALIASES = ['adset_id', 'adsetid', 'ad_group_id', 'adgroupid'] as const
+// `adgroup_id` faltava. O plano de marcação da Attra usa exatamente esse nome,
+// e um underscore de diferença fazia o grupo de anúncios chegar vazio sem
+// nenhum erro — a coluna só aparecia em branco no painel.
+const ADSET_ID_ALIASES = ['adset_id', 'adsetid', 'ad_group_id', 'adgroup_id', 'adgroupid'] as const
+
+/**
+ * Parâmetros do Google Ads em código de uma letra. Diferente dos IDs acima,
+ * NÃO viram cookie: descrevem o clique que trouxe a pessoa, e propagá-los na
+ * navegação seguinte atribuiria a uma visita direta o dispositivo e a rede de
+ * um clique pago antigo.
+ */
+const PARAMETROS_DE_CLIQUE = ['matchtype', 'device', 'network'] as const
 const AD_ID_ALIASES = ['ad_id', 'adid', 'creative_id'] as const
 
 function firstParam(params: URLSearchParams, keys: readonly string[]): string | null {
@@ -331,6 +344,10 @@ export function collectUTMParams(): Record<string, string | null> {
     result.ad_id = adFromUrl
   } else {
     result.ad_id = getCookie('attra_ad_id')
+  }
+
+  for (const chave of PARAMETROS_DE_CLIQUE) {
+    result[chave] = normalizarParametroAnuncio(params.get(chave))
   }
 
   return result

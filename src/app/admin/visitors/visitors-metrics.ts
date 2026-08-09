@@ -47,7 +47,7 @@ export interface LinhaCidade {
 	whatsapp: number
 }
 
-import type { LinhaMidiaPaga, LinhaMarcacao } from './visitors-tabelas'
+import type { LinhaMidiaPaga, LinhaMarcacao, LinhaContextoClique } from './visitors-tabelas'
 
 export interface MetricasVisitantes {
 	periodo: { dias: number; desde: string | null }
@@ -71,6 +71,7 @@ export interface MetricasVisitantes {
 	cidades: LinhaCidade[]
 	midia_paga: LinhaMidiaPaga[]
 	marcacao_paga: LinhaMarcacao[]
+	contexto_clique: LinhaContextoClique[]
 }
 
 /** Volume mínimo para tratar uma taxa como sinal, e não como ruído estatístico. */

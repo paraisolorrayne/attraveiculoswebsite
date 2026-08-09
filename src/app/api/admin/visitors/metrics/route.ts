@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 			group by pv.session_id
 		`
 
-		const [grupos, totaisExtras, veiculos, coberturaVeiculos, cidades, midiaPaga, marcacaoPaga] = await Promise.all([
+		const [grupos, totaisExtras, veiculos, coberturaVeiculos, cidades, midiaPaga, marcacaoPaga, contextoClique] = await Promise.all([
 			sql<GrupoAtribuicao>`
 				with veic as (${veiculosPorSessao})
 				select
@@ -248,10 +248,11 @@ export async function GET(request: NextRequest) {
 			// Detalhe da mídia paga: campanha → grupo/anúncio → termo. É o recorte que
 			// o time de mídia usa para decidir o que pausar; o nível de campanha
 			// sozinho não diz QUAL anúncio traz conversa.
-			sql<{ canal_fonte: string; campanha: string; conteudo: string; termo: string; sessoes: number; whatsapp: number }>`
+			sql<{ canal_fonte: string; campanha: string; grupo: string; conteudo: string; termo: string; sessoes: number; whatsapp: number }>`
 				select
 					lower(btrim(coalesce(s.utm_source, ''))) as canal_fonte,
 					coalesce(nullif(btrim(s.utm_campaign), ''), '(não marcada)') as campanha,
+					coalesce(nullif(btrim(s.adset_id), ''), '(não marcado)') as grupo,
 					coalesce(nullif(btrim(s.utm_content), ''), '(não marcado)') as conteudo,
 					coalesce(nullif(btrim(s.utm_term), ''), '(não marcado)') as termo,
 					count(*)::int as sessoes,
@@ -260,7 +261,7 @@ export async function GET(request: NextRequest) {
 				where ${noPeriodo}
 				  and (s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
 				       or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)
-				group by 1, 2, 3, 4
+				group by 1, 2, 3, 4, 5
 				order by sessoes desc
 				limit ${LIMITE_LISTAS}
 			`.execute(db),
@@ -269,20 +270,66 @@ export async function GET(request: NextRequest) {
 			// nome de campanha. É isso que revela um modelo de rastreamento mal
 			// configurado (ex.: custom parameter do Google Ads não definido na campanha,
 			// que chega vazio e joga tudo em "(não marcada)").
-			sql<{ fonte: string; sessoes: number; com_campanha: number; com_conteudo: number; com_termo: number; com_id: number }>`
+			sql<{ fonte: string; sessoes: number; com_campanha: number; com_conteudo: number; com_termo: number; com_id: number; com_grupo: number; com_matchtype: number; com_device: number; com_network: number }>`
 				select
 					coalesce(nullif(lower(btrim(s.utm_source)), ''), '(sem fonte)') as fonte,
 					count(*)::int as sessoes,
 					(count(*) filter (where nullif(btrim(s.utm_campaign), '') is not null))::int as com_campanha,
 					(count(*) filter (where nullif(btrim(s.utm_content), '') is not null))::int as com_conteudo,
 					(count(*) filter (where nullif(btrim(s.utm_term), '') is not null))::int as com_termo,
-					(count(*) filter (where nullif(btrim(s.utm_id), '') is not null))::int as com_id
+					(count(*) filter (where nullif(btrim(s.utm_id), '') is not null))::int as com_id,
+					(count(*) filter (where nullif(btrim(s.adset_id), '') is not null))::int as com_grupo,
+					(count(*) filter (where s.match_type is not null))::int as com_matchtype,
+					(count(*) filter (where s.ads_device is not null))::int as com_device,
+					(count(*) filter (where s.ads_network is not null))::int as com_network
 				from visitor_sessions s
 				where ${noPeriodo}
 				  and (s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
 				       or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)
 				group by 1
 				order by sessoes desc
+			`.execute(db),
+
+			// Contexto do CLIQUE pago: dispositivo, tipo de correspondência e rede.
+			//
+			// Três recortes independentes num único ida-e-volta, e não o cruzamento
+			// dos três: cruzado, 3x3x4 gera dezenas de linhas com duas sessões cada,
+			// onde nenhuma taxa significa nada. Separado, cada linha responde uma
+			// pergunta que muda decisão — "ampla converte menos que exata?",
+			// "celular converte menos que computador?".
+			sql<{ dimensao: string; valor: string; sessoes: number; whatsapp: number }>`
+				select 'device' as dimensao,
+				       coalesce(s.ads_device, '(não informado)') as valor,
+				       count(*)::int as sessoes,
+				       (count(*) filter (where s.contacted_whatsapp))::int as whatsapp
+				from visitor_sessions s
+				where ${noPeriodo} and ${sql`(s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
+				      or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)`}
+				group by 2
+
+				union all
+
+				select 'matchtype',
+				       coalesce(s.match_type, '(não informado)'),
+				       count(*)::int,
+				       (count(*) filter (where s.contacted_whatsapp))::int
+				from visitor_sessions s
+				where ${noPeriodo} and ${sql`(s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
+				      or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)`}
+				group by 2
+
+				union all
+
+				select 'network',
+				       coalesce(s.ads_network, '(não informado)'),
+				       count(*)::int,
+				       (count(*) filter (where s.contacted_whatsapp))::int
+				from visitor_sessions s
+				where ${noPeriodo} and ${sql`(s.utm_medium ilike '%cpc%' or s.utm_medium ilike '%ppc%'
+				      or s.utm_medium ilike '%paid%' or s.gclid is not null or s.fbclid is not null)`}
+				group by 2
+
+				order by 1, 3 desc
 			`.execute(db),
 		])
 
@@ -398,6 +445,7 @@ export async function GET(request: NextRequest) {
 			veiculos_cobertura: coberturaVeiculos.rows[0] ?? { com_slug: 0, sem_slug: 0 },
 			cidades: cidades.rows,
 			midia_paga: midiaPaga.rows,
+			contexto_clique: contextoClique.rows,
 			marcacao_paga: marcacaoPaga.rows,
 		})
 	} catch (error) {
