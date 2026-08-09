@@ -26,6 +26,7 @@ const fuelOptions = [
   { value: 'diesel', label: 'Diesel' },
   { value: 'hibrido', label: 'Híbrido' },
   { value: 'eletrico', label: 'Elétrico' },
+  { value: 'flex', label: 'Flex' },
 ]
 
 const transmissionOptions = [
@@ -42,6 +43,8 @@ const bodyTypeOptions = [
   { value: 'coupe', label: 'Cupê' },
   { value: 'conversivel', label: 'Conversível' },
   { value: 'perua', label: 'Perua' },
+  // Faltava: 4 picapes do estoque não tinham opção correspondente.
+  { value: 'picape', label: 'Picape' },
 ]
 
 export function VehicleFilters() {

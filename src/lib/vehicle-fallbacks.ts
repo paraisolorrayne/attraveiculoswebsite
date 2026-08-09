@@ -125,18 +125,82 @@ function normalizeKey(s: string): string {
 }
 
 /**
- * Resolve a vehicle's brand. Tries (in order):
- *   1. The provided marca string if non-empty.
- *   2. Lookup by full normalized model name.
- *   3. Lookup by first word of the model.
+ * Grafia correta das marcas cujo slug não vira nome por regra genérica.
  *
- * Returns an empty string when no inference is possible — callers should treat
- * empty as "unknown" and hide the brand label rather than showing a placeholder.
+ * O slug do AutoConf é minúsculo e hifenizado. Title-case resolve "tesla" e
+ * "porsche", mas erraria em sigla ("bmw" → "Bmw"), em marca composta com hífen
+ * de verdade ("mercedes-benz" → "Mercedes Benz") e no prefixo de grupo que o
+ * AutoConf usa em algumas marcas ("gm-chevrolet", que é Chevrolet).
  */
-export function resolveBrand(marca: string | null | undefined, modelo: string | null | undefined): string {
-  const trimmedMarca = (marca ?? '').trim()
-  if (trimmedMarca) return trimmedMarca
+const MARCA_POR_SLUG: Record<string, string> = {
+  'bmw': 'BMW',
+  'gmc': 'GMC',
+  'ram': 'RAM',
+  'mercedes-benz': 'Mercedes-Benz',
+  'rolls-royce': 'Rolls-Royce',
+  'gm-chevrolet': 'Chevrolet',
+  'land-rover': 'Land Rover',
+  'aston-martin': 'Aston Martin',
+  'alfa-romeo': 'Alfa Romeo',
+}
 
+/**
+ * Converte o slug de marca do AutoConf em nome exibível.
+ *
+ * Fora das exceções acima, a regra genérica é title-case por segmento — o que
+ * cobre marca nova sem precisar de deploy ("byd", "lotus", "rivian").
+ */
+function marcaDoSlug(slug: string | null | undefined): string {
+  const limpo = (slug ?? '').trim().toLowerCase()
+  if (!limpo) return ''
+  if (MARCA_POR_SLUG[limpo]) return MARCA_POR_SLUG[limpo]
+  return limpo
+    .split('-')
+    .filter(Boolean)
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(' ')
+}
+
+/** Os campos de marca que o AutoConf devolve, todos opcionais. */
+export interface MarcaBruta {
+  marca_apelido?: string | null
+  marca_nome?: string | null
+  marca_slug?: string | null
+  modelopai_nome?: string | null
+}
+
+/**
+ * Resolve a marca do veículo a partir do que o AutoConf devolve. Tenta:
+ *
+ *   1. `marca_apelido` — preenchido em 71/71 do estoque e melhor normalizado
+ *      que `marca_nome`: é ele que traz 'Lamborghini' onde o nome traz
+ *      'LAMBORGHINI'. É a grafia que a própria loja cadastrou.
+ *   2. `marca_nome` — 68/71. Vem nulo em parte do estoque.
+ *   3. `marca_slug` — 71/71, porém em caixa baixa e hifenizado; só serve
+ *      convertido, e é o último dado de origem antes do palpite.
+ *   4. Inferência pelo nome do modelo (mapa fixo, manutenção manual).
+ *
+ * A ordem importa. Antes desta correção só o passo 2 existia, e o Cybertruck
+ * (`marca_apelido: 'Tesla'`) e o GLE 63s (`'Mercedes'`) saíam sem marca em todo
+ * o site — ficha, JSON-LD, endpoint de LLM e feed de anúncios — enquanto o dado
+ * estava ali, num campo irmão. O passo 4 só os salvaria se alguém lembrasse de
+ * cadastrar cada modelo novo à mão; foi o que aconteceu com a SF90, resgatada
+ * por acaso porque 'sf90' estava no mapa.
+ *
+ * Continua devolvendo string vazia quando não há inferência possível: quem
+ * chama deve esconder o rótulo em vez de mostrar "Não informado".
+ */
+export function resolveBrand(veiculo: MarcaBruta): string {
+  const apelido = (veiculo.marca_apelido ?? '').trim()
+  if (apelido) return apelido
+
+  const nome = (veiculo.marca_nome ?? '').trim()
+  if (nome) return nome
+
+  const doSlug = marcaDoSlug(veiculo.marca_slug)
+  if (doSlug) return doSlug
+
+  const modelo = veiculo.modelopai_nome
   if (!modelo) return ''
   const modelKey = normalizeKey(modelo)
   if (BRAND_BY_MODEL_KEY[modelKey]) return BRAND_BY_MODEL_KEY[modelKey]

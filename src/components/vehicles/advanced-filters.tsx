@@ -17,7 +17,7 @@ const PREMIUM_BRANDS = [
   'Toyota', 'Lexus', 'Honda', 'Jeep', 'Volkswagen', 'Hyundai', 'Mitsubishi', 'Nissan', 'Kia', 'Fiat', 'Citroën',
 ]
 
-const bodyStyles = ['Cupê', 'Sedan', 'SUV', 'Conversível', 'Hatch', 'Wagon']
+const bodyStyles = ['Cupê', 'Sedan', 'SUV', 'Conversível', 'Hatch', 'Wagon', 'Picape']
 const powertrains = ['Gasolina', 'Diesel', 'Híbrido', 'Elétrico', 'Flex']
 const years = Array.from({ length: 10 }, (_, i) => (2025 - i).toString())
 const priceRanges = [

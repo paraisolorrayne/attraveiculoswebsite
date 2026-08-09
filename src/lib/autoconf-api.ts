@@ -25,8 +25,13 @@ export interface AutoConfVehicle {
   modelopai_nome: string
   modelopai_slug: string
   marca_id: number
-  marca_nome: string
+  marca_nome: string | null
   marca_slug: string
+  /** Grafia cadastrada pela loja. Preenchida em 71/71 onde `marca_nome` falha.
+   *  Opcional no tipo porque o snapshot empacotado de fallback é anterior a ela. */
+  marca_apelido?: string | null
+  /** Número de portas. É o que separa cupê/conversível de SUV de teto caído. */
+  portas?: number | null
   tipo_id: number
   tipo_nome: string
   tipo_slug: string
@@ -376,7 +381,7 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
   const category = determineCategoryFromVehicle(autoconfVehicle, price)
 
   // Resolve brand: try the field, infer from model, else empty (UI hides label)
-  const resolvedBrand = resolveBrand(autoconfVehicle.marca_nome, autoconfVehicle.modelopai_nome)
+  const resolvedBrand = resolveBrand(autoconfVehicle)
   const resolvedModel = nonEmpty(autoconfVehicle.modelopai_nome)
 
   // Determine if vehicle is imported based on brand
@@ -414,6 +419,7 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
     price,
     category,
     body_type: nonEmpty(autoconfVehicle.carroceria_nome),
+    doors: autoconfVehicle.portas ?? null,
     location_id: '1', // Default location
     photos: autoconfVehicle.fotos?.map(f => f.url) || (autoconfVehicle.foto ? [autoconfVehicle.foto] : []),
     videos: null,

@@ -9,6 +9,13 @@ import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { canonicalUrl, listingRobots } from '@/lib/seo/page-metadata'
 import { getCachedHeroAsset } from '@/lib/vehicle-hero-asset'
 import { Vehicle } from '@/types'
+import {
+  classificarCarroceria,
+  classificarCombustivel,
+  carroceriaDoFiltro,
+  combustivelDoFiltro,
+  marcaCasaComFiltro,
+} from '@/lib/taxonomia-veiculo'
 import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { FAQSection } from '@/components/home'
 import { FAQSchema } from '@/components/seo'
@@ -212,18 +219,27 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
         }
 
         if (brandFilter) {
-          const normalizedBrand = normalizeText(vehicle.brand || '')
-          const normalizedFilter = normalizeText(brandFilter)
-          // Bidirectional includes: "mercedes" matches "mercedes-benz" and vice versa
-          matchesBrand = normalizedBrand.includes(normalizedFilter) || normalizedFilter.includes(normalizedBrand)
+          matchesBrand = marcaCasaComFiltro(vehicle.brand, brandFilter)
         }
 
         if (carroceriaFilter) {
-          matchesCarroceria = normalizeText(vehicle.body_type || '').includes(normalizeText(carroceriaFilter))
+          // Compara categoria com categoria, nunca texto com texto: o rótulo da
+          // origem ('Conversível/Cupê', 'Sedã') e o valor do seletor ('coupe',
+          // 'sedan') não coincidem como string, e o `includes` que havia aqui
+          // devolvia zero em silêncio.
+          const alvo = carroceriaDoFiltro(carroceriaFilter)
+          matchesCarroceria = alvo != null && classificarCarroceria({
+            carroceria: vehicle.body_type,
+            marca: vehicle.brand,
+            modelo: vehicle.model,
+            versao: vehicle.version,
+            portas: vehicle.doors,
+          }).includes(alvo)
         }
 
         if (combustivelFilter) {
-          matchesCombustivel = normalizeText(vehicle.fuel_type || '').includes(normalizeText(combustivelFilter))
+          const alvo = combustivelDoFiltro(combustivelFilter)
+          matchesCombustivel = alvo != null && classificarCombustivel(vehicle.fuel_type) === alvo
         }
 
         if (anoFilter) {
@@ -291,8 +307,7 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
           if (similarBrands.length > 0) {
             suggestedVehicles = allVehicles
               .filter(vehicle => {
-                const vBrand = normalizeText(vehicle.brand || '')
-                return similarBrands.some(sb => vBrand.includes(sb) || sb.includes(vBrand))
+                return similarBrands.some(sb => marcaCasaComFiltro(vehicle.brand, sb))
               })
               .sort((a, b) => b.price - a.price)
               .slice(0, 6)

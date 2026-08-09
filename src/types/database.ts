@@ -25,6 +25,8 @@ export interface Database {
           price: number
           category: string
           body_type: string
+          /** Portas (`portas` do AutoConf). Desambigua cupê/conversível de SUV. */
+          doors: number | null
           location_id: string
           photos: string[]
           videos: string[] | null

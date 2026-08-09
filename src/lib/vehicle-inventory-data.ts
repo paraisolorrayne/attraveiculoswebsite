@@ -69,7 +69,7 @@ function determineCategoryFromVehicle(vehicle: AutoConfVehicle, price: number): 
 function generateDescription(vehicle: AutoConfVehicle): string {
   const isNew = vehicle.zero_km === 1
   const km = (vehicle.km ?? 0).toLocaleString('pt-BR')
-  const brand = resolveBrand(vehicle.marca_nome, vehicle.modelopai_nome)
+  const brand = resolveBrand(vehicle)
   const model = nonEmpty(vehicle.modelopai_nome)
   const year = vehicle.anomodelo ? String(vehicle.anomodelo) : ''
   const fuel = nonEmpty(vehicle.combustivel_nome)
@@ -104,7 +104,7 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
   const category = determineCategoryFromVehicle(autoconfVehicle, price)
 
   const importedBrands = ['Ferrari', 'Lamborghini', 'McLaren', 'Bentley', 'Rolls-Royce', 'Aston Martin', 'Maserati']
-  const brand = resolveBrand(autoconfVehicle.marca_nome, autoconfVehicle.modelopai_nome)
+  const brand = resolveBrand(autoconfVehicle)
   const model = nonEmpty(autoconfVehicle.modelopai_nome)
   const isImported = importedBrands.some(b => brand.toLowerCase().includes(b.toLowerCase()))
 
@@ -128,6 +128,7 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
     price,
     category,
     body_type: nonEmpty(autoconfVehicle.carroceria_nome),
+    doors: autoconfVehicle.portas ?? null,
     location_id: '1',
     photos: autoconfVehicle.fotos?.map(f => f.url) || (autoconfVehicle.foto ? [autoconfVehicle.foto] : []),
     videos: null,
