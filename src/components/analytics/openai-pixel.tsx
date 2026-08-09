@@ -91,9 +91,17 @@ function WhatsAppClickTracker() {
       const link = alvo?.closest?.('a[href*="wa.me"], a[href*="api.whatsapp.com"]')
       if (!link) return
 
-      // Contexto do veículo, quando o clique parte de uma ficha. Vai o slug do
-      // anúncio — identificador de produto, não dado de pessoa.
-      const naFicha = window.location.pathname.match(/^\/veiculo\/([\w-]+)/)
+      // Contexto do veículo, quando o clique parte de uma ficha.
+      //
+      // Vai o ID NUMÉRICO, não o slug: é o mesmo valor que o feed publica em
+      // `sku` e o que o estoque usa como chave. Identificador precisa ser
+      // idêntico no feed, na URL e na conversão — senão não dá para responder
+      // QUAL veículo gerou interesse, só quantos cliques houve.
+      //
+      // O slug termina no id (`mercedes-gt-2025-916079`), então basta o último
+      // segmento numérico. Sem ele, manda nada em vez de mandar o slug: valor
+      // que não casa com o feed é pior que valor ausente.
+      const naFicha = window.location.pathname.match(/^\/veiculo\/[\w-]*?(\d+)$/)
 
       medirOpenAI('whatsapp_click', {
         type: 'customer_action',

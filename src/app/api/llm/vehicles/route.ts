@@ -157,22 +157,69 @@ export async function GET(request: NextRequest) {
 				position: offset + i + 1,
 				item: {
 					'@type': 'Vehicle',
+					// IDENTIDADE ESTÁVEL. `@id` e `sku` carregam o id do veículo no
+					// estoque, que não muda enquanto o carro existir — é ele que liga
+					// o anúncio, a ficha, o feed e a conversão de WhatsApp
+					// (`content_id`). Sem identificador estável não dá para responder
+					// qual veículo gerou interesse, só quantos cliques houve.
+					'@id': `${BASE}/veiculo/${v.slug}#vehicle`,
+					sku: String(v.id),
 					name: vehicleName(v),
 					url: `${BASE}/veiculo/${v.slug}`,
 					brand: v.brand ? { '@type': 'Brand', name: v.brand } : undefined,
 					model: v.model,
+					vehicleConfiguration: v.version || undefined,
 					vehicleModelDate: String(v.year_model),
+					productionDate: v.year_manufacture ? String(v.year_manufacture) : undefined,
+					bodyType: v.body_type || undefined,
 					color: v.color || undefined,
 					fuelType: v.fuel_type || undefined,
 					vehicleTransmission: v.transmission || undefined,
-					vehicleEngine: v.engine ? { '@type': 'EngineSpecification', name: v.engine } : undefined,
+					// Emite com potência isolada: o feed traz `engine` vazio em todo o
+					// estoque e `horsepower` em poucos. Exigir os dois perderia esses.
+					vehicleEngine: (v.engine || v.horsepower)
+						? {
+								'@type': 'EngineSpecification',
+								...(v.engine ? { name: v.engine } : {}),
+								...(v.horsepower
+									? { enginePower: { '@type': 'QuantitativeValue', value: v.horsepower, unitCode: 'BHP' } }
+									: {}),
+							}
+						: undefined,
 					mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' },
-					image: v.photos?.[0],
+					itemCondition: v.is_new
+						? 'https://schema.org/NewCondition'
+						: 'https://schema.org/UsedCondition',
+					description: v.description || undefined,
+					// Opcionais como additionalProperty: schema.org não tem campo de
+					// "features" em Vehicle, e é assim que se representa lista de
+					// atributos sem inventar propriedade.
+					additionalProperty: v.options?.length
+						? v.options.map((opcional: string) => ({
+								'@type': 'PropertyValue',
+								name: 'Opcional',
+								value: opcional,
+							}))
+						: undefined,
+					// TODAS as fotos, não só a capa: quem escolhe carro de R$ 1 milhão
+					// decide olhando o conjunto.
+					image: v.photos?.length ? v.photos : undefined,
+					// Frescor do anúncio. Sem isto não há como distinguir estoque vivo
+					// de página que ficou no ar.
+					dateModified: v.updated_at ? new Date(v.updated_at).toISOString() : undefined,
 					offers: {
 						'@type': 'Offer',
 						price: v.price,
 						priceCurrency: 'BRL',
 						availability: offerAvailability(v.status),
+						itemCondition: v.is_new
+							? 'https://schema.org/NewCondition'
+							: 'https://schema.org/UsedCondition',
+						url: `${BASE}/veiculo/${v.slug}`,
+						// Vendedor por referência ao nó do layout raiz, para o feed não
+						// declarar uma segunda Attra no grafo.
+						seller: { '@id': `${BASE}/#organization` },
+						areaServed: { '@type': 'Country', name: 'Brasil' },
 					},
 				},
 			})),
