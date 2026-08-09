@@ -66,13 +66,30 @@ describe('carroceria', () => {
     })
 
     it('na Porsche, GTS é acabamento e não diz nada sobre o teto', () => {
+      // Não vira conversível como viraria numa Ferrari: cai na regra do fechado.
       const carreraGTS = { carroceria: 'Conversível/Cupê', marca: 'Porsche', modelo: '911', versao: 'Carrera GTS', portas: 2 }
-      expect(classificarCarroceria(carreraGTS)).toEqual(['conversivel', 'cupe'])
+      expect(classificarCarroceria(carreraGTS)).toEqual(['cupe'])
     })
 
-    it('quando não dá para saber, aparece nos dois em vez de sumir dos dois', () => {
+    it('sem marcador de teto aberto, é fechado — teto retrátil se anuncia', () => {
       const camaro = { carroceria: 'Conversível/Cupê', marca: 'Chevrolet', modelo: 'Camaro', versao: 'SS V8', portas: 2 }
-      expect(classificarCarroceria(camaro)).toEqual(['conversivel', 'cupe'])
+      expect(classificarCarroceria(camaro)).toEqual(['cupe'])
+    })
+
+    it('os 5 que o AutoConf não permite corrigir na origem', () => {
+      const base = { carroceria: 'Conversível/Cupê', portas: 2 }
+      const casos = [
+        { ...base, marca: 'Porsche', modelo: '911', versao: '911 Carrera T 3.0' },
+        { ...base, marca: 'Chevrolet', modelo: 'CAMARO', versao: 'Camaro SS 6.2 V8 16V' },
+        { ...base, marca: 'Chevrolet', modelo: 'Corvette', versao: 'Z06' },
+        { ...base, marca: 'Mercedes', modelo: 'GT', versao: 'GT 63 S AMG E Performance Aut. 2p' },
+      ]
+      for (const c of casos) expect(classificarCarroceria(c)).toEqual(['cupe'])
+    })
+
+    it('a placa que é roadster por definição continua vencendo a regra do fechado', () => {
+      const sl = { carroceria: 'Conversível/Cupê', marca: 'Mercedes', modelo: 'SL-63', versao: 'SL-63 AMG S E Performance Aut.', portas: 2 }
+      expect(classificarCarroceria(sl)).toEqual(['conversivel'])
     })
   })
 
@@ -160,7 +177,7 @@ describe('rótulo exibido na ficha, no JSON-LD e no feed', () => {
     expect(rotuloDeCarroceria(['suv'], 'Conversível/Cupê')).toBe('SUV')
   })
 
-  it('assume a dúvida quando a origem não permite decidir', () => {
+  it('se algum dia voltar a haver dúvida, o rótulo a assume em vez de escolher', () => {
     expect(rotuloDeCarroceria(['conversivel', 'cupe'], 'Conversível/Cupê')).toBe('Conversível / Cupê')
   })
 

@@ -1,0 +1,6 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# De 6 em 6 horas, deslocado dos outros jobs para não competir por CPU com o
+# pré-processamento de imagens (0 */6) nem com os embeddings (15 */6).
+40 */6 * * * root /usr/local/bin/attra-feed-openai.sh >> /var/log/attra-feed-openai.log 2>&1

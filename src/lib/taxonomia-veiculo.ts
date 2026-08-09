@@ -128,7 +128,24 @@ function desambiguarBaldeAmbiguo(entrada: EntradaCarroceria): Carroceria[] {
     if (texto.includes('gts')) return ['conversivel']
   }
 
-  return ['conversivel', 'cupe']
+  // Sem marcador nenhum: fechado.
+  //
+  // Não é moeda ao ar, é assimetria. Teto retrátil é argumento de venda e vai
+  // para o nome do anúncio — "Cabriolet", "Spider", "Roadster", "Targa". Cupê
+  // costuma não se anunciar. Então a AUSÊNCIA de marcador de teto aberto, já
+  // depois das placas que são roadster por definição, é evidência de carroceria
+  // fechada. A Attra conferiu os 5 casos pendentes do estoque em 09/08/2026:
+  // todos fechados.
+  //
+  // Antes isto devolvia os dois, para o carro não sumir de nenhum filtro. Só
+  // que o campo Versão do AutoConf é lista pré-selecionada, não texto livre —
+  // não há como corrigir na origem, e "aparece nos dois" deixaria de ser
+  // transitório para virar o estado permanente de 5 carros.
+  //
+  // Onde erra: roadster cujo nome não denuncia e que não esteja em
+  // SEMPRE_CONVERSIVEL. É por isso que aquela lista existe — quando entrar um
+  // conversível assim no estoque, o nome dele entra lá.
+  return ['cupe']
 }
 
 /**
