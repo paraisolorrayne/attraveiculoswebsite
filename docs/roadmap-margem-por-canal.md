@@ -75,8 +75,25 @@ No lugar, o clique no WhatsApp passou a ser gravado com sessão e horário
 quando há mais de um candidato na janela: **atribuição ausente é recuperável, errada
 não.**
 
-**O que falta:** ligar a correlação no receptor do webhook. A função existe e tem
-testes; falta o ponto de chamada.
+**Ligada no receptor em 09/08/2026.** A função e os testes existiam desde 05/08 e nunca
+tinham sido chamados — havia 45 cliques gravados e nenhum consumido. Agora todo card
+novo do webhook tenta a correlação.
+
+Três recusas deliberadas, todas para errar por omissão:
+
+- **Só em card novo.** Reprocessar a cada webhook faria o mesmo card consumir um clique
+  a cada mudança de etapa.
+- **Não correlaciona origem `portal`.** Lead de marketplace não veio de clique no nosso
+  site; casar por coincidência de horário atribuiria campanha e termo de outra pessoa.
+- **Card que já traga referência de sessão passa direto.** Id devolvido pelo emissor
+  vale mais que correlação por tempo — é o caminho da Etapa 1.
+
+O card recebe também `site_session_origem: 'correlacao_clique_whatsapp'`, para o
+relatório distinguir uma correlação por tempo de um id devolvido pelo CRM em vez de
+tratar as duas como o mesmo fato.
+
+**Como conferir:** `select count(*) from whatsapp_clicks where consumido_em is not null`
+deve sair de zero conforme entrarem leads novos.
 
 ---
 
@@ -121,7 +138,7 @@ Três decisões antes de qualquer código:
 | # | Ação | Quem | Desbloqueia |
 |---|---|---|---|
 | 1 | CRM devolver `site_session_id` | Time do CRM | Tudo |
-| 2 | Ligar a correlação de clique no receptor | Nós | Leads de WhatsApp |
+| 2 | ~~Ligar a correlação de clique no receptor~~ **feito 09/08** | Nós | Leads de WhatsApp |
 | 3 | Painel de receita por canal | Nós | Primeira resposta útil |
 | 4 | Conversions API na venda | Nós | Otimização do anúncio |
 | 5 | Definir e trazer o custo | Attra | Margem de verdade |
