@@ -3,6 +3,7 @@ import type { Insertable, Updateable, Transaction } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 import { verifyCrmSignature, safeEquals, mergeCardV2, atualizadoEmInvalido } from '@/lib/crm-webhook'
+import { ligarCliqueAoCard } from '@/lib/whatsapp-correlacao-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,10 @@ export const dynamic = 'force-dynamic'
 // dois webhooks simultâneos do mesmo lead se serializam e a regra de ordenação
 // vale mesmo sob corrida. Insert simultâneo de id novo cai num retry único.
 
-type ResultadoCard = 'upsert' | 'skip' | 'retry'
+// 'insert' e 'update' são distinguidos porque a correlação de clique só pode
+// rodar em card NOVO: reprocessar a cada webhook faria o mesmo card consumir
+// um clique novo a cada atualização de etapa.
+type ResultadoCard = 'insert' | 'update' | 'skip' | 'retry'
 
 async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<string, unknown>): Promise<ResultadoCard> {
 	const existing = await trx.selectFrom('crm_cards')
@@ -48,7 +52,26 @@ async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<
 			.executeTakeFirst()
 		// 0 linhas = outro request inseriu este id entre o SELECT e o INSERT —
 		// reprocessa uma vez como update (a linha agora existe e será lockada)
-		return Number(ins.numInsertedOrUpdatedRows ?? 0) > 0 ? 'upsert' : 'retry'
+		if (Number(ins.numInsertedOrUpdatedRows ?? 0) === 0) return 'retry'
+
+		// Atribuição do lead que chegou por WhatsApp: o identificador da sessão
+		// não viaja mais dentro da mensagem do cliente, então é aqui que a
+		// conversa é ligada ao clique que a originou. Best-effort — o lead entra
+		// mesmo que isto falhe.
+		try {
+			const ligacao = await ligarCliqueAoCard(trx, id, card)
+			if (ligacao.tipo === 'ligado') {
+				console.log(`[FykosCRM] card ${id} correlacionado à sessão ${ligacao.sessionId} (clique ${ligacao.cliqueId})`)
+			} else if (ligacao.tipo === 'ambigua') {
+				// Recusa deliberada: mais de uma sessão na janela. Atribuir a
+				// errada contamina campanha e termo de um lead real.
+				console.warn(`[FykosCRM] card ${id} sem atribuição: ${ligacao.candidatos} sessões candidatas`)
+			}
+		} catch (erro) {
+			console.warn(`[FykosCRM] correlação falhou no card ${id}:`, erro instanceof Error ? erro.message : erro)
+		}
+
+		return 'insert'
 	}
 
 	const { id: _id, ...mudancas } = r.row
@@ -57,7 +80,7 @@ async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<
 		.set(mudancas as unknown as Updateable<Database['crm_cards']>)
 		.where('id', '=', id)
 		.execute()
-	return 'upsert'
+	return 'update'
 }
 
 export async function POST(request: NextRequest) {
@@ -119,7 +142,7 @@ export async function POST(request: NextRequest) {
 				resultado = await db.transaction().execute(trx => aplicarCard(trx, id, card))
 			}
 			// retry duplo só acontece se a linha foi removida no meio — trata como ignorado
-			if (resultado === 'upsert') upserts++
+			if (resultado === 'insert' || resultado === 'update') upserts++
 			else ignorados++
 		}
 	} catch (error) {
