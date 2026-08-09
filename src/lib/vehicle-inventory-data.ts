@@ -6,6 +6,11 @@
 import type { Vehicle } from '@/types'
 import { type AutoConfVehicle, cleanVersionString } from './autoconf-api'
 import { resolveBrand, nonEmpty, joinNonEmpty } from './vehicle-fallbacks'
+import {
+  classificarCarroceria,
+  classificarCategoria,
+  rotuloDeCarroceria,
+} from './taxonomia-veiculo'
 import inventoryData from '../../list_vehicle.json'
 
 // Type for the JSON structure
@@ -31,37 +36,6 @@ function generateVehicleSlug(vehicle: AutoConfVehicle): string {
     + `-${vehicle.id}`
 }
 
-/**
- * Determine vehicle category based on characteristics
- */
-function determineCategoryFromVehicle(vehicle: AutoConfVehicle, price: number): string {
-  const brand = (vehicle.marca_nome || '').toLowerCase()
-
-  // Supercars/Sports
-  const supercarBrands = ['ferrari', 'lamborghini', 'mclaren', 'bugatti', 'pagani', 'koenigsegg']
-  if (supercarBrands.some(b => brand.includes(b))) return 'supercar'
-
-  // Sports cars
-  const sportsBrands = ['porsche', 'aston martin', 'maserati', 'lotus']
-  if (sportsBrands.some(b => brand.includes(b))) return 'sports'
-
-  // Luxury
-  const luxuryBrands = ['bentley', 'rolls-royce', 'maybach']
-  if (luxuryBrands.some(b => brand.includes(b))) return 'luxury'
-
-  // Premium
-  const premiumBrands = ['bmw', 'mercedes', 'audi', 'lexus', 'land rover', 'range rover', 'jaguar', 'volvo']
-  if (premiumBrands.some(b => brand.includes(b))) return 'premium'
-
-  // SUV based on body type
-  if (vehicle.carroceria_nome?.toLowerCase().includes('suv')) return 'suv'
-
-  // Price-based fallback
-  if (price >= 500000) return 'luxury'
-  if (price >= 200000) return 'premium'
-
-  return 'executive'
-}
 
 /**
  * Generate a description for the vehicle
@@ -101,10 +75,16 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
   const uniqueOptions = [...new Set(options)]
 
   const price = parseFloat(autoconfVehicle.valorvenda) || 0
-  const category = determineCategoryFromVehicle(autoconfVehicle, price)
-
   const importedBrands = ['Ferrari', 'Lamborghini', 'McLaren', 'Bentley', 'Rolls-Royce', 'Aston Martin', 'Maserati']
   const brand = resolveBrand(autoconfVehicle)
+  const carrocerias = classificarCarroceria({
+    carroceria: autoconfVehicle.carroceria_nome,
+    marca: brand,
+    modelo: autoconfVehicle.modelopai_nome,
+    versao: autoconfVehicle.modelo_nome,
+    portas: autoconfVehicle.portas,
+  })
+  const category = classificarCategoria({ marca: brand, carrocerias, preco: price })
   const model = nonEmpty(autoconfVehicle.modelopai_nome)
   const isImported = importedBrands.some(b => brand.toLowerCase().includes(b.toLowerCase()))
 
@@ -127,7 +107,7 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
     transmission: nonEmpty(autoconfVehicle.cambio_nome),
     price,
     category,
-    body_type: nonEmpty(autoconfVehicle.carroceria_nome),
+    body_type: rotuloDeCarroceria(carrocerias, autoconfVehicle.carroceria_nome),
     doors: autoconfVehicle.portas ?? null,
     location_id: '1',
     photos: autoconfVehicle.fotos?.map(f => f.url) || (autoconfVehicle.foto ? [autoconfVehicle.foto] : []),

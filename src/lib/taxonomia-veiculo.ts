@@ -161,6 +161,78 @@ export function classificarCombustivel(valor: string | null | undefined): Combus
   return null
 }
 
+/**
+ * Categoria editorial do veículo — o recorte que a listagem usa em
+ * "Performance", "SUV Premium" e afins.
+ *
+ * Vivia duplicada em `autoconf-api` e `vehicle-inventory-data`, em duas cópias
+ * que precisavam ser editadas juntas e não eram. Fica aqui, sem dependência de
+ * nenhum dos dois, para não haver import circular.
+ */
+export function classificarCategoria(entrada: {
+  marca: string
+  carrocerias: Carroceria[]
+  preco: number
+}): string {
+  // A marca RESOLVIDA. Com `marca_nome` cru, o campo vem nulo em parte do
+  // estoque, nenhuma regra de marca dispara e o veículo cai direto na regra de
+  // preço — a menos informada de todas. Era o caso do GLE 63s, que virava
+  // 'luxury' por custar mais de 500 mil em vez de 'premium' por ser Mercedes.
+  const marca = entrada.marca.toLowerCase()
+
+  const superesportivas = ['ferrari', 'lamborghini', 'mclaren', 'bugatti', 'pagani', 'koenigsegg']
+  if (superesportivas.some(m => marca.includes(m))) return 'supercar'
+
+  const esportivas = ['porsche', 'aston martin', 'maserati', 'lotus']
+  if (esportivas.some(m => marca.includes(m))) return 'sports'
+
+  const luxo = ['bentley', 'rolls-royce', 'maybach']
+  if (luxo.some(m => marca.includes(m))) return 'luxury'
+
+  const premium = ['bmw', 'mercedes', 'audi', 'lexus', 'land rover', 'range rover', 'jaguar', 'volvo']
+  if (premium.some(m => marca.includes(m))) return 'premium'
+
+  // Pela carroceria já classificada: o rótulo cru marca os 12 SUVs de teto
+  // caído como 'Conversível/Cupê', e eles nunca chegavam a esta linha.
+  if (entrada.carrocerias.includes('suv')) return 'suv'
+
+  if (entrada.preco >= 500000) return 'luxury'
+  if (entrada.preco >= 200000) return 'premium'
+
+  return 'executive'
+}
+
+const ROTULO_POR_CARROCERIA: Record<Carroceria, string> = {
+  suv: 'SUV',
+  sedan: 'Sedã',
+  hatch: 'Hatch',
+  cupe: 'Cupê',
+  conversivel: 'Conversível',
+  picape: 'Picape',
+  perua: 'Perua',
+}
+
+/**
+ * Rótulo para exibir na ficha, no JSON-LD e no feed.
+ *
+ * Recebe o que `classificarCarroceria` devolveu e o rótulo cru como rede de
+ * segurança: se a origem mandar uma carroceria que ainda não conhecemos, a
+ * classificação vem vazia e é melhor repetir o texto original do que apagar um
+ * dado que existia.
+ *
+ * Nos 5 casos que a origem não permite decidir, o rótulo assume a dúvida em vez
+ * de escolher — dizer "Conversível" num carro que pode ser cupê seria inventar
+ * especificação, que é pior que admitir a imprecisão.
+ */
+export function rotuloDeCarroceria(
+  categorias: Carroceria[],
+  rotuloCru?: string | null,
+): string {
+  if (categorias.length === 0) return (rotuloCru ?? '').trim()
+  if (categorias.length === 1) return ROTULO_POR_CARROCERIA[categorias[0]]
+  return categorias.map(c => ROTULO_POR_CARROCERIA[c]).join(' / ')
+}
+
 /** Traduz o valor que veio do seletor para a categoria canônica. */
 export function carroceriaDoFiltro(valor: string | null | undefined): Carroceria | null {
   return CARROCERIA_POR_CHAVE[chaveDeComparacao(valor)] ?? null

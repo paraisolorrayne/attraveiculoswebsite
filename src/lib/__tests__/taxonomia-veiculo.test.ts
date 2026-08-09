@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   classificarCarroceria,
+  classificarCategoria,
   classificarCombustivel,
+  rotuloDeCarroceria,
   carroceriaDoFiltro,
   combustivelDoFiltro,
   marcaCasaComFiltro,
@@ -150,5 +152,47 @@ describe('marca', () => {
 
   it('não casa marca diferente', () => {
     expect(marcaCasaComFiltro('Porsche', 'ferrari')).toBe(false)
+  })
+})
+
+describe('rótulo exibido na ficha, no JSON-LD e no feed', () => {
+  it('o SUV de teto caído deixa de dizer "Conversível/Cupê"', () => {
+    expect(rotuloDeCarroceria(['suv'], 'Conversível/Cupê')).toBe('SUV')
+  })
+
+  it('assume a dúvida quando a origem não permite decidir', () => {
+    expect(rotuloDeCarroceria(['conversivel', 'cupe'], 'Conversível/Cupê')).toBe('Conversível / Cupê')
+  })
+
+  it('carroceria desconhecida repete o texto da origem em vez de apagar', () => {
+    expect(rotuloDeCarroceria([], 'Buggy')).toBe('Buggy')
+  })
+
+  it('sem classificação e sem rótulo, fica vazio', () => {
+    expect(rotuloDeCarroceria([], null)).toBe('')
+  })
+})
+
+describe('categoria editorial', () => {
+  it('GLE 63s vira premium pela marca, não luxury pelo preço', () => {
+    expect(classificarCategoria({ marca: 'Mercedes', carrocerias: ['suv'], preco: 950000 })).toBe('premium')
+  })
+
+  it('com a marca vazia caía na regra de preço — era o defeito', () => {
+    expect(classificarCategoria({ marca: '', carrocerias: [], preco: 950000 })).toBe('luxury')
+  })
+
+  it('marca manda antes de preço', () => {
+    expect(classificarCategoria({ marca: 'Ferrari', carrocerias: ['cupe'], preco: 100000 })).toBe('supercar')
+    expect(classificarCategoria({ marca: 'Porsche', carrocerias: ['suv'], preco: 100000 })).toBe('sports')
+  })
+
+  it('SUV entra pela carroceria já classificada', () => {
+    expect(classificarCategoria({ marca: 'Tesla', carrocerias: ['suv'], preco: 700000 })).toBe('suv')
+  })
+
+  it('sem marca conhecida nem SUV, decide o preço', () => {
+    expect(classificarCategoria({ marca: 'Pontiac', carrocerias: ['cupe'], preco: 250000 })).toBe('premium')
+    expect(classificarCategoria({ marca: 'Pontiac', carrocerias: ['cupe'], preco: 90000 })).toBe('executive')
   })
 })
