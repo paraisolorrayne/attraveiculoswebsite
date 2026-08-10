@@ -16,6 +16,12 @@ import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucid
 
 interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
+	/**
+	 * Só existe para o redirecionamento abaixo carregar a marcação adiante.
+	 * Sem isso, um anúncio que aponte para um modelo cujo estoque acabou perde
+	 * utm e gclid no salto, e o lead entra como tráfego direto.
+	 */
+	searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
@@ -62,7 +68,7 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 	}
 }
 
-export default async function ModelPage({ params }: ModelPageProps) {
+export default async function ModelPage({ params, searchParams }: ModelPageProps) {
 	const { brand: brandSlug, model: modelSlug } = await params
 	const { vehicles: allVehicles } = await getVehicles({
 		tipo: 'carros',
@@ -77,7 +83,18 @@ export default async function ModelPage({ params }: ModelPageProps) {
 	// para onde há carro da mesma marca serve melhor a quem chegou do que um
 	// erro — para o buscador também.
 	if (!curado && !derivado) {
-		if (findSEOBrand(brandSlug)) redirect(`/comprar/${brandSlug}`)
+		if (findSEOBrand(brandSlug)) {
+			// A query vai JUNTO. Um redirecionamento que a descarta apaga utm_source,
+			// utm_campaign e gclid de quem chegou por anúncio — e o lead passa a
+			// contar como tráfego direto, sem que nada acuse o erro.
+			const query = new URLSearchParams()
+			for (const [chave, valor] of Object.entries((await searchParams) ?? {})) {
+				if (typeof valor === 'string') query.set(chave, valor)
+				else if (Array.isArray(valor) && valor[0]) query.set(chave, valor[0])
+			}
+			const sufixo = query.toString()
+			redirect(`/comprar/${brandSlug}${sufixo ? `?${sufixo}` : ''}`)
+		}
 		notFound()
 	}
 

@@ -74,6 +74,8 @@ function generateVehicleFAQs(vehicle: Vehicle) {
 
 interface VehiclePageProps {
 	params: Promise<{ slug: string }>
+	/** Só para o redirecionamento canônico carregar a marcação adiante. */
+	searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 /** Build a self-contained one-line summary used as meta description
@@ -156,7 +158,7 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	}
 }
 
-export default async function VehiclePage({ params }: VehiclePageProps) {
+export default async function VehiclePage({ params, searchParams }: VehiclePageProps) {
 	const { slug } = await params
 
 	// 404 DE VERDADE, não redirect.
@@ -182,7 +184,16 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	// slug (e.g. legacy "null-corvette-z06-2023-989248" → "corvette-z06-2023-989248"),
 	// 308-redirect so Google consolidates ranking signals on the clean URL.
 	if (vehicle.slug && vehicle.slug !== slug) {
-		permanentRedirect(`/veiculo/${vehicle.slug}`)
+		// A query acompanha o salto. Sem isso, um anúncio apontando para o slug
+		// antigo perderia utm e gclid no redirecionamento, e o lead entraria como
+		// tráfego direto — sem nada acusando a perda.
+		const query = new URLSearchParams()
+		for (const [chave, valor] of Object.entries((await searchParams) ?? {})) {
+			if (typeof valor === 'string') query.set(chave, valor)
+			else if (Array.isArray(valor) && valor[0]) query.set(chave, valor[0])
+		}
+		const sufixo = query.toString()
+		permanentRedirect(`/veiculo/${vehicle.slug}${sufixo ? `?${sufixo}` : ''}`)
 	}
 
 	// Fetch engine sound; datasheet lookup is synchronous
