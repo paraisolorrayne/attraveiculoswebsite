@@ -131,7 +131,12 @@ export async function GET(request: NextRequest) {
           s.session_id,
           coalesce(nullif(btrim(s.utm_source), ''), '(sem utm)') as utm_source,
           coalesce(nullif(btrim(s.utm_medium), ''), '-') as utm_medium,
-          coalesce(nullif(btrim(s.utm_campaign), ''), '(não marcada)') as utm_campaign,
+          coalesce(
+            nullif(btrim(s.utm_campaign), ''),
+            case when nullif(btrim(s.utm_id), '') is not null
+                 then 'campanha #' || btrim(s.utm_id) end,
+            '(não marcada)'
+          ) as utm_campaign,
           coalesce(nullif(btrim(s.utm_term), ''), '') as utm_term,
           coalesce(nullif(btrim(s.utm_content), ''), '') as utm_content,
           coalesce(nullif(btrim(s.referrer_domain), ''), '(direto)') as referrer,

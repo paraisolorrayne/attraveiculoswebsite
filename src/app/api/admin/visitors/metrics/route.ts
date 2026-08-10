@@ -156,7 +156,17 @@ export async function GET(request: NextRequest) {
 				select
 					${saneado(sql`s.utm_source`)} as utm_source,
 					${saneado(sql`s.utm_medium`)} as utm_medium,
-					${saneado(sql`s.utm_campaign`)} as utm_campaign,
+					-- Nome da campanha, com queda para o ID. O Google não tem código
+					-- automático para o nome — só utm_id={campaignid} —, então uma
+					-- campanha bem marcada pelo ID cairia em "(não marcada)" se
+					-- exigíssemos o nome. Aqui ela vira "campanha #123456", que separa
+					-- uma da outra, que é o que o relatório precisa.
+					coalesce(
+						${saneado(sql`s.utm_campaign`)},
+						case when nullif(btrim(s.utm_id), '') is not null
+						     then 'campanha #' || btrim(s.utm_id) end,
+						''
+					) as utm_campaign,
 					(${saneado(sql`s.gclid`)} is not null) as tem_gclid,
 					(${saneado(sql`s.fbclid`)} is not null) as tem_fbclid,
 					(${saneado(sql`s.ttclid`)} is not null) as tem_ttclid,
@@ -251,7 +261,18 @@ export async function GET(request: NextRequest) {
 			sql<{ canal_fonte: string; campanha: string; grupo: string; conteudo: string; termo: string; sessoes: number; whatsapp: number }>`
 				select
 					lower(btrim(coalesce(s.utm_source, ''))) as canal_fonte,
-					coalesce(nullif(btrim(s.utm_campaign), ''), '(não marcada)') as campanha,
+					-- Nome da campanha, ou o ID dela, ou "não marcada" — nessa ordem.
+					--
+					-- O Google NÃO tem código automático para o nome da campanha, só
+					-- para o ID (utm_id={campaignid}). Sem esta queda, toda campanha
+					-- corretamente marcada com o ID apareceria como "(não marcada)",
+					-- que é o oposto da verdade: o dado chegou, só não é um nome.
+					coalesce(
+						nullif(btrim(s.utm_campaign), ''),
+						case when nullif(btrim(s.utm_id), '') is not null
+						     then 'campanha #' || btrim(s.utm_id) end,
+						'(não marcada)'
+					) as campanha,
 					coalesce(nullif(btrim(s.adset_id), ''), '(não marcado)') as grupo,
 					coalesce(nullif(btrim(s.utm_content), ''), '(não marcado)') as conteudo,
 					coalesce(nullif(btrim(s.utm_term), ''), '(não marcado)') as termo,
@@ -274,7 +295,13 @@ export async function GET(request: NextRequest) {
 				select
 					coalesce(nullif(lower(btrim(s.utm_source)), ''), '(sem fonte)') as fonte,
 					count(*)::int as sessoes,
-					(count(*) filter (where nullif(btrim(s.utm_campaign), '') is not null))::int as com_campanha,
+					-- Campanha identificada = nome OU id. O que importa para o
+					-- relatório é conseguir separar uma campanha da outra; o nome é
+					-- conforto, o identificador é o requisito.
+					(count(*) filter (
+						where nullif(btrim(s.utm_campaign), '') is not null
+						   or nullif(btrim(s.utm_id), '') is not null
+					))::int as com_campanha,
 					(count(*) filter (where nullif(btrim(s.utm_content), '') is not null))::int as com_conteudo,
 					(count(*) filter (where nullif(btrim(s.utm_term), '') is not null))::int as com_termo,
 					(count(*) filter (where nullif(btrim(s.utm_id), '') is not null))::int as com_id,
