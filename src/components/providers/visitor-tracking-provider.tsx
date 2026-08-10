@@ -724,11 +724,23 @@ export function VisitorTrackingProvider({ children }: Props) {
 
       if (!interactionType) return
 
+      // De QUAL veículo é este botão.
+      //
+      // O href não diz: numa listagem há dezenas de cards e o caminho é só
+      // `/veiculos`. Sem isto o clique era gravado com veículo nulo, e a
+      // conversa que chegava no WhatsApp não se ligava ao carro — aconteceu com
+      // um lead real da Frontier em 10/08. O botão se identifica por
+      // `data-vehicle-id`; procuramos no próprio link e no ancestral mais
+      // próximo, para o card poder marcar o container em vez de cada botão.
+      const comVeiculo = anchor.closest<HTMLElement>('[data-vehicle-id]')
+
       // Rastreia sem bloquear a navegação (track é fire-and-forget)
       trackInteraction(interactionType, {
         href,
         anchor_text: (anchor.textContent || '').trim().slice(0, 80),
         page_path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        ...(comVeiculo?.dataset.vehicleId ? { vehicle_id: comVeiculo.dataset.vehicleId } : {}),
+        ...(comVeiculo?.dataset.vehicleSlug ? { vehicle_slug: comVeiculo.dataset.vehicleSlug } : {}),
       })
     }
 

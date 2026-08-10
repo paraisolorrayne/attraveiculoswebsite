@@ -15,6 +15,22 @@ interface VehicleCardCTAsProps {
 export function VehicleCardCTAs({ vehicle, variant = 'compact', className = '' }: VehicleCardCTAsProps) {
   const vehicleName = `${vehicle.brand} ${vehicle.model} ${vehicle.year_model}`
 
+  /**
+   * Identifica o veículo para o rastreamento.
+   *
+   * O ouvinte global de cliques captura qualquer link de WhatsApp pelo href,
+   * mas não tem como saber de QUE carro o botão é: numa listagem há dezenas de
+   * cards e o caminho da página é só `/veiculos`. Um lead real chegou assim em
+   * 10/08 — o clique foi gravado com `vehicle_id` nulo, e só a leitura da
+   * mensagem revelou que era a Frontier.
+   *
+   * O atributo resolve sem acoplar o ouvinte à estrutura do card.
+   */
+  const marcacao = {
+    'data-vehicle-id': String(vehicle.id),
+    'data-vehicle-slug': vehicle.slug,
+  }
+
   const testDriveMessage = `Olá! Gostaria de agendar um test drive no ${vehicleName}.
 
 Valor: ${formatPrice(vehicle.price)}
@@ -34,6 +50,7 @@ Podem me enviar mais detalhes?`
           href={getWhatsAppUrl(moreInfoMessage)}
           target="_blank"
           rel="noopener noreferrer"
+          {...marcacao}
           onClick={(e) => e.stopPropagation()}
           className="p-2 bg-primary/10 hover:bg-primary hover:text-white text-primary rounded-lg transition-all"
           title="Conversar com consultor no WhatsApp"
@@ -53,7 +70,7 @@ Podem me enviar mais detalhes?`
           className="w-full"
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
-          <a href={getWhatsAppUrl(moreInfoMessage)} target="_blank" rel="noopener noreferrer">
+          <a href={getWhatsAppUrl(moreInfoMessage)} target="_blank" rel="noopener noreferrer" {...marcacao}>
             <MessageCircle className="w-4 h-4 mr-2" />
             Falar com Consultor
           </a>
@@ -71,7 +88,7 @@ Podem me enviar mais detalhes?`
         className="w-full justify-start"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        <a href={getWhatsAppUrl(testDriveMessage)} target="_blank" rel="noopener noreferrer">
+        <a href={getWhatsAppUrl(testDriveMessage)} target="_blank" rel="noopener noreferrer" {...marcacao}>
           <Calendar className="w-4 h-4 mr-2" />
           Agendar Test Drive
         </a>
@@ -81,7 +98,7 @@ Podem me enviar mais detalhes?`
         className="w-full justify-start"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        <a href={getWhatsAppUrl(moreInfoMessage)} target="_blank" rel="noopener noreferrer">
+        <a href={getWhatsAppUrl(moreInfoMessage)} target="_blank" rel="noopener noreferrer" {...marcacao}>
           <MessageCircle className="w-4 h-4 mr-2" />
           Conversar com Consultor no WhatsApp
         </a>

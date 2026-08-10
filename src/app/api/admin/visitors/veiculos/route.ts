@@ -42,6 +42,25 @@ function faixaDe(preco: number): string {
   return f?.rotulo ?? FAIXAS[FAIXAS.length - 1].rotulo
 }
 
+interface LinhaClique {
+  id: string
+  clicked_at: string
+  page_path: string | null
+  vehicle_id: string | null
+  correlacionado: boolean
+  session_id: string | null
+  utm_source: string
+  utm_medium: string
+  utm_campaign: string
+  utm_term: string
+  utm_content: string
+  referrer: string
+  tem_gclid: boolean
+  city: string
+  region: string
+  device_type: string
+}
+
 interface LinhaVeiculo {
   vehicle_slug: string
   vehicle_brand: string | null
@@ -92,17 +111,40 @@ export async function GET(request: NextRequest) {
         group by 1
       `.execute(db),
 
-      // Cliques de WhatsApp gravados com o veículo. Fonte diferente da coluna
-      // `clicked_whatsapp` do page view: esta registra o clique com sessão e
-      // horário, e é a que alimenta a correlação com o CRM.
-      sql<{ vehicle_id: string; cliques: number }>`
-        select w.vehicle_id, count(*)::int as cliques
+      // Cada clique de WhatsApp, COM a origem da sessão.
+      //
+      // Era o que faltava para responder "de onde veio esse lead que chegou às
+      // 12:41". O painel só tinha agregados — canais, campanhas, veículos — e
+      // não havia caminho de um contato individual até a sessão que o originou.
+      // Esse trajeto só existia por consulta manual no banco.
+      //
+      // Traz termo e anúncio junto: quando a campanha não vem marcada — o caso
+      // de 259 das 261 sessões pagas dos últimos dois dias — é `utm_term` que
+      // diz o que a pessoa buscou, e é a única pista que sobra.
+      sql<LinhaClique>`
+        select
+          w.id,
+          w.clicked_at,
+          w.page_path,
+          w.vehicle_id,
+          (w.consumido_em is not null) as correlacionado,
+          s.session_id,
+          coalesce(nullif(btrim(s.utm_source), ''), '(sem utm)') as utm_source,
+          coalesce(nullif(btrim(s.utm_medium), ''), '-') as utm_medium,
+          coalesce(nullif(btrim(s.utm_campaign), ''), '(não marcada)') as utm_campaign,
+          coalesce(nullif(btrim(s.utm_term), ''), '') as utm_term,
+          coalesce(nullif(btrim(s.utm_content), ''), '') as utm_content,
+          coalesce(nullif(btrim(s.referrer_domain), ''), '(direto)') as referrer,
+          (s.gclid is not null) as tem_gclid,
+          coalesce(s.city, '') as city,
+          coalesce(s.region, '') as region,
+          coalesce(f.device_type, '') as device_type
         from whatsapp_clicks w
-        where w.vehicle_id is not null
-          and ${desde ? sql`w.clicked_at >= ${desde}` : sql`true`}
-        group by 1
-        order by cliques desc
-        limit ${LIMITE_LISTAS}
+        left join visitor_sessions s on s.id = w.session_db_id
+        left join visitor_fingerprints f on f.id = s.fingerprint_id
+        where ${desde ? sql`w.clicked_at >= ${desde}` : sql`true`}
+        order by w.clicked_at desc
+        limit 50
       `.execute(db),
 
       loadListedInventory().catch(() => ({ vehicles: [] })),

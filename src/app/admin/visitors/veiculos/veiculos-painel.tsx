@@ -24,7 +24,24 @@ interface Dados {
   mais_vistos: LinhaVeiculo[]
   sem_contato: LinhaVeiculo[]
   faixas: { faixa: string; visualizacoes: number; em_estoque: number }[]
-  cliques_whatsapp: { vehicle_id: string; cliques: number }[]
+  cliques_whatsapp: {
+    id: string
+    clicked_at: string
+    page_path: string | null
+    vehicle_id: string | null
+    correlacionado: boolean
+    session_id: string | null
+    utm_source: string
+    utm_medium: string
+    utm_campaign: string
+    utm_term: string
+    utm_content: string
+    referrer: string
+    tem_gclid: boolean
+    city: string
+    region: string
+    device_type: string
+  }[]
   veiculos_no_estoque: number
 }
 
@@ -149,23 +166,75 @@ export function VeiculosPainel() {
 
       {dados.cliques_whatsapp.length > 0 && (
         <Secao
-          titulo="Cliques de WhatsApp registrados por veículo"
-          dica="Fonte diferente da coluna da ficha: aqui o clique é gravado com sessão e horário, e é esta a base que liga a conversa ao lead no CRM."
+          titulo="Cada contato pelo WhatsApp, com a origem"
+          dica="Vai do contato individual até a sessão que o originou — o caminho que antes só existia por consulta no banco. Quando a campanha não vem marcada, é o termo buscado que diz o que a pessoa procurava."
         >
-          <table className="w-full text-sm">
-            <tbody>
-              {dados.cliques_whatsapp.map(c => (
-                <tr key={c.vehicle_id} className="border-b border-border/60 last:border-0">
-                  <td className="px-4 py-2 text-foreground">{c.vehicle_id}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">
-                    {fmtNum(c.cliques)} clique{c.cliques === 1 ? '' : 's'}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-foreground-secondary">
+                  <th className="px-4 py-2 font-medium">Quando</th>
+                  <th className="px-4 py-2 font-medium">Origem</th>
+                  <th className="px-4 py-2 font-medium">O que buscou</th>
+                  <th className="px-4 py-2 font-medium">Onde clicou</th>
+                  <th className="px-4 py-2 font-medium">Local</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {dados.cliques_whatsapp.map(c => (
+                  <tr key={c.id} className="border-b border-border/60 last:border-0 align-top">
+                    <td className="whitespace-nowrap px-4 py-2 text-foreground-secondary">
+                      {new Date(c.clicked_at).toLocaleString('pt-BR', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                        timeZone: 'America/Sao_Paulo',
+                      })}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className="text-foreground">
+                        {c.utm_source}
+                        {c.utm_medium !== '-' && ` / ${c.utm_medium}`}
+                      </span>
+                      <span className="block text-[11px] text-foreground-secondary">
+                        {c.utm_campaign}
+                        {c.tem_gclid && ' · gclid'}
+                      </span>
+                    </td>
+                    <td className="max-w-[14rem] px-4 py-2">
+                      {c.utm_term ? (
+                        <span className="block truncate text-foreground" title={c.utm_term}>
+                          {c.utm_term}
+                        </span>
+                      ) : (
+                        <span className="text-foreground-secondary">—</span>
+                      )}
+                      {c.utm_content && (
+                        <span className="block truncate text-[11px] text-foreground-secondary" title={c.utm_content}>
+                          {c.utm_content}
+                        </span>
+                      )}
+                    </td>
+                    <td className="max-w-[12rem] px-4 py-2">
+                      <span className="block truncate text-foreground-secondary" title={c.page_path ?? ''}>
+                        {c.page_path ?? '—'}
+                      </span>
+                      <span className="block text-[11px] text-foreground-secondary">
+                        {c.vehicle_id ? `veículo ${c.vehicle_id}` : 'sem veículo'}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-foreground-secondary">
+                      {[c.city, c.region].filter(Boolean).join(' / ') || '—'}
+                      {c.device_type && (
+                        <span className="block text-[11px]">{c.device_type}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Secao>
       )}
+
     </div>
   )
 }
