@@ -47,6 +47,7 @@ describe('tradução para o painel', () => {
     expect(rotuloMatchType('e')).toBe('Exata')
     expect(rotuloMatchType('p')).toBe('Frase')
     expect(rotuloMatchType('b')).toBe('Ampla')
+    expect(rotuloMatchType('a')).toBe('IA Max')
   })
 
   it('device', () => {

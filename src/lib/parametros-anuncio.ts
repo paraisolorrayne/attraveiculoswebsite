@@ -15,6 +15,10 @@ const MATCHTYPE: Record<string, string> = {
   e: 'Exata',
   p: 'Frase',
   b: 'Ampla',
+  // Valor novo do Google, para campanhas com IA Max. Sem ele o painel exibiria
+  // um "a" solto — que é o comportamento correto para código desconhecido, mas
+  // este já se conhece.
+  a: 'IA Max',
 }
 
 const DEVICE: Record<string, string> = {
