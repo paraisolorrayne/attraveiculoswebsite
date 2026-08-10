@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 const ABAS = [
   { href: '/admin/visitors', rotulo: 'Visão geral', exato: true },
   { href: '/admin/visitors/comportamento', rotulo: 'Comportamento' },
+  { href: '/admin/visitors/veiculos', rotulo: 'Veículos' },
 ] as const
 
 export function VisitorsNav() {
