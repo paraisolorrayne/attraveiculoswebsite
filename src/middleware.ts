@@ -26,7 +26,7 @@ const { auth } = NextAuth(authConfig)
  * carimbo nunca existiu, e sem ele a checagem do layout jamais rodou — na
  * prática, toda a autorização por seção dependia só do token.
  */
-export default auth((req) => {
+const comAutenticacao = auth((req) => {
   const { pathname } = req.nextUrl
 
   // Só protege /admin/*; login e reset são livres.
@@ -54,6 +54,31 @@ export default auth((req) => {
   return NextResponse.next({ request: { headers } })
 })
 
+/**
+ * A rota de veículo também precisa do carimbo — mas SEM passar pela
+ * autenticação.
+ *
+ * O `not-found.tsx` de `/veiculo/[slug]` não recebe params: é ele que atende o
+ * carro que saiu do estoque, e sem saber QUAL carro foi pedido não tem como
+ * sugerir semelhantes. O caminho vem por `x-pathname`, como no admin.
+ *
+ * O desvio antes de `comAutenticacao` é o que importa: envolver a rota pública
+ * no `auth()` faria o JWT ser decodificado a cada visita de ficha de veículo —
+ * trabalho de sessão numa página que não tem sessão, no caminho mais quente do
+ * site.
+ */
+export default function middleware(
+  req: Parameters<typeof comAutenticacao>[0],
+  ctx: Parameters<typeof comAutenticacao>[1],
+) {
+  if (req.nextUrl.pathname.startsWith('/veiculo/')) {
+    const headers = new Headers(req.headers)
+    headers.set('x-pathname', req.nextUrl.pathname)
+    return NextResponse.next({ request: { headers } })
+  }
+  return comAutenticacao(req, ctx)
+}
+
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/veiculo/:path*'],
 }
