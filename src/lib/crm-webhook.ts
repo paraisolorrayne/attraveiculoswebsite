@@ -26,6 +26,52 @@ export function safeEquals(a: string, b: string): boolean {
 	return timingSafeEqual(ba, bb)
 }
 
+/**
+ * Linha de log de requisição RECUSADA pelo receptor.
+ *
+ * Por que existe: até 11/08 o receptor devolvia 401/400/500 para o emissor e
+ * não deixava rastro nenhum aqui. No caso do lead Ubiratan (card parado 10 dias
+ * em "aguardando aceite") deu para provar que o evento não foi GRAVADO, mas não
+ * que ele não tinha batido na porta e levado um "não" — e sem isso a conversa
+ * com o emissor vira palavra contra palavra.
+ *
+ * O corpo NÃO entra no log: o payload traz nome e telefone de cliente. Vão só
+ * os ids dos cards (que cruzam com o log do emissor), o tamanho do corpo e se
+ * o header de assinatura veio.
+ */
+const MAX_IDS_LOG = 20
+// Erro do Postgres às vezes embute o valor da coluna que violou a restrição —
+// e aí vira telefone/e-mail de cliente no log. Não dá para higienizar sem
+// perder o diagnóstico, então corta: o começo da mensagem é o que identifica
+// a falha, o resto é onde os valores costumam aparecer.
+const MAX_MOTIVO_LOG = 300
+
+export function linhaRejeicao(ctx: {
+	status: number
+	motivo: string
+	bytes: number
+	assinatura: boolean
+	ids?: string[]
+}): string {
+	const motivo = ctx.motivo.length > MAX_MOTIVO_LOG
+		? `${ctx.motivo.slice(0, MAX_MOTIVO_LOG)}…[cortado]`
+		: ctx.motivo
+	const partes = [
+		'[FykosCRM] REJEITADO',
+		`status=${ctx.status}`,
+		`motivo="${motivo}"`,
+		`bytes=${ctx.bytes}`,
+		`assinatura=${ctx.assinatura ? 'presente' : 'ausente'}`,
+	]
+	if (ctx.ids && ctx.ids.length > 0) {
+		const mostrados = ctx.ids.slice(0, MAX_IDS_LOG)
+		const sobra = ctx.ids.length - mostrados.length
+		partes.push(`total=${ctx.ids.length}`)
+		partes.push(`ids=${mostrados.join(',')}${sobra > 0 ? ` +${sobra}` : ''}`)
+	}
+	return partes.join(' ')
+}
+
 const ETAPA_V1_MAP: Record<string, { etapa: string; situacaoImplicita?: string }> = {
 	aguardando_vendedor: { etapa: 'novo' },
 	encerrado_sucesso: { etapa: 'encerrado_ganho' },

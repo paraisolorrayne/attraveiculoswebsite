@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Insertable, Updateable, Transaction } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
-import { verifyCrmSignature, safeEquals, mergeCardV2, atualizadoEmInvalido } from '@/lib/crm-webhook'
+import { verifyCrmSignature, safeEquals, mergeCardV2, atualizadoEmInvalido, linhaRejeicao } from '@/lib/crm-webhook'
 import { ligarCliqueAoCard } from '@/lib/whatsapp-correlacao-db'
 
 export const dynamic = 'force-dynamic'
@@ -84,10 +84,31 @@ async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<
 }
 
 export async function POST(request: NextRequest) {
+	// Toda saída de erro daqui para baixo passa por `recusa`: antes de 11/08 o
+	// receptor recusava calado, e no caso do lead Ubiratan não deu para provar
+	// se o evento de aceite tinha sido rejeitado na porta ou nunca enviado.
+	// Vai para stderr de propósito — é o fluxo que sobrevive no attra-error.log.
+	// O que o emissor recebe NÃO muda: `motivo` é detalhado e vai só para o log;
+	// `resposta` preserva o texto anterior. Enriquecer o corpo da resposta
+	// atrapalharia o time do emissor no meio da correção deles, e dizer a um
+	// chamador não autenticado se a credencial faltou ou estava errada entrega
+	// informação a quem está sondando.
+	const bytes = request.headers.get('content-length')
+	const temAssinatura = !!request.headers.get('x-crm-signature')
+	const recusa = (
+		status: number,
+		motivo: string,
+		corpoLen: number,
+		opts: { ids?: string[]; resposta?: string } = {},
+	) => {
+		console.error(linhaRejeicao({ status, motivo, bytes: corpoLen, assinatura: temAssinatura, ids: opts.ids }))
+		return NextResponse.json({ error: opts.resposta ?? motivo }, { status })
+	}
+
 	const secretV2 = process.env.CRM_SITE_WEBHOOK_SECRET || process.env.FYKOS_CRM_SECRET
 	const secretV1 = process.env.FYKOS_CRM_SECRET
 	if (!secretV2 && !secretV1) {
-		return NextResponse.json({ error: 'Webhook sem secret configurado no servidor' }, { status: 500 })
+		return recusa(500, 'Webhook sem secret configurado no servidor', Number(bytes ?? 0))
 	}
 
 	const rawBody = await request.text()
@@ -95,7 +116,10 @@ export async function POST(request: NextRequest) {
 	const headerLegado = request.headers.get('x-webhook-secret')
 	const legadoOk = !!secretV1 && !!headerLegado && safeEquals(headerLegado, secretV1)
 	if (!assinaturaOk && !legadoOk) {
-		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		// Distingue "mandou credencial errada" de "não mandou credencial": um é
+		// secret rotacionado, o outro é emissor mal configurado.
+		const detalhe = temAssinatura || headerLegado ? 'credencial inválida' : 'sem credencial'
+		return recusa(401, `Unauthorized (${detalhe})`, rawBody.length, { resposta: 'Unauthorized' })
 	}
 
 	let body: Record<string, unknown>
@@ -104,7 +128,7 @@ export async function POST(request: NextRequest) {
 		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('não é objeto')
 		body = parsed as Record<string, unknown>
 	} catch {
-		return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+		return recusa(400, 'JSON inválido', rawBody.length)
 	}
 
 	const remover = Array.isArray(body.remover) ? body.remover.map(String) : []
@@ -112,15 +136,20 @@ export async function POST(request: NextRequest) {
 		? (body.cards as Record<string, unknown>[])
 		: (body.id !== undefined ? [body] : [])
 
+	// Ids da requisição: entram no log de recusa para cruzar com o log do emissor.
+	const idsDaRequisicao = [...lista.map(c => (c.id === undefined || c.id === null ? '(sem-id)' : String(c.id))), ...remover]
+
 	// Validação completa ANTES de qualquer escrita (inclusive remoções)
 	if (lista.some(c => c.id === undefined || c.id === null || String(c.id) === '')) {
-		return NextResponse.json({ error: 'Todo card precisa de id' }, { status: 400 })
+		return recusa(400, 'Todo card precisa de id', rawBody.length, { ids: idsDaRequisicao })
 	}
 	const cardInvalido = lista.find(c => atualizadoEmInvalido(c))
 	if (cardInvalido) {
-		return NextResponse.json(
-			{ error: `Card ${String(cardInvalido.id)}: atualizado_em inválido (esperado ISO-8601)` },
-			{ status: 400 },
+		return recusa(
+			400,
+			`Card ${String(cardInvalido.id)}: atualizado_em inválido (esperado ISO-8601)`,
+			rawBody.length,
+			{ ids: idsDaRequisicao },
 		)
 	}
 
@@ -128,15 +157,21 @@ export async function POST(request: NextRequest) {
 		try {
 			await db.deleteFrom('crm_cards').where('id', 'in', remover).execute()
 		} catch (error) {
-			return NextResponse.json({ error: `Falha ao remover: ${error instanceof Error ? error.message : error}` }, { status: 500 })
+			return recusa(500, `Falha ao remover: ${error instanceof Error ? error.message : error}`, rawBody.length, { ids: remover })
 		}
 	}
 
 	let upserts = 0
 	let ignorados = 0
+	// Card em processamento: cada um commita na sua transação, então uma falha
+	// no meio do lote deixa os anteriores GRAVADOS e devolve 500 assim mesmo.
+	// Sem saber onde parou, o emissor reenvia o lote inteiro e nós não temos
+	// como explicar por que metade entrou.
+	let idEmCurso = '(nenhum)'
 	try {
 		for (const card of lista) {
 			const id = String(card.id)
+			idEmCurso = id
 			let resultado = await db.transaction().execute(trx => aplicarCard(trx, id, card))
 			if (resultado === 'retry') {
 				resultado = await db.transaction().execute(trx => aplicarCard(trx, id, card))
@@ -146,7 +181,9 @@ export async function POST(request: NextRequest) {
 			else ignorados++
 		}
 	} catch (error) {
-		return NextResponse.json({ error: `Falha no upsert: ${error instanceof Error ? error.message : error}` }, { status: 500 })
+		const erroStr = error instanceof Error ? error.message : String(error)
+		const motivo = `Falha no upsert no card ${idEmCurso} (${upserts + ignorados} de ${lista.length} já processados, ${upserts} gravados): ${erroStr}`
+		return recusa(500, motivo, rawBody.length, { ids: idsDaRequisicao, resposta: `Falha no upsert: ${erroStr}` })
 	}
 
 	console.log(`[FykosCRM] upserts=${upserts} ignorados=${ignorados} remoções=${remover.length} auth=${assinaturaOk ? 'hmac-v2' : 'legado-v1'}`)
