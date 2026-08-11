@@ -296,55 +296,105 @@ function firstParam(params: URLSearchParams, keys: readonly string[]): string | 
   return null
 }
 
-// Collect UTM parameters from URL and persist in cookies for SPA propagation
-// First visit: captures from URL query params and stores in cookies
-// Subsequent navigations: reads from cookies (URL params are gone in SPA)
+/** Chaves resolvidas direto, sem alias. `utm_term` sai daqui: ver TERM_ALIASES. */
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const
+
+/**
+ * Termo de busca, em ordem de preferência.
+ *
+ * `utm_term` vem de `{_term}`, parâmetro PERSONALIZADO que o Eduardo cadastrou
+ * a nível de palavra-chave — e que funciona: 715 das 744 sessões pagas dos 7
+ * dias até 10/08/2026 chegaram com palavra-chave real. Ele vem primeiro
+ * justamente por isso; trocar a fonte de 715 sessões por outra seria mexer no
+ * que já está certo.
+ *
+ * `kw` é `{keyword}`, ValueTrack automático. Entra como rede: cobre a palavra
+ * nova que ninguém lembrou de cadastrar — as 29 sessões que hoje chegam sem
+ * termo nenhum — sem depender de manutenção manual.
+ */
+const TERM_ALIASES = ['utm_term', 'kw', 'keyword'] as const
+
+/**
+ * Tudo que só aparece na URL quando a visita veio de uma marcação/anúncio.
+ * A presença de QUALQUER um deles significa "entrada nova, marcada".
+ */
+const MARCADORES_DE_ENTRADA: readonly string[] = [
+  ...UTM_KEYS,
+  ...TERM_ALIASES,
+  ...CAMPAIGN_ID_ALIASES,
+  ...ADSET_ID_ALIASES,
+  ...AD_ID_ALIASES,
+  'gclid', 'fbclid', 'ttclid',
+]
+
+/**
+ * A URL traz marcação própria? Só conta valor NÃO VAZIO: o sufixo acordado com
+ * o Eduardo em 10/08/2026 mistura ValueTrack com parâmetros personalizados, e
+ * onde o personalizado não está cadastrado a chave chega presente e vazia
+ * (`utm_campaign=`). Presente-e-vazia não é marcação.
+ */
+function urlTemMarcacaoPropria(params: URLSearchParams): boolean {
+  return MARCADORES_DE_ENTRADA.some(k => (params.get(k) ?? '').trim() !== '')
+}
+
+function apagarCookie(nome: string): void {
+  if (typeof document === 'undefined') return
+  document.cookie = `${nome}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax; Secure`
+}
+
+/**
+ * UTMs da visita.
+ *
+ * O cookie existe porque numa SPA a query some na segunda página e a sessão
+ * perderia a origem. Mas ele é por CLIQUE, não por chave: quando a URL traz
+ * marcação própria, o conjunto inteiro é substituído pelo que veio agora, e o
+ * que não veio é APAGADO.
+ *
+ * O motivo é concreto. O sufixo acordado com o Eduardo (10/08/2026) manda
+ * `utm_campaign={_campaign}` — parâmetro personalizado, que só resolve nas
+ * campanhas onde alguém o cadastrou — junto de `utm_id={campaignid}`, que é
+ * ValueTrack e sempre resolve. Numa campanha sem `_campaign`, a URL chega com
+ * `utm_campaign=` vazio e `utm_id=222` cheio. Com a queda por chave, o vazio
+ * caía no cookie de 30 dias e a visita era gravada como
+ * `utm_campaign=institucional` (a campanha do clique ANTERIOR) + `utm_id=222`
+ * (a do clique atual): nome de uma campanha e ID de outra, no mesmo lead, com
+ * o painel preferindo o nome. É a mesma armadilha do gclid de 90 dias — um
+ * marcador velho fingindo descrever a visita de agora.
+ */
 export function collectUTMParams(): Record<string, string | null> {
   if (typeof window === 'undefined') return {}
 
   const params = new URLSearchParams(window.location.search)
-
-  const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const
+  const entradaNova = urlTemMarcacaoPropria(params)
   const result: Record<string, string | null> = {}
 
-  for (const key of utmKeys) {
-    const cookieName = `attra_${key}`
-    const fromUrl = params.get(key)
-    if (fromUrl) {
-      // Fresh value from URL — persist in cookie
-      setCookie(cookieName, fromUrl, UTM_COOKIE_DAYS)
-      result[key] = fromUrl
-    } else {
-      // Fallback to stored cookie
-      result[key] = getCookie(cookieName)
+  /** Grava o que veio na URL; sem valor, herda o cookie ou o apaga. */
+  const resolver = (chave: string, cookie: string, daUrl: string | null): string | null => {
+    if (daUrl) {
+      setCookie(cookie, daUrl, UTM_COOKIE_DAYS)
+      return (result[chave] = daUrl)
     }
+    if (entradaNova) {
+      // Pertencia ao clique anterior: some, senão contamina este.
+      apagarCookie(cookie)
+      return (result[chave] = null)
+    }
+    return (result[chave] = getCookie(cookie))
   }
 
-  // ID de campanha (utm_id GA4 / campaign_id Meta / campaignid Google Ads)
-  // Guardamos sob a chave canônica utm_id; campaign_id/adset/ad ficam à parte.
-  const utmIdFromUrl = firstParam(params, CAMPAIGN_ID_ALIASES)
-  if (utmIdFromUrl) {
-    setCookie('attra_utm_id', utmIdFromUrl, UTM_COOKIE_DAYS)
-    result.utm_id = utmIdFromUrl
-  } else {
-    result.utm_id = getCookie('attra_utm_id')
+  for (const key of UTM_KEYS) {
+    resolver(key, `attra_${key}`, params.get(key))
   }
 
-  const adsetFromUrl = firstParam(params, ADSET_ID_ALIASES)
-  if (adsetFromUrl) {
-    setCookie('attra_adset_id', adsetFromUrl, UTM_COOKIE_DAYS)
-    result.adset_id = adsetFromUrl
-  } else {
-    result.adset_id = getCookie('attra_adset_id')
-  }
+  // Termo: personalizado primeiro, {keyword} como rede. Guardado sob a chave
+  // canônica utm_term — o painel de termos não precisa saber de onde veio.
+  resolver('utm_term', 'attra_utm_term', firstParam(params, TERM_ALIASES))
 
-  const adFromUrl = firstParam(params, AD_ID_ALIASES)
-  if (adFromUrl) {
-    setCookie('attra_ad_id', adFromUrl, UTM_COOKIE_DAYS)
-    result.ad_id = adFromUrl
-  } else {
-    result.ad_id = getCookie('attra_ad_id')
-  }
+  // ID de campanha (utm_id GA4 / campaign_id Meta / campaignid Google Ads).
+  // Guardamos sob a chave canônica utm_id; adset/ad ficam à parte.
+  resolver('utm_id', 'attra_utm_id', firstParam(params, CAMPAIGN_ID_ALIASES))
+  resolver('adset_id', 'attra_adset_id', firstParam(params, ADSET_ID_ALIASES))
+  resolver('ad_id', 'attra_ad_id', firstParam(params, AD_ID_ALIASES))
 
   for (const chave of PARAMETROS_DE_CLIQUE) {
     result[chave] = normalizarParametroAnuncio(params.get(chave))
