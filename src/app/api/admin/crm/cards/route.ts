@@ -8,7 +8,7 @@ import {
   chaveTelefone,
   escolherSessaoDoCard,
 } from '@/lib/atribuicao-receita'
-import { classificarCanal, normalizarCampanha, rotuloCanal } from '@/lib/traffic-channel'
+import { classificarCanal, rotuloCampanha, rotuloCanal } from '@/lib/traffic-channel'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
@@ -20,6 +20,8 @@ interface SessaoOrigem {
   utm_source: string | null
   utm_medium: string | null
   utm_campaign: string | null
+  /** `{campaignid}` do Google Ads — o único código que ele tem para campanha. */
+  utm_id: string | null
   gclid: string | null
   fbclid: string | null
   ttclid: string | null
@@ -70,7 +72,7 @@ async function origensDosCards(
     const linhas = await sql<SessaoOrigem & { chave: string }>`
       select
         s.id::text as id, s.session_id, s.started_at, s.utm_source, s.utm_medium,
-        s.utm_campaign, s.gclid, s.fbclid, s.ttclid, s.referrer_domain,
+        s.utm_campaign, s.utm_id, s.gclid, s.fbclid, s.ttclid, s.referrer_domain,
         case when s.id::text = any(${uuids}) then s.id::text else s.session_id end as chave
       from visitor_sessions s
       where s.id::text = any(${uuids}) or s.session_id = any(${tokens})
@@ -130,7 +132,7 @@ async function origensDosCards(
         select
           fps.profile_id::text as profile_id,
           s.id::text as id, s.session_id, s.started_at, s.utm_source, s.utm_medium,
-          s.utm_campaign, s.gclid, s.fbclid, s.ttclid, s.referrer_domain
+          s.utm_campaign, s.utm_id, s.gclid, s.fbclid, s.ttclid, s.referrer_domain
         from visitor_sessions s
         join fps on fps.fingerprint_id = s.fingerprint_id
       `.execute(db)
@@ -166,7 +168,7 @@ async function origensDosCards(
     if (!sessao) continue
 
     saida.set(card.id, {
-      campanha: normalizarCampanha(sessao.utm_campaign),
+      campanha: rotuloCampanha(sessao.utm_campaign, sessao.utm_id),
       canal: rotuloCanal(classificarCanal(sessao)),
       metodo,
     })
@@ -174,6 +176,18 @@ async function origensDosCards(
 
   return saida
 }
+
+// Teto de cards devolvidos ao painel.
+//
+// Era 500 e a base estava em 367 (10/08/2026) — questão de semanas para
+// estourar. O corte é por `atualizado_em desc`, então quem cai primeiro é o
+// card mais parado: exatamente a fila de "Aguardando aceite", que é o que o
+// gestor mais precisa ver. Truncar ali é pior do que em qualquer outra coluna.
+//
+// 5000 cobre anos no ritmo atual (o card é upsert por pessoa, não por
+// atendimento — a base cresce com clientes novos, ~5-10/dia). Se um dia
+// estourar, o painel avisa em vez de mentir: `truncado` no corpo da resposta.
+const LIMITE_CARDS = 5000
 
 // Visão CRM (somente leitura). Acesso: admin e owner.
 export async function GET() {
@@ -186,7 +200,7 @@ export async function GET() {
   try {
     const data = await db.selectFrom('crm_cards').selectAll()
       .orderBy('atualizado_em', 'desc')
-      .limit(500)
+      .limit(LIMITE_CARDS)
       .execute()
 
     // A origem é um enriquecimento: se falhar, os cards ainda precisam abrir.
@@ -198,7 +212,9 @@ export async function GET() {
     }
 
     const cards = data.map(card => ({ ...card, origem_campanha: origens.get(card.id) ?? null }))
-    return NextResponse.json({ cards })
+    // `truncado` só é verdade quando o teto foi atingido de fato — a UI mostra
+    // o aviso em vez de deixar o gestor achar que está vendo tudo.
+    return NextResponse.json({ cards, truncado: data.length === LIMITE_CARDS, limite: LIMITE_CARDS })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'query failed' }, { status: 500 })
   }

@@ -235,6 +235,30 @@ export function normalizarCampanha(campanha: string | null | undefined): string 
 }
 
 /**
+ * Rótulo da campanha com queda para o ID — a MESMA regra que
+ * `/api/admin/visitors/metrics` já aplica em SQL (`'campanha #' || utm_id`).
+ *
+ * Existe porque o Google Ads não tem código automático para o NOME da
+ * campanha, só `{campaignid}`, que gravamos em `utm_id`. Sem a queda, uma
+ * campanha corretamente marcada por ID vira "(sem campanha)" e deixa de ser
+ * separável das outras. O painel de visitantes já fazia isso; o CRM não — e o
+ * mesmo lead saía com campanha numa tela e sem campanha na outra.
+ *
+ * Medido em 10/08/2026: das 728 sessões pagas dos 7 dias anteriores, 725
+ * chegaram sem `utm_campaign`. Exigir o nome é abrir mão de quase tudo.
+ */
+export function rotuloCampanha(
+  campanha: string | null | undefined,
+  campanhaId: string | null | undefined,
+): string {
+  const nome = normalizarCampanha(campanha)
+  if (nome !== SEM_CAMPANHA) return nome
+  const id = (campanhaId ?? '').trim()
+  if (!id || VALORES_NULOS.has(id.toLowerCase())) return SEM_CAMPANHA
+  return `campanha #${id}`
+}
+
+/**
  * Chave de AGRUPAMENTO da campanha. Sem ela, "Black Friday" e "black friday" viram duas linhas
  * na tabela — a mesma sujeira de caixa que `normalizarFonte` já resolve para a fonte. Quem
  * agrupa por esta chave deve exibir o rótulo de `normalizarCampanha` (a versão legível), não a

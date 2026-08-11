@@ -4,6 +4,7 @@ import {
   classificarCanal,
   normalizarCampanha,
   normalizarFonte,
+  rotuloCampanha,
   rotuloCanal,
   corCanal,
   CANAIS_ORDEM,
@@ -392,4 +393,31 @@ describe('rótulos e cores', () => {
     expect([...CANAIS_ORDEM].sort()).toEqual([...declarados].sort())
     expect(new Set(CANAIS_ORDEM).size).toBe(CANAIS_ORDEM.length)
   })
+})
+
+describe('rotuloCampanha — queda para o ID', () => {
+	it('usa o nome quando ele vem', () => {
+		expect(rotuloCampanha('institucional', '123456')).toBe('institucional')
+	})
+
+	it('cai para o ID quando o nome falta — o caso de 725 das 728 sessões pagas', () => {
+		// O Google não tem código para o NOME da campanha, só {campaignid}.
+		expect(rotuloCampanha(null, '22334455')).toBe('campanha #22334455')
+		expect(rotuloCampanha('', '22334455')).toBe('campanha #22334455')
+	})
+
+	it('trata o lixo dos coletores como ausência dos dois lados', () => {
+		expect(rotuloCampanha('(not set)', '789')).toBe('campanha #789')
+		expect(rotuloCampanha(null, '(not set)')).toBe(SEM_CAMPANHA)
+		expect(rotuloCampanha(null, '  ')).toBe(SEM_CAMPANHA)
+	})
+
+	it('sem nome e sem ID não inventa campanha', () => {
+		expect(rotuloCampanha(null, null)).toBe(SEM_CAMPANHA)
+	})
+
+	it('bate com o rótulo que o SQL do painel de visitantes monta', () => {
+		// metrics/route.ts: 'campanha #' || btrim(s.utm_id)
+		expect(rotuloCampanha(null, ' 22334455 ')).toBe('campanha #22334455')
+	})
 })
