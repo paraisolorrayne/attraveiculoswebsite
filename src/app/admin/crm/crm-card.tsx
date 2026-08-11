@@ -1,8 +1,9 @@
 'use client'
 
-import { Phone, Car, AlertTriangle, CalendarClock, ArrowLeftRight, Megaphone } from 'lucide-react'
+import { Phone, Car, AlertTriangle, CalendarClock, ArrowLeftRight, Megaphone, Hourglass } from 'lucide-react'
 import { situacaoInfo } from './crm-constants'
-import { dataReferenciaPeriodo } from '@/lib/crm-datas'
+import { dataReferenciaPeriodo, dataAlerta } from '@/lib/crm-datas'
+import { atrasoAceite, fmtHorasComerciais } from '@/lib/crm-periodo'
 
 // Card do kanban do CRM — slots fixos de identificação (com "–" quando o
 // dado não veio do webhook) + blocos narrativos condicionais.
@@ -89,6 +90,24 @@ export const motivoDoCard = (c: CrmCard): string | null => {
 /** Slot de identificação vazio — o dado não veio do webhook. */
 const Traco = () => <span className="text-foreground-secondary/60">–</span>
 
+/**
+ * Link de conversa a partir do telefone do card.
+ *
+ * O emissor manda o telefone JÁ com código de país, em dois formatos que
+ * convivem no banco (343 cards como "+5511999908011", 10 como
+ * "5511999908011"). O código antigo prefixava "55" de novo e produzia
+ * `wa.me/555511999908011` — um número inexistente. Todo card do quadro tinha
+ * o link quebrado.
+ */
+export const linkWhatsApp = (telefone: string): string | null => {
+	const digitos = telefone.replace(/\D/g, '')
+	if (digitos === '') return null
+	// Só acrescenta o 55 quando ele realmente falta. Um celular brasileiro com
+	// DDD tem 10 ou 11 dígitos; com o 55 na frente, 12 ou 13.
+	const completo = digitos.length <= 11 ? `55${digitos}` : digitos
+	return `https://wa.me/${completo}`
+}
+
 export function BadgeSituacao({ situacao }: { situacao: string }) {
 	const s = situacaoInfo(situacao)
 	return (
@@ -117,17 +136,55 @@ export function AvatarVendedor({ nome }: { nome: string }) {
 	)
 }
 
+/** Faixa de espera pelo aceite — só na coluna Aguardando aceite. */
+const ESTILO_ATRASO = {
+	ok:      'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+	atencao: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+	critico: 'bg-red-500/15 text-red-600 dark:text-red-400 font-medium',
+} as const
+
+function EsperaAceite({ card: c, agora }: { card: CrmCard; agora: number }) {
+	const alertadoEm = dataAlerta(c)
+	const atraso = atrasoAceite(alertadoEm, agora)
+	// Sem data de alerta não se inventa um relógio: o card aparece na coluna
+	// do mesmo jeito, só sem afirmar há quanto tempo espera (aí o tempo
+	// corrido genérico do topo volta a ser o único, e é melhor que nada).
+	if (!atraso) return null
+
+	const hora = alertadoEm
+		? new Date(alertadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+		: null
+
+	return (
+		<div className={`mt-2 flex items-center justify-between gap-2 rounded px-2 py-1 text-xs ${ESTILO_ATRASO[atraso.nivel]}`}>
+			<span className="flex items-center gap-1.5 min-w-0">
+				<Hourglass className="w-3.5 h-3.5 flex-shrink-0" />
+				<span className="truncate">
+					{atraso.nivel === 'ok' ? 'Esperando aceite' : `${fmtHorasComerciais(atraso.ms)} sem aceite`}
+				</span>
+			</span>
+			{hora && <span className="whitespace-nowrap opacity-70">alertado {hora}</span>}
+		</div>
+	)
+}
+
 /* ---------- o card ---------- */
 
-export function CardKanban({ card: c, encerrada, agora, onSelect }: {
+export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSelect }: {
 	card: CrmCard
 	encerrada: boolean
+	aguardando?: boolean
 	agora: number
 	onSelect: (c: CrmCard) => void
 }) {
 	const proximaAtrasada = !!c.proxima_acao_em && new Date(c.proxima_acao_em).getTime() < agora
 	const motivo = encerrada ? motivoDoCard(c) : null
 	const primeiroNome = c.vendedor?.trim().split(/\s+/)[0] ?? null
+	// Dois relógios no mesmo card se contradizem: o genérico conta tempo
+	// corrido e a faixa de espera conta horário comercial — "14h" e "2h sem
+	// aceite" lado a lado, para o mesmo lead. Quando a faixa aparece, ela é a
+	// única medida de tempo do card.
+	const mostraEspera = aguardando && dataAlerta(c) !== null
 
 	return (
 		<div
@@ -157,7 +214,9 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 				<span className="text-base font-semibold text-foreground whitespace-nowrap">
 					{fmtValor(c.valor) ?? <Traco />}
 				</span>
-				<span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span>
+				{!mostraEspera && (
+					<span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span>
+				)}
 			</div>
 
 			{/* Veículo de interesse (slot fixo) + troca (condicional) */}
@@ -171,6 +230,8 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 					<span className="truncate min-w-0" title={c.veiculo_troca}>Na troca: {c.veiculo_troca}</span>
 				</div>
 			)}
+
+			{mostraEspera && <EsperaAceite card={c} agora={agora} />}
 
 			{/* Campanha que trouxe o lead ao site. Só aparece quando dá para
 			    afirmar: sem ligação confiável entre a visita e o lead não se
@@ -228,9 +289,9 @@ export function CardKanban({ card: c, encerrada, agora, onSelect }: {
 
 			{/* Rodapé: telefone · origem · vendedor (slots fixos) */}
 			<div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
-				{c.telefone ? (
+				{c.telefone && linkWhatsApp(c.telefone) ? (
 					<a
-						href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}`}
+						href={linkWhatsApp(c.telefone)!}
 						target="_blank"
 						rel="noopener noreferrer"
 						onClick={e => e.stopPropagation()}

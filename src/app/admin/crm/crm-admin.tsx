@@ -8,6 +8,7 @@ import {
 import { COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
+import { inicioDoPeriodoBRT } from '@/lib/crm-periodo'
 import {
 	type CrmCard, CardKanban, BadgeSituacao,
 	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
@@ -35,10 +36,34 @@ const ultimaResposta = (
 }
 
 // Fixtures do modo demo (?demo=1): valida o redesign sem banco/webhook.
-// Cobrem as 4 colunas da visão do gestor: movimentando (reporte completo),
-// assumido mínimo (slots com "–"), perdido com motivo legado e assumido
-// via cobrança com impedimento + próxima ação atrasada.
+// Cobrem as 5 colunas da visão do gestor: aguardando aceite nos três níveis de
+// espera, movimentando (reporte completo), assumido mínimo (slots com "–"),
+// perdido com motivo legado e assumido via cobrança com impedimento +
+// próxima ação atrasada.
 const DEMO_CARDS: CrmCard[] = [
+	{
+		// Espera crítica: reproduz o caso real de 10/08 — proposta de R$ 1,25 mi
+		// à vista parada na fila de aceite.
+		id: 'demo-6', etapa: 'novo', nome: 'David', telefone: '+5545991242400', email: null,
+		veiculo: 'Porsche 911 Turbo S Coupe 2023', valor: 1250000, origem: 'patrocinado',
+		vendedor: 'Cláudio Antônio', fonte_evento: 'alerta', situacao: 'aguardando_contato',
+		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
+		motivo_encerramento: null, veiculo_troca: null,
+		atribuido_em: new Date(Date.now() - 5 * 3_600_000).toISOString(),
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 5 * 3_600_000).toISOString(), dados: null,
+	},
+	{
+		// Espera curta: mesma coluna, sem alarme.
+		id: 'demo-7', etapa: 'novo', nome: 'Adalberto Sanchez', telefone: '+5512992073448',
+		email: null, veiculo: 'Cadillac Escalade', valor: null, origem: 'site',
+		vendedor: 'Luiz Humberto', fonte_evento: 'alerta', situacao: 'aguardando_contato',
+		andamento: null, impedimento: null, proxima_acao: null, proxima_acao_em: null,
+		motivo_encerramento: null, veiculo_troca: null,
+		atribuido_em: new Date(Date.now() - 40 * 60_000).toISOString(),
+		primeiro_contato_em: null, encerrado_em: null, criado_em: null,
+		atualizado_em: new Date(Date.now() - 40 * 60_000).toISOString(), dados: null,
+	},
 	{
 		id: 'demo-1', etapa: 'em_negociacao', nome: 'Ricardo Almeida', telefone: '34999887766',
 		email: 'ricardo@example.com', veiculo: 'Porsche 911 Carrera GTS 2024', valor: 1250000,
@@ -98,6 +123,9 @@ export function CrmAdmin() {
 	const [selecionado, setSelecionado] = useState<CrmCard | null>(null)
 	const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
 	const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = tudo
+	// A API tem teto de cards. Se ele for atingido, "Tudo" deixa de ser tudo —
+	// e o gestor precisa saber disso em vez de contar um número incompleto.
+	const [truncado, setTruncado] = useState(false)
 
 	const load = useCallback(async () => {
 		// Modo demo (?demo=1): fixtures locais, sem tocar na API — validação
@@ -114,6 +142,7 @@ export function CrmAdmin() {
 			const d = await r.json()
 			if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
 			setCards(d.cards || [])
+			setTruncado(!!d.truncado)
 		} catch (e) {
 			setErro(e instanceof Error ? e.message : 'Falha ao carregar')
 		} finally {
@@ -138,20 +167,11 @@ export function CrmAdmin() {
 		return () => window.removeEventListener('keydown', onKey)
 	}, [selecionado])
 
-	// Visão do gestor: leads ainda não assumidos (etapa `novo`) ficam fora
-	// do painel — a história começa no aceite do vendedor.
-	const cardsAssumidos = cards.filter(c => c.etapa !== 'novo')
-	// Quantos ficaram de fora por ainda não terem sido aceitos. Eles somem em
-	// silêncio, e isso já custou uma investigação inteira: um card recém-emitido
-	// chegava certo ao banco e "não aparecia", sem nada na tela explicando por
-	// quê. O número aparece abaixo do quadro, como o dos cards sem informação.
-	const aguardandoAceite = cards.length - cardsAssumidos.length
-
 	// Cards em branco (só etapa, situação e data) saem do quadro: não dá para
 	// agir sobre eles e ainda inflavam a contagem das colunas. O total some é
 	// informado abaixo do quadro, para o número não desaparecer calado.
-	const cardsBase = cardsAssumidos.filter(c => !cardSemInformacao(c))
-	const ocultosSemInfo = cardsAssumidos.length - cardsBase.length
+	const cardsBase = cards.filter(c => !cardSemInformacao(c))
+	const ocultosSemInfo = cards.length - cardsBase.length
 
 	// Vendedores únicos (pro filtro). Alguns nomes não são vendedores — ocultos.
 	const VENDEDORES_OCULTOS = ['guilherme']
@@ -161,20 +181,26 @@ export function CrmAdmin() {
 		.sort()
 
 	const agora = Date.now()
+	// Corte por DIA-CALENDÁRIO em São Paulo, não por janela móvel de 24h.
+	// A janela móvel respondia outra pergunta: às 08:00 ela ainda mostrava as
+	// 23:00 de ontem, e no dia seguinte soltava o alerta das 09:27 antes de o
+	// gestor abrir o painel. "Hoje" agora é 00:00 BRT → agora.
+	const inicioPeriodo = inicioDoPeriodoBRT(filtroDias, agora)
 	const cardsFiltrados = cardsBase.filter(c => {
 		if (filtroVendedor && c.vendedor !== filtroVendedor) return false
 		if (filtroDias > 0) {
-			// Ativos: movimentação (atualizado_em). Encerrados: data EFETIVA do
-			// encerramento — o lote v1 carimbava atualizado_em e fazia venda de
-			// semanas atrás aparecer como "ganho do período".
+			// Aguardando aceite: data do alerta. Ativos: movimentação. Encerrados:
+			// data EFETIVA do encerramento — o lote v1 carimbava atualizado_em e
+			// fazia venda de semanas atrás aparecer como "ganho do período".
 			const t = new Date(dataReferenciaPeriodo(c)).getTime()
-			if (Number.isNaN(t) || agora - t > filtroDias * 86_400_000) return false
+			if (Number.isNaN(t) || t < inicioPeriodo) return false
 		}
 		return true
 	})
 
 	// KPIs sobre o conjunto filtrado (visão do gestor)
 	const kpiTotal = cardsFiltrados.length
+	const kpiAguardando = cardsFiltrados.filter(c => colunaDoCard(c) === 'aguardando').length
 	const kpiAssumidos = cardsFiltrados.filter(c => colunaDoCard(c) === 'assumido').length
 	const kpiMovimentando = cardsFiltrados.filter(c => colunaDoCard(c) === 'movimentando').length
 	const ganhosFiltrados = cardsFiltrados.filter(c => colunaDoCard(c) === 'ganho')
@@ -186,7 +212,8 @@ export function CrmAdmin() {
 		.reduce((s, c) => s + Number(c.valor), 0)
 
 	const kpis: { rotulo: string; valor: string; dica: string }[] = [
-		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Total de leads assumidos por vendedor que se movimentaram no período selecionado, já com o filtro de vendedor aplicado. Leads ainda sem vendedor não entram no painel.' },
+		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Todos os leads do período selecionado, já com o filtro de vendedor aplicado: aguardando aceite + assumidos + movimentando + encerrados. É o número que deve bater com a quantidade de alertas enviados no período.' },
+		{ rotulo: 'Aguardando aceite', valor: String(kpiAguardando), dica: 'Alerta enviado ao vendedor, sem aceite até agora. O relógio de cada card conta só em horário comercial (09:00–21:00 em dia útil, sábado até 13:00).' },
 		{ rotulo: 'Assumidos', valor: String(kpiAssumidos), dica: 'O vendedor aceitou o lead e confirmou o contato, mas ainda não reportou movimentação nas cobranças.' },
 		{ rotulo: 'Movimentando', valor: String(kpiMovimentando), dica: 'Leads cujo último evento é um reporte do vendedor — a conversa está andando de fato.' },
 		{ rotulo: 'Ganhos', valor: somaGanhos > 0 ? `${kpiGanhos} · ${fmtValorAbrev(somaGanhos)}` : String(kpiGanhos), dica: 'Vendas concluídas no período: quantidade e soma dos valores.' },
@@ -216,9 +243,11 @@ export function CrmAdmin() {
 							))}
 						</select>
 						<InfoDica>
-							Leads ativos: filtra pela última movimentação. Encerrados: pela data em que
-							foram ganhos/perdidos de fato. &ldquo;Hoje&rdquo; = últimas 24h; Semana = 7 dias;
-							Quinzena = 15; Mês = 30.
+							Dias de calendário no fuso de Brasília, com hoje contando como o primeiro:
+							&ldquo;Hoje&rdquo; = de 00:00 até agora; &ldquo;Semana&rdquo; = hoje e os 6 dias
+							anteriores. Cada card entra pela data que importa nele: aguardando aceite
+							pela data do alerta, ativos pela última movimentação, encerrados pela data
+							em que foram ganhos/perdidos de fato.
 						</InfoDica>
 					</span>
 					{vendedores.length > 0 && (
@@ -247,7 +276,7 @@ export function CrmAdmin() {
 
 			{/* KPIs do período */}
 			{cards.length > 0 && (
-				<div className="max-w-[1600px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+				<div className="max-w-[1600px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
 					{kpis.map(k => (
 						<div key={k.rotulo} className="p-3 bg-background-card border border-border rounded-xl">
 							<div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
@@ -312,6 +341,7 @@ export function CrmAdmin() {
 											key={c.id}
 											card={c}
 											encerrada={col.encerrada}
+											aguardando={col.id === 'aguardando'}
 											agora={agora}
 											onSelect={setSelecionado}
 										/>
@@ -327,22 +357,14 @@ export function CrmAdmin() {
 				<DetalhesModal card={selecionado} onClose={() => setSelecionado(null)} />
 			)}
 
+			{truncado && (
+				<div className="max-w-[1600px] mx-auto mt-4 px-4 py-3 rounded-lg text-sm bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+					O painel atingiu o teto de cards carregados — os leads mais parados ficaram
+					de fora e as contagens abaixo estão incompletas. Avise o time do site.
+				</div>
+			)}
+
 			<p className="max-w-[1600px] mx-auto mt-6 text-xs text-foreground-secondary">
-				{aguardandoAceite > 0 && (
-					<>
-						{aguardandoAceite === 1
-							? '1 lead aguardando o aceite do vendedor não é exibido'
-							: `${aguardandoAceite} leads aguardando o aceite do vendedor não são exibidos`}
-						<InfoDica>
-							O quadro é a visão do gestor e começa no aceite: mostra o que o
-							vendedor confirmou que chamou, o que ele reportou e os encerrados.
-							Leads que o CRM acabou de atribuir chegam como
-							&ldquo;aguardando_vendedor&rdquo; e ficam fora até alguém aceitar —
-							estão no CRM, só não neste quadro.
-						</InfoDica>
-						{' · '}
-					</>
-				)}
 				{ocultosSemInfo > 0 && (
 					<>
 						{ocultosSemInfo === 1

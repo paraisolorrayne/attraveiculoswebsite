@@ -10,10 +10,14 @@ interface CardComDatas {
 	etapa: string
 	atualizado_em: string
 	encerrado_em: string | null
+	atribuido_em?: string | null
 	dados: Record<string, unknown> | null
 }
 
 const ENCERRADAS = ['encerrado_ganho', 'encerrado_perdido']
+
+/** Etapa dos leads já designados a um vendedor mas ainda sem aceite. */
+export const ETAPA_AGUARDANDO = 'novo'
 
 function isoValida(v: unknown): v is string {
 	return typeof v === 'string' && v.trim() !== '' && !isNaN(Date.parse(v))
@@ -27,13 +31,31 @@ export function dataEncerramento(card: CardComDatas): string | null {
 }
 
 /**
+ * Data em que o lead foi designado ao vendedor — o "alertado em" da coluna
+ * Aguardando aceite. Coluna v2 → fallback `dados.atribuido_em` (v1) → null.
+ */
+export function dataAlerta(card: CardComDatas): string | null {
+	if (isoValida(card.atribuido_em)) return card.atribuido_em
+	const legado = card.dados?.atribuido_em
+	return isoValida(legado) ? legado : null
+}
+
+/**
  * Data usada no filtro de período e nos KPIs:
+ * - aguardando aceite → data do alerta (fallback: atualizado_em)
  * - etapa ativa → última movimentação (atualizado_em)
  * - encerrada → data efetiva de encerramento (fallback: atualizado_em)
+ *
+ * O caso do aguardando aceite não é teórico: cobrança automática toca um card
+ * parado em `novo` dias depois do alerta. Se o período olhasse atualizado_em,
+ * um lead alertado semana passada apareceria como "entrou hoje".
  */
 export function dataReferenciaPeriodo(card: CardComDatas): string {
 	if (ENCERRADAS.includes(card.etapa)) {
 		return dataEncerramento(card) ?? card.atualizado_em
+	}
+	if (card.etapa === ETAPA_AGUARDANDO) {
+		return dataAlerta(card) ?? card.atualizado_em
 	}
 	return card.atualizado_em
 }

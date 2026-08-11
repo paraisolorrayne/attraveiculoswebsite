@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
+import { dataEncerramento, dataReferenciaPeriodo, dataAlerta } from '@/lib/crm-datas'
 
 const base = {
 	etapa: 'encerrado_ganho',
 	atualizado_em: '2026-07-22T12:24:50.096Z',
 	encerrado_em: null as string | null,
+	atribuido_em: null as string | null,
 	dados: null as Record<string, unknown> | null,
 }
 
@@ -40,5 +41,37 @@ describe('dataReferenciaPeriodo', () => {
 	it('etapa ativa usa atualizado_em (movimentação)', () => {
 		const c = { ...base, etapa: 'em_negociacao', encerrado_em: '2026-07-25T10:00:00Z' }
 		expect(dataReferenciaPeriodo(c)).toBe(base.atualizado_em)
+	})
+
+	it('aguardando aceite usa a data do alerta, não a do último toque', () => {
+		// Um card em `novo` pode ser tocado por cobrança automática dias depois
+		// do alerta; o que interessa ao gestor é há quanto tempo ele espera.
+		const c = {
+			...base,
+			etapa: 'novo',
+			atribuido_em: '2026-08-10T12:27:10Z',
+			atualizado_em: '2026-08-12T09:00:00Z',
+		}
+		expect(dataReferenciaPeriodo(c)).toBe('2026-08-10T12:27:10Z')
+	})
+
+	it('aguardando aceite sem atribuido_em cai no atualizado_em', () => {
+		const c = { ...base, etapa: 'novo' }
+		expect(dataReferenciaPeriodo(c)).toBe(base.atualizado_em)
+	})
+})
+
+describe('dataAlerta', () => {
+	it('lê a coluna v2 atribuido_em', () => {
+		expect(dataAlerta({ ...base, atribuido_em: '2026-08-10T12:27:10Z' })).toBe('2026-08-10T12:27:10Z')
+	})
+
+	it('cai no dados.atribuido_em dos cards v1 (288 chegaram assim)', () => {
+		expect(dataAlerta({ ...base, dados: { atribuido_em: '2026-07-22T10:00:00Z' } })).toBe('2026-07-22T10:00:00Z')
+	})
+
+	it('ignora data imprestável em vez de devolver algo inventado', () => {
+		expect(dataAlerta({ ...base, atribuido_em: 'hoje de manhã' })).toBeNull()
+		expect(dataAlerta(base)).toBeNull()
 	})
 })
