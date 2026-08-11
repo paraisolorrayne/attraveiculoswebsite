@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-	Loader2, RefreshCw, X,
+	Loader2, RefreshCw, X, Search,
 	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
 import { COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 import { inicioDoPeriodoBRT } from '@/lib/crm-periodo'
+import { termosDaBusca, cardCasaBusca } from '@/lib/crm-busca'
 import {
 	type CrmCard, CardKanban, BadgeSituacao,
 	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
@@ -123,6 +124,7 @@ export function CrmAdmin() {
 	const [selecionado, setSelecionado] = useState<CrmCard | null>(null)
 	const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
 	const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = tudo
+	const [busca, setBusca] = useState('') // nome do cliente ou carro
 	// A API tem teto de cards. Se ele for atingido, "Tudo" deixa de ser tudo —
 	// e o gestor precisa saber disso em vez de contar um número incompleto.
 	const [truncado, setTruncado] = useState(false)
@@ -186,17 +188,32 @@ export function CrmAdmin() {
 	// 23:00 de ontem, e no dia seguinte soltava o alerta das 09:27 antes de o
 	// gestor abrir o painel. "Hoje" agora é 00:00 BRT → agora.
 	const inicioPeriodo = inicioDoPeriodoBRT(filtroDias, agora)
-	const cardsFiltrados = cardsBase.filter(c => {
+
+	const termos = termosDaBusca(busca)
+	const buscando = termos.length > 0
+
+	// Vendedor e busca cortam POR CARD; o período corta por data. Separados
+	// porque quem procura um cliente pelo nome não pensa em período — e a
+	// pessoa precisa saber que o card existe mas ficou fora da janela, em vez
+	// de concluir que o lead sumiu do CRM.
+	const casaFiltros = (c: CrmCard) => {
 		if (filtroVendedor && c.vendedor !== filtroVendedor) return false
-		if (filtroDias > 0) {
-			// Aguardando aceite: data do alerta. Ativos: movimentação. Encerrados:
-			// data EFETIVA do encerramento — o lote v1 carimbava atualizado_em e
-			// fazia venda de semanas atrás aparecer como "ganho do período".
-			const t = new Date(dataReferenciaPeriodo(c)).getTime()
-			if (Number.isNaN(t) || t < inicioPeriodo) return false
-		}
-		return true
-	})
+		return cardCasaBusca(c, termos)
+	}
+	const dentroDoPeriodo = (c: CrmCard) => {
+		if (filtroDias === 0) return true
+		// Aguardando aceite: data do alerta. Ativos: movimentação. Encerrados:
+		// data EFETIVA do encerramento — o lote v1 carimbava atualizado_em e
+		// fazia venda de semanas atrás aparecer como "ganho do período".
+		const t = new Date(dataReferenciaPeriodo(c)).getTime()
+		return !Number.isNaN(t) && t >= inicioPeriodo
+	}
+
+	const cardsFiltrados = cardsBase.filter(c => casaFiltros(c) && dentroDoPeriodo(c))
+	// Quantos a busca acharia se o período não estivesse estreitando o quadro.
+	const foraDoPeriodo = buscando
+		? cardsBase.filter(c => casaFiltros(c) && !dentroDoPeriodo(c)).length
+		: 0
 
 	// KPIs sobre o conjunto filtrado (visão do gestor)
 	const kpiTotal = cardsFiltrados.length
@@ -212,7 +229,7 @@ export function CrmAdmin() {
 		.reduce((s, c) => s + Number(c.valor), 0)
 
 	const kpis: { rotulo: string; valor: string; dica: string }[] = [
-		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Todos os leads do período selecionado, já com o filtro de vendedor aplicado: aguardando aceite + assumidos + movimentando + encerrados. É o número que deve bater com a quantidade de alertas enviados no período.' },
+		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Todos os leads do período selecionado, já com o filtro de vendedor e a busca aplicados: aguardando aceite + assumidos + movimentando + encerrados. Sem busca e sem filtro de vendedor, é o número que deve bater com a quantidade de alertas enviados no período.' },
 		{ rotulo: 'Aguardando aceite', valor: String(kpiAguardando), dica: 'Alerta enviado ao vendedor, sem aceite até agora. O relógio de cada card conta só em horário comercial (09:00–21:00 em dia útil, sábado até 13:00).' },
 		{ rotulo: 'Assumidos', valor: String(kpiAssumidos), dica: 'O vendedor aceitou o lead e confirmou o contato, mas ainda não reportou movimentação nas cobranças.' },
 		{ rotulo: 'Movimentando', valor: String(kpiMovimentando), dica: 'Leads cujo último evento é um reporte do vendedor — a conversa está andando de fato.' },
@@ -232,6 +249,34 @@ export function CrmAdmin() {
 					</p>
 				</div>
 				<div className="flex items-center gap-3 flex-wrap justify-end">
+					<div className="relative">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
+						<input
+							type="search"
+							value={busca}
+							onChange={e => setBusca(e.target.value)}
+							// Esc limpa a busca. Fica no input (e não no listener global
+							// de Esc) para não brigar com o fechamento do modal.
+							onKeyDown={e => {
+								if (e.key === 'Escape') {
+									e.stopPropagation()
+									setBusca('')
+								}
+							}}
+							placeholder="Buscar cliente ou carro"
+							aria-label="Buscar por nome do cliente ou carro"
+							className="w-56 pl-9 pr-9 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:border-foreground-secondary/50 [&::-webkit-search-cancel-button]:hidden"
+						/>
+						{busca !== '' && (
+							<button
+								onClick={() => setBusca('')}
+								aria-label="Limpar busca"
+								className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-background transition-colors"
+							>
+								<X className="w-3.5 h-3.5 text-foreground-secondary" />
+							</button>
+						)}
+					</div>
 					<span className="flex items-center gap-1.5">
 						<select
 							value={filtroDias}
@@ -295,6 +340,25 @@ export function CrmAdmin() {
 				</div>
 			)}
 
+			{/* A busca só enxerga o período selecionado. Sem este aviso, procurar
+			    um cliente antigo com "Hoje" ligado devolve nada e parece que o
+			    lead não existe no CRM. */}
+			{foraDoPeriodo > 0 && (
+				<div className="max-w-[1600px] mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center justify-between gap-3 flex-wrap">
+					<span>
+						{foraDoPeriodo === 1
+							? 'Mais 1 lead com esse nome/carro está fora do período selecionado.'
+							: `Mais ${foraDoPeriodo} leads com esse nome/carro estão fora do período selecionado.`}
+					</span>
+					<button
+						onClick={() => setFiltroDias(0)}
+						className="underline underline-offset-2 font-medium whitespace-nowrap hover:no-underline"
+					>
+						Buscar em tudo
+					</button>
+				</div>
+			)}
+
 			{loading && cards.length === 0 ? (
 				<div className="p-12 text-center text-foreground-secondary">
 					<Loader2 className="w-6 h-6 animate-spin mx-auto" />
@@ -309,8 +373,22 @@ export function CrmAdmin() {
 				</div>
 			) : cardsFiltrados.length === 0 ? (
 				<div className="max-w-[1600px] mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
-					<p className="text-foreground font-medium">Nenhum lead para os filtros selecionados</p>
-					<p className="text-sm text-foreground-secondary mt-2">Ajuste o período ou o vendedor no topo.</p>
+					<p className="text-foreground font-medium">
+						{buscando ? `Nenhum lead para “${busca.trim()}”` : 'Nenhum lead para os filtros selecionados'}
+					</p>
+					<p className="text-sm text-foreground-secondary mt-2">
+						{buscando
+							? 'A busca olha o nome do cliente e o carro (o de interesse e o da troca). Confira a grafia ou tente só um pedaço, como o sobrenome ou a marca.'
+							: 'Ajuste o período ou o vendedor no topo.'}
+					</p>
+					{buscando && (
+						<button
+							onClick={() => setBusca('')}
+							className="mt-4 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-background-card transition-colors"
+						>
+							Limpar busca
+						</button>
+					)}
 				</div>
 			) : (
 				<div className="flex gap-4 overflow-x-auto pb-4 max-w-[1600px] mx-auto">
