@@ -39,6 +39,7 @@ import {
 } from '@/hooks/use-analytics'
 import { identifyClarityUser, setClarityTag } from '@/components/analytics/microsoft-clarity'
 import { sendAbandonedLeadWebhook } from '@/lib/webhook'
+import { ehRotaInterna } from '@/lib/rotas-internas'
 
 // Geolocation data type
 interface GeolocationData {
@@ -394,8 +395,15 @@ export function VisitorTrackingProvider({ children }: Props) {
     // Navegar é interação real: o visitante está ali.
     lastInteractionAtRef.current = Date.now()
 
+    // Rota interna (painel do admin) não é conteúdo: a equipe navegando na
+    // própria ferramenta virava audiência do site. Não se grava a visita nem o
+    // tempo dela — nem quando ela é a página ANTERIOR, senão o tempo que o
+    // gestor passa no CRM entra no relatório de leitura.
+    const entrandoEmInterna = ehRotaInterna(pathname)
+    const saindoDeInterna = ehRotaInterna(lastPathRef.current)
+
     // Update previous page dwell time in behavioral signals
-    if (lastPathRef.current && timeOnPrevPage > 0) {
+    if (lastPathRef.current && timeOnPrevPage > 0 && !saindoDeInterna) {
       updateLastPageDwell(timeOnPrevPage * 1000)
 
       fetch('/api/tracking/page-time', {
@@ -412,6 +420,10 @@ export function VisitorTrackingProvider({ children }: Props) {
     // Track new page view
     const pageType = getPageType(pathname)
 
+    // A partir daqui é registro da visita. Numa rota interna, nada é gravado —
+    // mas os relógios abaixo SÃO reiniciados, para que a próxima página pública
+    // não herde o tempo gasto no painel.
+    if (!entrandoEmInterna) {
     // Record page visit in behavioral signal history
     recordPageVisit(pathname, pageType)
 
@@ -442,6 +454,7 @@ export function VisitorTrackingProvider({ children }: Props) {
           : {}),
       }),
     }).catch(() => {})
+    }
 
     lastPathRef.current = pathname
     pageStartTimeRef.current = Date.now()

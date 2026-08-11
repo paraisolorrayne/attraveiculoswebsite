@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { adminComAcessoA } from '@/lib/auth/guard-api'
+import { PADROES_LIKE_ROTAS_INTERNAS } from '@/lib/rotas-internas'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,18 @@ export async function GET(request: NextRequest) {
 
   const dias = Number(request.nextUrl.searchParams.get('dias') ?? DIAS_PADRAO)
   const desde = dias > 0 ? new Date(Date.now() - dias * 86_400_000) : null
-  const noPeriodo = desde ? sql`v.viewed_at >= ${desde}` : sql`true`
+
+  // Filtro-base de TODAS as consultas abaixo. O recorte de período e a exclusão
+  // do painel interno andam juntos de propósito: são cinco subconsultas lendo a
+  // mesma tabela, e uma que esquecesse a exclusão traria `/admin` de volta para
+  // uma das tabelas do quadro sem ninguém perceber.
+  //
+  // A coleta também parou de gravar rota interna (visitor-tracking-provider),
+  // mas o filtro precisa existir aqui: as 472 visualizações já gravadas nos 30
+  // dias anteriores continuam na base, e é justamente o histórico que o painel
+  // mostra.
+  const noPeriodo = sql`${desde ? sql`v.viewed_at >= ${desde}` : sql`true`}
+    and v.page_path not like all (${PADROES_LIKE_ROTAS_INTERNAS})`
 
   try {
     const [porTipo, prendem, perdem, rolagem, resumo] = await Promise.all([
