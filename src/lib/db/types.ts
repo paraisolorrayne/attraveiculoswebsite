@@ -295,23 +295,12 @@ export interface DualBlogPostsTable {
   updated_at: Timestamp
 }
 
-export interface BlogPostsTable {
-  id: Generated<string>
-  slug: string
-  title: string
-  excerpt: string
-  content: string
-  featured_image: string | null
-  category_id: string | null
-  tags: Generated<string[]>
-  author: string
-  seo_title: string | null
-  seo_description: string | null
-  is_published: Generated<boolean>
-  published_at: Timestamp | null
-  created_at: Timestamp
-  updated_at: Timestamp
-}
+// `BlogPostsTable` foi removida em 11/08/2026: a tabela `blog_posts` nunca
+// existiu em banco nenhum (zero ocorrências no dump do Supabase de 22/07) e o
+// blog roda em `dual_blog_posts`, logo acima. A única leitora era /api/blog,
+// que a própria rota declarava legada e que nunca recebeu uma requisição —
+// zero acessos em todos os logs rotacionados do nginx. Rota e tipo saíram
+// juntos, senão o tipo continuaria prometendo uma tabela inexistente.
 
 export interface BlogAiGenerationsTable {
   id: Generated<string>
@@ -571,7 +560,6 @@ export interface Database {
   vehicle_hero_asset: VehicleHeroAssetTable
   vehicle_embeddings: VehicleEmbeddingsTable
   dual_blog_posts: DualBlogPostsTable
-  blog_posts: BlogPostsTable
   blog_ai_generations: BlogAiGenerationsTable
   news_cycles: NewsCyclesTable
   news_categories: NewsCategoriesTable
@@ -592,3 +580,39 @@ export interface Database {
   inventory_snapshots: InventorySnapshotsTable
   admin_users: AdminUsersTable
 }
+
+/**
+ * As tabelas de `Database` como VALOR, para poder conferi-las contra o banco.
+ *
+ * Existe por causa de 11/08/2026: quatro tabelas estavam declaradas aqui e não
+ * existiam em produção — `site_settings` desde 06/02, `newsletter_campaigns` e
+ * `newsletter_subscribers` desde 27/02, e `blog_posts`, que nunca existiu em
+ * lugar nenhum. Duas features ficaram mortas seis meses sem ninguém notar,
+ * porque as rotas capturavam o erro e devolviam defaults.
+ *
+ * `Database` é só um tipo: some na compilação e não dá para percorrer em tempo
+ * de execução. Esta lista é a ponte — o teste de integração a compara com
+ * `pg_tables`, e o bloco abaixo garante que ela não fique para trás do tipo.
+ */
+export const TABELAS_DO_CODIGO = [
+  'visitor_fingerprints', 'visitor_sessions', 'visitor_page_views', 'visitor_profiles',
+  'identity_events', 'conversion_events', 'ip_geolocation_cache', 'site_settings',
+  'vehicle_section_content', 'vehicle_sounds', 'vehicle_hero_asset', 'vehicle_embeddings',
+  'dual_blog_posts', 'blog_ai_generations', 'news_cycles', 'news_categories',
+  'news_sources', 'news_articles', 'marketing_strategies', 'marketing_tasks',
+  'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
+  'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
+  'newsletter_subscribers', 'crm_cards', 'inventory_snapshots', 'admin_users',
+] as const satisfies readonly (keyof Database)[]
+
+/**
+ * Trava de completude, em tempo de COMPILAÇÃO.
+ *
+ * Se alguém acrescentar uma tabela a `Database` e esquecer da lista acima,
+ * `Faltando` deixa de ser `never` e o `tsc` quebra aqui — em vez de a tabela
+ * nova escapar do teste de integração justamente por ser nova. O `satisfies`
+ * acima cobre o outro sentido: nome na lista que não existe em `Database`.
+ */
+type Faltando = Exclude<keyof Database, (typeof TABELAS_DO_CODIGO)[number]>
+const _todasAsTabelasEstaoNaLista: Faltando extends never ? true : ['faltando na lista:', Faltando] = true
+void _todasAsTabelasEstaoNaLista
