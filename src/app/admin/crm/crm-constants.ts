@@ -128,6 +128,9 @@ export const FONTES_EVENTO: Record<string, string> = {
 	reporte: 'Reporte do vendedor',
 	cobranca: 'Cobrança automática',
 	cobranca_semanal: 'Cobrança semanal',
+	// 12/08: o emissor passa a transbordar o lead para outro vendedor, o que
+	// devolve o card para a fila de aceite (etapa volta a `novo`).
+	transbordo: 'Transbordo para outro vendedor',
 	inatividade: 'Encerrado por inatividade',
 	venda: 'Venda registrada',
 	perda: 'Perda registrada',
