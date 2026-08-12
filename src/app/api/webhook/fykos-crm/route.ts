@@ -186,6 +186,12 @@ export async function POST(request: NextRequest) {
 		return recusa(500, motivo, rawBody.length, { ids: idsDaRequisicao, resposta: `Falha no upsert: ${erroStr}` })
 	}
 
-	console.log(`[FykosCRM] upserts=${upserts} ignorados=${ignorados} remoções=${remover.length} auth=${assinaturaOk ? 'hmac-v2' : 'legado-v1'}`)
+	// console.error, não console.log: nesta versão do Next em produção o
+	// `console.log` de route handler é DESCARTADO — verificado em 12/08 com uma
+	// requisição válida de lote vazio, que devolveu 200 e não deixou linha em
+	// log nenhum. Foi por isso que o receptor pareceu mudo desde fevereiro,
+	// enquanto os cards entravam normalmente. Não é erro; é o único fluxo que
+	// sobrevive, e mantém sucesso e recusa no mesmo arquivo para cruzar.
+	console.error(`[FykosCRM] OK upserts=${upserts} ignorados=${ignorados} remoções=${remover.length} auth=${assinaturaOk ? 'hmac-v2' : 'legado-v1'}`)
 	return NextResponse.json({ success: true, upserts, ignorados, remocoes: remover.length })
 }
