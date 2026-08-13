@@ -634,8 +634,18 @@ function renderClassico(){
   // corte diagonal. A foto nova já traz as duas coisas no lugar certo, com a
   // luz batendo igual, então a colagem inteira saiu: sem piso desenhado, sem
   // corte, sem véu de continuidade.
+  // O céu sai. Medido na própria imagem (luminância por linha): céu de 0 a
+  // ~195, prédio a partir daí. A faixa 195→base é ESTICADA para preencher a
+  // peça inteira — 11% de alongamento vertical, que não se percebe em prédio
+  // e piso, e ganha a altura que o céu de entardecer estava consumindo sem
+  // dizer nada sobre o carro.
+  const CEU_ALTURA = 195;
   if(classicoFundoImg.complete && classicoFundoImg.naturalWidth){
-    drawPhoto(classicoFundoImg, 0, 0, W, H, {zoom:1, x:.5, y:.5}, 'cover');
+    const esc = classicoFundoImg.naturalHeight / H;
+    const sy = Math.round(CEU_ALTURA * esc);
+    ctx.drawImage(classicoFundoImg,
+      0, sy, classicoFundoImg.naturalWidth, classicoFundoImg.naturalHeight - sy,
+      0, 0, W, H);
   } else {
     ctx.fillStyle = '#101013'; ctx.fillRect(0, 0, W, H);
   }
@@ -714,10 +724,12 @@ function renderClassico(){
   const pisoShift = parseInt($('pisoy').value, 10) || 0;
   const PISO_TOP = PHOTO1_H + pisoShift;
 
-  // Divisa da foto de baixo: RETA. A diagonal de 40px era a "assinatura" do
-  // layout antigo e é justamente o demarcador que sai agora. Sem foto 2, nem
-  // divisa existe — o fundo segue inteiro até a borda.
+  // Recorte da foto de baixo: a diagonal de 40px do modelo original volta.
+  // O que saiu foi o demarcador da ÁREA DE TEXTO (faixa de piso desenhado);
+  // este aqui é outra coisa — é a borda da segunda foto, e é assinatura do
+  // layout. Sem foto 2 não existe recorte nenhum: o fundo segue até a borda.
   const CUT = 1416 - (parseInt($('corte').value, 10) || 0);
+  const DIAG_L = CUT + 20, DIAG_R = CUT - 20;
 
   // paleta dos textos conforme o fundo
   // O fundo passou a ser sempre a foto ao entardecer — asfalto escuro.
@@ -741,7 +753,7 @@ function renderClassico(){
   // e em último caso o texto é cortado com "…" — nunca quebra de linha.
   const bullets = ['b1','b2','b3'].map(val).filter(Boolean);
   const textX = 208, maxW = 800, lineH = 44;
-  const areaTop = PISO_TOP + 188, areaBot = (state.foto2 ? CUT : H) - 26;
+  const areaTop = PISO_TOP + 188, areaBot = (state.foto2 ? Math.min(DIAG_L, DIAG_R) : H) - 26;
   const items = bullets.map(b => {
     let size = 34;
     ctx.font = `700 ${size}px Montserrat, sans-serif`;
@@ -778,11 +790,12 @@ function renderClassico(){
   if(state.foto2){
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, CUT, W, H - CUT);
-    ctx.clip();
+    ctx.moveTo(0, DIAG_L); ctx.lineTo(W, DIAG_R);
+    ctx.lineTo(W, H); ctx.lineTo(0, H);
+    ctx.closePath(); ctx.clip();
     // Foto mais alta que a faixa: âncora automática na BASE — as rodas nunca
     // cortam. Se o operador mexer no slider de posição, o valor dele prevalece.
-    const bw = W, bh = H - CUT;
+    const bw = W, bh = H - DIAG_R;
     const cover = Math.max(bw/state.foto2.width, bh/state.foto2.height);
     const dh = state.foto2.height * cover * (state.f2.zoom || 1);
     let opt = state.f2;
@@ -790,12 +803,12 @@ function renderClassico(){
       const rangeY = Math.max(dh - bh, bh*.6);
       opt = {...state.f2, y: .5 + (dh - bh) / (2 * rangeY)};
     }
-    drawPhoto(state.foto2, 0, CUT, bw, bh, opt);
+    drawPhoto(state.foto2, 0, DIAG_R - 2, bw, bh + 2, opt);
     // penumbra curta no encontro, para a divisa reta não ler como corte de papel
-    const ga = ctx.createLinearGradient(0, CUT, 0, CUT + 70);
+    const ga = ctx.createLinearGradient(0, DIAG_R - 2, 0, DIAG_L + 70);
     ga.addColorStop(0, 'rgba(0,0,0,.40)');
     ga.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = ga; ctx.fillRect(0, CUT, W, 70);
+    ctx.fillStyle = ga; ctx.fillRect(0, DIAG_R - 2, W, DIAG_L - DIAG_R + 74);
     ctx.restore();
   }
 }
