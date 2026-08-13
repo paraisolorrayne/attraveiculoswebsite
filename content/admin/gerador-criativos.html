@@ -290,6 +290,21 @@
     </fieldset>
 
     <button class="btn" id="download">⬇ Baixar PNG (1080 × 1920)</button>
+
+    <fieldset id="sec-status" style="margin-top:18px">
+      <legend>Publicar no Status do WhatsApp</legend>
+      <label>Legenda</label>
+      <textarea id="statuscaption" rows="5"
+        style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--bd);
+               background:var(--bg2); color:var(--txt); font:inherit; resize:vertical"
+        placeholder="Escreva a legenda do status..."></textarea>
+      <label style="margin-top:12px">Link (entra no fim da legenda)</label>
+      <input type="text" id="statuslink" placeholder="https://attraveiculos.com.br/veiculo/...">
+      <div class="hint">Selecionar um veículo na busca preenche o link com a ficha dele,
+        já marcada para o painel saber que a visita veio do status. Dá para editar.</div>
+      <button class="btn" id="publicarstatus" style="margin-top:12px">Publicar no status (24h)</button>
+      <div id="statusmsg" class="hint" style="margin-top:10px"></div>
+    </fieldset>
   </div>
 
   <!-- ================= PREVIEW ================= -->
@@ -1595,6 +1610,52 @@ document.querySelectorAll('.typebtn[data-tipo]').forEach(btn => {
   });
 });
 
+/* ---------- publicar no status do WhatsApp ---------- */
+$('publicarstatus').addEventListener('click', async () => {
+  const btn = $('publicarstatus');
+  const msg = $('statusmsg');
+  const legenda = val('statuscaption').trim();
+  const link = val('statuslink').trim();
+
+  if(!legenda){ msg.textContent = 'Escreva a legenda antes de publicar.'; return; }
+
+  // O link entra no FIM da legenda: no WhatsApp o preview do link é gerado
+  // pelo último link da mensagem, e um link no meio do texto some no meio dele.
+  const textoFinal = link ? (legenda + '\n\n' + link) : legenda;
+
+  // Publicar é público e não tem desfazer: vai para todos os contatos da
+  // instância e fica 24h no ar. A confirmação mostra o que será publicado.
+  const resumo = 'Publicar no Status do WhatsApp?\n\n' + textoFinal +
+    '\n\nIsso fica 24h no ar e todos os contatos da instância veem. Não tem desfazer.';
+  if(!confirm(resumo)) return;
+
+  btn.disabled = true;
+  const rotulo = btn.textContent;
+  btn.textContent = 'Publicando...';
+  msg.textContent = 'Enviando a imagem — pode levar alguns segundos.';
+
+  try{
+    const imagem = cv.toDataURL('image/jpeg', 0.88);
+    const r = await fetch('/api/admin/marketing/gerador-criativos/publicar-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imagem, caption: textoFinal }),
+    });
+    const d = await r.json().catch(() => null);
+    if(!r.ok || !d || !d.ok){
+      msg.textContent = 'Não publicou: ' + ((d && (d.error || d.detalhe)) || ('HTTP ' + r.status));
+    } else {
+      const hora = d.timestamp ? new Date(d.timestamp).toLocaleTimeString('pt-BR') : '';
+      msg.textContent = 'Publicado' + (hora ? ' às ' + hora : '') + '. Fica 24h no ar.';
+    }
+  } catch(e){
+    msg.textContent = 'Falhou ao publicar: ' + (e && e.message ? e.message : e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = rotulo;
+  }
+});
+
 /* ---------- download ---------- */
 (function(){ var cb=document.createElement('input'); cb.type='checkbox'; cb.id='sendPatrocinado'; cb.style.cssText='width:16px;height:16px;accent-color:var(--red)'; var l=document.createElement('label'); l.style.cssText='display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px;color:var(--txt);cursor:pointer'; l.appendChild(cb); l.appendChild(document.createTextNode(' Enviar ao patrocinado (cria card no board do Marketing)')); var b=$('download'); if(b&&b.parentNode) b.parentNode.insertBefore(l,b); })(); $('download').addEventListener('click', () => {
   const clean = s => s.replace(/\s+/g, '-').replace(/[^\w\-\.]/g, '').replace(/-+/g,'-');
@@ -1659,8 +1720,29 @@ function aplicarVeiculo(v){
   $('preco').value  = v.price ? fmtBR(v.price) : '';
   $('km').value     = v.mileage ? fmtBR(v.mileage) : '';
   if(!val('b1') && v.color) $('b1').value = 'Cor ' + v.color;
+  sugerirLinkDoStatus(v);
   montarFotosEstoque(v);
   render();
+}
+
+/**
+ * Preenche o link do status com a ficha do veículo, marcada com UTM.
+ *
+ * `utm_source=whatsapp` + `utm_medium=status` cai em "social orgânico" no
+ * painel de visitantes — bucket real, não "outros". A campanha leva o slug do
+ * carro, então dá para ver qual veículo o status trouxe. Sem isso a visita
+ * chega como "direto" e não há como saber que veio daqui.
+ */
+function sugerirLinkDoStatus(v){
+  if(!v || !v.slug) return;
+  const campo = $('statuslink');
+  if(!campo) return;
+  const p = new URLSearchParams({
+    utm_source: 'whatsapp',
+    utm_medium: 'status',
+    utm_campaign: v.slug,
+  });
+  campo.value = 'https://attraveiculos.com.br/veiculo/' + v.slug + '?' + p.toString();
 }
 
 /**
