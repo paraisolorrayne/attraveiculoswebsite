@@ -233,7 +233,7 @@
         <div><label>Posição ↔</label><input type="range" id="f1x" min="0" max="100" value="50"></div>
         <div><label>Posição ↕</label><input type="range" id="f1y" min="0" max="100" value="18"></div>
       </div>
-      <div class="hint" id="foto1-hint">A foto entra inteira — não precisa recortar o fundo. No Clássico, o bloco de preço acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é cortado nem esmaecido.</div>
+      <div class="hint" id="foto1-hint">A foto entra inteira — não precisa recortar o fundo. No Clássico, fotos horizontais são enquadradas automaticamente com o carro abaixo do título.</div>
       <label id="foto2-label" style="margin-top:16px">Foto secundária (traseira / lateral — rodapé)</label>
       <input type="file" id="foto2" accept="image/*">
       <div class="sliders">
@@ -501,10 +501,7 @@ function drawPhoto(img, rx, ry, rw, rh, opt, mode){
 function autoFrameFoto1(img){
   const rw = 1080, rh = 1000;
   const base = Math.max(rw/img.width, rh/img.height);
-  if(true || state.tipo !== 'classico' || img.width/img.height <= rw/rh + .05){
-    // Neutro para TODOS os casos desde a banda 540..1060 (14/08): o zoom .88 /
-    // y .18 abaixo era calibrado para a foto na faixa 0..1000 do desenho
-    // antigo, e na banda ele afundava e encolhia o carro.
+  if(state.tipo !== 'classico' || img.width/img.height <= rw/rh + .05){
     state.f1 = {zoom:1, x:.5, y:.5};
   } else {
     // Enquadramento padrão do Clássico para foto horizontal, calibrado pela
@@ -627,62 +624,35 @@ function drawLogoBlack(cx, cy, maxW){
 }
 
 /**
- * Só calcula onde o recorte fica na peça — não desenha.
+ * Foto com o PISO apagado — só a faixa de baixo, nunca a peça inteira.
  *
- * O carro é desenhado mais adiante, DEPOIS do bloco de texto, para ficar em
- * primeiro plano sobre o fundo sem que nada o cubra.
- */
-/** Caixa real do veículo dentro do recorte (limites do alpha), em frações. */
-function bboxDoRecorte(recorte){
-  if(recorte._bbox) return recorte._bbox;
-  const P = 220;
-  const oc = document.createElement('canvas'); oc.width = P; oc.height = P;
-  const o = oc.getContext('2d');
-  o.drawImage(recorte, 0, 0, P, P);
-  const px = o.getImageData(0, 0, P, P).data;
-  let x0 = P, x1 = 0, y0 = P, y1 = 0;
-  for(let y = 0; y < P; y++) for(let x = 0; x < P; x++){
-    if(px[(y*P + x)*4 + 3] > 24){
-      if(x < x0) x0 = x; if(x > x1) x1 = x;
-      if(y < y0) y0 = y; if(y > y1) y1 = y;
-    }
-  }
-  return (recorte._bbox = { x0: x0/P, x1: (x1+1)/P, y0: y0/P, y1: (y1+1)/P });
-}
-
-/**
- * Foto com SÓ O PISO apagado, na janela do Clássico — a versão que a Lorrayne
- * aprovou, restaurada. (Numa rodada intermediária ela foi substituída pelo
- * recorte puro e o slider "Apagar o piso" ficou na tela sem efeito nenhum.)
+ * A máscara do recorte é aplicada apenas nos últimos `fatia` (% da altura da
+ * foto). Acima disso a foto entra intacta: loja, VIDROS, reflexos. Isso não é
+ * detalhe — com a máscara valendo na foto toda, o modelo trata vidro como
+ * fundo e abre buraco nas janelas (visto na G 63 em 14/08). Onde não há
+ * máscara, não há como furar.
  *
- * A máscara do recorte vale apenas nos últimos `fatia` da foto: o chão dela
- * some e o pátio do fundo aparece no lugar. Acima disso a foto entra INTACTA —
- * vidros, reflexos, loja — que é o que protege as janelas de virarem buraco
- * (G 63, 14/08). E a base é ancorada no pé da janela, como no modo foto
- * inteira: as rodas nunca são cortadas, em nenhum ajuste.
+ * Devolve onde o carro TERMINA na peça, para a faixa de piso subir por trás
+ * dele em vez de cortar as rodas.
  */
 function fotoComPisoApagado(foto, recorte, rx, ry, rw, rh, opt, fatia){
   opt = opt || {zoom:1, x:.5, y:.5};
-  // Posição vertical LIVRE (opt.y). Numa rodada eu apliquei aqui a âncora de
-  // base do modo foto-inteira e o slider ↕ ficou sem efeito nenhum — erro meu.
-  // Aqui a âncora é desnecessária: o texto se prende à base REAL do carro
-  // (medida no alpha), então mover a foto move o bloco de texto junto e nada
-  // é cortado.
-  const scale = Math.max(rw/foto.width, rh/foto.height) * opt.zoom;
+  const base = Math.max(rw/foto.width, rh/foto.height);
+  const scale = base * opt.zoom;
   const dw = foto.width*scale, dh = foto.height*scale;
   const dx = rx + (rw-dw)/2 - (opt.x-.5)*Math.max(dw - rw, rw*.6);
   const dy = ry + (rh-dh)/2 - (opt.y-.5)*Math.max(dh - rh, rh*.6);
 
   const L = Math.max(1, Math.ceil(dw)), A = Math.max(1, Math.ceil(dh));
-  const yCorte = Math.round(A * (1 - fatia));    // onde o apagamento começa
+  const yCorte = Math.round(A * (1 - fatia));   // onde a faixa do piso começa
 
   const m = document.createElement('canvas'); m.width = L; m.height = A;
   const mc = m.getContext('2d');
-  mc.drawImage(recorte, 0, 0, L, A);             // alpha do carro embaixo…
+  mc.drawImage(recorte, 0, 0, L, A);            // alpha do carro embaixo…
   mc.fillStyle = '#fff';
-  mc.fillRect(0, 0, L, yCorte);                  // …foto intacta acima
-  // 24px de degradê: a divisa não vira régua, e sobra uma tira do piso
-  // ORIGINAL colada no carro — onde vive a sombra de contato real.
+  mc.fillRect(0, 0, L, yCorte);                 // …e foto intacta acima
+  // 24px de degradê: a divisa não vira régua e sobra uma tira do piso ORIGINAL
+  // colada no carro, que é onde vive a sombra de contato real.
   const g = mc.createLinearGradient(0, yCorte, 0, yCorte + 24);
   g.addColorStop(0, 'rgba(255,255,255,1)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -690,38 +660,16 @@ function fotoComPisoApagado(foto, recorte, rx, ry, rw, rh, opt, fatia){
 
   const f = document.createElement('canvas'); f.width = L; f.height = A;
   const fc = f.getContext('2d');
-  fc.imageSmoothingQuality = 'high';
   fc.drawImage(foto, 0, 0, L, A);
   fc.globalCompositeOperation = 'destination-in';
   fc.drawImage(m, 0, 0);
-  // SEM fusão no topo. Eu havia posto 70px aqui e não era nada do combinado:
-  // a foto tem que entrar inteira acima da fatia do piso.
 
-  // Sombra ANTES da foto: onde a máscara apagou o chão ela aparece; onde a
-  // foto é opaca (carro, tira de piso original) ela fica escondida atrás —
-  // nunca por cima do veículo. Duas camadas: ambiente larga + contato curta.
-  const baseD = baseDoRecorte(recorte, dy, dh);
-  const forca = (parseInt($('sombra').value, 10) || 55) / 100;
-  const sil = document.createElement('canvas'); sil.width = L; sil.height = A;
-  const sc = sil.getContext('2d');
-  sc.drawImage(recorte, 0, 0, L, A);
-  sc.globalCompositeOperation = 'source-in';
-  sc.fillStyle = '#000'; sc.fillRect(0, 0, L, A);
   ctx.save();
-  // Clip só do topo até o fim da peça: embaixo nada corta o veículo — o que
-  // sobra ali já foi apagado pela máscara, e o texto se ancora abaixo dele.
-  ctx.beginPath(); ctx.rect(rx, ry, rw, H - ry); ctx.clip();
-  ctx.filter = 'blur(32px)';
-  ctx.globalAlpha = .28 * forca;
-  ctx.drawImage(sil, dx + dw*.03, baseD - dh*.13, dw*.94, dh*.20);
-  ctx.filter = 'blur(8px)';
-  ctx.globalAlpha = .80 * forca;
-  ctx.drawImage(sil, dx + dw*.10, baseD - dh*.045, dw*.80, dh*.065);
-  ctx.filter = 'none'; ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.clip();
   ctx.drawImage(f, dx, dy);
   ctx.restore();
 
-  return { dx, dy, dw, dh, baseDoCarro: baseD };
+  return { dy, dx, dw, dh, baseDoCarro: baseDoRecorte(recorte, dy, dh) };
 }
 
 /**
@@ -746,60 +694,6 @@ function baseDoRecorte(recorte, dy, dh){
   return dy + dh;
 }
 
-/**
- * Foto inteira na banda do carro (540..1060), com fusão no topo E na base.
- *
- * Antes a foto ocupava 0..1000 — cobria o letreiro do fundo novo, brigava com
- * o título e deixava o preço fixo em 1000: ajustar a posição vertical virava
- * uma luta entre três sliders (relato da Lorrayne, 14/08). Agora foto inteira
- * e recorte vivem na MESMA janela, abaixo do título e acima do preço: o
- * slider ↕ move a foto DENTRO da janela e nunca desloca o resto da peça.
- */
-function drawPhotoBanda(img, rx, ry, rw, rh, opt){
-  opt = opt || {zoom:1, x:.5, y:.5};
-  // Posição vertical LIVRE, e mesmo assim sem cortar o carro.
-  //
-  // A garantia não vem mais de travar o slider (eu havia removido o controle
-  // e isso deixou você sem poder enquadrar). Vem de a DIVISA acompanhar a
-  // foto: quem manda no início do bloco de texto é a borda de baixo da foto,
-  // devolvida por esta função. Mover a foto move o texto junto, e como as
-  // rodas nunca encostam na borda inferior da própria foto, elas nunca são
-  // atingidas — nem por corte, nem por transparência.
-  const scale = Math.max(rw/img.width, rh/img.height) * opt.zoom;
-  const dw = img.width*scale, dh = img.height*scale;
-  const dx = rx + (rw-dw)/2 - (opt.x-.5)*Math.max(dw - rw, rw*.6);
-  const dy = ry + (rh-dh)/2 - (opt.y-.5)*Math.max(dh - rh, rh*.6);
-
-  const altura = Math.max(rh, Math.ceil(dy + dh - ry));
-  const oc = document.createElement('canvas');
-  oc.width = rw; oc.height = altura;
-  const o = oc.getContext('2d');
-  o.imageSmoothingQuality = 'high';
-  o.drawImage(img, dx - rx, dy - ry, dw, dh);
-  o.globalCompositeOperation = 'destination-out';
-  // Fusão SÓ no topo, onde vive céu/fachada da foto — nunca o carro.
-  //
-  // A base é CORTE SECO, de propósito. Havia 90px de fusão aqui e ela comia
-  // o pneu (14/08) — os pneus vivem exatamente no pé da banda. É a mesma
-  // lição que este arquivo já registrava sobre o véu do desenho antigo:
-  // "lavava a borracha e a sombra de contato — a divisa seca é preferível a
-  // estragar o veículo, que é o assunto da peça". O carro tem prioridade
-  // máxima; efeito de acabamento nunca pode tocá-lo.
-  const topoFoto = Math.max(0, dy - ry);
-  let g = o.createLinearGradient(0, topoFoto, 0, topoFoto + 70);
-  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  o.fillStyle = g; o.fillRect(0, topoFoto, rw, 70);
-
-  ctx.save();
-  ctx.beginPath(); ctx.rect(rx, ry, rw, H - ry); ctx.clip();
-  ctx.drawImage(oc, rx, ry);
-  ctx.restore();
-  // topo: clampado na janela (o chamador usa para decidir o logo de reserva —
-  // com dy negativo ele desenhava um ATTRA duplicado sobre o letreiro).
-  // base: onde a foto termina — é o que ancora o bloco de texto.
-  return { topo: Math.max(ry, dy), base: dy + dh };
-}
-
 /* ================================================================
    TIPO 1 — CLÁSSICO (escuro, foto grande)
 ================================================================ */
@@ -814,14 +708,9 @@ function renderClassico(){
   // existe UM piso só na peça. A diferença de tom que motivou tudo isso deixa
   // de existir por construção, em vez de ser corrigida.
   if(facadeImg.complete && facadeImg.naturalWidth){
-    // Puxada para CIMA: medido na imagem, as letras do "ATTRA" começam na
-    // linha 181 — o deslocamento de -141 as coloca em y=40, no topo da peça.
-    // Com o letreiro lá em cima, o bloco de título vive ABAIXO dele e a marca
-    // do veículo nunca mais disputa espaço com o nome da loja.
-    const DESLOC_Y = -141;
     const esc = Math.max(W / facadeImg.naturalWidth, H / facadeImg.naturalHeight);
     ctx.drawImage(facadeImg,
-      (W - facadeImg.naturalWidth*esc)/2, DESLOC_Y,
+      (W - facadeImg.naturalWidth*esc)/2, 0,
       facadeImg.naturalWidth*esc, facadeImg.naturalHeight*esc);
   } else {
     ctx.fillStyle = '#101013'; ctx.fillRect(0, 0, W, H);
@@ -832,34 +721,16 @@ function renderClassico(){
   // aparecer por trás do carro, no lugar do chão que a máscara apagou. Sem
   // recorte, tudo segue como antes.
   const comRecorte = !!(state.foto1 && state.foto1Cut);
-  let baseDoCarro = null, posCarro = null, baseDaFoto = null;
-
-  // Até onde o carro pode descer sem espremer o texto.
-  //
-  // A divisa acompanha a base do veículo, então descer a foto empurrava o
-  // bloco para baixo até os destaques serem cortados pela borda da faixa
-  // (14/08). O bloco tem tamanho conhecido — preço (+54), KM (+102),
-  // destaques a partir de +156, três linhas de 44 com respiro mínimo de 20 —
-  // e a faixa termina no corte da foto 2. Daí sai o limite: além dele o
-  // slider simplesmente para, em vez de estragar a peça.
-  const CUT_ = 1416 - (parseInt($('corte').value, 10) || 0);
-  const ALTURA_TEXTO = 156 + 3*44 + 2*20 + 46;   // = 374 até a borda da faixa
-  const BASE_MAX = CUT_ - ALTURA_TEXTO;
+  let baseDoCarro = null, posCarro = null;
   let topGap = PHOTO1_H;
   if(comRecorte){
-    // Apaga SÓ O PISO da foto (fatia do slider); o resto entra intacto.
-    // A janela é a mesma do modo foto inteira (540..1060, abaixo do título),
-    // então o letreiro do fundo nunca é coberto — e o preço se ancora na
-    // base real do carro, medida no alpha do recorte.
     const fatia = (parseInt($('fatiapiso').value, 10) || 30) / 100;
-    const r = fotoComPisoApagado(state.foto1, state.foto1Cut, 0, 540, W, 520, state.f1, fatia);
-    topGap = Math.max(540, r.dy);
+    const r = fotoComPisoApagado(state.foto1, state.foto1Cut, 0, 0, W, PHOTO1_H, state.f1, fatia);
+    topGap = Math.max(0, r.dy);
     baseDoCarro = r.baseDoCarro;
     posCarro = r;
   } else if(state.foto1){
-    const r = drawPhotoBanda(state.foto1, 0, 540, W, 520, state.f1);
-    topGap = Math.max(0, r.topo);
-    baseDaFoto = r.base;
+    topGap = Math.max(0, drawPhotoFeather(state.foto1, 0, 0, W, PHOTO1_H, state.f1));
   } else {
     ctx.fillStyle = 'rgba(255,255,255,.45)';
     ctx.font = '600 26px Montserrat, sans-serif';
@@ -903,17 +774,16 @@ function renderClassico(){
   ctx.shadowBlur = 30;
   ctx.shadowOffsetY = 3;
 
-  // Título abaixo do letreiro (letreiro deslocado ocupa ~40-310).
-  if(marca) spacedText(marca, W/2, 380, '600 30px Montserrat, sans-serif', 11, '#ffffff');
+  if(marca) spacedText(marca, W/2, 316, '600 30px Montserrat, sans-serif', 11, '#ffffff');
 
   let msize = 92, mspace = 26;
   while(msize > 40 && spacedWidth(modelo, `200 ${msize}px Montserrat, sans-serif`, mspace) > 980){
     msize -= 3; mspace = Math.max(8, mspace - 1);
   }
-  if(modelo) spacedText(modelo, W/2, 452, `200 ${msize}px Montserrat, sans-serif`, mspace, '#ffffff');
+  if(modelo) spacedText(modelo, W/2, 400, `200 ${msize}px Montserrat, sans-serif`, mspace, '#ffffff');
 
   if(ano){
-    const yy = 508;
+    const yy = 458;
     const tw = spacedText(ano, W/2, yy, '300 34px Montserrat, sans-serif', 15, '#ffffff');
     ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -940,17 +810,42 @@ function renderClassico(){
   // O `pisoy` sobra como ajuste fino da altura do bloco de texto, e o `corte`
   // continua definindo onde entra a foto de baixo.
   const pisoShift = parseInt($('pisoy').value, 10) || 0;
-  // Com recorte: ancora na base real do carro. Sem recorte: no pé da banda da
-  // foto (1060) — o texto nunca depende de onde o slider ↕ deixou a foto.
-  // A divisa acompanha a base do veículo, MAS nunca passa de BASE_MAX: além
-  // dele o bloco de texto não caberia inteiro e os destaques eram cortados.
-  // A trava é no TEXTO, não na foto — travar a foto prendia o slider em quase
-  // toda a faixa, que não é o que se quer: o enquadramento continua livre.
-  const pisoBruto = baseDoCarro !== null
-    ? Math.round(baseDoCarro) + 30                    // recorte: base real do carro
-    : (baseDaFoto !== null ? Math.round(baseDaFoto) : 1064);  // foto inteira: base da foto
-  const PISO_TOP = Math.min(pisoBruto, BASE_MAX) + pisoShift;
+  const PISO_TOP = baseDoCarro !== null
+    ? Math.round(baseDoCarro) + 34 + pisoShift
+    : PHOTO1_H + pisoShift;
 
+  // O carro VOLTA por cima da faixa de piso.
+  //
+  // A faixa é desenhada depois da foto e sobe até a base do carro, então sem
+  // isto ela cobriria as rodas. Redesenhar o recorte aqui é bem menos invasivo
+  // que reordenar o bloco inteiro do piso, que é código calibrado e em
+  // produção — e o efeito é o mesmo: o piso aparece ATRÁS do veículo.
+  //
+  // A sombra vem em duas camadas. A larga e difusa é ambiente; a curta e escura,
+  // colada nos pneus, é a de contato — é ela que impede a sensação de carro
+  // flutuando, que a de ambiente sozinha não resolve.
+  if(comRecorte && posCarro){
+    const { dx, dw, dh } = posCarro;
+    const forca = (parseInt($('sombra').value, 10) || 55) / 100;
+
+    const sil = document.createElement('canvas');
+    sil.width = Math.max(1, Math.ceil(dw)); sil.height = Math.max(1, Math.ceil(dh));
+    const sc = sil.getContext('2d');
+    sc.drawImage(state.foto1Cut, 0, 0, dw, dh);
+    sc.globalCompositeOperation = 'source-in';
+    sc.fillStyle = '#000'; sc.fillRect(0, 0, sil.width, sil.height);
+
+    ctx.save();
+    ctx.filter = 'blur(32px)';
+    ctx.globalAlpha = .28 * forca;
+    ctx.drawImage(sil, dx + dw*.03, baseDoCarro - dh*.13, dw*.94, dh*.20);
+    ctx.filter = 'blur(8px)';
+    ctx.globalAlpha = .80 * forca;
+    ctx.drawImage(sil, dx + dw*.10, baseDoCarro - dh*.045, dw*.80, dh*.065);
+    ctx.restore();
+
+    ctx.drawImage(state.foto1Cut, dx, posCarro.dy, dw, dh);
+  }
 
   // SEM véu sobre a foto.
   //
@@ -974,19 +869,19 @@ function renderClassico(){
   if(dark){ ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1; }
 
   const preco = val('preco').replace(/^R\$\s*/i, '');
-  if(preco) spacedText('R$ ' + preco, W/2, PISO_TOP + 54, (dark ? '400' : '300') + ' 48px Montserrat, sans-serif', 10, tx.preco);
+  if(preco) spacedText('R$ ' + preco, W/2, PISO_TOP + 62, (dark ? '400' : '300') + ' 48px Montserrat, sans-serif', 10, tx.preco);
 
   const kmParts = [];
   if(val('km')) kmParts.push(val('km') + ' KM');
   if(val('kmextra')) kmParts.push(val('kmextra').toUpperCase());
   if(kmParts.length)
-    spacedText(kmParts.join('  |  '), W/2, PISO_TOP + 102, (dark ? '600' : '500') + ' 24px Montserrat, sans-serif', 5, tx.km);
+    spacedText(kmParts.join('  |  '), W/2, PISO_TOP + 118, (dark ? '600' : '500') + ' 24px Montserrat, sans-serif', 5, tx.km);
 
   // Máximo 3 destaques, UMA linha cada: a fonte encolhe até caber (mín. 25px)
   // e em último caso o texto é cortado com "…" — nunca quebra de linha.
   const bullets = ['b1','b2','b3'].map(val).filter(Boolean);
   const textX = 208, maxW = 800, lineH = 44;
-  const areaTop = PISO_TOP + 156, areaBot = Math.min(DIAG_L, DIAG_R) - 26;
+  const areaTop = PISO_TOP + 188, areaBot = Math.min(DIAG_L, DIAG_R) - 26;
   const items = bullets.map(b => {
     let size = 34;
     ctx.font = `700 ${size}px Montserrat, sans-serif`;
@@ -1016,17 +911,6 @@ function renderClassico(){
     ctx.fillText(it.text, textX, by);
     by += lineH + gap;
   }
-
-  // O veículo é redesenhado por ÚLTIMO — prioridade máxima na peça.
-  // Com o slider vertical livre, carro e texto podem se encontrar nos
-  // extremos; nesse encontro quem fica por cima é sempre o carro.
-  if(comRecorte && posCarro){
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0, 540, W, H - 540); ctx.clip();
-    ctx.drawImage(state.foto1Cut, posCarro.dx, posCarro.dy, posCarro.dw, posCarro.dh);
-    ctx.restore();
-  }
-
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   ctx.save();
@@ -2107,12 +1991,6 @@ $('rembgbtn').addEventListener('click', async () => {
     const img = new Image();
     img.onload = () => {
       state.foto1Cut = img;
-      // O enquadramento padrão do Clássico (zoom .88, y .18) foi calibrado
-      // para foto inteira; aplicado ao recorte, afundava o carro ~80px e
-      // empurrava todo o bloco de texto para cima da foto 2. Recorte entra
-      // com enquadramento neutro; os sliders continuam valendo.
-      state.f1 = {zoom: 1, x: .5, y: .5};
-      $('f1zoom').value = 100; $('f1x').value = 50; $('f1y').value = 50;
       $('rembgundo').style.display = '';
       const conf = typeof d.score === 'number' ? ' (confiança ' + d.score + '%)' : '';
       st.textContent = 'Fundo removido ✓' + conf + ' — ajuste zoom/posição nos sliders da Foto 1.';
