@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { Vehicle } from '@/types'
 import { useState } from 'react'
+import { filtrarPorMarca } from '@/lib/marca-normalizacao'
 
 const sortOptions = [
   { value: 'relevancia', label: 'Mais relevantes' },
@@ -42,10 +43,13 @@ export function VehicleGrid({ searchParams, vehicles, totalCount }: VehicleGridP
   let filteredVehicles = [...vehicles]
 
   if (searchParams.marca) {
-    const brandSearch = searchParams.marca.toLowerCase().replace('-', ' ')
-    filteredVehicles = filteredVehicles.filter(v =>
-      v.brand?.toLowerCase().includes(brandSearch)
-    )
+    // Comparação por slug canônico (src/lib/marca-normalizacao).
+    //
+    // Era `includes()` com `.replace('-', ' ')`, e isso escondia 10 Mercedes:
+    // o estoque grava "Mercedes", o filtro procurava "mercedes benz". O
+    // `includes` também casava por substring, e o replace trocava só o
+    // primeiro hífen.
+    filteredVehicles = filtrarPorMarca(filteredVehicles, searchParams.marca)
   }
 
   const displayCount = totalCount ?? filteredVehicles.length

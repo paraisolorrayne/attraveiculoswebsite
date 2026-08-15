@@ -13,6 +13,7 @@ import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
+import { marcaCasaCom } from '@/lib/marca-normalizacao'
 
 interface BrandPageProps {
 	params: Promise<{ brand: string }>
@@ -105,7 +106,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
 	// Filter vehicles for this brand (case-insensitive)
 	const brandVehicles = allVehicles.filter(v =>
-		(v.brand || '').toLowerCase() === brand.name.toLowerCase()
+		marcaCasaCom(v.brand, brand.slug)
 	)
 
 	// Find related brands
@@ -210,29 +211,54 @@ export default async function BrandPage({ params }: BrandPageProps) {
 				</section>
 			)}
 
-			{/* Available Vehicles */}
-			{brandVehicles.length > 0 && (
-				<section className="py-12 lg:py-16 bg-background-card border-y border-border">
-					<Container>
-						<div className="flex items-center justify-between mb-8">
-							<h2 className="text-2xl font-bold text-foreground">
-								{brand.displayName} à Venda
-							</h2>
+			{/* Estoque — a seção existe SEMPRE.
+			    Sem veículos ela some, e a página perdia o único ponto de
+			    conversão logo no início: quem chegou buscando "Ferrari à venda"
+			    caía direto no conteúdo editorial. Sem estoque, o espaço vira
+			    canal de sourcing — que é o diferencial da Attra, não uma
+			    mensagem de erro. */}
+			<section className="py-12 lg:py-16 bg-background-card border-y border-border">
+				<Container>
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-2xl font-bold text-foreground">
+							{brand.displayName} à Venda
+						</h2>
+						{brandVehicles.length > 0 && (
 							<Link
-								href={`/veiculos?marca=${brand.name.toLowerCase()}`}
+								href={`/veiculos?marca=${brand.slug}`}
 								className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
 							>
 								Ver todos <ArrowRight className="w-3 h-3" />
 							</Link>
-						</div>
+						)}
+					</div>
+
+					{brandVehicles.length > 0 ? (
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 							{brandVehicles.slice(0, 6).map(vehicle => (
 								<VehicleCard key={vehicle.id} vehicle={vehicle} />
 							))}
 						</div>
-					</Container>
-				</section>
-			)}
+					) : (
+						<div className="rounded-xl border border-border bg-background p-8 lg:p-12 text-center">
+							<p className="text-lg text-foreground font-medium">
+								Nenhuma {brand.displayName} disponível no estoque neste momento.
+							</p>
+							<p className="mt-3 text-foreground-secondary max-w-xl mx-auto">
+								A Attra localiza veículos sob encomenda — no Brasil e no exterior.
+								Diga qual {brand.displayName} você procura e nós buscamos, com a
+								mesma verificação de procedência do estoque próprio.
+							</p>
+							<Link
+								href={`/solicitar-veiculo?marca=${brand.slug}`}
+								className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+							>
+								Solicitar uma {brand.displayName} <ArrowRight className="w-4 h-4" />
+							</Link>
+						</div>
+					)}
+				</Container>
+			</section>
 
 			{/* Related Brands */}
 			<section className="py-12 lg:py-16">
