@@ -327,7 +327,7 @@ export const MARCAS_EDITORIAL: Record<string, MarcaEditorial> = {
 		resumo:
 			'A marca que reivindica a invenção do automóvel e construiu a referência do que é um carro de luxo.',
 		origem:
-			'A história começa antes da marca: Carl Benz patenteou em 1886 o veículo que é normalmente reconhecido como o primeiro automóvel. A Mercedes-Benz como nome surge em 1926, da fusão entre a Daimler-Motoren-Gesellschaft e a Benz & Cie. A sede fica em Stuttgart. A AMG nasceu separada, em 1967, criada por dois ex-engenheiros da Daimler em Affalterbach, e só depois foi incorporada.',
+			'A história começa antes da marca: Carl Benz patenteou em 1886 o veículo que é normalmente reconhecido como o primeiro automóvel. A Mercedes-Benz como nome surge em 1926, da fusão entre a Daimler-Motoren-Gesellschaft e a Benz & Cie. A sede fica em Stuttgart. A AMG nasceu separada, em 1967, criada por dois ex-engenheiros da Daimler, e mudou-se para Affalterbach na década seguinte — endereço que virou sinônimo da divisão. A incorporação pela montadora veio bem depois.',
 		identidade:
 			'A Mercedes-Benz é a referência histórica de conforto e tecnologia embarcada no segmento de luxo — a marca que tradicionalmente estreia sistemas de segurança e assistência que depois se espalham pela indústria. A AMG acrescentou a essa base uma linha de alto desempenho com identidade própria, incluindo a tradição de motor montado por um único técnico.',
 		noBrasil:
