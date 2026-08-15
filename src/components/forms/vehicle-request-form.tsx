@@ -9,7 +9,8 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { useAnalytics } from '@/hooks/use-analytics'
+import { useAnalytics, pushAnalyticsEvent } from '@/hooks/use-analytics'
+import { eventoDeSolicitacao } from '@/lib/analytics-marca'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
 const schema = z.object({
@@ -107,6 +108,17 @@ export function VehicleRequestForm({
         formLocation: '/veiculos',
         vehicleName: `${data.brand} ${data.model}`,
       }, visitorContext)
+
+      // Evento próprio da solicitação (item 26): reporta a marca e o modelo
+      // ENVIADOS, não os que a página pré-preencheu — quem chega por /ferrari
+      // pode acabar pedindo uma McLaren, e o relatório precisa dizer isso.
+      const solicitacao = eventoDeSolicitacao({
+        marca: data.brand,
+        modelo: data.model,
+        categoria,
+        caminho: origem ?? '/solicitar-veiculo',
+      })
+      pushAnalyticsEvent(solicitacao.nome, solicitacao.params, visitorContext)
 
       // Identify visitor for GA4 User Properties and Clarity
       identifyVisitor({

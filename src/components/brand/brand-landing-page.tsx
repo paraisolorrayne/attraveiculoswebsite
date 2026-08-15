@@ -12,6 +12,7 @@ import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 import { marcaCasaCom } from '@/lib/marca-normalizacao'
+import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
 
 /**
  * Página de marca — compartilhada por /comprar/[brand] e /[brand].
@@ -31,6 +32,12 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 	return (
 		<Link
 			href={`/veiculo/${vehicle.slug}`}
+			// Lidos por <MarcaAnalytics> na delegação de clique — sem eles o card
+			// sai do relatório calado.
+			data-veiculo-id={vehicle.id}
+			data-veiculo-marca={vehicle.brand}
+			data-veiculo-modelo={vehicle.model}
+			data-veiculo-slug={vehicle.slug}
 			className="group bg-background-card border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all hover:shadow-lg"
 		>
 			{vehicle.photos?.[0] && (
@@ -103,6 +110,12 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 
 	return (
 		<main>
+			<MarcaAnalytics
+				tipo="marca"
+				marca={brand.displayName}
+				categoria={brand.categoriaEditorial}
+			/>
+
 			{/* Hero */}
 			<section className="relative py-16 lg:py-24 bg-gradient-to-b from-background to-background-card">
 				<Container>

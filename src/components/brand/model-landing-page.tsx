@@ -4,8 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { findSEOBrand, findSEOModel, getAllModelSlugs } from '@/lib/seo-brands'
-import { acharModeloDoEstoque, modelosDoEstoque, veiculosDoModelo } from '@/lib/seo/modelos-do-estoque'
+import { findSEOBrand, findSEOModel } from '@/lib/seo-brands'
+import { acharModeloDoEstoque, veiculosDoModelo } from '@/lib/seo/modelos-do-estoque'
 import { getVehicles } from '@/lib/autoconf-api'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
@@ -13,6 +13,7 @@ import { SITE_URL } from '@/lib/constants'
 import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
+import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
 
 /**
  * Página de modelo — compartilhada por /comprar/[brand]/[model] e /[brand]/[model].
@@ -91,6 +92,13 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 
 	return (
 		<main>
+			<MarcaAnalytics
+				tipo="modelo"
+				marca={brand.displayName}
+				modelo={model.name}
+				categoria={brand.categoriaEditorial}
+			/>
+
 			{/* Hero */}
 			<section className="relative py-16 lg:py-24 bg-gradient-to-b from-background to-background-card">
 				<Container>
@@ -175,6 +183,11 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 								<Link
 									key={vehicle.id}
 									href={`/veiculo/${vehicle.slug}`}
+									// Lidos por <MarcaAnalytics> na delegação de clique.
+									data-veiculo-id={vehicle.id}
+									data-veiculo-marca={vehicle.brand}
+									data-veiculo-modelo={vehicle.model}
+									data-veiculo-slug={vehicle.slug}
 									className="group bg-background border border-border rounded-xl overflow-hidden hover:border-primary/40 transition-all hover:shadow-lg"
 								>
 									{vehicle.photos?.[0] && (

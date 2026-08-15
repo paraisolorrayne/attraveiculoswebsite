@@ -7,11 +7,13 @@ import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { marcasPorCategoria, marcasDoHub } from '@/lib/seo-brands'
 import { getVehicles } from '@/lib/autoconf-api'
 import { marcaCasaCom } from '@/lib/marca-normalizacao'
+import { podeAparecerNoHub } from '@/lib/estoque-superesportivo'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
+import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
 
 /**
  * Hub da categoria — /superesportivos.
@@ -25,7 +27,9 @@ import { Vehicle } from '@/types'
  */
 
 export const metadata: Metadata = {
-	title: 'Superesportivos à Venda | Supercarros no Brasil | Attra Veículos',
+	// Sem sufixo de marca: o layout raiz aplica o template '%s | Attra Veículos'.
+	// Repetir aqui produzia "... | Attra Veículos | Attra Veículos" na aba.
+	title: 'Superesportivos à Venda | Supercarros no Brasil',
 	description:
 		'Superesportivos à venda no Brasil: Ferrari, Lamborghini, McLaren, Porsche e Aston Martin com procedência verificada. Veja o estoque ou solicite o modelo que procura.',
 	keywords: [
@@ -49,6 +53,11 @@ function VeiculoCard({ vehicle }: { vehicle: Vehicle }) {
 	return (
 		<Link
 			href={`/veiculo/${vehicle.slug}`}
+			// Lidos por <MarcaAnalytics> na delegação de clique.
+			data-veiculo-id={vehicle.id}
+			data-veiculo-marca={vehicle.brand}
+			data-veiculo-modelo={vehicle.model}
+			data-veiculo-slug={vehicle.slug}
 			className="group bg-background-card border border-border rounded-xl overflow-hidden transition-all hover:border-primary/40 hover:shadow-lg"
 		>
 			{vehicle.photos?.[0] && (
@@ -124,16 +133,25 @@ export default async function SuperesportivosPage() {
 		registros_por_pagina: 100,
 	})
 
-	// Estoque da categoria = veículos de qualquer marca classificada no hub.
-	// Comparação pela camada de normalização, nunca por nome cru: o AutoConf
-	// grava "Mercedes" onde o catálogo tem "Mercedes-Benz".
-	const veiculos = todos.filter(v => marcas.some(m => marcaCasaCom(v.brand, m.slug)))
+	// Estoque da categoria. A marca é só o primeiro filtro — quem decide se o
+	// carro pode ser anunciado como superesportivo é `podeAparecerNoHub`, porque
+	// filtrar só por marca colocava BMW X2, Porsche Macan e Mercedes G-63
+	// debaixo do H1 "Superesportivos à venda".
+	//
+	// A comparação de marca usa a camada de normalização, nunca o nome cru: o
+	// AutoConf grava "Mercedes" onde o catálogo tem "Mercedes-Benz".
+	const veiculos = todos.filter(v => {
+		const marca = marcas.find(m => marcaCasaCom(v.brand, m.slug))
+		return marca ? podeAparecerNoHub(v, marca.categoriaEditorial) : false
+	})
 
 	const superesportivos = marcasPorCategoria('superesportivo')
 	const performance = marcasPorCategoria('performance')
 
 	return (
 		<main>
+			<MarcaAnalytics tipo="categoria" categoria="superesportivo" />
+
 			<Container className="pt-8">
 				<Breadcrumb items={[{ label: 'Superesportivos' }]} />
 			</Container>

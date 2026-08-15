@@ -173,6 +173,22 @@ function pushEvent(
 }
 
 /**
+ * Dispara um evento já montado em outro lugar.
+ *
+ * Existe para os eventos cujo payload é construído por uma camada pura e
+ * testável (`@/lib/analytics-marca`), em vez de montado dentro do hook. O
+ * enriquecimento com UTM e contexto de visitante é o mesmo de qualquer outro
+ * evento — este é só o portão de saída, não uma segunda via.
+ */
+export function pushAnalyticsEvent(
+  eventName: string,
+  eventParams: Record<string, unknown> = {},
+  visitorContext?: VisitorContext
+): void {
+  pushEvent(eventName, eventParams, visitorContext)
+}
+
+/**
  * Set GA4 User Properties for identified visitors
  * LGPD: Only call this when user has explicitly provided their data
  */
