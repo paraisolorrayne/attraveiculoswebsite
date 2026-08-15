@@ -281,7 +281,7 @@ export default async function SuperesportivosPage() {
 							Diga qual modelo você procura. A Attra localiza e apresenta as opções
 							com procedência verificada.
 						</p>
-						<VehicleRequestForm origem="/superesportivos" />
+						<VehicleRequestForm origem="/superesportivos" categoria="superesportivo" />
 					</div>
 				</Container>
 			</section>

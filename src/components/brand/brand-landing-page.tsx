@@ -281,7 +281,11 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 						<p className="text-foreground-secondary text-center mb-8">
 							Diga o que você busca e um especialista procura no mercado para você.
 						</p>
-						<VehicleRequestForm origem={`${basePath}/${brand.slug}`} />
+						<VehicleRequestForm
+							origem={`${basePath}/${brand.slug}`}
+							marcaInicial={brand.displayName}
+							categoria={brand.categoriaEditorial}
+						/>
 					</div>
 				</Container>
 			</section>

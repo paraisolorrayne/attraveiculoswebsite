@@ -1,3 +1,4 @@
+import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -233,7 +234,7 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 							</p>
 							<div className="flex flex-wrap justify-center gap-4">
 								<Link
-									href="/solicitar-veiculo"
+									href="#solicitar"
 									className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
 								>
 									Solicitar {model.name}
@@ -408,6 +409,31 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 					}),
 				}}
 			/>
+		{/* Solicitação — na PRÓPRIA página, com marca e modelo preenchidos.
+			    Antes havia só um link para /solicitar-veiculo, que jogava fora o
+			    contexto exatamente onde a intenção é mais forte: quem está em
+			    /ferrari/296-gtb já disse o que quer, e chegava ao comercial um
+			    pedido em branco. */}
+			<section id="solicitar" className="py-12 lg:py-16 bg-background-card border-t border-border">
+				<Container>
+					<div className="mx-auto max-w-2xl">
+						<h2 className="text-2xl font-bold text-foreground mb-3 text-center">
+							Solicitar {model.fullName}
+						</h2>
+						<p className="text-center text-foreground-secondary mb-8">
+							Não encontrou a configuração que procura? A Attra localiza no mercado
+							nacional e no exterior, com a mesma verificação de procedência.
+						</p>
+						<VehicleRequestForm
+							origem={`${basePath}/${brandSlug}/${modelSlug}`}
+							marcaInicial={brand.displayName}
+							modeloInicial={model.name}
+							categoria={brand.categoriaEditorial}
+						/>
+					</div>
+				</Container>
+			</section>
+
 		</main>
 	)
 }
