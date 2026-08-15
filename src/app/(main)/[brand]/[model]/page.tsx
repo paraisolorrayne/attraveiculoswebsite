@@ -19,6 +19,8 @@ interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
 }
 
+export const dynamicParams = false
+
 export async function generateStaticParams() {
 	// Curadas + derivadas do estoque. As derivadas existem enquanto houver
 	// unidade; quando o último carro do modelo sai, a rota deixa de ser gerada e
@@ -39,19 +41,25 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 		title: model.metaTitle,
 		description: model.metaDescription,
 		keywords: model.keywords,
-		alternates: { canonical: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}` },
+		alternates: { canonical: `${SITE_URL}/${brandSlug}/${modelSlug}` },
 		openGraph: {
 			title: model.metaTitle,
 			description: model.metaDescription,
-			url: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}`,
+			url: `${SITE_URL}/${brandSlug}/${modelSlug}`,
 			type: 'website',
 		},
 	}
 }
 
-/** Rota histórica, já indexada. Renderiza o mesmo componente da raiz. */
+/**
+ * Modelo na raiz: /ferrari/296-gtb, /porsche/911…
+ *
+ * `dynamicParams = false` pelo mesmo motivo da página de marca: sem a lista
+ * fechada, esta rota capturaria quaisquer dois segmentos da raiz e ficaria na
+ * frente de qualquer seção futura.
+ */
 export default async function ModelPage({ params }: ModelPageProps) {
 	const { brand: brandSlug, model: modelSlug } = await params
 	if (!(await resolverModelo(brandSlug, modelSlug))) notFound()
-	return <ModelLandingPage brandSlug={brandSlug} modelSlug={modelSlug} basePath="/comprar" />
+	return <ModelLandingPage brandSlug={brandSlug} modelSlug={modelSlug} basePath="" />
 }
