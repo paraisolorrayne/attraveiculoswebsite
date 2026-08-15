@@ -6,6 +6,7 @@ import {
 } from '@/lib/constants'
 import { ICONIC_CARS } from '@/lib/iconic-cars'
 import { SEO_BRANDS } from '@/lib/seo-brands'
+import { MARCAS_EDITORIAL } from '@/lib/seo/marcas-editorial'
 import {
   formatMileage,
   formatPrice,
@@ -37,6 +38,14 @@ export async function GET() {
   // pátio. Agora as duas informações convivem, e a segunda sai do estoque.
   let blocoMarcas = SEO_BRANDS
     .map(b => `- [Comprar ${b.displayName}](${BASE}/comprar/${b.slug}): ${b.tagline}. Modelos: ${b.models.map(m => m.name).join(', ')}`)
+    .join('\n')
+
+  // Família editorial (/marca), separada da comercial (/comprar/marca) de
+  // propósito: são intenções diferentes, e listar as duas com a diferença
+  // explicitada é o que evita que sejam lidas como o mesmo recurso duplicado.
+  // Só entram marcas com editorial escrito — a lista vem de MARCAS_EDITORIAL.
+  const blocoEditorial = Object.entries(MARCAS_EDITORIAL)
+    .map(([slug, e]) => `- [${e.titulo}](${BASE}/${slug}): ${e.resumo}`)
     .join('\n')
   try {
     const inventory = await loadListedInventory()
@@ -157,6 +166,14 @@ ${inventoryBlock}
 ## Comprar por marca
 
 ${blocoMarcas}
+
+## Marcas — história, contexto e o que verificar num usado
+
+Páginas informacionais, distintas das de compra acima: história da marca, o que
+define sua engenharia, como ela circula no Brasil e o que checar antes de
+comprar um exemplar usado.
+
+${blocoEditorial}
 
 ## Acervo icônico — Veículos marcantes já comercializados
 

@@ -19,6 +19,8 @@ interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
 }
 
+export const dynamicParams = false
+
 export async function generateStaticParams() {
 	// Curadas + derivadas do estoque. As derivadas existem enquanto houver
 	// unidade; quando o último carro do modelo sai, a rota deixa de ser gerada e
@@ -35,6 +37,20 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 	if (!result) return {}
 
 	const { model } = result
+
+	// CANONICAL APONTA PARA /comprar, de propósito.
+	//
+	// A página de MARCA se diferenciou: /ferrari tem história, verificação e FAQ
+	// próprios, e /comprar/ferrari tem o comercial. A de MODELO não — esta rota
+	// e /comprar/[brand]/[model] renderizam o mesmo componente com o mesmo
+	// texto. Enquanto for cópia, declarar as duas como originais faz elas
+	// disputarem a mesma busca e o buscador descartar uma.
+	//
+	// Aponta para /comprar porque é a família já indexada e a que recebe
+	// anúncio. A URL curta continua funcionando para quem navega a partir de
+	// /ferrari — o que ela não faz é reivindicar autoria de um texto que é do
+	// outro endereço. Quando o modelo ganhar editorial próprio, este canonical
+	// passa a apontar para si mesmo.
 	return {
 		title: model.metaTitle,
 		description: model.metaDescription,
@@ -43,15 +59,21 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 		openGraph: {
 			title: model.metaTitle,
 			description: model.metaDescription,
-			url: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}`,
+			url: `${SITE_URL}/${brandSlug}/${modelSlug}`,
 			type: 'website',
 		},
 	}
 }
 
-/** Rota histórica, já indexada. Renderiza o mesmo componente da raiz. */
+/**
+ * Modelo na raiz: /ferrari/296-gtb, /porsche/911…
+ *
+ * `dynamicParams = false` pelo mesmo motivo da página de marca: sem a lista
+ * fechada, esta rota capturaria quaisquer dois segmentos da raiz e ficaria na
+ * frente de qualquer seção futura.
+ */
 export default async function ModelPage({ params }: ModelPageProps) {
 	const { brand: brandSlug, model: modelSlug } = await params
 	if (!(await resolverModelo(brandSlug, modelSlug))) notFound()
-	return <ModelLandingPage brandSlug={brandSlug} modelSlug={modelSlug} basePath="/comprar" />
+	return <ModelLandingPage brandSlug={brandSlug} modelSlug={modelSlug} basePath="" />
 }

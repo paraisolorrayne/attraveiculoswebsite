@@ -9,7 +9,8 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
-import { useAnalytics } from '@/hooks/use-analytics'
+import { useAnalytics, pushAnalyticsEvent } from '@/hooks/use-analytics'
+import { eventoDeSolicitacao } from '@/lib/analytics-marca'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
 const schema = z.object({
@@ -26,12 +27,37 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
+interface VehicleRequestFormProps {
+  /** De onde o lead partiu (ex.: "/ferrari"). */
+  origem?: string
+  /** Marca da página, pré-preenchida no formulário. */
+  marcaInicial?: string
+  /** Modelo da página, pré-preenchido quando a página é de modelo. */
+  modeloInicial?: string
+  /** Categoria editorial da origem (ex.: "superesportivos"). */
+  categoria?: string
+}
+
 /**
  * `origem` marca de onde o lead partiu (ex.: "/comprar/porsche"). Sem isso, um
  * pedido vindo da página de marca chega indistinguível de um pedido genérico —
  * e é justamente essa distinção que responde qual intenção gera negócio.
+ *
+ * `marcaInicial` e `modeloInicial` pré-preenchem os campos a partir da página.
+ * Quem clica em "Solicitar uma Ferrari" já disse qual marca quer; pedir que
+ * digite de novo é atrito puro, e o campo em branco ainda deixa o lead chegar
+ * ao comercial sem marca quando a pessoa desiste no meio.
+ *
+ * Os campos continuam EDITÁVEIS de propósito: quem chegou por /ferrari pode
+ * acabar pedindo outra coisa, e travar o campo transformaria a página numa
+ * armadilha.
  */
-export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
+export function VehicleRequestForm({
+  origem,
+  marcaInicial,
+  modeloInicial,
+  categoria,
+}: VehicleRequestFormProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [erroEnvio, setErroEnvio] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -40,6 +66,15 @@ export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
+    // O pré-preenchimento vem do `defaultValue` de cada Input, não daqui.
+    // Testado no navegador em 15/08: com `defaultValues` no useForm os campos
+    // renderizavam vazios (o placeholder aparecia, provando que a prop chegava,
+    // mas o value não). `defaultValue` no input não-controlado funciona, e o
+    // react-hook-form lê o valor do DOM no envio.
+    defaultValues: {
+      brand: marcaInicial ?? '',
+      model: modeloInicial ?? '',
+    },
   })
 
   const onSubmit = async (data: FormData) => {
@@ -50,7 +85,7 @@ export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
       const resposta = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: origem ?? '/solicitar-veiculo', traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
+        body: JSON.stringify({ ...data, subject: 'Solicitação de Veículo', sourcePage: origem ?? '/solicitar-veiculo', sourceCategory: categoria, traffic: visitorContext.traffic, sessionId: visitorContext.sessionId }),
       })
       // A API devolve 502 quando nenhum canal (e-mail, WhatsApp, webhook)
       // recebeu o lead. Sem esta checagem o formulário anunciava sucesso
@@ -73,6 +108,17 @@ export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
         formLocation: '/veiculos',
         vehicleName: `${data.brand} ${data.model}`,
       }, visitorContext)
+
+      // Evento próprio da solicitação (item 26): reporta a marca e o modelo
+      // ENVIADOS, não os que a página pré-preencheu — quem chega por /ferrari
+      // pode acabar pedindo uma McLaren, e o relatório precisa dizer isso.
+      const solicitacao = eventoDeSolicitacao({
+        marca: data.brand,
+        modelo: data.model,
+        categoria,
+        caminho: origem ?? '/solicitar-veiculo',
+      })
+      pushAnalyticsEvent(solicitacao.nome, solicitacao.params, visitorContext)
 
       // Identify visitor for GA4 User Properties and Clarity
       identifyVisitor({
@@ -122,11 +168,21 @@ export function VehicleRequestForm({ origem }: { origem?: string } = {}) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Marca desejada</label>
-          <Input {...register('brand')} placeholder="Ex: Porsche" error={errors.brand?.message} />
+          <Input
+            {...register('brand')}
+            defaultValue={marcaInicial}
+            placeholder={marcaInicial ?? 'Ex: Porsche'}
+            error={errors.brand?.message}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Modelo desejado</label>
-          <Input {...register('model')} placeholder="Ex: 911 Carrera" error={errors.model?.message} />
+          <Input
+            {...register('model')}
+            defaultValue={modeloInicial}
+            placeholder={modeloInicial ?? 'Ex: 911 Carrera'}
+            error={errors.model?.message}
+          />
         </div>
       </div>
 

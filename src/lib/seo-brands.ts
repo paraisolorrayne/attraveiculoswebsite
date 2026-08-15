@@ -9,10 +9,22 @@
  * sitemap, and internal links from vehicle pages.
  */
 
+/**
+ * Classificação editorial da marca (item 18 dos specs de superesportivos).
+ *
+ * Serve ao hub /superesportivos, que agrupa as marcas em dois blocos em vez de
+ * jogar todas na mesma lista. Marca sem classificação NÃO aparece no hub — é o
+ * caso da Land Rover, que é luxo mas não performance, e apareceria deslocada
+ * ao lado de Ferrari e McLaren.
+ */
+export type CategoriaEditorial = 'superesportivo' | 'performance'
+
 export interface SEOBrand {
 	slug: string
 	name: string
 	displayName: string
+	/** Ausente = não entra no hub /superesportivos. */
+	categoriaEditorial?: CategoriaEditorial
 	country: string
 	tagline: string
 	description: string
@@ -39,7 +51,64 @@ export interface SEOModel {
 
 export const SEO_BRANDS: SEOBrand[] = [
 	{
+		slug: 'aston-martin',
+		categoriaEditorial: 'superesportivo',
+		name: 'Aston Martin',
+		displayName: 'Aston Martin',
+		country: 'Reino Unido',
+		tagline: 'Gran turismo britânico, feito à mão',
+		description: 'A Aston Martin ocupa um lugar próprio entre as marcas de alto desempenho: em vez de perseguir o carro mais radical, constrói gran turismos que combinam performance com conforto de viagem e acabamento artesanal. É a escolha de quem quer presença e exclusividade sem abrir mão de usar o carro no dia a dia.',
+		metaTitle: 'Comprar Aston Martin no Brasil | Aston Martin à Venda',
+		metaDescription: 'Aston Martin à venda no Brasil. DB12, Vantage e DBX com procedência verificada. Curadoria premium e sourcing sob encomenda — Attra Veículos.',
+		keywords: ['comprar aston martin brasil', 'aston martin à venda', 'aston martin preço brasil', 'aston martin seminovo'],
+		highlights: [
+			'Gran turismo — performance com conforto para viajar',
+			'Acabamento artesanal e forte personalização de fábrica',
+			'Presença rara no mercado brasileiro',
+			'Design reconhecível à distância',
+		],
+		models: [
+			{
+				slug: 'db12',
+				name: 'DB12',
+				fullName: 'Aston Martin DB12',
+				tagline: 'O gran turismo da linha atual',
+				description: 'O DB12 é o gran turismo de dois lugares da linha atual da Aston Martin — o modelo que melhor traduz a proposta da marca: velocidade de viagem, acabamento de luxo e uma silhueta que não se confunde com nenhuma concorrente.',
+				metaTitle: 'Aston Martin DB12 à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Aston Martin DB12 no Brasil. Gran turismo com procedência verificada. Consulte disponibilidade ou solicite sob encomenda — Attra Veículos.',
+				keywords: ['aston martin db12 preço', 'comprar aston martin db12', 'db12 à venda brasil'],
+				category: 'gt',
+				highlights: ['Gran turismo de dois lugares', 'Interior com forte grau de personalização', 'Proposta de uso em viagem, não só de exibição'],
+			},
+			{
+				slug: 'vantage',
+				name: 'Vantage',
+				fullName: 'Aston Martin Vantage',
+				tagline: 'O esportivo mais direto da marca',
+				description: 'O Vantage é o modelo mais compacto e direto da Aston Martin — o mais próximo de um esportivo puro dentro da linha, com postura mais agressiva que a dos gran turismos maiores.',
+				metaTitle: 'Aston Martin Vantage à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Aston Martin Vantage no Brasil. Esportivo britânico com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['aston martin vantage preço', 'comprar aston martin vantage', 'vantage à venda brasil'],
+				category: 'sports',
+				highlights: ['O esportivo mais compacto da linha', 'Postura mais agressiva que a dos GTs', 'Disponível em carroceria fechada e conversível'],
+			},
+			{
+				slug: 'dbx',
+				name: 'DBX',
+				fullName: 'Aston Martin DBX',
+				tagline: 'O SUV da Aston Martin',
+				description: 'O DBX é o SUV da Aston Martin — a porta de entrada para quem quer a marca sem abrir mão de espaço, altura e uso familiar. Foi o modelo que ampliou o alcance da marca para além dos esportivos de dois lugares.',
+				metaTitle: 'Aston Martin DBX à Venda no Brasil | SUV Aston Martin',
+				metaDescription: 'Comprar Aston Martin DBX no Brasil. SUV de alto desempenho com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['aston martin dbx preço', 'comprar aston martin dbx', 'dbx à venda brasil', 'suv aston martin'],
+				category: 'suv',
+				highlights: ['SUV com uso familiar real', 'Mesma identidade visual dos esportivos da marca', 'Alternativa aos SUVs de alto desempenho alemães'],
+			},
+		],
+	},
+	{
 		slug: 'porsche',
+		categoriaEditorial: 'superesportivo',
 		name: 'Porsche',
 		displayName: 'Porsche',
 		country: 'Alemanha',
@@ -95,6 +164,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'ferrari',
+		categoriaEditorial: 'superesportivo',
 		name: 'Ferrari',
 		displayName: 'Ferrari',
 		country: 'Itália',
@@ -138,6 +208,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'bmw',
+		categoriaEditorial: 'performance',
 		name: 'BMW',
 		displayName: 'BMW',
 		country: 'Alemanha',
@@ -193,6 +264,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'mercedes-benz',
+		categoriaEditorial: 'performance',
 		name: 'Mercedes-Benz',
 		displayName: 'Mercedes-Benz',
 		country: 'Alemanha',
@@ -236,6 +308,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'audi',
+		categoriaEditorial: 'performance',
 		name: 'Audi',
 		displayName: 'Audi',
 		country: 'Alemanha',
@@ -298,6 +371,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'chevrolet',
+		categoriaEditorial: 'performance',
 		name: 'Chevrolet',
 		displayName: 'Chevrolet',
 		country: 'Estados Unidos',
@@ -329,6 +403,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'mclaren',
+		categoriaEditorial: 'superesportivo',
 		name: 'McLaren',
 		displayName: 'McLaren',
 		country: 'Reino Unido',
@@ -360,6 +435,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'lamborghini',
+		categoriaEditorial: 'superesportivo',
 		name: 'Lamborghini',
 		displayName: 'Lamborghini',
 		country: 'Itália',
@@ -403,6 +479,7 @@ export const SEO_BRANDS: SEOBrand[] = [
 	},
 	{
 		slug: 'bentley',
+		categoriaEditorial: 'performance',
 		name: 'Bentley',
 		displayName: 'Bentley',
 		country: 'Reino Unido',
@@ -444,6 +521,65 @@ export const SEO_BRANDS: SEOBrand[] = [
 			},
 		],
 	},
+	{
+		slug: 'rolls-royce',
+		// SEM categoriaEditorial, de propósito — mesmo tratamento da Land Rover.
+		// A categoria alimenta o hub /superesportivos, e Rolls-Royce não é
+		// superesportivo nem marca de performance: é o oposto disso. Ela ganha
+		// /rolls-royce e /comprar/rolls-royce, mas não entra naquele hub.
+		name: 'Rolls-Royce',
+		displayName: 'Rolls-Royce',
+		country: 'Reino Unido',
+		tagline: 'O automóvel de luxo como referência absoluta',
+		description: 'A Rolls-Royce não disputa desempenho com ninguém: constrói o carro em que se é conduzido. Silêncio de rodagem, acabamento sob medida e presença são os argumentos, e o grau de personalização de fábrica não tem paralelo na indústria.',
+		metaTitle: 'Comprar Rolls-Royce no Brasil | Rolls-Royce à Venda',
+		metaDescription: 'Rolls-Royce à venda no Brasil. Phantom, Ghost e Cullinan com procedência verificada. Curadoria premium e sourcing sob encomenda — Attra Veículos.',
+		keywords: ['comprar rolls royce brasil', 'rolls royce à venda', 'rolls royce preço brasil', 'rolls royce seminovo'],
+		highlights: [
+			'Personalização de fábrica praticamente sem limite',
+			'Silêncio de rodagem como projeto, não como consequência',
+			'Frota mínima no Brasil — exclusividade real',
+			'Acabamento artesanal, com couro e madeira trabalhados à mão',
+		],
+		models: [
+			{
+				slug: 'phantom',
+				name: 'Phantom',
+				fullName: 'Rolls-Royce Phantom',
+				tagline: 'O topo da linha, e a referência da marca',
+				description: 'O Phantom é o modelo de topo da Rolls-Royce e o que define a marca: um sedã de grande porte pensado antes para o banco de trás. É nele que a personalização de fábrica vai mais longe.',
+				metaTitle: 'Rolls-Royce Phantom à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Rolls-Royce Phantom no Brasil. Sedã de luxo com procedência verificada. Consulte disponibilidade ou solicite sob encomenda — Attra Veículos.',
+				keywords: ['rolls royce phantom preço', 'comprar rolls royce phantom', 'phantom à venda brasil'],
+				category: 'luxury',
+				highlights: ['O modelo de topo da marca', 'Projetado para quem é conduzido', 'Personalização de fábrica sem paralelo'],
+			},
+			{
+				slug: 'ghost',
+				name: 'Ghost',
+				fullName: 'Rolls-Royce Ghost',
+				tagline: 'O Rolls-Royce de dirigir',
+				description: 'O Ghost é o sedã mais contido da linha e o mais associado ao proprietário que dirige o próprio carro. Mantém o silêncio e o acabamento da marca num conjunto menos cerimonioso que o do Phantom.',
+				metaTitle: 'Rolls-Royce Ghost à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Rolls-Royce Ghost no Brasil. Sedã de luxo com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['rolls royce ghost preço', 'comprar rolls royce ghost', 'ghost à venda brasil'],
+				category: 'luxury',
+				highlights: ['O mais discreto da linha', 'Pensado para o proprietário ao volante', 'Mesma exigência de acabamento do Phantom'],
+			},
+			{
+				slug: 'cullinan',
+				name: 'Cullinan',
+				fullName: 'Rolls-Royce Cullinan',
+				tagline: 'O SUV da Rolls-Royce',
+				description: 'O Cullinan é o primeiro utilitário da história da Rolls-Royce, e o modelo que ampliou o alcance da marca. Traz altura de comando e uso mais amplo sem abrir mão do acabamento e do silêncio que definem a casa.',
+				metaTitle: 'Rolls-Royce Cullinan à Venda no Brasil | SUV Rolls-Royce',
+				metaDescription: 'Comprar Rolls-Royce Cullinan no Brasil. SUV de luxo com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['rolls royce cullinan preço', 'comprar rolls royce cullinan', 'cullinan à venda brasil', 'suv rolls royce'],
+				category: 'suv',
+				highlights: ['O primeiro SUV da marca', 'Altura de comando com acabamento de Phantom', 'Uso mais amplo que o dos sedãs'],
+			},
+		],
+	},
 ]
 
 export function findSEOBrand(slug: string): SEOBrand | undefined {
@@ -468,4 +604,19 @@ export function getAllModelSlugs(): { brand: string; model: string }[] {
 	return SEO_BRANDS.flatMap(b =>
 		b.models.map(m => ({ brand: b.slug, model: m.slug }))
 	)
+}
+
+/**
+ * Marcas de uma categoria editorial, para o hub /superesportivos.
+ *
+ * Marca sem `categoriaEditorial` fica de fora por decisão, não por esquecimento:
+ * o hub é de performance, e listar toda marca premium ali diluiria a página.
+ */
+export function marcasPorCategoria(categoria: CategoriaEditorial): SEOBrand[] {
+	return SEO_BRANDS.filter(b => b.categoriaEditorial === categoria)
+}
+
+/** Todas as marcas que aparecem no hub, em qualquer categoria. */
+export function marcasDoHub(): SEOBrand[] {
+	return SEO_BRANDS.filter(b => b.categoriaEditorial !== undefined)
 }

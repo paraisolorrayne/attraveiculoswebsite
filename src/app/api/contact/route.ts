@@ -31,6 +31,8 @@ const contactSchema = z.object({
   subject: z.string().optional(),
   message: z.string().optional(),
   sourcePage: z.string().optional(),
+  /** Categoria editorial da origem (ex.: "superesportivos"). */
+  sourceCategory: z.string().optional(),
   formType: z.string().optional(), // To specify the type of form
   // Atribuição de mídia (UTM + click IDs)
   traffic: trafficSchema,
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
     if (data.installments) metadata.installments = data.installments
     if (data.brand) metadata.brand = data.brand
     if (data.model) metadata.model = data.model
+    if (data.sourceCategory) metadata.sourceCategory = data.sourceCategory
     if (data.year) metadata.year = data.year
     if (data.mileage) metadata.mileage = data.mileage
     if (data.condition) metadata.condition = data.condition
