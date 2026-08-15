@@ -152,13 +152,12 @@ export default async function SuperesportivosPage() {
 		<main>
 			<MarcaAnalytics tipo="categoria" categoria="superesportivo" />
 
-			<Container className="pt-8">
-				<Breadcrumb items={[{ label: 'Superesportivos' }]} />
-			</Container>
-
-			{/* Hero — linguagem comercial, não institucional */}
-			<section className="py-12 lg:py-20">
+			{/* Hero — linguagem comercial, não institucional.
+			    O breadcrumb vai DENTRO da seção: solto acima, com padding
+			    menor, ele passava por baixo do cabeçalho fixo. */}
+			<section className="py-16 lg:py-24">
 				<Container>
+					<Breadcrumb items={[{ label: 'Superesportivos' }]} className="mb-8" />
 					<div className="max-w-3xl">
 						<h1 className="text-3xl lg:text-5xl font-bold text-foreground">
 							Superesportivos à venda

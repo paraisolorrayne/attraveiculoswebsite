@@ -13,6 +13,7 @@ import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 import { marcaCasaCom } from '@/lib/marca-normalizacao'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
+import { editorialDaMarca } from '@/lib/seo/marcas-editorial'
 
 /**
  * Página de marca — compartilhada por /comprar/[brand] e /[brand].
@@ -256,6 +257,35 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 					)}
 				</Container>
 			</section>
+
+			{/* Ponte para a página editorial da marca.
+			    As duas famílias coexistem com intenções diferentes (decisão de
+			    15/08/2026): esta é a de compra, /marca é a de história e
+			    verificação. O link recíproco ajuda o leitor a achar o que
+			    procura e sinaliza que são páginas distintas e relacionadas —
+			    não cópias disputando a mesma busca. Só aparece quando o
+			    editorial existe. */}
+			{editorialDaMarca(slug) && (
+				<section className="py-12 lg:py-16">
+					<Container>
+						<div className="mx-auto max-w-3xl rounded-xl border border-border bg-background-card p-6 lg:p-8">
+							<h2 className="text-xl font-bold text-foreground">
+								Conheça a história da {brand.displayName}
+							</h2>
+							<p className="mt-3 text-foreground-secondary">
+								Como a marca nasceu, o que define sua engenharia e o que verificar
+								antes de comprar uma {brand.displayName} usada.
+							</p>
+							<Link
+								href={`/${slug}`}
+								className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+							>
+								Ler sobre a {brand.displayName} <ArrowRight className="w-4 h-4" />
+							</Link>
+						</div>
+					</Container>
+				</section>
+			)}
 
 			{/* Related Brands */}
 			<section className="py-12 lg:py-16">

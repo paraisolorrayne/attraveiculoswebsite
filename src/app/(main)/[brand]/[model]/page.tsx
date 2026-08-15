@@ -37,11 +37,25 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 	if (!result) return {}
 
 	const { model } = result
+
+	// CANONICAL APONTA PARA /comprar, de propósito.
+	//
+	// A página de MARCA se diferenciou: /ferrari tem história, verificação e FAQ
+	// próprios, e /comprar/ferrari tem o comercial. A de MODELO não — esta rota
+	// e /comprar/[brand]/[model] renderizam o mesmo componente com o mesmo
+	// texto. Enquanto for cópia, declarar as duas como originais faz elas
+	// disputarem a mesma busca e o buscador descartar uma.
+	//
+	// Aponta para /comprar porque é a família já indexada e a que recebe
+	// anúncio. A URL curta continua funcionando para quem navega a partir de
+	// /ferrari — o que ela não faz é reivindicar autoria de um texto que é do
+	// outro endereço. Quando o modelo ganhar editorial próprio, este canonical
+	// passa a apontar para si mesmo.
 	return {
 		title: model.metaTitle,
 		description: model.metaDescription,
 		keywords: model.keywords,
-		alternates: { canonical: `${SITE_URL}/${brandSlug}/${modelSlug}` },
+		alternates: { canonical: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}` },
 		openGraph: {
 			title: model.metaTitle,
 			description: model.metaDescription,

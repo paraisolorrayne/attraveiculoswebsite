@@ -1,6 +1,7 @@
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
 import { SEO_BRANDS } from '@/lib/seo-brands'
+import { MARCAS_EDITORIAL } from '@/lib/seo/marcas-editorial'
 import {
 	MODELOS,
 	PRECOS,
@@ -51,7 +52,10 @@ export async function GET() {
 		// SEO landing pages — brand/model hubs
 		{ loc: `${BASE}/comprar`, lastmod, changefreq: 'daily', priority: 0.8 },
 		...SEO_BRANDS.flatMap(brand => [
-			{ loc: `${BASE}/comprar/${brand.slug}`, lastmod, changefreq: 'daily', priority: 0.8 },
+			// `as const` obrigatório: dentro do flatMap o literal alarga para
+			// string e deixa de satisfazer SitemapUrl, o que contaminava a
+			// inferência de TODOS os blocos seguintes do array.
+			{ loc: `${BASE}/comprar/${brand.slug}`, lastmod, changefreq: 'daily' as const, priority: 0.8 },
 			...brand.models.map(model => ({
 				loc: `${BASE}/comprar/${brand.slug}/${model.slug}`,
 				lastmod,
@@ -59,6 +63,23 @@ export async function GET() {
 				priority: 0.7,
 			})),
 		]),
+		// Páginas editoriais de marca na raiz (/ferrari, /porsche…).
+		//
+		// Entram no sitemap SÓ AGORA, e a espera foi deliberada: enquanto elas
+		// renderizavam o mesmo componente de /comprar/marca, submetê-las era pedir
+		// indexação de uma cópia — o buscador escolheria uma das duas e descartaria
+		// a outra. Com editorial próprio elas são páginas distintas, de intenção
+		// informacional, e somam em vez de competir.
+		//
+		// A lista vem de MARCAS_EDITORIAL, não de SEO_BRANDS: só existe rota para
+		// marca com texto escrito. changefreq menor que o da página comercial —
+		// história de marca não muda toda semana; estoque muda.
+		...Object.keys(MARCAS_EDITORIAL).map(slug => ({
+			loc: `${BASE}/${slug}`,
+			lastmod,
+			changefreq: 'weekly' as const,
+			priority: 0.8,
+		})),
 		// Bloco 1 — Páginas de modelo
 		...MODELOS.map(m => ({
 			loc: `${BASE}/comprar/modelo/${m.slug}`,
