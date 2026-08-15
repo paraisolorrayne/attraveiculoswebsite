@@ -48,6 +48,39 @@ export interface PerguntaEditorial {
 	resposta: string
 }
 
+/**
+ * Identidade de uma LINHA que ganha página própria sem ser uma marca.
+ *
+ * O caso é o Range Rover: no estoque ele chega como `brand: "Land Rover",
+ * model: "Range Rover"`, mas no mercado é procurado como se fosse marca — e a
+ * própria fabricante o posiciona assim. A página existe para essa busca, sem
+ * inventar uma marca que não existe no catálogo nem no estoque.
+ */
+export interface LinhaPropria {
+	displayName: string
+	country: string
+	/** Marca de SEO_BRANDS de onde vêm o estoque e a página comercial. */
+	marcaBase: string
+	/**
+	 * Só entram veículos cujo modelo contém este texto.
+	 *
+	 * Sem ele, a página do Range Rover mostraria Defender e Discovery: o filtro
+	 * de marca casaria com toda a Land Rover, e `range-rover` inclusive é alias
+	 * de `land-rover` na normalização de marca.
+	 */
+	filtroDeModelo: string
+}
+
+/**
+ * Gênero gramatical do nome, para a página concordar.
+ *
+ * Marca costuma ser feminina em português ("a Ferrari", "a Porsche" — subentende
+ * "a marca"), mas nome de linha segue o carro: "o Range Rover", "um Range Rover
+ * usado". Sem isto a página escreveria "numa Range Rover usada" em todos os
+ * títulos, e erro de concordância em página que quer autoridade custa caro.
+ */
+export type GeneroDoNome = 'f' | 'm'
+
 export interface MarcaEditorial {
 	/** H1 da página — informacional, nunca comercial: /comprar cobre a compra. */
 	titulo: string
@@ -63,6 +96,33 @@ export interface MarcaEditorial {
 	oQueVerificar: string[]
 	/** Vira FAQPage no JSON-LD. */
 	perguntas: PerguntaEditorial[]
+	/** Ausente = feminino, que é o caso de toda marca aqui. */
+	genero?: GeneroDoNome
+	/** Preenchido só quando o slug não é uma marca de SEO_BRANDS. */
+	linha?: LinhaPropria
+}
+
+/** Artigos e terminações já flexionados, para os textos da página. */
+export function flexao(genero: GeneroDoNome = 'f') {
+	const masculino = genero === 'm'
+	return {
+		/** a / o */
+		def: masculino ? 'o' : 'a',
+		/** A / O — início de frase */
+		defMaiusculo: masculino ? 'O' : 'A',
+		/** uma / um */
+		indef: masculino ? 'um' : 'uma',
+		/** numa / num */
+		em: masculino ? 'num' : 'numa',
+		/** usada / usado */
+		usado: masculino ? 'usado' : 'usada',
+		/** Nenhuma / Nenhum */
+		nenhum: masculino ? 'Nenhum' : 'Nenhuma',
+		/** específica / específico */
+		especifico: masculino ? 'específico' : 'específica',
+		/** disponíveis é invariável, mas fica junto para não espalhar a regra */
+		disponiveis: 'disponíveis',
+	}
 }
 
 export const MARCAS_EDITORIAL: Record<string, MarcaEditorial> = {
@@ -355,6 +415,85 @@ export const MARCAS_EDITORIAL: Record<string, MarcaEditorial> = {
 		],
 	},
 
+	'land-rover': {
+		titulo: 'Land Rover: história, linha atual e o que saber antes de comprar',
+		resumo:
+			'Nasceu como veículo de trabalho para o campo inglês do pós-guerra e acabou criando, décadas depois, a categoria do utilitário de luxo.',
+		origem:
+			'O primeiro Land Rover foi apresentado em 1948 pela Rover Company, na Inglaterra, como veículo utilitário para uso agrícola — carroceria de alumínio, mecânica simples e tração nas quatro rodas. A fábrica de Solihull produz a marca desde então. O Range Rover, de 1970, foi o ponto de virada: manteve a capacidade fora de estrada e acrescentou conforto de carro de passeio. A marca pertence hoje ao grupo indiano Tata Motors, que a adquiriu em 2008.',
+		identidade:
+			'A Land Rover é a marca que atravessou a distância mais longa dentro da própria história: do utilitário de fazenda ao utilitário de luxo, sem abandonar a capacidade fora de estrada como argumento. Diferentemente de concorrentes que fazem SUVs sobre plataforma de carro de passeio, a marca mantém sistemas de tração e de controle de terreno que existem para uso real fora do asfalto — mesmo em exemplares que nunca vão sair dele.',
+		noBrasil:
+			'A marca tem presença oficial consolidada no país e chegou a manter produção local em Itatiaia, no Rio de Janeiro. Isso significa rede de assistência ampla em comparação com marcas importadas de baixo volume, e a convivência no mercado de usados entre exemplares de origem nacional e importada.',
+		oQueVerificar: [
+			'Estado da suspensão pneumática, presente em boa parte da linha — é o item que mais pesa quando falha e o primeiro a testar em todos os modos de altura.',
+			'Histórico de revisões na rede, com atenção ao sistema elétrico e aos módulos eletrônicos, numerosos nos modelos recentes.',
+			'Sinais de uso fora de estrada de verdade: proteções inferiores, estado do assoalho, e não apenas a aparência da carroceria.',
+			'Se o exemplar é de produção nacional ou importado, pelo efeito em prazo de peça e em revenda.',
+			'Funcionamento completo dos sistemas de controle de terreno e de tração, item por item, e não só num teste de rua.',
+		],
+		perguntas: [
+			{
+				pergunta: 'Land Rover dá muito problema?',
+				resposta:
+					'A marca carrega fama de manutenção exigente, concentrada em suspensão pneumática e eletrônica. Num exemplar usado, o que separa um bom carro de um problema é o histórico de manutenção documentado — mais do que a quilometragem ou o ano.',
+			},
+			{
+				pergunta: 'Qual a diferença entre Land Rover e Range Rover?',
+				resposta:
+					'Land Rover é a marca; Range Rover é a linha de topo dela, criada em 1970. Hoje a fabricante trata Range Rover quase como marca própria, com modelos que vão do Evoque ao Range Rover de tamanho integral.',
+			},
+			{
+				pergunta: 'Land Rover é bom para uso urbano?',
+				resposta:
+					'Sim, e é o uso da maioria dos exemplares. Vale considerar que as dimensões e o consumo são maiores que os de um SUV médio de marca generalista, e que a suspensão pneumática exige atenção na manutenção.',
+			},
+		],
+	},
+
+	'range-rover': {
+		titulo: 'Range Rover: história, versões e o que saber antes de comprar',
+		resumo:
+			'Inventou o utilitário de luxo em 1970 e segue definindo a categoria — hoje tratado pela própria fabricante quase como uma marca à parte.',
+		origem:
+			'O Range Rover foi lançado em 1970 pela Land Rover, na Inglaterra, com uma proposta que não existia até então: capacidade fora de estrada de utilitário somada ao conforto de um carro de passeio. Antes dele, os dois mundos não se encontravam. A linha se ramificou com o tempo — ganhou versões de porte e posicionamento diferentes — e hoje a fabricante a posiciona quase como uma marca própria dentro do grupo.',
+		identidade:
+			'O Range Rover é o carro que criou a categoria do SUV de luxo, e a linha manteve por décadas a mesma combinação: postura de comando, acabamento de sedã de luxo e capacidade real fora do asfalto. A silhueta de teto flutuante e a linha de cintura alta atravessaram todas as gerações, o que dá à linha uma continuidade visual rara entre utilitários.',
+		noBrasil:
+			'É o produto mais reconhecido da Land Rover no mercado brasileiro, com procura consistente no usado. Circulam aqui exemplares de origem nacional e importada, e as versões variam bastante em porte, motorização e preço — vale confirmar exatamente qual versão é o exemplar antes de comparar valores.',
+		oQueVerificar: [
+			'Estado da suspensão pneumática em todos os modos de altura — é o item de maior custo quando falha e está presente em boa parte da linha.',
+			'Qual versão exatamente é o carro: a linha reúne modelos de portes e posicionamentos bem diferentes, e o nome sozinho não define o valor.',
+			'Histórico de revisões documentado, com atenção especial à eletrônica e aos módulos de controle.',
+			'Sinais de uso fora de estrada real, verificando proteções inferiores e assoalho, e não apenas a carroceria.',
+			'Origem do exemplar, nacional ou importada, pelo efeito em prazo de peça e revenda.',
+		],
+		perguntas: [
+			{
+				pergunta: 'Range Rover é uma marca ou um modelo?',
+				resposta:
+					'Tecnicamente é uma linha da Land Rover, criada em 1970. Na prática, a fabricante hoje a posiciona quase como marca própria, e o mercado a trata assim — daí a linha reunir modelos bem distintos entre si.',
+			},
+			{
+				pergunta: 'Qual a diferença entre Range Rover e Range Rover Sport?',
+				resposta:
+					'São modelos diferentes dentro da mesma linha. O Range Rover é o de topo, maior e mais voltado ao conforto; o Sport é mais compacto e com afinação mais voltada ao comportamento em asfalto. Confirme qual dos dois é o exemplar antes de comparar preços.',
+			},
+			{
+				pergunta: 'Vale a pena comprar um Range Rover usado?',
+				resposta:
+					'Vale para quem prioriza o histórico de manutenção acima do ano e da quilometragem. A depreciação já ocorrida favorece o comprador, mas suspensão pneumática e eletrônica exigem que o exemplar tenha sido bem cuidado — sem isso, a economia na compra vira custo depois.',
+			},
+		],
+		genero: 'm',
+		linha: {
+			displayName: 'Range Rover',
+			country: 'Reino Unido',
+			marcaBase: 'land-rover',
+			filtroDeModelo: 'range rover',
+		},
+	},
+
 	bentley: {
 		titulo: 'Bentley: história, modelos e o que saber antes de comprar',
 		resumo:
@@ -389,4 +528,22 @@ export const MARCAS_EDITORIAL: Record<string, MarcaEditorial> = {
 
 export function editorialDaMarca(slug: string): MarcaEditorial | undefined {
 	return MARCAS_EDITORIAL[slug]
+}
+
+/**
+ * Restringe o estoque da marca-base aos veículos da linha.
+ *
+ * Existe separado da página para poder ser testado: o estoque real hoje tem um
+ * único Land Rover, e ele por acaso é um Range Rover — então a página parece
+ * correta mesmo se o filtro não funcionasse. O primeiro Defender ou Discovery
+ * a entrar revelaria o defeito na frente do cliente.
+ *
+ * Sem linha, devolve tudo: a página de marca mostra a marca inteira.
+ */
+export function filtrarPelaLinha<T extends { model?: string | null }>(
+	veiculos: T[],
+	linha: LinhaPropria | undefined,
+): T[] {
+	if (!linha) return veiculos
+	return veiculos.filter(v => (v.model ?? '').toLowerCase().includes(linha.filtroDeModelo))
 }

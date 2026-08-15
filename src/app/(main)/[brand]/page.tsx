@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { findSEOBrand } from '@/lib/seo-brands'
-import { MARCAS_EDITORIAL, editorialDaMarca } from '@/lib/seo/marcas-editorial'
+import { MARCAS_EDITORIAL, editorialDaMarca, flexao } from '@/lib/seo/marcas-editorial'
 import { SITE_URL } from '@/lib/constants'
 import { BrandEditorialPage } from '@/components/brand/brand-editorial-page'
 
@@ -39,23 +39,28 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { brand: slug } = await params
-	const brand = findSEOBrand(slug)
 	const editorial = editorialDaMarca(slug)
-	if (!brand || !editorial) return {}
+	if (!editorial) return {}
+
+	// Uma linha (Range Rover) não está em SEO_BRANDS: o nome vem dela própria.
+	const brand = findSEOBrand(editorial.linha?.marcaBase ?? slug)
+	if (!brand) return {}
+	const nome = editorial.linha?.displayName ?? brand.displayName
+	const g = flexao(editorial.genero)
 
 	// Título e descrição PRÓPRIOS, não os de /comprar/marca. Duas páginas com o
 	// mesmo title competem entre si no mesmo resultado de busca — era o que
 	// acontecia quando as duas rotas liam brand.metaTitle.
-	const description = `${editorial.resumo} Veja a história da ${brand.displayName}, os modelos e o que verificar antes de comprar uma usada.`
+	const description = `${editorial.resumo} Veja a história ${g.def === 'o' ? 'do' : 'da'} ${nome} e o que verificar antes de comprar ${g.indef} ${g.usado}.`
 
 	return {
 		title: editorial.titulo,
 		description,
 		keywords: [
-			`${brand.name} história`,
-			`sobre ${brand.name}`,
-			`${brand.name} modelos`,
-			`${brand.name} usada o que verificar`,
+			`${nome} história`,
+			`sobre ${nome}`,
+			`${nome} modelos`,
+			`${nome} ${g.usado} o que verificar`,
 		],
 		alternates: { canonical: `${SITE_URL}/${slug}` },
 		openGraph: {
@@ -69,6 +74,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MarcaPage({ params }: Props) {
 	const { brand: slug } = await params
-	if (!findSEOBrand(slug) || !editorialDaMarca(slug)) notFound()
+	const editorial = editorialDaMarca(slug)
+	// A marca-base precisa existir mesmo numa linha: é dela que vêm o estoque e
+	// a página comercial.
+	if (!editorial || !findSEOBrand(editorial.linha?.marcaBase ?? slug)) notFound()
 	return <BrandEditorialPage slug={slug} />
 }

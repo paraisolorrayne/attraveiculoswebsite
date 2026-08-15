@@ -5,7 +5,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
 import { findSEOBrand, marcasDoHub } from '@/lib/seo-brands'
-import { editorialDaMarca } from '@/lib/seo/marcas-editorial'
+import { editorialDaMarca, flexao, filtrarPelaLinha } from '@/lib/seo/marcas-editorial'
 import { getVehicles } from '@/lib/autoconf-api'
 import { filtrarPorMarca } from '@/lib/marca-normalizacao'
 import { formatPrice, formatMileage } from '@/lib/utils'
@@ -89,20 +89,38 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 }
 
 export async function BrandEditorialPage({ slug }: { slug: string }) {
-	const brand = findSEOBrand(slug)
 	const editorial = editorialDaMarca(slug)
-	if (!brand || !editorial) return null
+	if (!editorial) return null
+
+	// Uma LINHA (o Range Rover) não é marca: ela empresta o estoque e a página
+	// comercial da marca-base, mas tem nome, país e textos próprios.
+	const slugBase = editorial.linha?.marcaBase ?? slug
+	const brand = findSEOBrand(slugBase)
+	if (!brand) return null
+
+	const nome = editorial.linha?.displayName ?? brand.displayName
+	const pais = editorial.linha?.country ?? brand.country
+	const g = flexao(editorial.genero)
 
 	const { vehicles: todos } = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
-	const veiculos = filtrarPorMarca(todos, slug)
+	// O filtro de marca sozinho não basta numa linha: `range-rover` é alias de
+	// `land-rover` na normalização, então sem o filtro de modelo a página do
+	// Range Rover mostraria Defender e Discovery.
+	const veiculos = filtrarPelaLinha(filtrarPorMarca(todos, slugBase), editorial.linha)
+
+	// A página comercial equivalente: para a linha é a página de modelo, que é
+	// mais precisa que a da marca inteira.
+	const urlComercial = editorial.linha
+		? `/comprar/${slugBase}/${slug}`
+		: `/comprar/${slug}`
 
 	const outrasMarcas = marcasDoHub()
-		.filter(m => m.slug !== slug)
+		.filter(m => m.slug !== slug && m.slug !== slugBase)
 		.slice(0, 4)
 
 	return (
 		<main>
-			<MarcaAnalytics tipo="marca" marca={brand.displayName} categoria={brand.categoriaEditorial} />
+			<MarcaAnalytics tipo="marca" marca={nome} categoria={brand.categoriaEditorial} />
 
 			{/* Hero editorial — título informacional, não comercial. A página que
 			    disputa "comprar Ferrari" é /comprar/ferrari.
@@ -111,10 +129,10 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 			    do cabeçalho fixo e colidia com o logo. */}
 			<section className="py-16 lg:py-24">
 				<Container>
-					<Breadcrumb items={[{ label: brand.displayName }]} className="mb-8" />
+					<Breadcrumb items={[{ label: nome }]} className="mb-8" />
 					<div className="max-w-3xl">
 						<p className="text-sm font-medium uppercase tracking-wider text-primary">
-							{brand.country}
+							{pais}
 						</p>
 						<h1 className="mt-2 text-3xl lg:text-5xl font-bold text-foreground">
 							{editorial.titulo}
@@ -130,19 +148,19 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 					<div className="max-w-3xl space-y-8">
 						<div>
 							<h2 className="text-2xl font-bold text-foreground">
-								Como a {brand.displayName} nasceu
+								Como {g.def} {nome} nasceu
 							</h2>
 							<p className="mt-4 text-foreground-secondary">{editorial.origem}</p>
 						</div>
 						<div>
 							<h2 className="text-2xl font-bold text-foreground">
-								O que define a {brand.displayName}
+								O que define {g.def} {nome}
 							</h2>
 							<p className="mt-4 text-foreground-secondary">{editorial.identidade}</p>
 						</div>
 						<div>
 							<h2 className="text-2xl font-bold text-foreground">
-								A {brand.displayName} no Brasil
+								{g.defMaiusculo} {nome} no Brasil
 							</h2>
 							<p className="mt-4 text-foreground-secondary">{editorial.noBrasil}</p>
 						</div>
@@ -158,11 +176,11 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 				<Container>
 					<div className="mb-8 flex items-center justify-between gap-4">
 						<h2 className="text-2xl font-bold text-foreground">
-							{brand.displayName} disponíveis na Attra
+							{nome} {g.disponiveis} na Attra
 						</h2>
 						{veiculos.length > 0 && (
 							<Link
-								href={`/comprar/${slug}`}
+								href={urlComercial}
 								className="flex items-center gap-1 text-sm text-primary transition-colors hover:text-primary/80"
 							>
 								Ver condições de compra <ArrowRight className="w-3 h-3" />
@@ -179,7 +197,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 					) : (
 						<div className="rounded-xl border border-border bg-background p-8 lg:p-12 text-center">
 							<p className="text-lg font-medium text-foreground">
-								Nenhuma {brand.displayName} no estoque neste momento.
+								{g.nenhum} {nome} no estoque neste momento.
 							</p>
 							<p className="mx-auto mt-3 max-w-xl text-foreground-secondary">
 								A Attra localiza veículos sob encomenda, no Brasil e no exterior, com a
@@ -189,7 +207,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 								href="#solicitar"
 								className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 							>
-								Solicitar uma {brand.displayName} <ArrowRight className="w-4 h-4" />
+								Solicitar {g.indef} {nome} <ArrowRight className="w-4 h-4" />
 							</Link>
 						</div>
 					)}
@@ -202,7 +220,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 				<Container>
 					<div className="max-w-3xl">
 						<h2 className="text-2xl font-bold text-foreground">
-							O que verificar numa {brand.displayName} usada
+							O que verificar {g.em} {nome} {g.usado}
 						</h2>
 						<ul className="mt-6 space-y-4">
 							{editorial.oQueVerificar.map((item, i) => (
@@ -223,13 +241,16 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 				</Container>
 			</section>
 
-			{/* Modelos — links para as páginas de modelo da própria família /marca */}
-			{brand.models.length > 0 && (
+			{/* Modelos — links para as páginas de modelo da própria família /marca.
+			    Some numa LINHA: os modelos catalogados são da marca-base, e listá-los
+			    aqui geraria "Modelos Range Rover → Range Rover", apontando para
+			    /range-rover/range-rover, que não existe. */}
+			{!editorial.linha && brand.models.length > 0 && (
 				<section className="pb-12 lg:pb-16">
 					<Container>
 						<div className="max-w-3xl">
 							<h2 className="text-2xl font-bold text-foreground">
-								Modelos {brand.displayName}
+								Modelos {nome}
 							</h2>
 							<div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
 								{brand.models.map(m => (
@@ -274,17 +295,17 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 				<Container>
 					<div className="mx-auto max-w-3xl rounded-xl border border-border bg-background-card p-6 lg:p-8">
 						<h2 className="text-xl font-bold text-foreground">
-							Procurando comprar uma {brand.displayName}?
+							Procurando comprar {g.indef} {nome}?
 						</h2>
 						<p className="mt-3 text-foreground-secondary">
 							Esta página conta a história da marca. Para estoque, condições de compra,
 							financiamento e troca, veja a página de compra.
 						</p>
 						<Link
-							href={`/comprar/${slug}`}
+							href={urlComercial}
 							className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 						>
-							Comprar {brand.displayName} <ArrowRight className="w-4 h-4" />
+							Comprar {nome} <ArrowRight className="w-4 h-4" />
 						</Link>
 					</div>
 				</Container>
@@ -318,7 +339,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 				<Container>
 					<div className="mx-auto max-w-2xl">
 						<h2 className="mb-3 text-center text-2xl font-bold text-foreground">
-							Procura uma {brand.displayName} específica?
+							Procura {g.indef} {nome} {g.especifico}?
 						</h2>
 						<p className="mb-8 text-center text-foreground-secondary">
 							Diga qual modelo você procura. A Attra localiza e apresenta as opções com
@@ -326,7 +347,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 						</p>
 						<VehicleRequestForm
 							origem={`/${slug}`}
-							marcaInicial={brand.displayName}
+							marcaInicial={nome}
 							categoria={brand.categoriaEditorial}
 						/>
 					</div>
@@ -340,7 +361,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 						{
 							'@context': 'https://schema.org',
 							'@type': 'Brand',
-							name: brand.displayName,
+							name: nome,
 							description: editorial.resumo,
 							url: `${SITE_URL}/${slug}`,
 						},
@@ -358,7 +379,7 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 							'@type': 'WebPage',
 							name: editorial.titulo,
 							url: `${SITE_URL}/${slug}`,
-							about: { '@type': 'Brand', name: brand.displayName },
+							about: { '@type': 'Brand', name: nome },
 							publisher: organizationRef(),
 						},
 					]),
