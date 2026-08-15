@@ -521,6 +521,65 @@ export const SEO_BRANDS: SEOBrand[] = [
 			},
 		],
 	},
+	{
+		slug: 'rolls-royce',
+		// SEM categoriaEditorial, de propósito — mesmo tratamento da Land Rover.
+		// A categoria alimenta o hub /superesportivos, e Rolls-Royce não é
+		// superesportivo nem marca de performance: é o oposto disso. Ela ganha
+		// /rolls-royce e /comprar/rolls-royce, mas não entra naquele hub.
+		name: 'Rolls-Royce',
+		displayName: 'Rolls-Royce',
+		country: 'Reino Unido',
+		tagline: 'O automóvel de luxo como referência absoluta',
+		description: 'A Rolls-Royce não disputa desempenho com ninguém: constrói o carro em que se é conduzido. Silêncio de rodagem, acabamento sob medida e presença são os argumentos, e o grau de personalização de fábrica não tem paralelo na indústria.',
+		metaTitle: 'Comprar Rolls-Royce no Brasil | Rolls-Royce à Venda',
+		metaDescription: 'Rolls-Royce à venda no Brasil. Phantom, Ghost e Cullinan com procedência verificada. Curadoria premium e sourcing sob encomenda — Attra Veículos.',
+		keywords: ['comprar rolls royce brasil', 'rolls royce à venda', 'rolls royce preço brasil', 'rolls royce seminovo'],
+		highlights: [
+			'Personalização de fábrica praticamente sem limite',
+			'Silêncio de rodagem como projeto, não como consequência',
+			'Frota mínima no Brasil — exclusividade real',
+			'Acabamento artesanal, com couro e madeira trabalhados à mão',
+		],
+		models: [
+			{
+				slug: 'phantom',
+				name: 'Phantom',
+				fullName: 'Rolls-Royce Phantom',
+				tagline: 'O topo da linha, e a referência da marca',
+				description: 'O Phantom é o modelo de topo da Rolls-Royce e o que define a marca: um sedã de grande porte pensado antes para o banco de trás. É nele que a personalização de fábrica vai mais longe.',
+				metaTitle: 'Rolls-Royce Phantom à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Rolls-Royce Phantom no Brasil. Sedã de luxo com procedência verificada. Consulte disponibilidade ou solicite sob encomenda — Attra Veículos.',
+				keywords: ['rolls royce phantom preço', 'comprar rolls royce phantom', 'phantom à venda brasil'],
+				category: 'luxury',
+				highlights: ['O modelo de topo da marca', 'Projetado para quem é conduzido', 'Personalização de fábrica sem paralelo'],
+			},
+			{
+				slug: 'ghost',
+				name: 'Ghost',
+				fullName: 'Rolls-Royce Ghost',
+				tagline: 'O Rolls-Royce de dirigir',
+				description: 'O Ghost é o sedã mais contido da linha e o mais associado ao proprietário que dirige o próprio carro. Mantém o silêncio e o acabamento da marca num conjunto menos cerimonioso que o do Phantom.',
+				metaTitle: 'Rolls-Royce Ghost à Venda no Brasil | Attra Veículos',
+				metaDescription: 'Comprar Rolls-Royce Ghost no Brasil. Sedã de luxo com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['rolls royce ghost preço', 'comprar rolls royce ghost', 'ghost à venda brasil'],
+				category: 'luxury',
+				highlights: ['O mais discreto da linha', 'Pensado para o proprietário ao volante', 'Mesma exigência de acabamento do Phantom'],
+			},
+			{
+				slug: 'cullinan',
+				name: 'Cullinan',
+				fullName: 'Rolls-Royce Cullinan',
+				tagline: 'O SUV da Rolls-Royce',
+				description: 'O Cullinan é o primeiro utilitário da história da Rolls-Royce, e o modelo que ampliou o alcance da marca. Traz altura de comando e uso mais amplo sem abrir mão do acabamento e do silêncio que definem a casa.',
+				metaTitle: 'Rolls-Royce Cullinan à Venda no Brasil | SUV Rolls-Royce',
+				metaDescription: 'Comprar Rolls-Royce Cullinan no Brasil. SUV de luxo com procedência verificada. Consulte disponibilidade — Attra Veículos.',
+				keywords: ['rolls royce cullinan preço', 'comprar rolls royce cullinan', 'cullinan à venda brasil', 'suv rolls royce'],
+				category: 'suv',
+				highlights: ['O primeiro SUV da marca', 'Altura de comando com acabamento de Phantom', 'Uso mais amplo que o dos sedãs'],
+			},
+		],
+	},
 ]
 
 export function findSEOBrand(slug: string): SEOBrand | undefined {

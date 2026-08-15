@@ -451,6 +451,42 @@ export const MARCAS_EDITORIAL: Record<string, MarcaEditorial> = {
 		],
 	},
 
+	'rolls-royce': {
+		titulo: 'Rolls-Royce: história, modelos e o que saber antes de comprar',
+		resumo:
+			'Nasceu de um encontro entre um engenheiro obcecado por precisão e um vendedor de automóveis, e há mais de um século define o que o mercado entende por luxo.',
+		origem:
+			'Henry Royce, engenheiro, e Charles Rolls, que vendia automóveis em Londres, se conheceram em 1904; a Rolls-Royce foi constituída em 1906, na Inglaterra. O Silver Ghost, lançado em seguida, construiu a reputação de confiabilidade que sustentou a marca por décadas. A empresa também fabricou motores de aviação — atividade que hoje pertence a uma companhia separada, de mesmo nome e sem relação societária com a de automóveis. Desde 2003 a divisão de automóveis pertence ao grupo BMW, e a fábrica fica em Goodwood.',
+		identidade:
+			'A Rolls-Royce é a única marca que nunca precisou entrar na conversa sobre desempenho. O projeto persegue silêncio de rodagem, suavidade e presença, e o desempenho existe apenas como consequência de motores grandes. O que a distingue de qualquer concorrente é o grau de personalização de fábrica: cor sob medida, marcenaria específica, detalhes que não se repetem em outro exemplar. É um produto encomendado mais do que comprado.',
+		noBrasil:
+			'Frota mínima e todos os exemplares importados — é provavelmente a marca de menor circulação entre as tratadas aqui. Isso significa exclusividade real, mas também que oficina capacitada, prazo de peça e revenda são pontos a resolver antes da compra, não depois.',
+		oQueVerificar: [
+			'Documentação de importação completa e coerente com o chassi — ponto crítico numa marca cuja frota nacional é quase toda de entrada independente.',
+			'Existência de oficina apta a atender o modelo na região onde o carro vai rodar, confirmada antes de fechar negócio.',
+			'Estado do acabamento interno — couro, madeira e detalhes sob medida são o produto em si, e o item mais caro de recuperar.',
+			'Especificação original de fábrica e a documentação da personalização, que fazem parte do valor do exemplar.',
+			'Em carros de baixa rodagem, vencimento de fluidos, pneus e borrachas por tempo, e o estado da suspensão.',
+		],
+		perguntas: [
+			{
+				pergunta: 'Qual a diferença entre Rolls-Royce e Bentley?',
+				resposta:
+					'As duas marcas dividem boa parte da história e chegaram a pertencer à mesma empresa, mas hoje são de grupos diferentes e ocupam posições distintas. A Rolls-Royce enfatiza o carro de ser conduzido, com foco no passageiro; a Bentley, o gran turismo dirigido pelo proprietário, com mais ênfase em desempenho.',
+			},
+			{
+				pergunta: 'A Rolls-Royce de automóveis é a mesma que faz motores de avião?',
+				resposta:
+					'Não. As duas compartilham origem e nome, mas são empresas separadas há décadas, sem relação societária. A de automóveis pertence ao grupo BMW desde 2003.',
+			},
+			{
+				pergunta: 'Faz sentido comprar uma Rolls-Royce no Brasil?',
+				resposta:
+					'Faz para quem valoriza exclusividade e acabamento acima de qualquer outro critério, e aceita a contrapartida de uma frota mínima: pouquíssimas oficinas capacitadas, prazos longos de peça e revenda lenta por haver poucos compradores. Resolver assistência antes da compra é parte da decisão.',
+			},
+		],
+	},
+
 	'range-rover': {
 		titulo: 'Range Rover: história, versões e o que saber antes de comprar',
 		resumo:
