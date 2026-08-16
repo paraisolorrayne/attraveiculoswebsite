@@ -56,9 +56,10 @@ export async function POST(request: Request) {
 			// no array `errors` e o próximo lote segue normalmente.
 			try {
 				const gravados = await lerRotulos(batch.map(v => Number(v.id)))
-				const passages = await Promise.all(
+				const resultados = await Promise.all(
 					batch.map(v => passagemDoVeiculo(v, gravados.get(Number(v.id)), anoAtual, gerarProsa)),
 				)
+				const passages = resultados.map(r => r.passagem)
 
 				const embeddingResponse = await generateEmbeddings(passages, 'retrieval.passage')
 
@@ -84,16 +85,20 @@ export async function POST(request: Request) {
 					errors.push(`Batch ${i}: ${upsertError instanceof Error ? upsertError.message : String(upsertError)}`)
 				}
 
-				// Grava os rótulos derivados por regra (nunca a prosa, que é recalculada
-				// em toda sincronização) — o `where sobrescrito_por is null` dentro de
-				// `gravarRotulosDerivados` protege a correção manual da Attra. Erro
-				// aqui não pode apagar o que já sincronizou nesta chamada.
+				// Grava os rótulos derivados por regra E a prosa que `passagemDoVeiculo`
+				// efetivamente usou (cache, sobrescrita ou recém-gerada) — não `null`
+				// fixo, senão toda sincronização perderia o cache e regeraria a prosa
+				// do zero (cron de 6 em 6 horas × ~77 veículos = ~300 chamadas/dia ao
+				// modelo por nada, e o texto indexado mudando sem o carro mudar). O
+				// `where sobrescrito_por is null` dentro de `gravarRotulosDerivados`
+				// protege a correção manual da Attra. Erro aqui não pode apagar o que
+				// já sincronizou nesta chamada.
 				try {
 					await gravarRotulosDerivados(
-						batch.map(v => ({
+						batch.map((v, idx) => ({
 							vehicle_id: Number(v.id),
 							rotulos: derivarRotulos(v, anoAtual),
-							prosa: null,
+							prosa: resultados[idx].prosa,
 						})),
 					)
 				} catch (labelErr) {
