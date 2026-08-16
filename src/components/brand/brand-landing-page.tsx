@@ -12,6 +12,7 @@ import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 import { marcaCasaCom } from '@/lib/marca-normalizacao'
+import { porPrecoDecrescente } from '@/lib/ordenacao-veiculos'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
 import { editorialDaMarca } from '@/lib/seo/marcas-editorial'
 
@@ -96,9 +97,11 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 		registros_por_pagina: 100,
 	})
 
-	// Filter vehicles for this brand (case-insensitive)
-	const brandVehicles = allVehicles.filter(v =>
-		marcaCasaCom(v.brand, brand.slug)
+	// Filtrado pela marca e ordenado do mais caro para o mais barato. A ordem
+	// vem ANTES do corte de seis da grade — cortar primeiro deixaria o carro
+	// mais caro de fora da página.
+	const brandVehicles = porPrecoDecrescente(
+		allVehicles.filter(v => marcaCasaCom(v.brand, brand.slug)),
 	)
 
 	// Find related brands

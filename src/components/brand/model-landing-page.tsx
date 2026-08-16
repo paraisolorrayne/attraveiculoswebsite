@@ -6,6 +6,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { findSEOBrand, findSEOModel } from '@/lib/seo-brands'
 import { acharModeloDoEstoque, veiculosDoModelo } from '@/lib/seo/modelos-do-estoque'
+import { porPrecoDecrescente } from '@/lib/ordenacao-veiculos'
 import { getVehicles } from '@/lib/autoconf-api'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
@@ -68,7 +69,10 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 	// "Mercedes". TODA página de modelo Mercedes mostrava zero carro, com nove
 	// deles no pátio. O nome do modelo tinha o mesmo problema, em outro eixo:
 	// "AMG GT" contra "GT", "G 63 AMG" contra "G-63".
-	const modelVehicles = veiculosDoModelo(allVehicles, brand.name, model.name)
+	// Do mais caro para o mais barato, como nas demais listagens do site.
+	const modelVehicles = porPrecoDecrescente(
+		veiculosDoModelo(allVehicles, brand.name, model.name),
+	)
 
 	// Get technical datasheet if available
 	const datasheet = findVehicleDatasheet(brand.name, model.name, '')
