@@ -1,8 +1,25 @@
-import { describe, it, expect } from 'vitest'
-import { mesclar } from '@/lib/mcp/repositorio-rotulos'
+import { describe, it, expect, vi } from 'vitest'
+import { mesclar, lerRotulos } from '@/lib/mcp/repositorio-rotulos'
 import type { Rotulos } from '@/lib/mcp/rotulos'
 
 const DERIVADO: Rotulos = { uso: ['familia'], comprador: ['executivo'], forca: [] }
+
+// `linhasMock.valor` é lido dentro do factory de `vi.mock` abaixo — precisa
+// ser criado com `vi.hoisted` porque `vi.mock` é hoisted para o topo do
+// arquivo pelo Vitest, antes de qualquer `const` normal deste módulo existir.
+const { linhasMock } = vi.hoisted(() => ({ linhasMock: { valor: [] as unknown[] } }))
+
+vi.mock('@/lib/db', () => ({
+	db: {
+		selectFrom: () => ({
+			selectAll: () => ({
+				where: () => ({
+					execute: async () => linhasMock.valor,
+				}),
+			}),
+		}),
+	},
+}))
 
 describe('mesclar', () => {
 	// O motivo de a tabela ser separada dos embeddings. Se a ressincronização
@@ -67,5 +84,51 @@ describe('mesclar', () => {
 		})
 		expect(r.uso).toEqual(['colecao'])
 		expect(r.sobrescritoPor).toBe('')
+	})
+})
+
+describe('lerRotulos — vocabulário fechado na leitura (Conserto 4)', () => {
+	// A tela de admin ficou fora de escopo, então a correção da Attra hoje é
+	// `UPDATE` na mão no banco — sem essa filtragem, um rótulo digitado
+	// errado entra direto no `Map` devolvido e, via `legivel()` caindo no
+	// fallback `?? r`, vaza o slug cru pro texto indexado, em silêncio.
+	it('descarta rótulo que não pertence ao vocabulário de cada eixo', async () => {
+		linhasMock.valor = [{
+			vehicle_id: 1,
+			rotulos_uso: ['familia', 'rotulo-digitado-errado'],
+			rotulos_comprador: ['executivo', 'outro-typo'],
+			rotulos_forca: ['espaco'],
+			prosa: null,
+			sobrescrito_por: null,
+		}]
+
+		const mapa = await lerRotulos([1])
+		const r = mapa.get(1)
+
+		expect(r?.uso).toEqual(['familia'])
+		expect(r?.comprador).toEqual(['executivo'])
+		expect(r?.forca).toEqual(['espaco'])
+	})
+
+	// O lado oposto necessário: uma linha só com rótulos válidos não pode
+	// perder nada na filtragem — senão o teste acima não provaria que é o
+	// rótulo INVÁLIDO sendo descartado, e sim que tudo é descartado.
+	it('mantém intactos os rótulos que pertencem ao vocabulário', async () => {
+		linhasMock.valor = [{
+			vehicle_id: 2,
+			rotulos_uso: ['familia', 'viagem', 'urbano'],
+			rotulos_comprador: ['executivo', 'familia'],
+			rotulos_forca: ['baixa-quilometragem', 'espaco'],
+			prosa: 'prosa válida',
+			sobrescrito_por: null,
+		}]
+
+		const mapa = await lerRotulos([2])
+		const r = mapa.get(2)
+
+		expect(r?.uso).toEqual(['familia', 'viagem', 'urbano'])
+		expect(r?.comprador).toEqual(['executivo', 'familia'])
+		expect(r?.forca).toEqual(['baixa-quilometragem', 'espaco'])
+		expect(r?.prosa).toBe('prosa válida')
 	})
 })

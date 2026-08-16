@@ -46,6 +46,13 @@ export async function POST(request: Request) {
 		let synced = 0
 		const errors: string[] = []
 		const anoAtual = new Date().getFullYear()
+		// Único sinal de saúde da camada de prosa: `gerarProsa` pode falhar 100%
+		// (chave ausente, modelo com nome errado, cota, timeout, trava) e o
+		// único indício antes disto era um `console.warn` que o build de
+		// produção apaga (`removeConsole: true` em next.config.ts). `cacheadas`
+		// inclui sobrescrita humana — nenhuma chamada ao gerador acontece nos
+		// dois casos, ver `passagem-do-veiculo.ts`.
+		const prosa = { geradas: 0, cacheadas: 0, reprovadas: 0, falhas: 0 }
 
 		for (let i = 0; i < vehicles.length; i += batchSize) {
 			const batch = vehicles.slice(i, i + batchSize)
@@ -60,6 +67,13 @@ export async function POST(request: Request) {
 					batch.map(v => passagemDoVeiculo(v, gravados.get(Number(v.id)), anoAtual, gerarProsa)),
 				)
 				const passages = resultados.map(r => r.passagem)
+
+				for (const r of resultados) {
+					if (r.origemProsa === 'gerada') prosa.geradas++
+					else if (r.origemProsa === 'cache' || r.origemProsa === 'sobrescrita') prosa.cacheadas++
+					else if (r.origemProsa === 'reprovada') prosa.reprovadas++
+					else prosa.falhas++
+				}
 
 				const embeddingResponse = await generateEmbeddings(passages, 'retrieval.passage')
 
@@ -125,6 +139,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({
 			synced,
 			total: vehicles.length,
+			prosa,
 			errors: errors.length > 0 ? errors : undefined,
 		})
 	} catch (err) {

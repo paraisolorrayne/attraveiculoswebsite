@@ -1,6 +1,26 @@
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
-import type { Rotulos, RotuloUso, RotuloComprador, RotuloForca } from '@/lib/mcp/rotulos'
+import { VOCABULARIO, type Rotulos, type RotuloUso, type RotuloComprador, type RotuloForca } from '@/lib/mcp/rotulos'
+
+const USO_VALIDOS = new Set<string>(VOCABULARIO.uso)
+const COMPRADOR_VALIDOS = new Set<string>(VOCABULARIO.comprador)
+const FORCA_VALIDOS = new Set<string>(VOCABULARIO.forca)
+
+/**
+ * Filtra `valor` (o que veio cru do banco) contra o vocabulário fechado.
+ *
+ * O vocabulário é fechado só de nome se a LEITURA não fizer valer isso. A
+ * tela de admin ficou fora de escopo, então a correção da Attra hoje é
+ * `UPDATE` na mão — um rótulo digitado errado (typo, rótulo de outro eixo,
+ * valor legado) entrava direto no texto indexado, porque `legivel()` cai no
+ * fallback `?? r` e vaza o slug cru quando não reconhece. Descartar aqui,
+ * silenciosamente, é melhor que indexar lixo: um rótulo a menos não afirma
+ * nada de errado sobre o carro.
+ */
+function filtrarValidos<T extends string>(valor: unknown, validos: ReadonlySet<string>): T[] {
+	if (!Array.isArray(valor)) return []
+	return valor.filter((v): v is T => typeof v === 'string' && validos.has(v))
+}
 
 export interface RotulosGravados extends Rotulos {
 	prosa: string | null
@@ -45,9 +65,9 @@ export async function lerRotulos(vehicleIds: number[]): Promise<Map<number, Rotu
 		// no banco, protegida, e simplesmente nunca é enxergada. Falha
 		// silenciosa. Não remover achando redundante.
 		mapa.set(Number(l.vehicle_id), {
-			uso: l.rotulos_uso as RotuloUso[],
-			comprador: l.rotulos_comprador as RotuloComprador[],
-			forca: l.rotulos_forca as RotuloForca[],
+			uso: filtrarValidos<RotuloUso>(l.rotulos_uso, USO_VALIDOS),
+			comprador: filtrarValidos<RotuloComprador>(l.rotulos_comprador, COMPRADOR_VALIDOS),
+			forca: filtrarValidos<RotuloForca>(l.rotulos_forca, FORCA_VALIDOS),
 			prosa: l.prosa,
 			sobrescritoPor: l.sobrescrito_por,
 		})

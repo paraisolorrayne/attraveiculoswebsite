@@ -66,11 +66,13 @@ describe('gerarProsa — falha sem chamar rede', () => {
 		else process.env.GEMINI_API_KEY = chaveOriginal
 	})
 
-	// Ausência de chave é uma das falhas que devolvem null sem tentar rede —
-	// não é um caso de erro, é o contrato: null aqui não trava a sincronização.
-	it('devolve null sem chave, sem tentar chamar a rede', async () => {
+	// Ausência de chave é uma das falhas que devolvem `ok: false` sem tentar
+	// rede — não é um caso de erro, é o contrato: isso aqui não trava a
+	// sincronização. `motivo: 'falha'` (e não 'reprovada') é o que permite a
+	// rota contar "chave não configurada" separado de "trava reprovando".
+	it('devolve ok:false, motivo:falha sem chave, sem tentar chamar a rede', async () => {
 		delete process.env.GEMINI_API_KEY
-		expect(await gerarProsa(V, R)).toBeNull()
+		expect(await gerarProsa(V, R)).toEqual({ ok: false, motivo: 'falha' })
 	})
 })
 
@@ -107,15 +109,19 @@ describe('gerarProsa — trava aplicada à resposta do modelo (fetch mockado)', 
 	// gerarProsa, é aqui — e só aqui — que isso fica vermelho. prosaEhAceitavel
 	// isolada continua verde porque ela nunca deixou de funcionar; o que falta
 	// sem essa chamada é gerarProsa PARAR de usá-la.
-	it('descarta e devolve null quando o modelo devolve prosa que a trava reprova', async () => {
+	//
+	// `motivo: 'reprovada'` (não 'falha') é o que permite a rota separar "a
+	// trava está reprovando tudo" de "a chave/rede/cota está com problema" na
+	// contagem que ela devolve no JSON.
+	it('descarta e devolve ok:false, motivo:reprovada quando o modelo devolve prosa que a trava reprova', async () => {
 		mockarRespostaDoGemini('SUV com interior amplo e confortável para a família.')
-		expect(await gerarProsa(V, R)).toBeNull()
+		expect(await gerarProsa(V, R)).toEqual({ ok: false, motivo: 'reprovada' })
 	})
 
-	// O par necessário: sem esse lado, um teste que sempre espera null não
+	// O par necessário: sem esse lado, um teste que sempre espera ok:false não
 	// prova que a trava está filtrando — só que gerarProsa sempre falha.
-	it('devolve a prosa quando o modelo devolve texto que passa na trava', async () => {
+	it('devolve ok:true com a prosa quando o modelo devolve texto que passa na trava', async () => {
 		mockarRespostaDoGemini('SUV para uso em família e viagem. Baixa quilometragem.')
-		expect(await gerarProsa(V, R)).toBe('SUV para uso em família e viagem. Baixa quilometragem.')
+		expect(await gerarProsa(V, R)).toEqual({ ok: true, texto: 'SUV para uso em família e viagem. Baixa quilometragem.' })
 	})
 })

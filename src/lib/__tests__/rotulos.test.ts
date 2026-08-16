@@ -18,6 +18,27 @@ describe('derivarRotulos — uso', () => {
 		expect(r.uso).toContain('viagem')
 	})
 
+	// Conserto 5: das sete carrocerias canônicas do projeto (SUV, Sedã, Hatch,
+	// Cupê, Conversível, Picape, Perua), picape era a única sem nenhum rótulo
+	// de uso — zero cobertura em qualquer eixo. Ela cabota família e viagem
+	// (cabine dupla) e tem espaço de carga real (a caçamba), então entra em
+	// FAMILIARES/ESPACOSAS, sujeita ao mesmo gate de portas que já vale para
+	// hatch/sedan: cabine simples (2 portas) não vira família.
+	it('picape de cabine dupla (4 portas) é família, viagem e tem espaço', () => {
+		const r = derivarRotulos({ body_type: 'Picape', doors: 4, price: 400_000 }, ANO)
+		expect(r.uso).toContain('familia')
+		expect(r.uso).toContain('viagem')
+		expect(r.comprador).toContain('familia')
+		expect(r.forca).toContain('espaco')
+	})
+
+	it('picape de cabine simples (2 portas) não vira família — mesmo gate de portas do resto da regra', () => {
+		const r = derivarRotulos({ body_type: 'Picape', doors: 2, price: 400_000 }, ANO)
+		expect(r.uso).not.toContain('familia')
+		expect(r.comprador).not.toContain('familia')
+		expect(r.forca).not.toContain('espaco')
+	})
+
 	it('carroceria esportiva vira fim de semana', () => {
 		expect(derivarRotulos({ body_type: 'Cupê', doors: 2 }, ANO).uso).toContain('fim-de-semana')
 		expect(derivarRotulos({ body_type: 'Conversível', doors: 2 }, ANO).uso).toContain('fim-de-semana')

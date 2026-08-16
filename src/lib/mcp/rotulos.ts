@@ -44,10 +44,16 @@ export interface VeiculoParaRotulo {
 
 /** Carrocerias de duas portas voltadas a desempenho. */
 const ESPORTIVAS = new Set(['cupe', 'coupe', 'conversivel', 'cabriolet', 'roadster', 'targa', 'spider', 'spyder'])
+// Picape entra em FAMILIARES e ESPACOSAS, não em ESPORTIVAS: cabota família e
+// viagem (cabine dupla, 4 portas) e tem espaço de carga real — a caçamba. O
+// mesmo gate de `MIN_PORTAS_FAMILIAR` que já existe para hatch/sedan também
+// se aplica aqui: picape de cabine simples (2 portas) não vira família,
+// coerente com o resto da regra. 'picapes' cobre a variante no plural que
+// aparece em outros pontos do código (ex.: `taxonomia-veiculo.ts`).
 /** Carrocerias que comportam família. */
-const FAMILIARES = new Set(['suv', 'seda', 'sedan', 'perua', 'minivan', 'hatch'])
+const FAMILIARES = new Set(['suv', 'seda', 'sedan', 'perua', 'minivan', 'hatch', 'picape', 'picapes'])
 /** Subconjunto com espaço de carga relevante. */
-const ESPACOSAS = new Set(['suv', 'perua', 'minivan'])
+const ESPACOSAS = new Set(['suv', 'perua', 'minivan', 'picape', 'picapes'])
 
 const LIMIAR_BAIXA_KM = 30_000
 const LIMIAR_DESEMPENHO_CV = 400

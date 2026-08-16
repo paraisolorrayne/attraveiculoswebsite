@@ -39,15 +39,33 @@ export function montarPrompt(v: VeiculoParaProsa, rotulos: Rotulos): string {
 }
 
 /**
- * Devolve `null` em qualquer falha — rede, cota, chave ausente, ou prosa
- * reprovada na trava.
+ * Resultado de uma tentativa de gerar prosa.
  *
- * `null` não é erro: a passagem sai só com ficha e rótulos, e a sincronização
- * segue. Índice desatualizado é pior que índice sem prosa.
+ * Antes disto, `gerarProsa` devolvia `string | null` para TUDO — chave
+ * ausente, modelo com nome errado, cota, timeout ou trava reprovando —, e o
+ * único sinal era um `console.warn` que o build de produção apaga
+ * (`removeConsole: true` em `next.config.ts`). A rota respondia 200 mesmo se
+ * 100% das prosas falhassem, sem jeito nenhum de saber por quê.
+ *
+ * `motivo: 'reprovada'` e `motivo: 'falha'` existem para poder contar cada um
+ * separado na resposta da rota: "a trava está reprovando tudo" e "a chave não
+ * está configurada" são dois problemas diferentes, e ficavam indistinguíveis
+ * atrás do mesmo `null`.
  */
-export async function gerarProsa(v: VeiculoParaProsa, rotulos: Rotulos): Promise<string | null> {
+export type ResultadoProsa =
+	| { ok: true; texto: string }
+	| { ok: false; motivo: 'reprovada' | 'falha' }
+
+/**
+ * `ok: false` em qualquer falha — rede, cota, chave ausente (`motivo:
+ * 'falha'`), ou prosa reprovada na trava (`motivo: 'reprovada'`).
+ *
+ * `ok: false` não é erro: a passagem sai só com ficha e rótulos, e a
+ * sincronização segue. Índice desatualizado é pior que índice sem prosa.
+ */
+export async function gerarProsa(v: VeiculoParaProsa, rotulos: Rotulos): Promise<ResultadoProsa> {
 	const chave = process.env.GEMINI_API_KEY
-	if (!chave) return null
+	if (!chave) return { ok: false, motivo: 'falha' }
 
 	try {
 		const resposta = await fetch(
@@ -62,19 +80,19 @@ export async function gerarProsa(v: VeiculoParaProsa, rotulos: Rotulos): Promise
 				signal: AbortSignal.timeout(15_000),
 			},
 		)
-		if (!resposta.ok) return null
+		if (!resposta.ok) return { ok: false, motivo: 'falha' }
 
 		const dados = await resposta.json()
 		const texto: string | undefined = dados?.candidates?.[0]?.content?.parts?.[0]?.text
-		if (!texto) return null
+		if (!texto) return { ok: false, motivo: 'falha' }
 
 		const limpo = texto.trim()
 		if (!prosaEhAceitavel(limpo).ok) {
 			console.warn('[Prosa] descartada pela trava:', limpo.slice(0, 120))
-			return null
+			return { ok: false, motivo: 'reprovada' }
 		}
-		return limpo
+		return { ok: true, texto: limpo }
 	} catch {
-		return null
+		return { ok: false, motivo: 'falha' }
 	}
 }

@@ -1,16 +1,28 @@
 import { buildVehiclePassage } from '@/lib/jina'
 import { derivarRotulos, type Rotulos, type VeiculoParaRotulo } from '@/lib/mcp/rotulos'
-import { montarPassagem } from '@/lib/mcp/perfil-semantico'
+import { montarPassagem, prosaEhAceitavel } from '@/lib/mcp/perfil-semantico'
 import { mesclar, type RotulosGravados } from '@/lib/mcp/repositorio-rotulos'
-import type { VeiculoParaProsa } from '@/lib/mcp/prosa'
+import type { VeiculoParaProsa, ResultadoProsa } from '@/lib/mcp/prosa'
 
 type Veiculo = VeiculoParaRotulo & VeiculoParaProsa & Parameters<typeof buildVehiclePassage>[0]
+
+/** O que aconteceu com a prosa nesta chamada.
+ *
+ *  A rota usa isso para contar por lote (geradas/cacheadas/reprovadas/falhas)
+ *  no JSON de resposta. Sem esse sinal, `gerarProsa` podia falhar 100% das
+ *  vezes — chave ausente, cota, timeout, trava — e a rota responderia 200 sem
+ *  nenhum jeito de distinguir "a trava está reprovando tudo" de "a chave não
+ *  está configurada". `sobrescrita` conta junto com `cache` na rota (nenhuma
+ *  chamada ao gerador aconteceu nos dois casos); ver justificativa no
+ *  relatório da onda final. */
+export type OrigemProsa = 'cache' | 'sobrescrita' | 'gerada' | 'reprovada' | 'falha'
 
 export interface PassagemComProsa {
 	passagem: string
 	/** Prosa realmente usada nesta passagem — cache, sobrescrita ou recém-gerada.
 	 *  A rota usa isso para gravar, evitando regenerar a cada sincronização. */
 	prosa: string | null
+	origemProsa: OrigemProsa
 }
 
 /** Compara dois conjuntos de rótulos ignorando ordem de array — comparação por
@@ -35,9 +47,20 @@ export async function passagemDoVeiculo(
 	v: Veiculo,
 	gravado: RotulosGravados | undefined,
 	anoAtual: number,
-	gerador: (v: VeiculoParaProsa, r: ReturnType<typeof derivarRotulos>) => Promise<string | null>,
+	gerador: (v: VeiculoParaProsa, r: Rotulos) => Promise<ResultadoProsa>,
 ): Promise<PassagemComProsa> {
 	const derivado = derivarRotulos(v, anoAtual)
+
+	// Prosa gravada que a TRAVA reprovaria hoje não pode ficar presa no cache
+	// pra sempre: se ela chegou ao banco antes de um termo entrar em
+	// TERMOS_PROIBIDOS, ou foi digitada à mão sem passar pela trava (ex.:
+	// 'conforto' é rótulo legítimo do vocabulário e termo proibido na prosa),
+	// os rótulos nunca mudam sozinhos — e sem essa checagem o cache nunca
+	// invalidaria, o veículo ficaria PERMANENTEMENTE sem prosa no índice, em
+	// silêncio. Mesmo `sobrescritoPor == null` do bloco abaixo: ela só
+	// dispara sobre prosa que a REGRA escreveu, nunca sobre sobrescrita
+	// humana de verdade (`sobrescritoPor` setado).
+	const prosaGravadaReprovada = gravado?.prosa != null && !prosaEhAceitavel(gravado.prosa).ok
 
 	// Prosa cacheada foi gerada A PARTIR dos rótulos de quando foi escrita. Se
 	// o carro cruzou um limiar (ex.: passou de 30.000 km) e os rótulos
@@ -48,20 +71,32 @@ export async function passagemDoVeiculo(
 	// humana (`sobrescritoPor`) é decisão humana e não sofre essa invalidação
 	// — só a prosa DERIVADA pelo cache é descartada, nunca a escrita à mão.
 	const gravadoEfetivo =
-		gravado != null && gravado.sobrescritoPor == null && !mesmosRotulos(derivado, gravado)
+		gravado != null && gravado.sobrescritoPor == null && (!mesmosRotulos(derivado, gravado) || prosaGravadaReprovada)
 			? { ...gravado, prosa: null }
 			: gravado
 
 	const final = mesclar(derivado, gravadoEfetivo)
 
 	let prosa = final.prosa
+	// Valor de `prosa != null` é só um placeholder — substituído no bloco
+	// abaixo sempre que o gerador é de fato chamado.
+	let origemProsa: OrigemProsa = prosa != null ? (final.sobrescritoPor != null ? 'sobrescrita' : 'cache') : 'falha'
+
 	if (prosa == null) {
 		try {
-			prosa = await gerador(v, final)
+			const resultado = await gerador(v, final)
+			if (resultado.ok) {
+				prosa = resultado.texto
+				origemProsa = 'gerada'
+			} else {
+				prosa = null
+				origemProsa = resultado.motivo
+			}
 		} catch {
 			prosa = null
+			origemProsa = 'falha'
 		}
 	}
 
-	return { passagem: montarPassagem(buildVehiclePassage(v), final, prosa), prosa }
+	return { passagem: montarPassagem(buildVehiclePassage(v), final, prosa), prosa, origemProsa }
 }
