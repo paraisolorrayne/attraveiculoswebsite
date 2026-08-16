@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { gerarProsa, montarPrompt } from '@/lib/mcp/prosa'
 import { prosaEhAceitavel } from '@/lib/mcp/perfil-semantico'
 import type { Rotulos } from '@/lib/mcp/rotulos'
@@ -71,5 +71,51 @@ describe('gerarProsa — falha sem chamar rede', () => {
 	it('devolve null sem chave, sem tentar chamar a rede', async () => {
 		delete process.env.GEMINI_API_KEY
 		expect(await gerarProsa(V, R)).toBeNull()
+	})
+})
+
+describe('gerarProsa — trava aplicada à resposta do modelo (fetch mockado)', () => {
+	// Sem chave, gerarProsa sai antes de chegar na chamada de rede — por isso
+	// esse describe precisa da própria chave, senão os dois testes abaixo
+	// nunca exerceriam a linha que estamos protegendo.
+	const chaveOriginal = process.env.GEMINI_API_KEY
+
+	beforeEach(() => {
+		process.env.GEMINI_API_KEY = 'chave-de-teste'
+	})
+
+	afterEach(() => {
+		if (chaveOriginal === undefined) delete process.env.GEMINI_API_KEY
+		else process.env.GEMINI_API_KEY = chaveOriginal
+		vi.unstubAllGlobals()
+	})
+
+	/** Mocka `fetch` para devolver `texto` no formato de resposta do Gemini — sem rede real. */
+	function mockarRespostaDoGemini(texto: string) {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					candidates: [{ content: { parts: [{ text: texto }] } }],
+				}),
+			}),
+		)
+	}
+
+	// O ponto sério da task: se a validação da saída for removida de dentro de
+	// gerarProsa, é aqui — e só aqui — que isso fica vermelho. prosaEhAceitavel
+	// isolada continua verde porque ela nunca deixou de funcionar; o que falta
+	// sem essa chamada é gerarProsa PARAR de usá-la.
+	it('descarta e devolve null quando o modelo devolve prosa que a trava reprova', async () => {
+		mockarRespostaDoGemini('SUV com interior amplo e confortável para a família.')
+		expect(await gerarProsa(V, R)).toBeNull()
+	})
+
+	// O par necessário: sem esse lado, um teste que sempre espera null não
+	// prova que a trava está filtrando — só que gerarProsa sempre falha.
+	it('devolve a prosa quando o modelo devolve texto que passa na trava', async () => {
+		mockarRespostaDoGemini('SUV para uso em família e viagem. Baixa quilometragem.')
+		expect(await gerarProsa(V, R)).toBe('SUV para uso em família e viagem. Baixa quilometragem.')
 	})
 })
