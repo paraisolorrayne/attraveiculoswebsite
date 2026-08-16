@@ -27,19 +27,17 @@ Esta task existe para **derrubar a arquitetura cedo se ela não se sustentar**. 
 
 **Files:**
 - Create: `src/app/api/mcp/route.ts`
-- Modify: `package.json` (dependência)
 
 **Interfaces:**
 - Consumes: nada
 - Produces: nada que o resto do plano use. É um teste de viabilidade.
 
-- [ ] **Step 1: Instalar o SDK**
+> **Decisão de 16/08:** esta task NÃO instala o SDK. A pergunta que importa não
+> é "a biblioteca X roda aqui", é **"um cliente MCP real consegue conectar num
+> route handler do Next?"**. Respondida essa, a escolha de SDK vira detalhe da
+> fase seguinte — e não fica amarrada antes de se saber se é a melhor.
 
-```bash
-npm install @modelcontextprotocol/sdk
-```
-
-- [ ] **Step 2: Rota mínima que só responde ao handshake**
+- [ ] **Step 1: Rota mínima que só responde ao handshake**
 
 Criar `src/app/api/mcp/route.ts`. O objetivo é responder `initialize` e `tools/list` com uma ferramenta boba, nada mais.
 
@@ -92,7 +90,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: Verificar o handshake por HTTP**
+- [ ] **Step 2: Verificar o handshake por HTTP**
 
 Subir o dev server em `localhost:3111` (**nunca `127.0.0.1`** — o Next 16 bloqueia recursos de dev de outra origem e a página não hidrata) e rodar:
 
@@ -112,7 +110,7 @@ curl -s -X POST http://localhost:3111/api/mcp \
 
 Esperado: JSON com uma ferramenta chamada `ping`.
 
-- [ ] **Step 4: Conectar um cliente MCP de verdade**
+- [ ] **Step 3: Conectar um cliente MCP de verdade**
 
 Esse é o passo que importa, e o que o curl não prova. Conectar o endpoint como servidor MCP remoto num cliente real e confirmar que a ferramenta `ping` aparece na lista.
 
@@ -120,10 +118,10 @@ Registrar o resultado no próprio arquivo, em comentário, com data:
 - Se **funcionou**: anotar cliente e versão testados. A arquitetura do spec está confirmada.
 - Se **não funcionou**: anotar o erro exato. **Parar aqui e reportar** — o servidor MCP vira processo separado, e o plano do subsistema 2 muda antes de existir.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add package.json package-lock.json src/app/api/mcp/route.ts
+git add src/app/api/mcp/route.ts
 git commit -m "Prova de conceito: transporte MCP em route handler do Next
 
 Responde initialize e tools/list com uma ferramenta boba. Não é o
@@ -646,9 +644,11 @@ E registrar em `Database`:
   vehicle_semantic_labels: VehicleSemanticLabelsTable
 ```
 
-- [ ] **Step 3: APLICAR NA VPS**
+- [ ] **Step 3: APLICAR NA VPS** — *executado pelo controlador, NÃO delegado*
 
-O passo que não pode ser pulado.
+O passo que não pode ser pulado. **Nenhum subagente recebe credencial de banco
+de produção**: o subagente entrega a migration e o tipo; quem aplica é o
+controlador da sessão.
 
 ```bash
 ssh -i ~/.ssh/id_gitlab_bookie root@217.216.82.138 'bash -s' <<'REMOTO'
@@ -663,7 +663,7 @@ Esperado: a saída do `\d` lista as oito colunas. Se der `did not find any relat
 
 > O arquivo precisa existir na VPS. Fazer `git push` da branch e `git pull` lá antes, ou passar o SQL por stdin.
 
-- [ ] **Step 4: Provar pelo teste de drift**
+- [ ] **Step 4: Provar pelo teste de drift** — *executado pelo controlador*
 
 ```bash
 ssh -i ~/.ssh/id_gitlab_bookie root@217.216.82.138 'bash -s' <<'REMOTO'
