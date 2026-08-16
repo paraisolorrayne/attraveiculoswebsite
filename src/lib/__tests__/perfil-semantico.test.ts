@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { montarPassagem, prosaEhAceitavel } from '@/lib/mcp/perfil-semantico'
+import { montarPassagem, prosaEhAceitavel, NOME_DO_ROTULO } from '@/lib/mcp/perfil-semantico'
+import { VOCABULARIO } from '@/lib/mcp/rotulos'
 import type { Rotulos } from '@/lib/mcp/rotulos'
 
 const FATUAL = 'Porsche Macan GTS Bi-Turbo 2024. tipo SUV. 19.930 km. R$ 499.000'
@@ -45,6 +46,43 @@ describe('prosaEhAceitavel', () => {
 	it('aceita outra reescrita de rótulo e valor de ficha, sem juízo nem comparação', () => {
 		expect(prosaEhAceitavel('Uso executivo, baixa quilometragem, revisões em dia.').ok).toBe(true)
 	})
+
+	// Rodada de conserto 1: a checagem casava por substring, então "referência"
+	// reprovava "preferência" e "melhor" reprovava "melhoria" — rejeição
+	// silenciosa derrubando prosa legítima sem ninguém saber o motivo. Casa por
+	// PALAVRA INTEIRA agora; estes quatro pares cobrem os dois lados da fronteira.
+	it('não recusa palavra que só contém o termo proibido como substring', () => {
+		expect(prosaEhAceitavel('Marca de preferência entre colecionadores.').ok).toBe(true)
+		expect(prosaEhAceitavel('Melhorias recentes na suspensão.').ok).toBe(true)
+	})
+
+	it('recusa o termo proibido quando aparece como palavra inteira', () => {
+		expect(prosaEhAceitavel('Um carro de referência no segmento.').ok).toBe(false)
+		expect(prosaEhAceitavel('O melhor exemplar disponível.').ok).toBe(false)
+	})
+
+	// "amplo" é a palavra mais comum em anúncio de carro brasileiro para
+	// alegar espaço interno, e não estava na lista até esta rodada. A lista só
+	// tinha formas masculinas singulares antes — "espaçosa" escapava.
+	it('recusa "amplo" e flexões, e "espaçosa"', () => {
+		expect(prosaEhAceitavel('SUV com interior amplo para a família.').ok).toBe(false)
+		expect(prosaEhAceitavel('Grande amplitude de espaço para bagagem.').ok).toBe(false)
+		expect(prosaEhAceitavel('Cabine espaçosa e confortável.').ok).toBe(false)
+	})
+})
+
+describe('NOME_DO_ROTULO', () => {
+	// `legivel()` cai no fallback `?? r` quando um slug não está no mapa —
+	// isso vazaria o slug cru (ex.: "fim-de-semana") para o texto indexado
+	// em silêncio. Este teste garante que todo slug de VOCABULARIO tem
+	// tradução, então um rótulo novo sem entrada quebra o teste em vez de
+	// vazar em produção.
+	it('cobre todo rótulo de VOCABULARIO nos três eixos', () => {
+		const todosOsRotulos = [...VOCABULARIO.uso, ...VOCABULARIO.comprador, ...VOCABULARIO.forca]
+		for (const rotulo of todosOsRotulos) {
+			expect(NOME_DO_ROTULO).toHaveProperty(rotulo)
+		}
+	})
 })
 
 describe('montarPassagem', () => {
@@ -75,10 +113,16 @@ describe('montarPassagem', () => {
 		expect(montarPassagem(FATUAL, vazio, null)).toBe(FATUAL)
 	})
 
-	// Prosa reprovada não pode entrar no índice de jeito nenhum.
-	it('descarta prosa que não passa na trava', () => {
-		const p = montarPassagem(FATUAL, ROTULOS, 'Espaço real para quatro adultos.')
-		expect(p).not.toContain('quatro adultos')
+	// Prosa reprovada não pode entrar no índice de jeito nenhum — nem em
+	// parte. Uma implementação que só podasse a frase ofensiva (em vez de
+	// descartar a prosa inteira) passaria num teste que só checasse
+	// "quatro adultos" sumiu; por isso a asserção compara a passagem inteira
+	// contra a que sairia sem prosa nenhuma.
+	it('descarta prosa que não passa na trava — a passagem inteira, não só o trecho ofensivo', () => {
+		const comProsaReprovada = montarPassagem(FATUAL, ROTULOS, 'Espaço real para quatro adultos.')
+		const semProsaNenhuma = montarPassagem(FATUAL, ROTULOS, null)
+		expect(comProsaReprovada).not.toContain('Espaço real para quatro adultos')
+		expect(comProsaReprovada).toBe(semProsaNenhuma)
 	})
 
 	// Cada eixo de rótulo (uso, comprador, força) decide sozinho se entra na

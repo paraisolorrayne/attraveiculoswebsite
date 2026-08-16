@@ -22,26 +22,66 @@ import type { Rotulos } from '@/lib/mcp/rotulos'
  * Comparativos, superlativos e juízos de conforto. A lista é generosa de
  * propósito: descartar prosa boa custa um pouco de qualidade de busca;
  * publicar prosa falsa custa a confiança que o canal inteiro existe para ter.
+ *
+ * Cada termo entra numa única forma (com acento, singular ou plural conforme
+ * o uso comum) porque a checagem casa por PALAVRA INTEIRA sobre o texto
+ * normalizado (sem acento, minúsculo) — não precisa duplicar 'ótimo'/'otimo'
+ * aqui, a normalização cobre isso. O que precisa estar listado é cada
+ * FLEXÃO (espaçoso/espaçosa/espaçosos/espaçosas), porque a normalização não
+ * conjuga palavras.
  */
 export const TERMOS_PROIBIDOS = [
-	'espaçoso', 'espacoso', 'confortável', 'confortavel', 'conforto',
-	'espaço real', 'espaco real', 'adultos',
-	'acima da média', 'acima da media', 'melhor', 'pior', 'mais rápido', 'mais rapido',
-	'ideal para', 'perfeito para', 'incrível', 'incrivel', 'imperdível', 'imperdivel',
-	'excelente', 'ótimo', 'otimo', 'surpreendente', 'referência', 'referencia',
+	'espaçoso', 'espaçosa', 'espaçosos', 'espaçosas',
+	'amplo', 'ampla', 'amplos', 'amplas', 'amplitude',
+	'confortável', 'confortáveis', 'confortavelmente', 'conforto',
+	'espaço real', 'adultos', 'adulto',
+	'acima da média', 'abaixo da média',
+	'melhor', 'melhores', 'pior', 'piores',
+	'mais rápido', 'mais rápida', 'mais veloz',
+	'ideal para', 'ideais para', 'perfeito para', 'perfeita para',
+	'incrível', 'incríveis', 'imperdível', 'imperdíveis',
+	'excelente', 'excelentes', 'ótimo', 'ótima', 'ótimos', 'ótimas',
+	'surpreendente', 'surpreendentes', 'referência', 'referências',
 ]
 
+/** Tira acento e caixa, para comparar termo e prosa na mesma forma. */
+function normalizar(texto: string): string {
+	return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+/** Escapa caractere especial de regex — termo é dado, não literal de código. */
+function escaparRegex(termo: string): string {
+	return termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Casa `termo` como palavra (ou frase) inteira dentro de `textoNormalizado`.
+ *
+ * Deliberadamente NÃO usa `\b` do JavaScript: `\b` se apoia no conjunto
+ * `[A-Za-z0-9_]`, então uma letra acentuada já conta como fronteira — "melhor"
+ * "casaria" sozinho dentro de qualquer coisa colada a uma vogal acentuada. A
+ * fronteira aqui é explícita: início/fim de string ou qualquer caractere que
+ * não seja letra ASCII (pós-normalização, sem acento) nem dígito. Frases de
+ * duas palavras ("espaço real") funcionam igual — o espaço interno do termo
+ * casa literalmente com o espaço no texto.
+ */
+function contemPalavraInteira(textoNormalizado: string, termo: string): boolean {
+	const termoNormalizado = normalizar(termo)
+	const padrao = new RegExp(`(^|[^a-z0-9])${escaparRegex(termoNormalizado)}([^a-z0-9]|$)`)
+	return padrao.test(textoNormalizado)
+}
+
 export function prosaEhAceitavel(prosa: string): { ok: true } | { ok: false; motivo: string } {
-	const alvo = prosa.toLowerCase()
+	const alvo = normalizar(prosa)
 	for (const termo of TERMOS_PROIBIDOS) {
-		if (alvo.includes(termo)) {
+		if (contemPalavraInteira(alvo, termo)) {
 			return { ok: false, motivo: `prosa contém termo proibido: "${termo}"` }
 		}
 	}
 	return { ok: true }
 }
 
-const NOME_DO_ROTULO: Record<string, string> = {
+export const NOME_DO_ROTULO: Record<string, string> = {
 	'urbano': 'uso urbano',
 	'viagem': 'viagem',
 	'fim-de-semana': 'fim de semana',
