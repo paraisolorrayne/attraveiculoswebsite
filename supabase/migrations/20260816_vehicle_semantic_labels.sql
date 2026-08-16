@@ -4,7 +4,13 @@
 -- regerada do zero a qualquer momento; esta contém correção humana, que não
 -- pode ser perdida numa ressincronização.
 create table if not exists vehicle_semantic_labels (
-  vehicle_id        bigint primary key,
+  -- integer, não bigint: alinhado com vehicle_embeddings, vehicle_hero_asset
+  -- e vehicle_section_content. bigint (int8) faz o driver `pg` devolver
+  -- vehicle_id como STRING, não number — apesar de o tipo do Kysely dizer
+  -- `number` — e isso quebra silenciosamente qualquer Map/comparação por
+  -- id feita rio abaixo (ex.: `gravados.get(Number(v.id))` nunca bate com
+  -- uma chave string).
+  vehicle_id        integer primary key,
   rotulos_uso       text[] not null default '{}',
   rotulos_comprador text[] not null default '{}',
   rotulos_forca     text[] not null default '{}',

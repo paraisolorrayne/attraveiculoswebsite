@@ -15,7 +15,9 @@ export interface RotulosGravados extends Rotulos {
  * sumiria toda madrugada e ninguém saberia por quê.
  */
 export function mesclar(derivado: Rotulos, gravado: RotulosGravados | undefined): RotulosGravados {
-	if (gravado?.sobrescritoPor) return gravado
+	// Checagem explícita contra null/undefined, não truthy: `sobrescritoPor: ''`
+	// não pode passar por "sem sobrescrita" só porque string vazia é falsy em JS.
+	if (gravado?.sobrescritoPor != null) return gravado
 	return {
 		...derivado,
 		prosa: gravado?.prosa ?? null,
@@ -34,7 +36,15 @@ export async function lerRotulos(vehicleIds: number[]): Promise<Map<number, Rotu
 		.execute()
 
 	for (const l of linhas) {
-		mapa.set(l.vehicle_id, {
+		// Number(...) é defensivo, não decorativo: o driver `pg` faz parsing
+		// de bigint (OID 20/int8) para STRING em JS, então se a coluna algum
+		// dia voltar a ser bigint (ou outra tabela nova nascer bigint por
+		// engano), `l.vehicle_id` chega como "123" apesar de o tipo do
+		// Kysely dizer `number`. Sem essa coerção, `mapa.set("123", ...)`
+		// nunca bate com `gravados.get(Number(v.id))` — a sobrescrita fica
+		// no banco, protegida, e simplesmente nunca é enxergada. Falha
+		// silenciosa. Não remover achando redundante.
+		mapa.set(Number(l.vehicle_id), {
 			uso: l.rotulos_uso as RotuloUso[],
 			comprador: l.rotulos_comprador as RotuloComprador[],
 			forca: l.rotulos_forca as RotuloForca[],
