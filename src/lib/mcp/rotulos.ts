@@ -9,8 +9,11 @@
  * NÃO EXISTE campo `seats` no veículo do AutoConf. Toda regra de lotação passa
  * por `body_type` e `doors`.
  *
- * `conforto` e `liquidez` estão no vocabulário mas NUNCA são derivados: nada no
- * banco os sustenta. Existem só para a Attra atribuir à mão.
+ * `conforto`, `liquidez` e `exclusividade` estão no vocabulário mas NUNCA são
+ * derivados: nada no banco os sustenta. `exclusividade` viria da marca ser
+ * superesportiva, mas `brand` saiu das regras — adjudicado pelo controlador:
+ * o rótulo fica órfão de propósito, não vira regra. Os três existem só para a
+ * Attra atribuir à mão.
  */
 
 export const VOCABULARIO = {
@@ -51,6 +54,7 @@ const LIMIAR_DESEMPENHO_CV = 400
 const LIMIAR_EXECUTIVO_BRL = 250_000
 const LIMIAR_PRIMEIRO_PREMIUM_BRL = 300_000
 const IDADE_DE_COLECAO = 20
+const MIN_PORTAS_FAMILIAR = 4
 
 function normalizar(v: string | null | undefined): string {
 	if (typeof v !== 'string') return ''
@@ -60,12 +64,15 @@ function normalizar(v: string | null | undefined): string {
 export function derivarRotulos(v: VeiculoParaRotulo, anoAtual: number): Rotulos {
 	const carroceria = normalizar(v.body_type)
 	const esportiva = ESPORTIVAS.has(carroceria)
-	const familiar = FAMILIARES.has(carroceria) && (v.doors ?? 0) >= 4
-	const espacosa = ESPACOSAS.has(carroceria) && (v.doors ?? 0) >= 4
+	const familiar = FAMILIARES.has(carroceria) && (v.doors ?? 0) >= MIN_PORTAS_FAMILIAR
+	const espacosa = ESPACOSAS.has(carroceria) && (v.doors ?? 0) >= MIN_PORTAS_FAMILIAR
 	const antigo = v.year_model != null && anoAtual - v.year_model >= IDADE_DE_COLECAO
 	const potente = (v.horsepower ?? 0) >= LIMIAR_DESEMPENHO_CV
 
 	const uso: RotuloUso[] = []
+	// `urbano` só sai acoplado a `familiar` — um compacto de duas portas não
+	// aciona nenhuma regra de uso e fica sem `urbano`. Acoplamento conhecido,
+	// não reestruturado nesta rodada.
 	if (familiar) { uso.push('familia', 'viagem', 'urbano') }
 	if (esportiva) { uso.push('fim-de-semana') }
 	if (esportiva && potente) uso.push('pista')
@@ -82,7 +89,9 @@ export function derivarRotulos(v: VeiculoParaRotulo, anoAtual: number): Rotulos 
 	if (potente) forca.push('desempenho')
 	if (espacosa) forca.push('espaco')
 	if (v.mileage != null && v.mileage < LIMIAR_BAIXA_KM) forca.push('baixa-quilometragem')
-	// `conforto` e `liquidez`: nunca aqui. Só override.
+	// `conforto`, `liquidez` e `exclusividade`: nunca aqui. Só override — a
+	// Attra atribui à mão. `exclusividade` viria de marca superesportiva, mas
+	// `brand` saiu das regras (adjudicado), então fica órfão de propósito.
 
 	return {
 		uso: [...new Set(uso)],
