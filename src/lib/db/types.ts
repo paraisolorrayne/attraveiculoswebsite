@@ -271,6 +271,23 @@ export interface VehicleEmbeddingsTable {
   updated_at: Timestamp
 }
 
+/**
+ * Rótulos de intenção por veículo — correção humana, separada de
+ * `vehicle_embeddings` porque aquela é derivada e regerável e esta não pode
+ * sumir numa ressincronização.
+ */
+export interface VehicleSemanticLabelsTable {
+  vehicle_id: number
+  rotulos_uso: string[]
+  rotulos_comprador: string[]
+  rotulos_forca: string[]
+  prosa: string | null
+  /** E-mail de quem sobrescreveu. Nulo = derivado só por regra. */
+  sobrescrito_por: string | null
+  criado_em: Generated<Timestamp>
+  atualizado_em: Generated<Timestamp>
+}
+
 // ─────────────────────────── BLOG / NEWS ───────────────────────────
 
 export interface DualBlogPostsTable {
@@ -559,6 +576,7 @@ export interface Database {
   vehicle_sounds: VehicleSoundsTable
   vehicle_hero_asset: VehicleHeroAssetTable
   vehicle_embeddings: VehicleEmbeddingsTable
+  vehicle_semantic_labels: VehicleSemanticLabelsTable
   dual_blog_posts: DualBlogPostsTable
   blog_ai_generations: BlogAiGenerationsTable
   news_cycles: NewsCyclesTable
@@ -598,6 +616,7 @@ export const TABELAS_DO_CODIGO = [
   'visitor_fingerprints', 'visitor_sessions', 'visitor_page_views', 'visitor_profiles',
   'identity_events', 'conversion_events', 'ip_geolocation_cache', 'site_settings',
   'vehicle_section_content', 'vehicle_sounds', 'vehicle_hero_asset', 'vehicle_embeddings',
+  'vehicle_semantic_labels',
   'dual_blog_posts', 'blog_ai_generations', 'news_cycles', 'news_categories',
   'news_sources', 'news_articles', 'marketing_strategies', 'marketing_tasks',
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
