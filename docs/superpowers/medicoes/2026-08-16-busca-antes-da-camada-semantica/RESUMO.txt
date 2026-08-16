@@ -1,0 +1,22 @@
+LINHA DE BASE — 2026-08-16T21:49:34Z UTC, ANTES do deploy da camada semântica
+master=26ffe5a  branch=eb31e1a
+
+### SUV familiar com bastante espaco
+  1. Mercedes G-63 AMG 4MATIC V8 Bi-TB 585cv Aut.  [SUV]
+  2. Cadillac Escalade Sport Sport  [SUV]
+  3. Tesla Cybertruck  [SUV]
+  4. Mercedes GLE-400 TB 4MATIC Diesel Aut.  [SUV]
+  5. Porsche Macan Turbo  [SUV]
+
+### carro para o fim de semana
+  1. Nissan Frontier XE CD 4x4 Bi-TB Diesel Aut.  [Picape]
+  2. Mercedes G-63 AMG ED1 4MATIC V8 Bi-TB Aut.  [SUV]
+  3. Mercedes G-63 AMG 4MATIC V8 Bi-TB 585cv Aut.  [SUV]
+
+### primeiro carro premium ate 300 mil
+  1. GMC Sierra 3500 Denali Denali Ultimate Dually  [Picape]
+  2. Land Rover Discov. Metrop. Edt. 4x4 Die.  [SUV]
+  3. Chevrolet Corvette Z06  [Cupê]
+  4. Mercedes G-63 AMG 4MATIC V8 Bi-TB 585cv Aut.  [SUV]
+  5. Mercedes GLE-400 TB 4MATIC Diesel Aut.  [SUV]
+
