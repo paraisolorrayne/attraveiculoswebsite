@@ -8,6 +8,7 @@ import { marcasPorCategoria, marcasDoHub } from '@/lib/seo-brands'
 import { getVehicles } from '@/lib/autoconf-api'
 import { marcaCasaCom } from '@/lib/marca-normalizacao'
 import { podeAparecerNoHub } from '@/lib/estoque-superesportivo'
+import { porPrecoDecrescente } from '@/lib/ordenacao-veiculos'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
@@ -140,10 +141,14 @@ export default async function SuperesportivosPage() {
 	//
 	// A comparação de marca usa a camada de normalização, nunca o nome cru: o
 	// AutoConf grava "Mercedes" onde o catálogo tem "Mercedes-Benz".
-	const veiculos = todos.filter(v => {
-		const marca = marcas.find(m => marcaCasaCom(v.brand, m.slug))
-		return marca ? podeAparecerNoHub(v, marca.categoriaEditorial) : false
-	})
+	// Ordenado ANTES do corte de seis: o hub é a vitrine da categoria, e o carro
+	// mais caro não pode ficar fora dela por acidente de ordem.
+	const veiculos = porPrecoDecrescente(
+		todos.filter(v => {
+			const marca = marcas.find(m => marcaCasaCom(v.brand, m.slug))
+			return marca ? podeAparecerNoHub(v, marca.categoriaEditorial) : false
+		}),
+	)
 
 	const superesportivos = marcasPorCategoria('superesportivo')
 	const performance = marcasPorCategoria('performance')

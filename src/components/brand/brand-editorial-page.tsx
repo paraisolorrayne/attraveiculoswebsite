@@ -8,6 +8,7 @@ import { findSEOBrand, marcasDoHub } from '@/lib/seo-brands'
 import { editorialDaMarca, flexao, filtrarPelaLinha } from '@/lib/seo/marcas-editorial'
 import { getVehicles } from '@/lib/autoconf-api'
 import { filtrarPorMarca } from '@/lib/marca-normalizacao'
+import { porPrecoDecrescente } from '@/lib/ordenacao-veiculos'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
@@ -106,7 +107,11 @@ export async function BrandEditorialPage({ slug }: { slug: string }) {
 	// O filtro de marca sozinho não basta numa linha: `range-rover` é alias de
 	// `land-rover` na normalização, então sem o filtro de modelo a página do
 	// Range Rover mostraria Defender e Discovery.
-	const veiculos = filtrarPelaLinha(filtrarPorMarca(todos, slugBase), editorial.linha)
+	// Ordenado ANTES do corte de seis da grade: cortar primeiro mostraria seis
+	// carros quaisquer, e o mais caro do estoque poderia ficar de fora.
+	const veiculos = porPrecoDecrescente(
+		filtrarPelaLinha(filtrarPorMarca(todos, slugBase), editorial.linha),
+	)
 
 	// A página comercial equivalente: para a linha é a página de modelo, que é
 	// mais precisa que a da marca inteira.
