@@ -16,26 +16,89 @@ export const maxDuration = 120
 // (default 90%). Se não passar, devolvemos accepted:false e o cliente usa a
 // FOTO ORIGINAL, sem recorte — melhor foto inteira que carro furado.
 //
-// BiRefNet: recorte afiado em bordas finas (rodas, aerofólios, vãos).
+// 851-labs/background-remover: limpo em vão de porta e vidro.
 // BRIA: mais robusto em manter o objeto inteiro. Rodar os dois e cruzar dá
 // a "confiança" que nenhum modelo entrega sozinho.
+//
+// Era men1scus/birefnet no lugar do 851-labs. Trocado por duas razões medidas
+// (16/08/2026, McLaren GTS de portas abertas): o birefnet abriu buraco na
+// soleira — integridade 90%, reprovado pelo próprio porteiro, contra 100% dos
+// outros dois — e concorda menos com o BRIA (IoU 94% contra 99% do 851-labs).
+// Na picape branca em piso liso os três empatam; a diferença aparece no caso
+// difícil, que é justamente o que o gate existe para pegar.
 const REMBG_MODELS = [
-  process.env.REMBG_MODEL || 'men1scus/birefnet',
+  process.env.REMBG_MODEL || '851-labs/background-remover',
   'bria/remove-background',
 ]
 const POLL_MS = 2000
 const TIMEOUT_MS = 90_000
 
+/**
+ * Endpoint de predição do Replicate, que depende do TIPO do modelo:
+ * modelo oficial aceita /v1/models/{slug}/predictions; modelo da comunidade
+ * exige /v1/predictions com a `version`.
+ *
+ * A rota chamava sempre a primeira forma, então todo modelo da comunidade
+ * respondia 404 — e como falha vira null silencioso, o par de modelos nunca
+ * existiu: rodava só o BRIA, e a concordância por IoU (o motivo de haver dois)
+ * jamais foi calculada. Passou despercebido porque o gate cai no ramo de
+ * candidato único e continua aprovando.
+ *
+ * O metadado é lido uma vez por modelo e fica em cache no processo — muda só
+ * quando o autor publica versão nova, e um deploy renova.
+ */
+const metaCache = new Map<string, { oficial: boolean; versao: string | null }>()
+
+async function modeloMeta(model: string, apiToken: string) {
+  const emCache = metaCache.get(model)
+  if (emCache) return emCache
+  const r = await fetch(`https://api.replicate.com/v1/models/${model}`, {
+    headers: { 'Authorization': `Bearer ${apiToken}` },
+  })
+  if (!r.ok) {
+    console.warn(`[GeradorRembg] ${model} meta HTTP ${r.status}`)
+    return null
+  }
+  const j = await r.json()
+  const meta = { oficial: !!j.is_official, versao: j.latest_version?.id ?? null }
+  metaCache.set(model, meta)
+  return meta
+}
+
 /** Roda um modelo e devolve o PNG recortado (buffer), ou null se falhar. */
 async function runRembg(model: string, apiToken: string, image: string): Promise<Buffer | null> {
-  const start = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiToken}`,
-      'Content-Type': 'application/json',
+  const meta = await modeloMeta(model, apiToken)
+  if (!meta) return null
+  if (!meta.oficial && !meta.versao) {
+    console.warn(`[GeradorRembg] ${model} sem versão publicada`)
+    return null
+  }
+
+  // Rodamos os dois modelos EM PARALELO, e conta sem método de pagamento fica
+  // com burst 1 — o segundo disparo leva 429 na hora e o par vira modelo único,
+  // que é o cenário que o gate existe para evitar. Uma repetição respeitando o
+  // Retry-After resolve, ao custo de ~10s só quando o limite morde.
+  const dispara = () => fetch(
+    meta.oficial
+      ? `https://api.replicate.com/v1/models/${model}/predictions`
+      : 'https://api.replicate.com/v1/predictions',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(meta.oficial ? { input: { image } } : { version: meta.versao, input: { image } }),
     },
-    body: JSON.stringify({ input: { image } }),
-  })
+  )
+
+  let start = await dispara()
+  if (start.status === 429) {
+    const espera = Math.min(20, Number(start.headers.get('retry-after')) || 11)
+    console.warn(`[GeradorRembg] ${model} 429 — repetindo em ${espera}s`)
+    await new Promise(r => setTimeout(r, espera * 1000))
+    start = await dispara()
+  }
   if (!start.ok) {
     console.warn(`[GeradorRembg] ${model} start HTTP ${start.status}`)
     return null
