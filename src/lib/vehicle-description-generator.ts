@@ -5,6 +5,7 @@
  */
 
 import type { Vehicle } from '@/types'
+import { expandirAbreviacoes } from '@/lib/normalizar-abreviacoes'
 
 // Category labels in Portuguese
 const categoryLabels: Record<string, string> = {
@@ -88,6 +89,12 @@ function getCleanVersion(model: string, version: string | null): string {
   cleaned = cleaned.replace(/\s*\([^)]*\)\s*/g, ' ')
   // Clean multiple spaces
   cleaned = cleaned.replace(/\s+/g, ' ').trim()
+
+  // Abreviação do AutoConf por extenso — "BI-TB" vira "Bi-Turbo", "Aut." vira
+  // "Automático". Fica por ÚLTIMO de propósito: as limpezas acima removem
+  // cilindrada e código de geração, e expandir antes disso faria a expansão
+  // ser recortada pelas regex seguintes.
+  cleaned = expandirAbreviacoes(cleaned)
 
   return cleaned
 }
