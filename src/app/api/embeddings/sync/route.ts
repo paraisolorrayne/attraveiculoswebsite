@@ -3,7 +3,11 @@ import { sql } from 'kysely'
 import { db } from '@/lib/db'
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 import { getVehicles } from '@/lib/autoconf-api'
-import { generateEmbeddings, buildVehiclePassage } from '@/lib/jina'
+import { generateEmbeddings } from '@/lib/jina'
+import { passagemDoVeiculo } from '@/lib/mcp/passagem-do-veiculo'
+import { derivarRotulos } from '@/lib/mcp/rotulos'
+import { gerarProsa } from '@/lib/mcp/prosa'
+import { lerRotulos, gravarRotulosDerivados } from '@/lib/mcp/repositorio-rotulos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -41,12 +45,36 @@ export async function POST(request: Request) {
 		const batchSize = 20
 		let synced = 0
 		const errors: string[] = []
+		const anoAtual = new Date().getFullYear()
+		// Único sinal de saúde da camada de prosa: `gerarProsa` pode falhar 100%
+		// (chave ausente, modelo com nome errado, cota, timeout, trava) e o
+		// único indício antes disto era um `console.warn` que o build de
+		// produção apaga (`removeConsole: true` em next.config.ts). `cacheadas`
+		// inclui sobrescrita humana — nenhuma chamada ao gerador acontece nos
+		// dois casos, ver `passagem-do-veiculo.ts`.
+		const prosa = { geradas: 0, cacheadas: 0, reprovadas: 0, falhas: 0 }
 
 		for (let i = 0; i < vehicles.length; i += batchSize) {
 			const batch = vehicles.slice(i, i + batchSize)
-			const passages = batch.map(v => buildVehiclePassage(v))
 
+			// Lote inteiro (rótulos + passagem + embedding) sob o mesmo catch de
+			// batchErr: uma falha ao ler `vehicle_semantic_labels` ou ao montar a
+			// passagem não pode derrubar a sincronização — vira erro acumulado
+			// no array `errors` e o próximo lote segue normalmente.
 			try {
+				const gravados = await lerRotulos(batch.map(v => Number(v.id)))
+				const resultados = await Promise.all(
+					batch.map(v => passagemDoVeiculo(v, gravados.get(Number(v.id)), anoAtual, gerarProsa)),
+				)
+				const passages = resultados.map(r => r.passagem)
+
+				for (const r of resultados) {
+					if (r.origemProsa === 'gerada') prosa.geradas++
+					else if (r.origemProsa === 'cache' || r.origemProsa === 'sobrescrita') prosa.cacheadas++
+					else if (r.origemProsa === 'reprovada') prosa.reprovadas++
+					else prosa.falhas++
+				}
+
 				const embeddingResponse = await generateEmbeddings(passages, 'retrieval.passage')
 
 				const rows = batch.map((v, idx) => ({
@@ -70,6 +98,26 @@ export async function POST(request: Request) {
 				} catch (upsertError) {
 					errors.push(`Batch ${i}: ${upsertError instanceof Error ? upsertError.message : String(upsertError)}`)
 				}
+
+				// Grava os rótulos derivados por regra E a prosa que `passagemDoVeiculo`
+				// efetivamente usou (cache, sobrescrita ou recém-gerada) — não `null`
+				// fixo, senão toda sincronização perderia o cache e regeraria a prosa
+				// do zero (cron de 6 em 6 horas × ~77 veículos = ~300 chamadas/dia ao
+				// modelo por nada, e o texto indexado mudando sem o carro mudar). O
+				// `where sobrescrito_por is null` dentro de `gravarRotulosDerivados`
+				// protege a correção manual da Attra. Erro aqui não pode apagar o que
+				// já sincronizou nesta chamada.
+				try {
+					await gravarRotulosDerivados(
+						batch.map((v, idx) => ({
+							vehicle_id: Number(v.id),
+							rotulos: derivarRotulos(v, anoAtual),
+							prosa: resultados[idx].prosa,
+						})),
+					)
+				} catch (labelErr) {
+					errors.push(`Batch ${i} rótulos: ${labelErr instanceof Error ? labelErr.message : String(labelErr)}`)
+				}
 			} catch (batchErr) {
 				errors.push(`Batch ${i}: ${batchErr instanceof Error ? batchErr.message : String(batchErr)}`)
 			}
@@ -91,6 +139,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({
 			synced,
 			total: vehicles.length,
+			prosa,
 			errors: errors.length > 0 ? errors : undefined,
 		})
 	} catch (err) {

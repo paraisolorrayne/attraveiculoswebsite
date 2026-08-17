@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Kysely, PostgresDialect, DummyDriver, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from 'kysely'
+import { Kysely, PostgresDialect, DummyDriver, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler, sql } from 'kysely'
 import type { Database } from '../types'
 
 /**
@@ -59,5 +59,38 @@ describe('Kysely foundation (tracking slice)', () => {
 
     expect(sql).toContain('update "visitor_sessions" set')
     expect(sql).toContain('"submitted_form"')
+  })
+})
+
+describe('Kysely foundation (vehicle_semantic_labels upsert)', () => {
+  // Espelha a query real de `gravarRotulosDerivados`
+  // (src/lib/mcp/repositorio-rotulos.ts). A linha mais crítica do arquivo é o
+  // `where` do onConflict: sem ele, a sincronização noturna pisaria em
+  // qualquer correção manual gravada em `sobrescrito_por`. Este teste prova
+  // em compilação — sem banco — que essa cláusula está de fato no SQL
+  // gerado, então apagar o `.where(...)` por engano quebra este teste.
+  it('compila o upsert com a trava de sobrescrita humana no WHERE', () => {
+    const { sql: compiledSql } = db
+      .insertInto('vehicle_semantic_labels')
+      .values([{
+        vehicle_id: 1,
+        rotulos_uso: ['familia'],
+        rotulos_comprador: [],
+        rotulos_forca: [],
+        prosa: null,
+        sobrescrito_por: null,
+      }])
+      .onConflict(oc => oc.column('vehicle_id').doUpdateSet({
+        rotulos_uso: eb => eb.ref('excluded.rotulos_uso'),
+        rotulos_comprador: eb => eb.ref('excluded.rotulos_comprador'),
+        rotulos_forca: eb => eb.ref('excluded.rotulos_forca'),
+        prosa: eb => eb.ref('excluded.prosa'),
+        atualizado_em: sql`now()`,
+      }).where('vehicle_semantic_labels.sobrescrito_por', 'is', null))
+      .compile()
+
+    expect(compiledSql).toContain('insert into "vehicle_semantic_labels"')
+    expect(compiledSql).toContain('on conflict ("vehicle_id") do update set')
+    expect(compiledSql).toContain('where "vehicle_semantic_labels"."sobrescrito_por" is null')
   })
 })
