@@ -3,26 +3,18 @@
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { Vehicle } from '@/types'
+import { resumoDoVeiculo } from '@/lib/resumo-do-veiculo'
 
 export function CopyVehicleButton({ vehicle }: { vehicle: Vehicle }) {
     const [copied, setCopied] = useState(false)
 
     const handleCopy = async () => {
-        const formatPrice = (price: number) => {
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-            }).format(price)
-        }
-
-        const textToCopy = `${vehicle.brand.toUpperCase()} ${vehicle.model.toUpperCase()}
-${vehicle.version || ''}
-Ano: ${vehicle.year_model}
-Quilometragem: ${vehicle.mileage.toLocaleString('pt-BR')} km
-Valor: ${formatPrice(vehicle.price)}`
+        // Formato e regras vivem em `resumoDoVeiculo`, testado — este texto é
+        // colado no WhatsApp do cliente, então vale ter teste em cima dele.
+        const textToCopy = resumoDoVeiculo(vehicle)
 
         try {
-            await navigator.clipboard.writeText(textToCopy.trim())
+            await navigator.clipboard.writeText(textToCopy)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         } catch (err) {
