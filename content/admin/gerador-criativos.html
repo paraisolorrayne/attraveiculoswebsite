@@ -2000,6 +2000,22 @@ function sugerirLinkDoStatus(v){
  */
 const FICHA_POSICOES = [1, 2, 11];
 
+/**
+ * URL da foto do estoque na resolução NATIVA da origem.
+ *
+ * Medido em produção (18/08/2026): a foto na S3 é 1920x1440 e este proxy era
+ * chamado com w=1080 — devolvia 1080x810, um terço dos pixels. Não aparecia em
+ * zoom 1,0, onde a banda do Clássico usa exatamente 1080 de largura; passando
+ * disso — que é o uso normal, fechar o enquadramento no carro — a foto era
+ * ampliada a partir de uma fonte já reduzida, e a peça saía mole.
+ *
+ * w=1920 e q=90 porque AMBOS precisam constar em next.config.ts: q=95 devolve
+ * HTTP 400, e pedir w acima de 1920 não adianta — o proxy não faz upscale.
+ * Foto pequena continua pequena (540x420 medido), só com compressão melhor;
+ * por isso a troca nunca piora nenhum caso.
+ */
+const urlFotoEstoque = u => '/_next/image?url=' + encodeURIComponent(u) + '&w=1920&q=90';
+
 /** Carrega a galeria do carro nas fotos da Ficha, respeitando quantas existem. */
 function preSelecionarFotosDaFicha(fotos){
   if(!fotos || fotos.length === 0) return;
@@ -2026,7 +2042,7 @@ function preSelecionarFotosDaFicha(fotos){
       }
       render();
     };
-    img.src = '/_next/image?url=' + encodeURIComponent(url) + '&w=1080&q=85';
+    img.src = urlFotoEstoque(url);
   });
 }
 
@@ -2064,7 +2080,7 @@ function montarFotosEstoque(v){
         if(state.tipo === 'ficha') avancarSlot();
         render();
       };
-      img.src = '/_next/image?url=' + encodeURIComponent(u) + '&w=1080&q=85';
+      img.src = urlFotoEstoque(u);
     });
     wrap.appendChild(t);
   }
