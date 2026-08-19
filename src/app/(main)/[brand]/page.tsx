@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { findSEOBrand } from '@/lib/seo-brands'
 import { MARCAS_EDITORIAL, editorialDaMarca, flexao } from '@/lib/seo/marcas-editorial'
+import { seNoAr } from '@/lib/seo/marcas-na-raiz'
 import { SITE_URL } from '@/lib/constants'
 import { BrandEditorialPage } from '@/components/brand/brand-editorial-page'
 
@@ -34,7 +35,9 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-	return Object.keys(MARCAS_EDITORIAL).map(brand => ({ brand }))
+	// `seNoAr` devolve vazio enquanto MARCAS_NA_RAIZ_NO_AR for false — sem params
+	// e com dynamicParams = false, /ferrari cai no 404 normal do Next.
+	return seNoAr(Object.keys(MARCAS_EDITORIAL)).map(brand => ({ brand }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

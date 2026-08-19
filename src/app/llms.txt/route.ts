@@ -7,6 +7,7 @@ import {
 import { ICONIC_CARS } from '@/lib/iconic-cars'
 import { SEO_BRANDS } from '@/lib/seo-brands'
 import { MARCAS_EDITORIAL } from '@/lib/seo/marcas-editorial'
+import { MARCAS_NA_RAIZ_NO_AR } from '@/lib/seo/marcas-na-raiz'
 import {
   formatMileage,
   formatPrice,
@@ -47,6 +48,22 @@ export async function GET() {
   const blocoEditorial = Object.entries(MARCAS_EDITORIAL)
     .map(([slug, e]) => `- [${e.titulo}](${BASE}/${slug}): ${e.resumo}`)
     .join('\n')
+
+  // A SEÇÃO INTEIRA é condicional, não só a lista: com as páginas fora do ar,
+  // um cabeçalho seguido de nada anunciaria a um LLM um recurso que responde
+  // 404. Vazia, ela some sem deixar buraco — a próxima seção encosta na
+  // anterior porque o sufixo já leva as duas quebras de linha.
+  const secaoEditorial = MARCAS_NA_RAIZ_NO_AR
+    ? `## Marcas — história, contexto e o que verificar num usado
+
+Páginas informacionais, distintas das de compra acima: história da marca, o que
+define sua engenharia, como ela circula no Brasil e o que checar antes de
+comprar um exemplar usado.
+
+${blocoEditorial}
+
+`
+    : ''
   try {
     const inventory = await loadListedInventory()
     const vehicles = inventory.vehicles
@@ -167,15 +184,7 @@ ${inventoryBlock}
 
 ${blocoMarcas}
 
-## Marcas — história, contexto e o que verificar num usado
-
-Páginas informacionais, distintas das de compra acima: história da marca, o que
-define sua engenharia, como ela circula no Brasil e o que checar antes de
-comprar um exemplar usado.
-
-${blocoEditorial}
-
-## Acervo icônico — Veículos marcantes já comercializados
+${secaoEditorial}## Acervo icônico — Veículos marcantes já comercializados
 
 ${ICONIC_CARS.map(c => `- ${c.brand} ${c.model} ${c.year}: ${c.engine}, ${c.power}, ${c.mileage} — ${c.editorial.slice(0, 120)}`).join('\n')}
 ${postsBlock}

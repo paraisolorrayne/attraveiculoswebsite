@@ -2,6 +2,7 @@ import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
 import { SEO_BRANDS } from '@/lib/seo-brands'
 import { MARCAS_EDITORIAL } from '@/lib/seo/marcas-editorial'
+import { seNoAr } from '@/lib/seo/marcas-na-raiz'
 import {
 	MODELOS,
 	PRECOS,
@@ -74,7 +75,9 @@ export async function GET() {
 		// A lista vem de MARCAS_EDITORIAL, não de SEO_BRANDS: só existe rota para
 		// marca com texto escrito. changefreq menor que o da página comercial —
 		// história de marca não muda toda semana; estoque muda.
-		...Object.keys(MARCAS_EDITORIAL).map(slug => ({
+		// `seNoAr`: fora do ar, o bloco some do sitemap. Anunciar URL que responde
+		// 404 ensina o crawler que o domínio publica link morto.
+		...seNoAr(Object.keys(MARCAS_EDITORIAL)).map(slug => ({
 			loc: `${BASE}/${slug}`,
 			lastmod,
 			changefreq: 'weekly' as const,
