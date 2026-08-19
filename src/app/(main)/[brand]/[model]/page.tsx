@@ -14,6 +14,7 @@ import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 import { ModelLandingPage, resolverModelo } from '@/components/brand/model-landing-page'
+import { MARCAS_NA_RAIZ_NO_AR } from '@/lib/seo/marcas-na-raiz'
 
 interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
@@ -22,6 +23,11 @@ interface ModelPageProps {
 export const dynamicParams = false
 
 export async function generateStaticParams() {
+	// Marca na raiz fora do ar: sai antes de consultar o estoque. Lista vazia
+	// com dynamicParams = false faz /ferrari/roma cair no 404 normal do Next.
+	// /comprar/ferrari/roma não passa por aqui e segue atendendo.
+	if (!MARCAS_NA_RAIZ_NO_AR) return []
+
 	// Curadas + derivadas do estoque. As derivadas existem enquanto houver
 	// unidade; quando o último carro do modelo sai, a rota deixa de ser gerada e
 	// o acesso é redirecionado para a marca (ver abaixo) em vez de dar 404 numa
