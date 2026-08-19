@@ -3,14 +3,17 @@ import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { evaluateCutouts } from '@/lib/rembg-quality'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+// Dois modelos em SÉRIE: o pior caso é 2x TIMEOUT_MS mais os recuos das
+// retentativas. 120s cortava a segunda predição no meio e recriava justamente
+// o candidato único que a sequência existe para evitar.
+export const maxDuration = 300
 
 // Remove o fundo da foto do veículo via Replicate. Usado pelo template
 // Editorial do Gerador de Criativos: o carro recortado é composto sobre o
 // cenário de estúdio embutido.
 //
 // GATE DE QUALIDADE (decisão de produto — agressivo pra não denegrir a marca):
-// rodamos os DOIS modelos em paralelo e passamos os recortes pelo porteiro
+// rodamos os DOIS modelos EM SEQUÊNCIA e passamos os recortes pelo porteiro
 // (src/lib/rembg-quality). Só aceitamos se a integridade >= REMBG_MIN_SCORE
 // (default 99%) E a concordância entre os modelos >= REMBG_MIN_AGREEMENT
 // (default 90%). Se não passar, devolvemos accepted:false e o cliente usa a
@@ -26,6 +29,26 @@ export const maxDuration = 120
 // outros dois — e concorda menos com o BRIA (IoU 94% contra 99% do 851-labs).
 // Na picape branca em piso liso os três empatam; a diferença aparece no caso
 // difícil, que é justamente o que o gate existe para pegar.
+
+// SEQUENCIAL, não paralelo — medido em 18/08/2026 (scripts/medir-rembg.ts,
+// G 63 + McLaren GTS + RAM 1500 + RAM 2500, 6 fotos cada):
+//
+// Em paralelo, o burst 1 da conta derruba o segundo disparo e a retentativa
+// única (com o `retry-after` curto que o Replicate devolve) não alcança: numa
+// passada de 48 execuções, 21 das 23 fotos avaliadas terminaram com UM modelo
+// só. Com candidato único o IoU não é calculado, `agreementOk` vira true por
+// omissão e o gate desaba para "integridade >= 99" puro — exatamente o oposto
+// do que este bloco promete.
+//
+// O custo disso foi medido cruzando as duas passadas nas 23 fotos comparáveis:
+// 3 FALSOS ACEITES (McLaren foto 16 com concordância real de 77%; RAM 1500
+// foto 20 com 0%; RAM 2500 foto 20 com 15% — os dois modelos discordando da
+// silhueta inteira, aprovado com nota 100%) e 2 FALSAS REJEIÇÕES (G 63 foto 9
+// e RAM 1500 foto 5, ambas 100%/>=90% quando o par existe).
+//
+// Em sequência, com o recuo crescente de `runRembg`, o par se formou em 24/24.
+// Custa ~10s por recorte (20-25s contra 7-18s). É o preço do consenso que este
+// gate pressupõe — sem ele, os dois modelos são teatro.
 const REMBG_MODELS = [
   process.env.REMBG_MODEL || '851-labs/background-remover',
   'bria/remove-background',
@@ -74,10 +97,9 @@ async function runRembg(model: string, apiToken: string, image: string): Promise
     return null
   }
 
-  // Rodamos os dois modelos EM PARALELO, e conta sem método de pagamento fica
-  // com burst 1 — o segundo disparo leva 429 na hora e o par vira modelo único,
-  // que é o cenário que o gate existe para evitar. Uma repetição respeitando o
-  // Retry-After resolve, ao custo de ~10s só quando o limite morde.
+  // Conta sem método de pagamento fica com burst 1: disparo negado vem como
+  // 429 com `retry-after` curto (< 2s), cedo demais para a predição anterior
+  // ter terminado. Uma repetição só não alcançava — daí o recuo CRESCENTE.
   const dispara = () => fetch(
     meta.oficial
       ? `https://api.replicate.com/v1/models/${model}/predictions`
@@ -92,15 +114,20 @@ async function runRembg(model: string, apiToken: string, image: string): Promise
     },
   )
 
-  let start = await dispara()
-  if (start.status === 429) {
-    const espera = Math.min(20, Number(start.headers.get('retry-after')) || 11)
-    console.warn(`[GeradorRembg] ${model} 429 — repetindo em ${espera}s`)
-    await new Promise(r => setTimeout(r, espera * 1000))
+  let start: Response | null = null
+  for (let tentativa = 0; tentativa < 5; tentativa++) {
     start = await dispara()
+    if (start.status !== 429) break
+    const header = Number(start.headers.get('retry-after'))
+    const espera = Math.min(
+      30,
+      Math.max(Number.isFinite(header) && header > 0 ? header : 0, 3 * 2 ** tentativa),
+    )
+    console.warn(`[GeradorRembg] ${model} 429 — repetindo em ${espera}s (tentativa ${tentativa + 1}/5)`)
+    await new Promise(r => setTimeout(r, espera * 1000))
   }
-  if (!start.ok) {
-    console.warn(`[GeradorRembg] ${model} start HTTP ${start.status}`)
+  if (!start || !start.ok) {
+    console.warn(`[GeradorRembg] ${model} start HTTP ${start?.status ?? 'sem resposta'}`)
     return null
   }
   const pred = await start.json()
@@ -159,9 +186,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Roda os dois modelos EM PARALELO — a latência fica ~= a de um só,
-    // e ficamos com os dois recortes pra cruzar.
-    const buffers = await Promise.all(REMBG_MODELS.map(m => runRembg(m, apiToken, input)))
+    // Um modelo de cada vez: o segundo só dispara depois de o primeiro
+    // terminar, que é o que o burst 1 permite. Ver a medição no topo.
+    const buffers: (Buffer | null)[] = []
+    for (const m of REMBG_MODELS) {
+      buffers.push(await runRembg(m, apiToken, input))
+    }
 
     if (!buffers.some(Boolean)) {
       return NextResponse.json({ error: 'Recorte falhou nos dois modelos — tente outra foto' }, { status: 502 })
