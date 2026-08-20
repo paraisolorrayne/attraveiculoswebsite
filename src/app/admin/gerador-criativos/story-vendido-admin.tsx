@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, Loader2, Search, AlertTriangle, Image as ImageIcon } from 'lucide-react'
+import { Download, Loader2, Search, AlertTriangle, Upload, Image as ImageIcon } from 'lucide-react'
 import {
   renderStory, fotoDoVeiculo, carregar, fontesProntas, exportarPng,
   type Veiculo, type Assets,
@@ -59,7 +59,7 @@ export function StoryVendidoAdmin() {
   const [selo, setSelo] = useState('VENDIDO')
   const [mostrarSite, setMostrarSite] = useState(false)
 
-  const [urlFoto, setUrlFoto] = useState('')
+  const [nomeArquivo, setNomeArquivo] = useState('')
   const [busca, setBusca] = useState('')
   const [resultados, setResultados] = useState<VeiculoEstoque[]>([])
   const [buscando, setBuscando] = useState(false)
@@ -94,12 +94,15 @@ export function StoryVendidoAdmin() {
     return () => { vivo = false }
   }, [])
 
-  /** Carrega a foto pelo proxy de mesma origem — S3 direto tinge o canvas. */
-  const aplicarFoto = useCallback(async (url: string) => {
-    if (!url) return
-    setCarregandoFoto(true); setErro(null)
+  /**
+   * Aceita a foto já carregada e só decide sobre proporção e assets.
+   *
+   * Duas origens, dois caminhos: a do ESTOQUE passa por fotoDoVeiculo(), que
+   * usa /_next/image — buscar do S3 direto tinge o canvas e quebra o toBlob().
+   * A do UPLOAD vira object URL, que é mesma origem por construção e não tinge.
+   */
+  const usarFoto = useCallback((foto: HTMLImageElement) => {
     try {
-      const foto = await fotoDoVeiculo(url)
       const razao = foto.naturalWidth / foto.naturalHeight
       const desvio = Math.abs(razao / RAZAO_ALVO - 1)
       if (desvio > TOLERANCIA) {
@@ -119,13 +122,44 @@ export function StoryVendidoAdmin() {
       const fixos = fixosRef.current
       if (!fixos) throw new Error('assets fixos ainda não carregaram')
       setAssets({ foto, caminhao: fixos.caminhao, bandeira: fixos.bandeira })
-      setUrlFoto(url)
+      setErro(null)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
+    }
+  }, [])
+
+  /** Foto do estoque: precisa do proxy de mesma origem. */
+  const aplicarDoEstoque = useCallback(async (url: string) => {
+    if (!url) return
+    setCarregandoFoto(true); setErro(null)
+    try {
+      usarFoto(await fotoDoVeiculo(url))
+      setNomeArquivo('')
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e))
     } finally {
       setCarregandoFoto(false)
     }
-  }, [])
+  }, [usarFoto])
+
+  /**
+   * Upload do computador. O object URL é revogado assim que a imagem decodifica
+   * — o canvas desenha a partir do bitmap, não da URL, então segurá-la só
+   * vazaria memória a cada troca de foto.
+   */
+  const aplicarUpload = useCallback(async (file: File) => {
+    setCarregandoFoto(true); setErro(null)
+    const url = URL.createObjectURL(file)
+    try {
+      usarFoto(await carregar(url))
+      setNomeArquivo(file.name)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
+    } finally {
+      URL.revokeObjectURL(url)
+      setCarregandoFoto(false)
+    }
+  }, [usarFoto])
 
   async function buscarEstoque() {
     if (!busca.trim()) { setResultados([]); return }
@@ -148,7 +182,7 @@ export function StoryVendidoAdmin() {
     setSpec([v.year, km].filter(Boolean).join(' · '))
     setResultados([])
     const primeira = v.photos?.[0]
-    if (primeira) void aplicarFoto(primeira)
+    if (primeira) void aplicarDoEstoque(primeira)
     else setErro('Esse veículo não tem foto no estoque.')
   }
 
@@ -237,25 +271,32 @@ export function StoryVendidoAdmin() {
           )}
 
           <label className="mt-4 block text-xs font-medium text-foreground-secondary">
-            …ou cole a URL da foto
+            …ou envie a foto do computador
           </label>
-          <div className="mt-1 flex gap-2">
-            <input
-              value={urlFoto}
-              onChange={e => setUrlFoto(e.target.value)}
-              placeholder="https://autoconf-production.s3.amazonaws.com/…"
-              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground"
-            />
-            <button
-              type="button" onClick={() => void aplicarFoto(urlFoto)} disabled={carregandoFoto}
-              className="rounded-md border border-border px-3 py-2 text-sm text-foreground hover:bg-background-soft disabled:opacity-50"
-            >
-              {carregandoFoto ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Usar'}
-            </button>
+          <div className="mt-1 flex items-center gap-3">
+            <label className="cursor-pointer rounded-md border border-border px-3 py-2 text-sm text-foreground hover:bg-background-soft">
+              {carregandoFoto ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-2"><Upload className="h-4 w-4" /> Escolher imagem</span>
+              )}
+              <input
+                type="file" accept="image/*" className="hidden" disabled={carregandoFoto}
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) void aplicarUpload(f)
+                  e.target.value = ''   // permite reenviar o MESMO arquivo
+                }}
+              />
+            </label>
+            {nomeArquivo && (
+              <span className="truncate text-xs text-foreground-secondary">{nomeArquivo}</span>
+            )}
           </div>
           <p className="mt-1 text-xs text-foreground-secondary">
-            A foto passa pelo <code>/_next/image</code> (mesma origem). Carregar do S3 direto
-            tinge o canvas e o download falha.
+            Do estoque, a foto passa pelo <code>/_next/image</code> — buscar do S3 direto tinge o
+            canvas e o download falha. Do computador não há esse risco: o arquivo é lido da própria
+            página. Melhor resultado em 4:3 (ex.: 1920×1440).
           </p>
         </section>
 

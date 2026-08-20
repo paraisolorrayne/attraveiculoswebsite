@@ -171,6 +171,7 @@ createServer(async (req, res) => {
   // não tinja o canvas — igual ao que acontece no site.
   const estaticos: Record<string, [string, string]> = {
     '/harness': ['.gerador-local/harness.html', 'text/html; charset=utf-8'],
+    '/vendido': ['.gerador-local/vendido.html', 'text/html; charset=utf-8'],
     '/story-vendido.js': ['.gerador-local/story-vendido.js', 'text/javascript'],
     '/creative-css/fonts.css': ['content/admin/creative/fonts.css', 'text/css'],
     '/creative/truck-base.webp': ['public/creative/truck-base.webp', 'image/webp'],
