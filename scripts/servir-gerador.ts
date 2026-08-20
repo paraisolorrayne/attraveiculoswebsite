@@ -166,6 +166,25 @@ createServer(async (req, res) => {
     res.writeHead(200); res.end('ok'); return
   }
 
+  // Harness do Story Vendido: bundle do módulo, fontes e assets servidos da
+  // MESMA origem, para que fotoDoVeiculo() -> /_next/image (proxiado abaixo)
+  // não tinja o canvas — igual ao que acontece no site.
+  const estaticos: Record<string, [string, string]> = {
+    '/harness': ['.gerador-local/harness.html', 'text/html; charset=utf-8'],
+    '/story-vendido.js': ['.gerador-local/story-vendido.js', 'text/javascript'],
+    '/creative-css/fonts.css': ['content/admin/creative/fonts.css', 'text/css'],
+    '/creative/truck-base.webp': ['public/creative/truck-base.webp', 'image/webp'],
+    '/creative/flag-br.png': ['public/creative/flag-br.png', 'image/png'],
+    '/fonts/Archivo.woff2': ['public/fonts/Archivo.woff2', 'font/woff2'],
+    '/fonts/Inter.woff2': ['public/fonts/Inter.woff2', 'font/woff2'],
+  }
+  if (estaticos[caminho]) {
+    const [arq, tipo] = estaticos[caminho]
+    res.writeHead(200, { 'Content-Type': tipo })
+    res.end(readFileSync(resolve(process.cwd(), arq)))
+    return
+  }
+
   if (caminho.startsWith('/api/') || caminho.startsWith('/_next/')) {
     try {
       const r = await fetch(ORIGEM + url, { headers: { 'user-agent': 'gerador-local' } })
