@@ -1,0 +1,53 @@
+/*
+ * Attra — instâncias de fonte para o gerador de criativos.
+ *
+ * O problema: o gerador Python usa fontes VARIÁVEIS e crava os eixos
+ * (Archivo tem wght 100-900 e wdth 62-125). O canvas 2D não expõe
+ * font-variation-settings — ctx.font só entende o shorthand CSS, e suporte a
+ * font-stretch percentual no shorthand ainda é irregular entre engines.
+ *
+ * A solução: declarar uma @font-face por instância, com valor ÚNICO nos
+ * descritores. O browser trava os eixos da variável nesses valores, e aí basta
+ * referenciar pelo family no ctx.font.
+ *
+ * Alternativa mais robusta (recomendada para produção): gerar instâncias
+ * estáticas e servir só elas — elimina qualquer ambiguidade de engine e corta
+ * o payload. Com fontTools:
+ *
+ *   fonttools varLib.instancer Archivo.ttf wght=800 wdth=104 -o AttraSelo.ttf
+ *   fonttools varLib.instancer Archivo.ttf wght=700 wdth=110 -o AttraTitulo.ttf
+ *   pyftsubset AttraSelo.ttf --unicodes="U+0020-007E,U+00C0-00FF" \
+ *              --flavor=woff2 --output-file=AttraSelo.woff2
+ */
+
+@font-face {
+  font-family: 'AttraSelo';                 /* faixa VENDIDO */
+  src: url('/fonts/Archivo.woff2') format('woff2-variations');
+  font-weight: 800;
+  font-stretch: 104%;
+  font-display: block;                      /* nunca renderize com fallback:
+                                               mudaria a métrica e o layout */
+}
+
+@font-face {
+  font-family: 'AttraTitulo';               /* nome do veículo */
+  src: url('/fonts/Archivo.woff2') format('woff2-variations');
+  font-weight: 700;
+  font-stretch: 110%;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Inter';                     /* frase fixa, spec, domínio */
+  src: url('/fonts/Inter.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-display: block;
+}
+
+:root {
+  --attra-ink: #060708;
+  --attra-accent: #9a1c1c;
+  --attra-muted: #a8abb2;
+  --attra-letter: #ffffff;                  /* a marca no fundo escuro */
+  --attra-red: #f62826;                     /* vermelho do "A" (≠ do accent) */
+}

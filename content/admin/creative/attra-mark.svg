@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 882.75 771.25"
+     width="882.75" height="771.25" role="img" aria-label="Attra Veículos">
+  <title>Attra Veículos</title>
+  <path fill="var(--attra-letter, #FFFFFF)" fill-rule="evenodd" d="M295.50 606.00L148.25 556.75L12.75 770.75L194.75 770.75L295.00 610.00ZM224.75 436.00L402.00 436.50L558.25 181.75L611.75 436.75L794.00 437.25L674.50 0.00L498.50 0.00Z"/>
+  <path fill="var(--attra-red, #F62826)" fill-rule="evenodd" d="M0.00 470.50L830.75 751.50L882.50 767.25L804.75 478.00L800.50 469.75Z"/>
+</svg>
