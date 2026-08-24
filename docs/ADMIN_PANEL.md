@@ -328,7 +328,18 @@ social_media, content, paid_ads, email, events, partnerships, other.)
 
 Ferramenta standalone (HTML auto-contido, canvas 1080×1920) para montar criativos de
 stories/anúncios no padrão visual da Attra: fotos com zoom/enquadramento, logos oficiais
-embutidas e preferência de logo persistida em `localStorage`. Não usa banco nem APIs.
+embutidas e preferência de logo persistida em `localStorage`.
+
+- **Dois formatos por peça:** o botão "Baixar Stories + Feed" gera o Stories 1080×1920 e,
+  da mesma composição, o **Feed 1080×1350 (4:5, o formato que a Meta usa no feed de
+  anúncios)** — só com a foto principal, sem foto traseira/tira de detalhes. Baixa os
+  dois PNGs (`NOME-STORIES-v1.png`, `NOME-FEED-v1.png`) e **envia os dois automaticamente**
+  ao board do Marketing (`POST /api/admin/marketing/creatives`, um card por formato,
+  coluna `marketing_creatives.format`). Não há mais checkbox "enviar ao patrocinado".
+- O Feed não tem prévia na tela: nasce num canvas fora da tela na hora de baixar (os
+  `render*` do HTML leem a altura em `H` e têm um ramo `FEED`).
+- Formatos válidos e apresentação (rótulo, proporção, sufixo) vivem em
+  `src/lib/marketing-creatives.ts`.
 
 - **Como funciona:** a página embute via iframe a rota
   `GET /api/admin/marketing/gerador-criativos`, que exige admin logado e serve o HTML.

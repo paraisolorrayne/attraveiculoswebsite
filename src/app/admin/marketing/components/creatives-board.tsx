@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Download, CheckCircle2, ImageOff, RefreshCw } from 'lucide-react'
+import {
+  rotuloFormatoCriativo,
+  sufixoArquivoCriativo,
+  proporcaoFormatoCriativo,
+} from '@/lib/marketing-creatives'
 
 interface Creative {
   id: string
   image_url: string
   vehicle_name: string | null
   created_by_name: string | null
+  format: string | null   // 'stories' | 'feed' — linhas antigas podem vir sem
   created_at: string
 }
 
@@ -62,8 +68,9 @@ export function CreativesBoard() {
         <ImageOff className="w-8 h-8 mx-auto text-foreground-secondary mb-3" />
         <p className="text-foreground font-medium">Nenhum criativo para publicar</p>
         <p className="text-sm text-foreground-secondary mt-2">
-          No Gerador de Criativos, marque <strong>&quot;Enviar ao patrocinado&quot;</strong> ao
-          gerar — o criativo aparece aqui em qualidade cheia, sem passar por WhatsApp.
+          Cada peça baixada no Gerador de Criativos chega aqui sozinha, em dois
+          formatos — <strong>Stories 9:16</strong> e <strong>Feed 4:5</strong> — em
+          qualidade cheia, sem passar por WhatsApp.
         </p>
       </div>
     )
@@ -92,13 +99,19 @@ export function CreativesBoard() {
             <img
               src={c.image_url}
               alt={c.vehicle_name || 'Criativo'}
-              className="w-full aspect-[9/16] object-cover bg-background-soft"
+              className="w-full object-cover bg-background-soft"
+              style={{ aspectRatio: proporcaoFormatoCriativo(c.format) }}
               loading="lazy"
             />
             <div className="p-3 flex flex-col gap-2 flex-1">
               <div className="min-h-[2.5rem]">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {c.vehicle_name || 'Criativo'}
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {c.vehicle_name || 'Criativo'}
+                  </div>
+                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground-secondary">
+                    {rotuloFormatoCriativo(c.format)}
+                  </span>
                 </div>
                 <div className="text-[11px] text-foreground-secondary">
                   {c.created_by_name ? `por ${c.created_by_name}` : ''} · {fmtData(c.created_at)}
@@ -107,7 +120,7 @@ export function CreativesBoard() {
               <div className="mt-auto flex flex-col gap-2">
                 <a
                   href={c.image_url}
-                  download={`${(c.vehicle_name || 'criativo').replace(/[^a-z0-9]+/gi, '-')}.png`}
+                  download={`${(c.vehicle_name || 'criativo').replace(/[^a-z0-9]+/gi, '-')}-${sufixoArquivoCriativo(c.format)}.png`}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors"
                 >
                   <Download className="w-4 h-4" />

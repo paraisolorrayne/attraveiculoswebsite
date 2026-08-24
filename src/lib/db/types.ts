@@ -452,6 +452,7 @@ export interface MarketingCreativesTable {
   created_by: string | null
   created_by_name: string | null
   status: Generated<string>
+  format: Generated<string>   // 'stories' (1080×1920) | 'feed' (1080×1350) — ver src/lib/marketing-creatives.ts
   created_at: Timestamp
 }
 
