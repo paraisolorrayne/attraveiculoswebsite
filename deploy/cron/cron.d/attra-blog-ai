@@ -1,4 +1,8 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-0 4 * * * root /usr/local/bin/attra-blog-ai.sh >> /var/log/attra-blog.log 2>&1
+# 10:00 na hora da VPS (UTC+2 no verão, UTC+1 no inverno) = 05:00-06:00 em
+# Brasília. Era 04:00 local = 23:00 de Brasília do DIA ANTERIOR: como
+# published_date é a hora da geração, todo post nascia datado de ontem para o
+# leitor brasileiro e "o post de hoje" nunca aparecia (26/08/2026).
+0 10 * * * root /usr/local/bin/attra-blog-ai.sh >> /var/log/attra-blog.log 2>&1

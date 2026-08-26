@@ -20,7 +20,7 @@ deploy/cron/
     attra-cleanup-tracking.sh   # curl /api/cron/cleanup-tracking (retenção 60d)
     attra-indexnow-sync.sh      # curl /api/indexnow/sync (avisa Bing/Copilot/ChatGPT do que mudou; precisa de INDEXNOW_KEY)
   cron.d/                       # -> /etc/cron.d/ (0644, root)
-    attra-blog-ai               # 0 4 * * *   (diário 04:00)
+    attra-blog-ai               # 0 10 * * *  (diário 10:00 VPS = 05-06h Brasília; antes 04:00 = 23h de ontem no Brasil)
     attra-news-ingestion        # 0 3 * * *   (diário 03:00 — no-op se o ciclo tem <6 dias; auto-cura quando o domingo falha)
     attra-hero-preprocess       # 0 */6 * * * (a cada 6h)
     attra-cleanup-tracking      # 30 3 * * *  (diário 03:30)
