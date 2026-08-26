@@ -70,7 +70,13 @@ export function HomeHero({ videoId }: HomeHeroProps) {
   const embedUrl = videoId ? buildEmbedUrl(videoId) : null
 
   // Bloco de texto editorial — reusado em mobile e desktop.
-  const editorialCopy = (
+  //
+  // `Titulo` muda por bloco: o mobile leva o ÚNICO <h1> do documento (é a
+  // viewport que o Googlebot e os crawlers de IA leem) e o desktop leva <h2>,
+  // como já se faz na ficha de veículo. Antes os dois blocos repetiam <h1> e a
+  // home saía com dois títulos principais — sinal ambíguo para buscador e LLM
+  // (avaliação AEO, 26/08/2026).
+  const editorialCopy = (Titulo: 'h1' | 'h2') => (
     <>
       {/* Eyebrow */}
       <div className="flex items-center gap-4 mb-7 sm:mb-9">
@@ -84,7 +90,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
       </div>
 
       {/* Manifesto headline */}
-      <h1
+      <Titulo
         className="text-foreground font-normal tracking-tight leading-[1.05]
                    text-[clamp(2.5rem,5.5vw,5rem)] mb-6 sm:mb-8"
         style={{ fontFamily: 'var(--font-montserrat)' }}
@@ -94,7 +100,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
             {line}
           </span>
         ))}
-      </h1>
+      </Titulo>
 
       {/* Subhead */}
       <p className="text-foreground-secondary font-light text-sm sm:text-[15px] tracking-wide
@@ -157,7 +163,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
           ============================================================ */}
       <div className="lg:hidden relative w-full bg-background pt-24 pb-12 px-6">
         <div className="flex flex-col items-start text-left max-w-md mx-auto">
-          {editorialCopy}
+          {editorialCopy('h1')}
           {videoPlayer && <div className="w-full mt-10">{videoPlayer}</div>}
         </div>
       </div>
@@ -169,7 +175,7 @@ export function HomeHero({ videoId }: HomeHeroProps) {
                       min-h-[560px] py-16 xl:py-20 overflow-hidden px-[10%]">
         {/* Coluna esquerda — texto */}
         <div className="relative z-10 flex flex-col justify-center items-start text-left">
-          {editorialCopy}
+          {editorialCopy('h2')}
         </div>
 
         {/* Coluna direita — vídeo (centralizado verticalmente) */}

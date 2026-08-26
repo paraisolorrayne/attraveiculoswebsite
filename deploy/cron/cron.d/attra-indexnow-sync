@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+40 * * * * root /usr/local/bin/attra-indexnow-sync.sh >> /var/log/attra-indexnow-sync.log 2>&1

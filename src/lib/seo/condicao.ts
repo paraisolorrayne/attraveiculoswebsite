@@ -1,5 +1,12 @@
 export interface CondicaoPage {
 	slug: string
+	/**
+	 * Resposta direta à pergunta que a página existe para responder, em 2-3
+	 * frases, antes da definição. É o trecho que um assistente de IA extrai e
+	 * cita (avaliação AEO, 26/08/2026). Só afirma o que `comoAttraReduz` já
+	 * detalha — nada de alegação nova.
+	 */
+	respostaDireta?: string
 	title: string
 	metaTitle: string
 	metaDescription: string
@@ -87,6 +94,7 @@ export const CONDICOES: CondicaoPage[] = [
 		metaTitle: 'Carros Esportivos Usados à Venda | Procedência Verificada | Attra Veículos',
 		metaDescription: 'Carros esportivos usados com procedência verificada e histórico auditado. Porsche, Ferrari, BMW M e AMG. O que checar antes de comprar. Attra Veículos.',
 		keywords: ['carros esportivos usados', 'carro esportivo usado a venda', 'comprar esportivo usado', 'loja de carro esportivo', 'esportivo seminovo brasil'],
+		respostaDireta: 'Um carro esportivo usado vale a pena quando o histórico sustenta o preço: revisões na rede autorizada, nenhum uso em pista escondido, embreagem, freios e suspensão avaliados e originalidade conferida. É o que a Attra verifica antes de colocar um Porsche, Ferrari, BMW M ou Mercedes-AMG à venda — e o que você deve exigir de qualquer loja.',
 		definicao: 'Carro esportivo usado é o veículo de performance que já teve um ou mais proprietários — de um Porsche 911 a um BMW M ou Mercedes-AMG. É o segmento em que a diferença entre um bom e um mau negócio está menos no preço e mais no histórico: como foi rodado, onde foi revisado e o que já precisou trocar.',
 		vantagensVsZeroKm: [
 			'A depreciação mais forte já foi absorvida pelo primeiro dono',
@@ -122,6 +130,7 @@ export const CONDICOES: CondicaoPage[] = [
 		metaTitle: 'Carros de Luxo Usados à Venda | Curadoria e Procedência | Attra Veículos',
 		metaDescription: 'Carros de luxo usados com procedência verificada, laudo cautelar e entrega em todo o Brasil. Como avaliar antes de comprar. Attra Veículos, Uberlândia (MG).',
 		keywords: ['carros de luxo usados', 'carro de luxo usado a venda', 'comprar carro de luxo usado', 'onde comprar carros de luxo', 'loja de carros de luxo'],
+		respostaDireta: 'Carro de luxo usado se compra com três coisas na mão: laudo cautelar independente, consulta de procedência (sinistro, gravame, débitos e proprietários) e o levantamento do que está perto de vencer — revisão, pneus, suspensão. A Attra faz as três antes de o carro entrar no estoque e entrega em todo o Brasil.',
 		definicao: 'Carro de luxo usado é o veículo de alto padrão que já foi emplacado — sedãs, SUVs e cupês de marcas como Mercedes-Benz, BMW, Audi, Land Rover, Porsche e Bentley. É o segmento com a maior distância entre o preço de anúncio e o custo real de propriedade, e é aí que a procedência decide o negócio.',
 		vantagensVsZeroKm: [
 			'A perda de valor mais acentuada acontece nos dois primeiros anos e já passou',

@@ -545,6 +545,13 @@ export interface InventorySnapshotsTable {
   created_at: Timestamp
 }
 
+/** Última assinatura submetida ao IndexNow por URL — ver src/lib/indexnow.ts. */
+export interface IndexnowSubmissionsTable {
+  url: string
+  assinatura: string
+  submitted_at: Generated<Timestamp>
+}
+
 export interface AdminUsersTable {
   id: string
   email: string
@@ -597,6 +604,7 @@ export interface Database {
   newsletter_subscribers: NewsletterSubscribersTable
   crm_cards: CrmCardsTable
   inventory_snapshots: InventorySnapshotsTable
+  indexnow_submissions: IndexnowSubmissionsTable
   admin_users: AdminUsersTable
 }
 
@@ -622,7 +630,7 @@ export const TABELAS_DO_CODIGO = [
   'news_sources', 'news_articles', 'marketing_strategies', 'marketing_tasks',
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
-  'newsletter_subscribers', 'crm_cards', 'inventory_snapshots', 'admin_users',
+  'newsletter_subscribers', 'crm_cards', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
 ] as const satisfies readonly (keyof Database)[]
 
 /**

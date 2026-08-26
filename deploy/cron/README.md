@@ -18,11 +18,13 @@ deploy/cron/
     attra-news-ingestion.sh     # curl /api/cron/news-ingestion
     attra-hero-preprocess.sh    # npm run hero:preprocess (tsx, sem HTTP)
     attra-cleanup-tracking.sh   # curl /api/cron/cleanup-tracking (retenção 60d)
+    attra-indexnow-sync.sh      # curl /api/indexnow/sync (avisa Bing/Copilot/ChatGPT do que mudou; precisa de INDEXNOW_KEY)
   cron.d/                       # -> /etc/cron.d/ (0644, root)
     attra-blog-ai               # 0 4 * * *   (diário 04:00)
     attra-news-ingestion        # 0 3 * * *   (diário 03:00 — no-op se o ciclo tem <6 dias; auto-cura quando o domingo falha)
     attra-hero-preprocess       # 0 */6 * * * (a cada 6h)
     attra-cleanup-tracking      # 30 3 * * *  (diário 03:30)
+    attra-indexnow-sync         # 40 * * * *  (de hora em hora, :40)
   install-crons.sh              # aplica tudo, idempotente, valida com ls
 ```
 

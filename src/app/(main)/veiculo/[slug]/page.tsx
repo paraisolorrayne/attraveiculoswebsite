@@ -26,6 +26,7 @@ import { buildVehiclePageSchemas } from '@/lib/vehicle-schema'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL } from '@/lib/constants'
 import { pageTitle } from '@/lib/seo/page-metadata'
+import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
 
 /** Generate dynamic FAQ items based on vehicle data for SEO */
@@ -238,7 +239,17 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 		}
 	}
 
-	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs)
+	// Frescor: a ficha é montada lendo o estoque ao vivo, então "conferido em"
+	// é a data desta renderização — verdade verificável, não um carimbo fixo.
+	// "Publicado em" só aparece quando a fonte informou a data (updated_at =
+	// `publicacao` da AutoConf; sem ela o mapeamento cai em now(), que aqui
+	// coincidiria com o dia de hoje e leria como anúncio novo sem ser).
+	const conferidoEm = new Date().toISOString()
+	const conferidoEmBR = formatarDataBR(conferidoEm)
+	const publicadoEmBR = formatarDataBR(vehicle.updated_at)
+	const mostrarPublicado = publicadoEmBR && publicadoEmBR !== conferidoEmBR
+
+	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs, conferidoEm)
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -278,6 +289,12 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 			<Container className="py-8 lg:py-12">
 				{/* Breadcrumb - afterHero because it comes after full-screen gallery */}
 				<Breadcrumb items={breadcrumbItems} afterHero />
+
+				{/* Frescor — visível para quem lê e para quem cita */}
+				<p className="mt-4 text-sm text-foreground-secondary">
+					{mostrarPublicado && <>Anúncio publicado em {publicadoEmBR} · </>}
+					Preço e disponibilidade conferidos em {conferidoEmBR}
+				</p>
 
 				{/* Main content grid */}
 				<div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">

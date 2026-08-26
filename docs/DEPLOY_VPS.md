@@ -107,6 +107,10 @@ GEMINI_API_KEY=...
 NEXT_PUBLIC_SITE_URL=https://attraveiculos.com.br
 RESEND_API_KEY=...
 NOTIFICATION_EMAIL=faleconosco@attraveiculos.com.br
+# IndexNow (Bing → Copilot e busca do ChatGPT): 32+ caracteres [a-zA-Z0-9-];
+# gere com `openssl rand -hex 16`. Servida em /indexnow/{chave}.txt; o cron
+# attra-indexnow-sync envia o que mudou. Sem ela, a rota responde `desligado`.
+INDEXNOW_KEY=...
 ```
 
 Como o PM2 agora inicia o `server.js` diretamente (e não mais via `npm start`),
