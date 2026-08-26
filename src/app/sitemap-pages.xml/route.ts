@@ -1,5 +1,8 @@
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
+import { getVehicles } from '@/lib/autoconf-api'
+import { getBlogPosts } from '@/lib/blog-api'
+import { LASTMOD_CONTEUDO_ESTATICO, dataMaisRecente, lastmodDoEstoque } from '@/lib/seo/frescor'
 import { SEO_BRANDS } from '@/lib/seo-brands'
 import { MARCAS_EDITORIAL } from '@/lib/seo/marcas-editorial'
 import { seNoAr } from '@/lib/seo/marcas-na-raiz'
@@ -19,10 +22,31 @@ export const revalidate = 3600
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL
 
 export async function GET() {
-	const lastmod = new Date().toISOString()
+	// Três lastmods, nenhum deles a hora do build (ver src/lib/seo/frescor.ts):
+	//   estoque — publicação mais nova entre os veículos: muda quando entra carro;
+	//   blog    — post mais recente (publicado ou atualizado);
+	//   lastmod — conteúdo fixo, data mantida à mão.
+	// Antes tudo era `new Date()` e o sitemap dizia que 300 páginas mudaram a
+	// cada build — um sinal que o buscador aprende a ignorar.
+	const lastmod = LASTMOD_CONTEUDO_ESTATICO
+	let estoque = lastmod
+	let blog = lastmod
+	try {
+		const { vehicles } = await getVehicles({ registros_por_pagina: 1000 })
+		estoque = lastmodDoEstoque(vehicles)
+	} catch (err) {
+		console.error('sitemap-pages: estoque indisponível, lastmod estático', err)
+	}
+	try {
+		const posts = await getBlogPosts({ limit: 50 })
+		blog = dataMaisRecente(posts.map(p => p.updated_date || p.published_date)) ?? lastmod
+	} catch (err) {
+		console.error('sitemap-pages: blog indisponível, lastmod estático', err)
+	}
+
 	const pages: SitemapUrl[] = [
-		{ loc: BASE, lastmod, changefreq: 'daily', priority: 1.0 },
-		{ loc: `${BASE}/veiculos`, lastmod, changefreq: 'hourly', priority: 0.9 },
+		{ loc: BASE, lastmod: estoque, changefreq: 'daily', priority: 1.0 },
+		{ loc: `${BASE}/veiculos`, lastmod: estoque, changefreq: 'hourly', priority: 0.9 },
 		{ loc: `${BASE}/sobre`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/contato`, lastmod, changefreq: 'monthly', priority: 0.8 },
 		{ loc: `${BASE}/financiamento`, lastmod, changefreq: 'monthly', priority: 0.8 },
@@ -31,8 +55,8 @@ export async function GET() {
 		{ loc: `${BASE}/servicos/importacao`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/compramos-seu-carro`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/solicitar-veiculo`, lastmod, changefreq: 'monthly', priority: 0.6 },
-		{ loc: `${BASE}/blog`, lastmod, changefreq: 'daily', priority: 0.8 },
-		{ loc: `${BASE}/blog/arquivo`, lastmod, changefreq: 'daily', priority: 0.6 },
+		{ loc: `${BASE}/blog`, lastmod: blog, changefreq: 'daily', priority: 0.8 },
+		{ loc: `${BASE}/blog/arquivo`, lastmod: blog, changefreq: 'daily', priority: 0.6 },
 		{ loc: `${BASE}/videos`, lastmod, changefreq: 'daily', priority: 0.7 },
 		// Índice de notícias: revalida a cada ciclo semanal de ingestão, daí o changefreq weekly.
 		{ loc: `${BASE}/news`, lastmod, changefreq: 'weekly', priority: 0.6 },
@@ -51,15 +75,15 @@ export async function GET() {
 		{ loc: `${BASE}/politica-privacidade`, lastmod, changefreq: 'yearly', priority: 0.3 },
 		{ loc: `${BASE}/termos-uso`, lastmod, changefreq: 'yearly', priority: 0.3 },
 		// SEO landing pages — brand/model hubs
-		{ loc: `${BASE}/comprar`, lastmod, changefreq: 'daily', priority: 0.8 },
+		{ loc: `${BASE}/comprar`, lastmod: estoque, changefreq: 'daily', priority: 0.8 },
 		...SEO_BRANDS.flatMap(brand => [
 			// `as const` obrigatório: dentro do flatMap o literal alarga para
 			// string e deixa de satisfazer SitemapUrl, o que contaminava a
 			// inferência de TODOS os blocos seguintes do array.
-			{ loc: `${BASE}/comprar/${brand.slug}`, lastmod, changefreq: 'daily' as const, priority: 0.8 },
+			{ loc: `${BASE}/comprar/${brand.slug}`, lastmod: estoque, changefreq: 'daily' as const, priority: 0.8 },
 			...brand.models.map(model => ({
 				loc: `${BASE}/comprar/${brand.slug}/${model.slug}`,
-				lastmod,
+				lastmod: estoque,
 				changefreq: 'daily' as const,
 				priority: 0.7,
 			})),
@@ -86,35 +110,35 @@ export async function GET() {
 		// Bloco 1 — Páginas de modelo
 		...MODELOS.map(m => ({
 			loc: `${BASE}/comprar/modelo/${m.slug}`,
-			lastmod,
+			lastmod: estoque,
 			changefreq: 'monthly' as const,
 			priority: 0.7,
 		})),
 		// Bloco 2 — Páginas de preço
 		...PRECOS.map(p => ({
 			loc: `${BASE}/preco/${p.slug}`,
-			lastmod,
+			lastmod: estoque,
 			changefreq: 'monthly' as const,
 			priority: 0.7,
 		})),
 		// Bloco 3 — Condição
 		...CONDICOES.map(c => ({
 			loc: `${BASE}/comprar/condicao/${c.slug}`,
-			lastmod,
+			lastmod: estoque,
 			changefreq: 'monthly' as const,
 			priority: 0.6,
 		})),
 		// Bloco 4 — Faixa de preço
 		...FAIXAS_PRECO.map(f => ({
 			loc: `${BASE}/comprar/faixa-preco/${f.slug}`,
-			lastmod,
+			lastmod: estoque,
 			changefreq: 'monthly' as const,
 			priority: 0.6,
 		})),
 		// Bloco 5 — Perfil do comprador
 		...PERFIS_COMPRADOR.map(p => ({
 			loc: `${BASE}/comprar/perfil/${p.slug}`,
-			lastmod,
+			lastmod: estoque,
 			changefreq: 'monthly' as const,
 			priority: 0.6,
 		})),

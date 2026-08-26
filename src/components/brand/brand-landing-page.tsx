@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { findSEOBrand, SEO_BRANDS } from '@/lib/seo-brands'
+import { formatarDataBR } from '@/lib/seo/frescor'
 import { getVehicles } from '@/lib/autoconf-api'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
@@ -138,6 +139,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 							<p className="mt-4 text-sm text-foreground-secondary">
 								<strong className="text-foreground">{brandVehicles.length}</strong>{' '}
 								{brandVehicles.length === 1 ? 'veículo disponível' : 'veículos disponíveis'} agora
+								{' · '}estoque conferido em {formatarDataBR(new Date().toISOString())}
 							</p>
 						)}
 					</div>

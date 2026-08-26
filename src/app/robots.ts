@@ -24,6 +24,39 @@ const LLM_ENDPOINT_ALLOWS = [
   '/api/vehicles/search?q=',
 ]
 
+/**
+ * Crawlers de assistentes de IA — liberados EXPLICITAMENTE.
+ *
+ * Eles já entravam pelo grupo `*`, mas a decisão de permitir precisa estar
+ * escrita: é a diferença entre "ninguém pensou nisso" e "a Attra quer ser lida
+ * por ChatGPT, Perplexity, Claude, Gemini e Copilot". Para uma loja, ser
+ * citada na resposta é o objetivo; bloquear "para proteger conteúdo" tiraria
+ * a Attra justamente do canal que o painel de visitantes mede como o de maior
+ * conversão (canal "Assistente de IA" em src/lib/traffic-channel.ts).
+ *
+ * Inclui os bots de treinamento (Google-Extended, Applebot-Extended, CCBot)
+ * de propósito: o ganho de bloqueá-los é simbólico e o custo é sumir de
+ * modelos que respondem sem buscar na web.
+ *
+ * Lembrete do protocolo: um grupo por user-agent SUBSTITUI o grupo `*` por
+ * inteiro, então cada um repete o allow dos endpoints de LLM.
+ */
+const AI_CRAWLERS = [
+  'GPTBot',            // OpenAI — treinamento
+  'OAI-SearchBot',     // OpenAI — busca do ChatGPT (citações)
+  'ChatGPT-User',      // OpenAI — quando o usuário pede pra abrir uma página
+  'ClaudeBot',         // Anthropic — treinamento
+  'Claude-SearchBot',  // Anthropic — busca
+  'Claude-User',       // Anthropic — a pedido do usuário
+  'PerplexityBot',     // Perplexity — índice
+  'Perplexity-User',   // Perplexity — a pedido do usuário
+  'Google-Extended',   // Google — Gemini (treinamento/grounding)
+  'Applebot-Extended', // Apple — Apple Intelligence
+  'Amazonbot',         // Amazon — Alexa
+  'CCBot',             // Common Crawl — base de vários modelos
+  'meta-externalagent',// Meta AI
+]
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -100,6 +133,20 @@ export default function robots(): MetadataRoute.Robots {
           '/admin/',
           '/api/',
           '/_next/',
+        ],
+      },
+      // Assistentes de IA — mesmas regras do `*`, declaradas por nome (ver AI_CRAWLERS).
+      {
+        userAgent: AI_CRAWLERS,
+        allow: [
+          '/',
+          ...LLM_ENDPOINT_ALLOWS,
+        ],
+        disallow: [
+          '/admin/',
+          '/api/',
+          '/_next/',
+          '/private/',
         ],
       },
     ],

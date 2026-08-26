@@ -55,6 +55,11 @@ export default async function CondicaoPage({ params }: PageProps) {
 						<h1 className="text-3xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
 							{data.title}
 						</h1>
+						{data.respostaDireta && (
+							<p className="text-lg text-foreground leading-relaxed mb-4">
+								{data.respostaDireta}
+							</p>
+						)}
 						<p className="text-lg text-foreground-secondary leading-relaxed mb-6">
 							{data.definicao}
 						</p>

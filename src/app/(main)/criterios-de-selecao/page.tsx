@@ -142,10 +142,17 @@ export default function CriteriosDeSelecaoPage() {
               <span className="text-sm text-primary font-medium uppercase tracking-wider">Procedência</span>
             </div>
             <h1 className="text-3xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">{TITULO}</h1>
+            {/* Resposta direta primeiro: é o trecho que um assistente de IA
+                extrai e cita. O contexto vem depois. */}
+            <p className="text-lg text-foreground leading-relaxed mb-4">
+              A Attra recusa veículo de leilão, com histórico suspeito, com motor remapeado
+              ou preparado (stage) e com repintura total — e só aceita o que passa pela
+              documentação e chega com mecânica e funilaria íntegras. É esse filtro, e não um
+              selo, que sustenta a palavra procedência quando ela aparece num anúncio nosso.
+            </p>
             <p className="text-lg text-foreground-secondary leading-relaxed">
-              Toda loja diz que inspeciona. Poucas dizem o que devolvem. Esta página lista os
-              critérios que fazem a Attra recusar um veículo — é o que sustenta a palavra
-              procedência quando ela aparece num anúncio nosso.
+              Toda loja diz que inspeciona. Poucas dizem o que devolvem. Abaixo, cada critério
+              e o porquê.
             </p>
           </div>
         </Container>

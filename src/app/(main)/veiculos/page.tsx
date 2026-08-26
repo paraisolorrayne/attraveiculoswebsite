@@ -6,6 +6,7 @@ import { AdvancedFilters, CinematicVehicleCard, VehiclePagination, FeaturedVehic
 import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
+import { formatarDataBR } from '@/lib/seo/frescor'
 import { canonicalUrl, listingRobots } from '@/lib/seo/page-metadata'
 import { getCachedHeroAsset } from '@/lib/vehicle-hero-asset'
 import { Vehicle } from '@/types'
@@ -457,6 +458,7 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
               <div className="flex items-center justify-between mb-6">
                 <p className="text-foreground-secondary">
                   <span className="text-foreground font-medium">{total}</span> veículos
+                  <span className="text-sm"> · estoque conferido em {formatarDataBR(new Date().toISOString())}</span>
                 </p>
                 <SortDropdown currentSort={params.ordenar} />
               </div>

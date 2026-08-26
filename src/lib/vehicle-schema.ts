@@ -187,14 +187,39 @@ export function buildVehicleFAQSchema(faqs: { question: string; answer: string }
   }
 }
 
+/**
+ * A página da ficha como CreativeWork, com as datas que Vehicle/Product não
+ * têm onde declarar: `dateModified` = quando preço e disponibilidade foram
+ * conferidos (a renderização lê o estoque ao vivo), `datePublished` = data de
+ * publicação do anúncio na fonte. Assistentes de IA e o Google usam essas
+ * datas para preferir a ficha que diz de quando é (avaliação AEO, 26/08/2026).
+ */
+export function buildVehicleItemPageSchema(vehicle: Vehicle, conferidoEm: string) {
+  const { baseUrl } = getContext()
+  const url = `${baseUrl}/veiculo/${vehicle.slug}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemPage',
+    '@id': url,
+    url,
+    inLanguage: 'pt-BR',
+    mainEntity: { '@id': `${url}#vehicle` },
+    ...(vehicle.updated_at ? { datePublished: vehicle.updated_at } : {}),
+    dateModified: conferidoEm,
+    isPartOf: { '@id': `${baseUrl}/#website` },
+  }
+}
+
 export function buildVehiclePageSchemas(
   vehicle: Vehicle,
-  faqs: { question: string; answer: string }[]
+  faqs: { question: string; answer: string }[],
+  conferidoEm?: string,
 ) {
   return [
     buildVehicleSchema(vehicle),
     buildVehicleProductSchema(vehicle),
     buildVehicleBreadcrumbSchema(vehicle),
     buildVehicleFAQSchema(faqs),
+    ...(conferidoEm ? [buildVehicleItemPageSchema(vehicle, conferidoEm)] : []),
   ].filter((s): s is NonNullable<typeof s> => s !== null)
 }

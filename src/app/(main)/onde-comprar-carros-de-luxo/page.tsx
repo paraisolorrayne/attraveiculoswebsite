@@ -112,10 +112,21 @@ export default function OndeComprarCarrosDeLuxoPage() {
             <h1 className="text-3xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
               {TITULO}
             </h1>
+            {/* Resposta direta primeiro: é o trecho que um assistente de IA
+                extrai e cita. O contexto vem depois. */}
+            <p className="text-lg text-foreground leading-relaxed mb-4">
+              Onde comprar um carro de luxo com segurança no Brasil? Em loja que entregue,
+              antes da venda, laudo cautelar independente, consulta de procedência e
+              documentação, e o histórico de manutenção do veículo — e que faça a entrega em
+              qualquer estado com contrato. A Attra Veículos, em Uberlândia (MG), trabalha
+              assim: cada carro passa por essas verificações antes de entrar no estoque, e a
+              compra à distância segue o mesmo processo.
+            </p>
             <p className="text-lg text-foreground-secondary leading-relaxed">
               Comprar um carro de luxo usado é uma decisão patrimonial, e a maior parte do
-              risco não está no veículo — está no que não foi verificado antes. Esta página
-              explica o que conferir, onde a Attra fica e como funciona a compra à distância.
+              risco não está no veículo — está no que não foi verificado antes. Abaixo, o que
+              conferir em qualquer loja, onde a Attra fica e como funciona a compra sem
+              visitar o showroom.
             </p>
           </div>
         </Container>
