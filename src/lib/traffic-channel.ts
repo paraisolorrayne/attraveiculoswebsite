@@ -141,7 +141,47 @@ const PLATAFORMAS: Plataforma[] = [
     dominios: ['wa.me'],
   },
   { canonica: 'telegram', grupo: 'social', exatos: ['telegram'], rotulos: ['telegram'], dominios: ['t.me'] },
+  // Link da bio do Instagram. Os dois Linktrees da Attra (linktr.ee/attraveiculos e
+  // linktr.ee/attra_veiculos) apontam para o site SEM UTM, então esse tráfego só se
+  // identifica pelo referrer — e caía em "referência", misturado com portal e
+  // classificados. É social orgânico: o clique nasceu no perfil do Instagram.
+  { canonica: 'linktree', grupo: 'social', exatos: ['linktree', 'linktr.ee', 'bio'], rotulos: ['linktr'], dominios: ['linktr.ee'] },
 ]
+
+/**
+ * Nome de exibição das fontes canônicas. O painel mostra o canônico ao lado
+ * das grafias cruas; sem este mapa "meta" e "linktree" saem secos na tela.
+ * Fonte fora do mapa aparece como veio (cauda longa preservada).
+ */
+const ROTULO_FONTE: Record<string, string> = {
+  chatgpt: 'ChatGPT',
+  perplexity: 'Perplexity',
+  copilot: 'Copilot',
+  gemini: 'Gemini',
+  claude: 'Claude',
+  google: 'Google',
+  bing: 'Bing',
+  duckduckgo: 'DuckDuckGo',
+  yahoo: 'Yahoo',
+  yandex: 'Yandex',
+  ecosia: 'Ecosia',
+  brave: 'Brave',
+  meta: 'Meta (Facebook/Instagram)',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  twitter: 'X (Twitter)',
+  pinterest: 'Pinterest',
+  kwai: 'Kwai',
+  whatsapp: 'WhatsApp',
+  telegram: 'Telegram',
+  linktree: 'Linktree (bio do Instagram)',
+}
+
+export function rotuloFonte(fonte: string): string {
+  if (fonte === SEM_FONTE) return fonte
+  return ROTULO_FONTE[fonte] ?? fonte
+}
 
 /**
  * Marcadores de mídia paga. Substring é obrigatório: a base real tem "pi-cpc", que nunca

@@ -6,6 +6,7 @@ import {
   normalizarFonte,
   rotuloCampanha,
   rotuloCanal,
+  rotuloFonte,
   corCanal,
   CANAIS_ORDEM,
   CANAL_ROTULOS,
@@ -420,4 +421,29 @@ describe('rotuloCampanha — queda para o ID', () => {
 		// metrics/route.ts: 'campanha #' || btrim(s.utm_id)
 		expect(rotuloCampanha(null, ' 22334455 ')).toBe('campanha #22334455')
 	})
+})
+
+describe('Linktree — link da bio do Instagram (27/08/2026)', () => {
+  it('referrer linktr.ee sem UTM → social orgânico, fonte "linktree"', () => {
+    const sessao: SessaoAtribuicao = { referrer_domain: 'linktr.ee' }
+    expect(classificarCanal(sessao)).toBe('social_organico')
+    expect(normalizarFonte(sessao)).toBe('linktree')
+  })
+
+  it('utm_source=linktree também agrupa na mesma fonte', () => {
+    expect(normalizarFonte({ utm_source: 'Linktree' })).toBe('linktree')
+  })
+
+  it('a marcação recomendada (instagram/bio/linktree) continua social orgânico, fonte meta', () => {
+    const sessao: SessaoAtribuicao = { utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'linktree' }
+    expect(classificarCanal(sessao)).toBe('social_organico')
+    expect(normalizarFonte(sessao)).toBe('meta')
+  })
+
+  it('rotuloFonte traduz o canônico e preserva a cauda longa', () => {
+    expect(rotuloFonte('linktree')).toBe('Linktree (bio do Instagram)')
+    expect(rotuloFonte('meta')).toBe('Meta (Facebook/Instagram)')
+    expect(rotuloFonte('olx.com.br')).toBe('olx.com.br')
+    expect(rotuloFonte(SEM_FONTE)).toBe(SEM_FONTE)
+  })
 })
