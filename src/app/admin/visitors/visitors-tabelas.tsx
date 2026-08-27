@@ -1,6 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import Link from 'next/link'
+import { chaveCampanha } from '@/lib/traffic-channel'
 import { rotuloDevice, rotuloMatchType, rotuloNetwork } from '@/lib/parametros-anuncio'
 import { InfoDica } from '../crm/info-dica'
 import {
@@ -241,7 +243,14 @@ export function TabelaCampanhas({
 							{campanhas.map(c => (
 								<tr key={c.campanha} className="hover:bg-background-soft/60">
 									<td className={`${TD} max-w-[280px]`}>
-										<p className="truncate font-medium" title={c.campanha}>{c.campanha}</p>
+										{/* Link para a página da campanha (criativos, termos, entradas, leads). */}
+										<Link
+											href={`/admin/visitors/campanha/${encodeURIComponent(chaveCampanha(c.campanha))}`}
+											className="block truncate font-medium hover:underline"
+											title={c.campanha}
+										>
+											{c.campanha}
+										</Link>
 										{c.fonte && <p className="text-xs text-foreground-secondary truncate">{c.fonte}</p>}
 									</td>
 									<td className={TD}>

@@ -39,6 +39,8 @@ CREATE TABLE visitor_sessions (
   referrer_url TEXT, referrer_domain TEXT,
   utm_source TEXT, utm_medium TEXT, utm_campaign TEXT, utm_content TEXT, utm_term TEXT,
   gclid TEXT, fbclid TEXT, ttclid TEXT, utm_id TEXT, adset_id TEXT, ad_id TEXT,
+  -- Parâmetros do modelo de rastreamento do Google Ads (migration 20260809).
+  match_type TEXT, ads_device TEXT, ads_network TEXT,
   ip_address INET, country_code TEXT, region TEXT, city TEXT,
   page_views_count INTEGER DEFAULT 0, vehicles_viewed INTEGER DEFAULT 0,
   contacted_whatsapp BOOLEAN DEFAULT FALSE, submitted_form BOOLEAN DEFAULT FALSE, used_calculator BOOLEAN DEFAULT FALSE,

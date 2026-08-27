@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql, type RawBuilder } from 'kysely'
+import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { adminComAcessoA } from '@/lib/auth/guard-api'
 import {
@@ -10,9 +10,9 @@ import {
 	corCanal,
 	rotuloCanal,
 	SEM_CAMPANHA,
-	VALORES_NULOS_LISTA,
 	type CanalTrafego,
 } from '@/lib/traffic-channel'
+import { campanhaSql, periodoDaUrl, saneado } from '@/lib/visitors/sql-atribuicao'
 
 // Métricas do /admin/visitors por CANAL e CAMPANHA.
 //
@@ -22,32 +22,11 @@ import {
 // chega são dezenas de linhas já somadas — e a soma dos canais bate exatamente com o total
 // do período, porque canais e totais saem do MESMO conjunto de grupos.
 
-// Período padrão do painel. `dias = 0` significa "toda a história".
-const DIAS_PADRAO = 30
-const DIAS_MAX = 730
 const LIMITE_CAMPANHAS = 15
 const LIMITE_LISTAS = 10
 
-// Lista de "valores que significam vazio" vinda da lib de canal — ela é a fonte de verdade da
-// classificação, então é ela quem define o que é vazio, aqui também.
-const VAZIOS_SQL = sql.join(VALORES_NULOS_LISTA.map((v) => sql`${v}`))
-
-/**
- * Aplica no SQL o MESMO saneamento que `limpar()` faz na lib: apara, e trata '(not set)',
- * '(none)', 'null', 'undefined', 'direct', '-' como ausência de valor.
- *
- * Sem isso a rota e a lib discordavam: para o SQL `utm_source = '(not set)'` era um valor
- * presente, para a lib era vazio. A mesma sessão saía como "direto" nesta tabela e como
- * "assistente de IA" na tabela de receita (que passa a linha crua para a lib). Uma tela, duas
- * verdades. Saneando aqui existe UMA definição — e de quebra o GROUP BY agrupa toda a sujeira
- * numa linha só em vez de espalhá-la.
- */
-function saneado(coluna: RawBuilder<unknown>) {
-	return sql<string | null>`nullif(
-		case when lower(btrim(${coluna})) in (${VAZIOS_SQL}) then null else btrim(${coluna}) end,
-		''
-	)`
-}
+// `saneado`, `campanhaSql` e o período vivem em src/lib/visitors/sql-atribuicao.ts,
+// compartilhados com as rotas de Origens, Entradas, Campanha e Sessões.
 
 interface GrupoAtribuicao {
 	utm_source: string | null
@@ -128,17 +107,9 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		const diasBruto = Number(new URL(request.url).searchParams.get('dias'))
-		const dias =
-			Number.isFinite(diasBruto) && diasBruto >= 0 && diasBruto <= DIAS_MAX
-				? Math.floor(diasBruto)
-				: DIAS_PADRAO
-
-		const desde = dias > 0 ? new Date(Date.now() - dias * 24 * 60 * 60 * 1000) : null
-
 		// Condição de período reaproveitada por todas as queries: com `dias = 0` vira `true`,
 		// então o SQL continua válido sem montar/desmontar cláusula WHERE.
-		const noPeriodo = desde ? sql`s.started_at >= ${desde}` : sql`true`
+		const { dias, desde, noPeriodo } = periodoDaUrl(request.url)
 
 		// Sessão "viu veículo": contada pelo PATH da página (/veiculo/<slug>, singular), não pela
 		// coluna vehicles_viewed. A coluna ficou zerada em todo o histórico por causa do bug de
@@ -156,17 +127,8 @@ export async function GET(request: NextRequest) {
 				select
 					${saneado(sql`s.utm_source`)} as utm_source,
 					${saneado(sql`s.utm_medium`)} as utm_medium,
-					-- Nome da campanha, com queda para o ID. O Google não tem código
-					-- automático para o nome — só utm_id={campaignid} —, então uma
-					-- campanha bem marcada pelo ID cairia em "(não marcada)" se
-					-- exigíssemos o nome. Aqui ela vira "campanha #123456", que separa
-					-- uma da outra, que é o que o relatório precisa.
-					coalesce(
-						${saneado(sql`s.utm_campaign`)},
-						case when nullif(btrim(s.utm_id), '') is not null
-						     then 'campanha #' || btrim(s.utm_id) end,
-						''
-					) as utm_campaign,
+					-- Nome da campanha com queda para o ID (ver campanhaSql).
+					${campanhaSql} as utm_campaign,
 					(${saneado(sql`s.gclid`)} is not null) as tem_gclid,
 					(${saneado(sql`s.fbclid`)} is not null) as tem_fbclid,
 					(${saneado(sql`s.ttclid`)} is not null) as tem_ttclid,

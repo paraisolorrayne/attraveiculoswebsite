@@ -17,6 +17,12 @@ import { cn } from '@/lib/utils'
  */
 const ABAS = [
   { href: '/admin/visitors', rotulo: 'Visão geral', exato: true },
+  // Origem em três profundidades (27/08/2026): fonte/meio e referenciadores,
+  // páginas de entrada, e a sessão uma a uma. A campanha tem página própria
+  // (/admin/visitors/campanha/[chave]) alcançada por link, não por aba.
+  { href: '/admin/visitors/origens', rotulo: 'Origens' },
+  { href: '/admin/visitors/entradas', rotulo: 'Entradas' },
+  { href: '/admin/visitors/sessoes', rotulo: 'Sessões' },
   { href: '/admin/visitors/comportamento', rotulo: 'Comportamento' },
   { href: '/admin/visitors/veiculos', rotulo: 'Veículos' },
 ] as const
