@@ -99,7 +99,7 @@ export function AboutSectionExpanded() {
             {/* CEO Photo - Thiago */}
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border border-border">
               <Image
-                src="/about/attra-ceo-thiago-fundador.png"
+                src="/about/attra-ceo-thiago-fundador-2026.jpg"
                 alt="Thiago - CEO Attra Veículos"
                 fill
                 className="object-cover object-center"
