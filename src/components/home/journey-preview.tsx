@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, Search, FileCheck, Truck, CheckCircle } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
+import { anosDeMercado } from '@/lib/constants'
 
 const journeySteps = [
   {
@@ -111,7 +112,7 @@ export function JourneyPreview() {
             </Link>
           </Button>
           <p className="text-foreground-secondary text-sm mt-4">
-            Explore cada etapa em detalhes, históricos de clientes e nossa trajetória de 18+ anos
+            Explore cada etapa em detalhes, históricos de clientes e nossa trajetória de {anosDeMercado()} anos
           </p>
         </div>
       </Container>

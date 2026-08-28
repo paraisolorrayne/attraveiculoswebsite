@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react'
 import { Repeat, MapPin, Search, TrendingUp } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { SectionKicker, SectionHeading } from '@/components/ui/brand'
+import { anosDeMercado } from '@/lib/constants'
 
 const pillars = [
   {
@@ -33,7 +34,7 @@ const pillars = [
 ]
 
 const metrics = [
-  { value: '16+', label: 'Anos no Mercado' },
+  { value: String(anosDeMercado()), label: 'Anos no Mercado' },
   { value: '500+', label: 'Veículos/Ano' },
   { value: '27', label: 'Estados' },
   { value: '5.0', label: 'Google Rating' },

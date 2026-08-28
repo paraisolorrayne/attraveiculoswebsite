@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { ArrowRight, Search } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
+import { anosDeMercado } from '@/lib/constants'
 
 export function HeroSection() {
   return (
@@ -49,7 +50,7 @@ export function HeroSection() {
                 <p className="text-sm text-foreground-secondary">Veículos vendidos</p>
               </div>
               <div>
-                <p className="text-2xl lg:text-3xl font-bold text-primary">16+</p>
+                <p className="text-2xl lg:text-3xl font-bold text-primary">{anosDeMercado()}</p>
                 <p className="text-sm text-foreground-secondary">Anos de mercado</p>
               </div>
               <div>

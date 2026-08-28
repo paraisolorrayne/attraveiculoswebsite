@@ -8,6 +8,12 @@ import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { TradeInForm } from '@/components/forms/trade-in-form'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 // SEO Optimized Metadata for LLMO
 export const metadata: Metadata = {
@@ -64,7 +70,7 @@ const benefits = [
   {
     icon: Award,
     title: 'Especialistas em Premium',
-    description: 'Expertise de 18+ anos no mercado de veículos de luxo, importados e superesportivos.'
+    description: `Expertise de ${anosDeMercado()} anos no mercado de veículos de luxo, importados e superesportivos.`
   },
   {
     icon: Users,
@@ -123,7 +129,7 @@ function CarBuyingServiceSchema() {
     name: 'Compramos seu Carro Premium',
     // Referencia a entidade canônica do layout raiz em vez de redeclará-la.
     provider: organizationRef(),
-    description: 'A Attra Veículos compra seu carro premium com avaliação profissional e processo transparente. Especialistas em veículos de luxo há 18+ anos.',
+    description: `A Attra Veículos compra seu carro premium com avaliação profissional e processo transparente. Especialistas em veículos de luxo há ${anosDeMercado()} anos.`,
     areaServed: 'BR',
     serviceType: 'Compra de Veículos Premium'
   }
@@ -181,13 +187,13 @@ export default function CompramosSeuCarroPage() {
             <p className="text-lg lg:text-xl text-foreground-secondary mb-8 max-w-3xl mx-auto leading-relaxed">
               A Attra Veículos compra seu veículo de luxo com <strong>avaliação profissional</strong> e
               <strong> processo transparente</strong>.
-              Especialistas em veículos premium há 18+ anos.
+              Especialistas em veículos premium há {anosDeMercado()} anos.
             </p>
 
             {/* Stats */}
             <div className="flex flex-wrap justify-center gap-8 lg:gap-12 mb-10">
               <div className="text-center">
-                <p className="text-3xl lg:text-4xl font-bold text-primary">18+</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary">{anosDeMercado()}</p>
                 <p className="text-sm text-foreground-secondary">Anos de Mercado</p>
               </div>
               <div className="text-center">

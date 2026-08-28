@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { HistoryGallery, type HistoryEra } from '@/components/about/history-gallery'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia',
@@ -75,7 +81,7 @@ const differentials = [
   { icon: Globe, title: 'Atendimento Nacional', description: 'Logística especializada com seguro premium e rastreamento em tempo real para qualquer cidade do Brasil.' },
   { icon: Shield, title: 'Procedência Verificada', description: 'Cada veículo passa por inspeção rigorosa e verificação completa de histórico antes de entrar no showroom.' },
   { icon: Users, title: 'Equipe Especializada', description: 'Consultores com experiência em cada marca, oferecendo atendimento consultivo e personalizado.' },
-  { icon: Car, title: '+500 Veículos/Ano', description: 'Mais de 500 veículos comercializados anualmente — resultado de confiança construída ao longo de 18+ anos.' },
+  { icon: Car, title: '+500 Veículos/Ano', description: `Mais de 500 veículos comercializados anualmente — resultado de confiança construída ao longo de ${anosDeMercado()} anos.` },
   { icon: Building2, title: '5.000m² de Estrutura', description: 'Showroom climatizado com iluminação profissional projetado para exibir cada veículo como patrimônio.' },
 ]
 
@@ -160,7 +166,7 @@ export default function SobrePage() {
         <Container>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
             <div>
-              <p className="text-4xl lg:text-5xl font-bold">16+</p>
+              <p className="text-4xl lg:text-5xl font-bold">{anosDeMercado()}</p>
               <p className="text-white/80">Anos de Mercado</p>
             </div>
             <div>
@@ -206,7 +212,7 @@ export default function SobrePage() {
                 <p>
                   O <strong className="text-foreground">atendimento nacional</strong> permite que clientes de qualquer
                   cidade do Brasil tenham acesso aos melhores veículos premium, com toda a segurança
-                  da logística especializada e a confiança construída em 18+ anos de operação.
+                  da logística especializada e a confiança construída em {anosDeMercado()} anos de operação.
                 </p>
               </div>
             </div>

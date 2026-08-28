@@ -2,12 +2,13 @@ import Link from 'next/link'
 import { ArrowRight, Award, MapPin, Users, Shield } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
+import { anosDeMercado } from '@/lib/constants'
 
 const features = [
   {
     icon: Award,
     title: 'Referência em MG',
-    description: 'Há 18+ anos sendo referência no mercado de veículos premium em Minas Gerais.',
+    description: `Há ${anosDeMercado()} anos sendo referência no mercado de veículos premium em Minas Gerais.`,
   },
   {
     icon: MapPin,

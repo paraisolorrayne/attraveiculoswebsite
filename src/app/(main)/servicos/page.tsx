@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 // SEO Optimized Metadata - Hub de Serviços (3 serviços principais)
 export const metadata: Metadata = {
@@ -70,7 +76,7 @@ const whyChooseAttra = [
   {
     icon: Star,
     title: 'Desde 2008 no Mercado Premium',
-    description: 'A Attra Veículos atua há 18+ anos no segmento de veículos nacionais, importados, seminovos premium e supercarros em Uberlândia/MG.'
+    description: `A Attra Veículos atua há ${anosDeMercado()} anos no segmento de veículos nacionais, importados, seminovos premium e supercarros em Uberlândia/MG.`
   },
   {
     icon: Shield,
@@ -222,7 +228,7 @@ export default function ServicosPage() {
                 <p className="text-sm text-foreground-secondary">Veículos/Ano</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl lg:text-4xl font-bold text-primary">16+</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary">{anosDeMercado()}</p>
                 <p className="text-sm text-foreground-secondary">Anos de Mercado</p>
               </div>
               <div className="text-center">
@@ -420,7 +426,7 @@ export default function ServicosPage() {
               Por Que Escolher a Attra Veículos?
             </h2>
             <p className="text-foreground-secondary max-w-2xl mx-auto">
-              Há 18+ anos no mercado premium, a Attra se consolidou como referência em veículos nacionais, importados, seminovos premium e supercarros.
+              Há {anosDeMercado()} anos no mercado premium, a Attra se consolidou como referência em veículos nacionais, importados, seminovos premium e supercarros.
             </p>
           </div>
 

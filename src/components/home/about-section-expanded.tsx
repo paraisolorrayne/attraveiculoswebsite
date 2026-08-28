@@ -7,9 +7,10 @@ import { ArrowRight, Award, Users, MapPin, Calendar, CheckCircle } from 'lucide-
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { SectionKicker, SectionHeading } from '@/components/ui/brand'
+import { anosDeMercado } from '@/lib/constants'
 
 const stats = [
-  { value: '16+', label: 'Anos de Mercado', icon: Calendar },
+  { value: String(anosDeMercado()), label: 'Anos de Mercado', icon: Calendar },
   { value: '500+', label: 'Veículos/Ano', icon: Award },
   { value: '27', label: 'Estados Atendidos', icon: MapPin },
   { value: '5.0', label: 'Avaliação Google', icon: Users },

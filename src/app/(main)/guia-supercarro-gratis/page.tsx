@@ -3,6 +3,12 @@ import { Container } from '@/components/ui/container'
 import { LeadMagnetForm } from './lead-magnet-form'
 import { Shield, FileText, CheckCircle, Car, BookOpen, TrendingUp } from 'lucide-react'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Guia Definitivo para Comprar Supercarros com Segurança',
@@ -72,7 +78,7 @@ export default function GuiaSupercarroPage() {
               </h1>
               
               <p className="text-lg text-foreground-secondary mb-8 leading-relaxed">
-                Mais de <strong className="text-foreground">18 anos de experiência</strong> no mercado de veículos premium
+                <strong className="text-foreground">{anosDeMercado()} anos de experiência</strong> no mercado de veículos premium
                 condensados em um guia prático de 8 páginas. Aprenda a evitar golpes, verificar procedência 
                 e fazer o melhor negócio.
               </p>

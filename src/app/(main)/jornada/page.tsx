@@ -9,6 +9,12 @@ import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Jornada Attra | Curadoria de Supercarros, Acervo Icônico e Entrega Nacional',
@@ -546,7 +552,7 @@ export default function JornadaPage() {
               Conheça a Attra
             </h2>
             <p className="text-foreground-secondary text-base lg:text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
-              18+ anos curando veículos premium, uma operação própria e uma
+              {anosDeMercado()} anos curando veículos premium, uma operação própria e uma
               equipe dedicada a transformar cada compra em experiência. Saiba
               mais sobre a história, o time e os valores por trás da curadoria.
             </p>

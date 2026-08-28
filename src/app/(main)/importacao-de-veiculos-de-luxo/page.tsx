@@ -8,6 +8,12 @@ import { IMPORTACAO_MAIN, IMPORTACAO_MARCAS } from '@/lib/seo'
 import { pageTitle } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, ChevronDown, MessageCircle, Globe, Check, ShieldCheck } from 'lucide-react'
+import { anosDeMercado } from '@/lib/constants'
+
+// Página estática que exibe os anos de mercado (calculados a partir do ano
+// corrente). Sem revalidação ela ficaria com o número do último build — e o
+// número mudaria só no próximo deploy, não na virada do ano.
+export const revalidate = 86400
 
 const data = IMPORTACAO_MAIN
 
@@ -71,7 +77,7 @@ export default function ImportacaoPage() {
 						{/* Stats */}
 						<div className="flex flex-wrap justify-center gap-8 lg:gap-12 mb-10">
 							<div className="text-center">
-								<p className="text-3xl lg:text-4xl font-bold text-primary">16+</p>
+								<p className="text-3xl lg:text-4xl font-bold text-primary">{anosDeMercado()}</p>
 								<p className="text-sm text-foreground-secondary">Anos de Mercado</p>
 							</div>
 							<div className="text-center">

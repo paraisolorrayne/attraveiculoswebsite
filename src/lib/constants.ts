@@ -165,3 +165,24 @@ export function getWhatsAppUrl(message?: string): string {
   return `https://wa.me/${WHATSAPP_NUMBER}${encodedMessage ? `?text=${encodedMessage}` : ''}`
 }
 
+
+/**
+ * Ano de fundação da Attra. Confirmado pela Lorrayne em 28/08/2026 — antes o
+ * site alternava entre 2008, 2009 e 2010, e entre "15+", "16+", "17" e "18+"
+ * anos de mercado na mesma navegação.
+ */
+export const ANO_FUNDACAO = 2008
+
+/**
+ * Anos de mercado, contados sempre a partir do ano corrente: em 2026, 18.
+ *
+ * Existe para o número nunca mais ser digitado à mão. A regra é a que a
+ * Lorrayne definiu — ano atual menos 2008 —, sem considerar o mês: a marca
+ * conta o ano cheio, e não a data exata do aniversário.
+ *
+ * `hoje` é injetável só para o teste poder fixar a data; em produção ninguém
+ * passa argumento.
+ */
+export function anosDeMercado(hoje: Date = new Date()): number {
+  return hoje.getFullYear() - ANO_FUNDACAO
+}

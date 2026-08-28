@@ -8,6 +8,7 @@ import { getVehicles } from '@/lib/autoconf-api'
 import { SITE_URL } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, Globe, Truck, Search } from 'lucide-react'
+import { ANO_FUNDACAO, anosDeMercado } from '@/lib/constants'
 
 export const metadata: Metadata = {
 	title: 'Comprar Carros de Luxo e Supercarros no Brasil',
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 const TRUST_SIGNALS = [
 	{ icon: Shield, title: 'Procedência Verificada', description: 'Curadoria rigorosa com inspeção completa de cada veículo' },
 	{ icon: Globe, title: 'Entrega Nacional', description: 'Logística especializada para todo o Brasil com seguro completo' },
-	{ icon: Truck, title: 'Desde 2008', description: 'Mais de 17 anos de excelência no mercado premium brasileiro' },
+	{ icon: Truck, title: `Desde ${ANO_FUNDACAO}`, description: `${anosDeMercado()} anos de excelência no mercado premium brasileiro` },
 	{ icon: Search, title: 'Curadoria Premium', description: 'Seleção criteriosa dos melhores exemplares do mercado' },
 ]
 

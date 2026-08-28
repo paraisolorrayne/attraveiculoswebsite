@@ -7,9 +7,10 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { Container } from '@/components/ui/container'
+import { anosDeMercado } from '@/lib/constants'
 
 const pillars = [
-  { icon: Compass,     title: '18+ anos',           line: 'curando veículos premium' },
+  { icon: Compass,     title: `${anosDeMercado()} anos`, line: 'curando veículos premium' },
   { icon: Globe2,      title: 'Atuação nacional',   line: 'entrega em 27 estados' },
   { icon: Search,      title: 'Curadoria rigorosa', line: 'seleção antes do catálogo' },
   { icon: ShieldCheck, title: 'Inspeção 200+ itens',line: 'procedência verificada' },
