@@ -83,10 +83,7 @@ export default async function LinksPage() {
         >
           <div className="flex items-center gap-3">
             <Car className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <div>
-              <span className="font-semibold text-sm block">Consultar veículos disponíveis</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Apenas visualização do acervo</span>
-            </div>
+            <span className="font-semibold text-sm">Veículos disponíveis</span>
           </div>
           <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
         </a>
@@ -174,14 +171,6 @@ export default async function LinksPage() {
           </div>
           <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
         </a>
-      </div>
-
-      {/* Como Trabalhamos */}
-      <div className="w-full max-w-sm border border-gray-200 dark:border-gray-800 rounded-xl p-5 mb-6">
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Como trabalhamos</h2>
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          Curadoria documentada, atendimento direto e um ambiente consultivo que reduz riscos na sua escolha.
-        </p>
       </div>
 
       {/* Social icons */}
