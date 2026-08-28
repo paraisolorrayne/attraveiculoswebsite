@@ -55,7 +55,7 @@ export default async function LinksPage() {
 
       {/* Headline */}
       <h1 className="text-gray-900 dark:text-white text-xl sm:text-2xl font-bold text-center leading-snug max-w-xs mb-8">
-        Em qualquer lugar do Brasil, orientação segura para quem não compra carro por impulso.
+        Onde carros exclusivos encontram escolhas seguras.
       </h1>
 
       {/* Main CTAs */}
@@ -69,10 +69,7 @@ export default async function LinksPage() {
         >
           <div className="flex items-center gap-3">
             <MessageCircle className="w-5 h-5" />
-            <div>
-              <span className="font-semibold text-sm block">Iniciar processo de escolha</span>
-              <span className="text-xs text-white/80">Etapa inicial leva menos de 1 minuto</span>
-            </div>
+            <span className="font-semibold text-sm">Fale diretamente conosco</span>
           </div>
           <ChevronRight className="w-5 h-5 text-white/60" />
         </a>
