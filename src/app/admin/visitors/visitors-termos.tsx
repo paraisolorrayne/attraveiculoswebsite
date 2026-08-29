@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Secao } from './visitors-tabelas'
+import { TabelaOrdenavel } from './visitors-tabela'
 import { corTaxa, fmtNum, fmtPct, larguraRelativa } from './visitors-metrics'
 
 type Padrao =
@@ -49,8 +50,6 @@ const ROTULO: Record<Padrao, string> = {
   outros: 'Outros',
 }
 
-const TH = 'px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-foreground-secondary whitespace-nowrap'
-const TD = 'px-3 py-2.5 text-sm text-foreground whitespace-nowrap'
 
 export function SecaoTermosDeConversao({ dias }: { dias: number }) {
   const [dados, setDados] = useState<Dados | null>(null)
@@ -127,42 +126,77 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
             </p>
           </div>
 
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full">
-              <thead className="bg-background-soft border-y border-border">
-                <tr>
-                  <th className={`${TH} text-left`}>Termo</th>
-                  <th className={`${TH} text-right`}>Sessões</th>
-                  <th className={`${TH} text-right`}>Contatos</th>
-                  <th className={`${TH} text-right`}>Taxa</th>
-                  <th className={`${TH} text-right`} title="Taxa que o termo comprova (Wilson 95%)">
-                    Piso
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {dados.termos.map(t => (
-                  <tr key={t.termo} className="hover:bg-background-soft/50">
-                    <td className={`${TD} max-w-[22rem]`}>
-                      <span className="block truncate" title={t.termo}>{t.termo}</span>
-                      <span className="block text-[11px] text-foreground-secondary truncate">
-                        {ROTULO[t.padrao]}
+          <div className="mt-4 border-t border-border">
+            <TabelaOrdenavel
+              colunas={[
+                {
+                  chave: 'termo',
+                  titulo: 'Termo',
+                  filtro: 'texto',
+                  valor: t => `${t.termo} ${ROTULO[t.padrao]}`,
+                  classe: 'max-w-[22rem]',
+                  render: t => (
+                    <>
+                      <span className="block truncate" title={t.termo}>
+                        {t.termo}
                       </span>
-                      <span className="block mt-1 h-1 rounded-full bg-primary/25"
-                            style={{ width: larguraRelativa(t.sessoes, maxSessoes) }} />
-                    </td>
-                    <td className={`${TD} text-right tabular-nums`}>{fmtNum(t.sessoes)}</td>
-                    <td className={`${TD} text-right tabular-nums`}>{fmtNum(t.conversoes)}</td>
-                    <td className={`${TD} text-right tabular-nums text-foreground-secondary`}>
-                      {fmtPct(t.taxa)}
-                    </td>
-                    <td className={`${TD} text-right tabular-nums font-semibold ${corTaxa(t.piso, dados.media_geral, t.sessoes)}`}>
-                      {fmtPct(t.piso)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span className="block truncate text-[11px] text-foreground-secondary">{ROTULO[t.padrao]}</span>
+                      <span
+                        className="mt-1 block h-1 rounded-full bg-primary/25"
+                        style={{ width: larguraRelativa(t.sessoes, maxSessoes) }}
+                      />
+                    </>
+                  ),
+                },
+                {
+                  chave: 'padrao',
+                  titulo: 'Intenção',
+                  filtro: 'opcoes',
+                  valor: t => ROTULO[t.padrao],
+                  classe: 'text-xs text-foreground-secondary',
+                  render: t => ROTULO[t.padrao],
+                },
+                {
+                  chave: 'sessoes',
+                  titulo: 'Sessões',
+                  filtro: 'numero',
+                  valor: t => t.sessoes,
+                  alinhar: 'dir',
+                  classe: 'tabular-nums',
+                  render: t => fmtNum(t.sessoes),
+                },
+                {
+                  chave: 'conversoes',
+                  titulo: 'Contatos',
+                  filtro: 'numero',
+                  valor: t => t.conversoes,
+                  alinhar: 'dir',
+                  classe: 'tabular-nums',
+                  render: t => fmtNum(t.conversoes),
+                },
+                {
+                  chave: 'taxa',
+                  titulo: 'Taxa',
+                  filtro: 'numero',
+                  valor: t => t.taxa,
+                  alinhar: 'dir',
+                  classe: 'tabular-nums text-foreground-secondary',
+                  render: t => fmtPct(t.taxa),
+                },
+                {
+                  chave: 'piso',
+                  titulo: 'Piso',
+                  filtro: 'numero',
+                  valor: t => t.piso,
+                  alinhar: 'dir',
+                  classe: 'tabular-nums font-semibold',
+                  render: t => <span className={corTaxa(t.piso, dados.media_geral, t.sessoes)}>{fmtPct(t.piso)}</span>,
+                },
+              ]}
+              linhas={dados.termos}
+              chaveLinha={t => t.termo}
+              vazio="Nenhum termo com volume suficiente no período."
+            />
           </div>
 
           {dados.termos_abaixo_do_minimo > 0 && (

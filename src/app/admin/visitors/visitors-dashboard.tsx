@@ -7,6 +7,7 @@ import type { VisitorProfileWithDetails } from '@/types/database'
 import { PERIODOS } from '../crm/crm-constants'
 import { InfoDica } from '../crm/info-dica'
 import { ContextoClique, ListaCidades, ListaVeiculos, MidiaPaga, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
+import { TabelaOrdenavel } from './visitors-tabela'
 import { SecaoReceitaPorCanal } from './visitors-receita'
 import { SecaoTermosDeConversao } from './visitors-termos'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
@@ -259,84 +260,96 @@ export function VisitorsDashboard(props: Props) {
 						</div>
 					}
 				>
-					<div className="overflow-x-auto">
-						<table className="w-full">
-							<thead className="bg-background-soft">
-								<tr>
-									<th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Visitante</th>
-									<th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Empresa</th>
-									<th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Sessões</th>
-									<th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Veículos</th>
-									<th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Score</th>
-									<th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-foreground-secondary">Atualizado</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-border">
-								{visitantes.length === 0 ? (
-									<tr>
-										<td colSpan={6} className="px-3 py-8 text-center text-sm text-foreground-secondary">
-											Nenhum visitante encontrado.
-										</td>
-									</tr>
-								) : (
-									visitantes.map(v => (
-										<tr key={v.id} className="hover:bg-background-soft/60">
-											<td className="px-3 py-2.5 text-sm">
-												<p className="font-medium text-foreground">
-													{v.full_name || v.email || 'Anônimo'}
-												</p>
-												<div className="flex flex-wrap gap-3 text-xs text-foreground-secondary">
-													{v.email && (
-														<span className="flex items-center gap-1">
-															<Mail className="w-3 h-3" />
-															{v.email}
-														</span>
-													)}
-													{v.phone && (
-														<span className="flex items-center gap-1">
-															<Phone className="w-3 h-3" />
-															{v.phone}
-														</span>
-													)}
-												</div>
-											</td>
-											<td className="px-3 py-2.5 text-sm text-foreground">
-												{v.company_name ? (
-													<>
-														<p>{v.company_name}</p>
-														{v.job_title && (
-															<p className="text-xs text-foreground-secondary">{v.job_title}</p>
-														)}
-													</>
-												) : (
-													<span className="text-foreground-secondary">—</span>
-												)}
-											</td>
-											<td className="px-3 py-2.5 text-sm text-right tabular-nums text-foreground">
-												{v.total_sessions || 0}
-											</td>
-											<td className="px-3 py-2.5 text-sm text-right tabular-nums text-foreground">
-												{v.vehicles_interested?.length ? (
-													<span className="inline-flex items-center gap-1">
-														<Car className="w-3.5 h-3.5 text-foreground-secondary" />
-														{v.vehicles_interested.length}
-													</span>
-												) : (
-													<span className="text-foreground-secondary">—</span>
-												)}
-											</td>
-											<td className="px-3 py-2.5 text-sm text-right tabular-nums text-foreground">
-												{v.lead_score}
-											</td>
-											<td className="px-3 py-2.5 text-xs text-right text-foreground-secondary whitespace-nowrap">
-												{new Date(v.updated_at).toLocaleDateString('pt-BR')}
-											</td>
-										</tr>
-									))
-								)}
-							</tbody>
-						</table>
-					</div>
+					<TabelaOrdenavel
+						colunas={[
+							{
+								chave: 'visitante',
+								titulo: 'Visitante',
+								filtro: 'texto',
+								valor: v => [v.full_name, v.email, v.phone].filter(Boolean).join(' '),
+								render: v => (
+									<>
+										<p className="font-medium text-foreground">{v.full_name || v.email || 'Anônimo'}</p>
+										<div className="flex flex-wrap gap-3 text-xs text-foreground-secondary">
+											{v.email && (
+												<span className="flex items-center gap-1">
+													<Mail className="w-3 h-3" />
+													{v.email}
+												</span>
+											)}
+											{v.phone && (
+												<span className="flex items-center gap-1">
+													<Phone className="w-3 h-3" />
+													{v.phone}
+												</span>
+											)}
+										</div>
+									</>
+								),
+							},
+							{
+								chave: 'empresa',
+								titulo: 'Empresa',
+								filtro: 'texto',
+								valor: v => [v.company_name, v.job_title].filter(Boolean).join(' '),
+								render: v =>
+									v.company_name ? (
+										<>
+											<p>{v.company_name}</p>
+											{v.job_title && <p className="text-xs text-foreground-secondary">{v.job_title}</p>}
+										</>
+									) : (
+										<span className="text-foreground-secondary">—</span>
+									),
+							},
+							{
+								chave: 'sessoes',
+								titulo: 'Sessões',
+								filtro: 'numero',
+								valor: v => v.total_sessions ?? 0,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: v => v.total_sessions || 0,
+							},
+							{
+								chave: 'veiculos',
+								titulo: 'Veículos',
+								filtro: 'numero',
+								valor: v => v.vehicles_interested?.length ?? 0,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: v =>
+									v.vehicles_interested?.length ? (
+										<span className="inline-flex items-center gap-1">
+											<Car className="w-3.5 h-3.5 text-foreground-secondary" />
+											{v.vehicles_interested.length}
+										</span>
+									) : (
+										<span className="text-foreground-secondary">—</span>
+									),
+							},
+							{
+								chave: 'score',
+								titulo: 'Score',
+								filtro: 'numero',
+								valor: v => v.lead_score,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: v => v.lead_score,
+							},
+							{
+								chave: 'atualizado',
+								titulo: 'Atualizado',
+								valor: v => v.updated_at,
+								alinhar: 'dir',
+								classe: 'whitespace-nowrap text-xs text-foreground-secondary',
+								render: v => new Date(v.updated_at).toLocaleDateString('pt-BR'),
+							},
+						]}
+						linhas={visitantes}
+						chaveLinha={v => v.id}
+						vazio="Nenhum visitante encontrado."
+					/>
 				</Secao>
 
 				<p className="text-center text-xs text-foreground-secondary">

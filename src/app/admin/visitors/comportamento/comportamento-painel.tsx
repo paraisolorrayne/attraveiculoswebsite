@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Secao } from '../visitors-tabelas'
+import { TabelaOrdenavel } from '../visitors-tabela'
 import {
   corTaxa,
   fmtDuracao,
@@ -150,49 +151,69 @@ export function ComportamentoPainel() {
         titulo="Onde a pessoa para, por tipo de página"
         dica="Compare a taxa de contato entre os tipos: é ela que diz se a ficha de veículo está fazendo o trabalho que a listagem não faz."
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-foreground-secondary">
-                <th className="px-4 py-2 font-medium">Tipo</th>
-                <th className="px-4 py-2 text-right font-medium">Visualizações</th>
-                <th className="px-4 py-2 text-right font-medium">Sessões</th>
-                <th className="px-4 py-2 text-right font-medium">Tempo mediano</th>
-                <th className="px-4 py-2 text-right font-medium">Rolagem</th>
-                <th className="px-4 py-2 text-right font-medium">Contato</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.por_tipo.map(t => {
+        <TabelaOrdenavel
+          colunas={[
+            {
+              chave: 'tipo',
+              titulo: 'Tipo',
+              filtro: 'opcoes',
+              valor: t => NOME_DO_TIPO[t.page_type] ?? t.page_type,
+              render: t => NOME_DO_TIPO[t.page_type] ?? t.page_type,
+            },
+            {
+              chave: 'visualizacoes',
+              titulo: 'Visualizações',
+              filtro: 'numero',
+              valor: t => t.visualizacoes,
+              alinhar: 'dir',
+              classe: 'tabular-nums text-foreground-secondary',
+              render: t => fmtNum(t.visualizacoes),
+            },
+            {
+              chave: 'sessoes',
+              titulo: 'Sessões',
+              filtro: 'numero',
+              valor: t => t.sessoes,
+              alinhar: 'dir',
+              classe: 'tabular-nums text-foreground-secondary',
+              render: t => fmtNum(t.sessoes),
+            },
+            {
+              chave: 'tempo',
+              titulo: 'Tempo mediano',
+              filtro: 'numero',
+              valor: t => t.tempo_mediano,
+              alinhar: 'dir',
+              classe: 'tabular-nums text-foreground-secondary',
+              rotuloFiltro: 'Tempo em segundos',
+              render: t => fmtDuracao(t.tempo_mediano),
+            },
+            {
+              chave: 'rolagem',
+              titulo: 'Rolagem',
+              filtro: 'numero',
+              valor: t => t.rolagem_mediana,
+              alinhar: 'dir',
+              classe: 'tabular-nums text-foreground-secondary',
+              render: t => (t.rolagem_mediana != null ? `${t.rolagem_mediana}%` : '—'),
+            },
+            {
+              chave: 'contato',
+              titulo: 'Contato',
+              filtro: 'numero',
+              valor: t => taxa(t.com_whatsapp, t.visualizacoes),
+              alinhar: 'dir',
+              classe: 'tabular-nums font-medium',
+              render: t => {
                 const tx = taxa(t.com_whatsapp, t.visualizacoes)
-                return (
-                  <tr key={t.page_type} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-2 text-foreground">
-                      {NOME_DO_TIPO[t.page_type] ?? t.page_type}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">
-                      {fmtNum(t.visualizacoes)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">
-                      {fmtNum(t.sessoes)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">
-                      {fmtDuracao(t.tempo_mediano)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">
-                      {t.rolagem_mediana != null ? `${t.rolagem_mediana}%` : '—'}
-                    </td>
-                    <td
-                      className={`px-4 py-2 text-right tabular-nums font-medium ${corTaxa(tx, mediaWhats, t.visualizacoes)}`}
-                    >
-                      {fmtPct(tx)}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                return <span className={corTaxa(tx, mediaWhats, t.visualizacoes)}>{fmtPct(tx)}</span>
+              },
+            },
+          ]}
+          linhas={dados.por_tipo}
+          chaveLinha={t => t.page_type}
+          vazio="Sem páginas no período."
+        />
       </Secao>
 
       {totalRolagem > 0 && (
@@ -262,36 +283,62 @@ function ListaDePaginas({
 }) {
   return (
     <Secao titulo={titulo} dica={dica}>
-      {linhas.length === 0 ? (
-        <p className="p-4 text-sm text-foreground-secondary">Sem páginas com volume suficiente no período.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <tbody>
-            {linhas.map(l => {
+      <TabelaOrdenavel
+        colunas={[
+          {
+            chave: 'pagina',
+            titulo: 'Página',
+            filtro: 'texto',
+            valor: l => l.page_path,
+            classe: 'max-w-[16rem]',
+            render: l => (
+              <>
+                <span className="block truncate text-foreground" title={l.page_path}>
+                  {l.page_path}
+                </span>
+                <span className="text-[11px] text-foreground-secondary">
+                  {fmtNum(l.visualizacoes)} visualizações
+                  {l.rolagem_mediana != null && ` · rolagem ${l.rolagem_mediana}%`}
+                </span>
+              </>
+            ),
+          },
+          {
+            chave: 'visualizacoes',
+            titulo: 'Visualizações',
+            filtro: 'numero',
+            valor: l => l.visualizacoes,
+            alinhar: 'dir',
+            classe: 'tabular-nums text-foreground-secondary',
+            render: l => fmtNum(l.visualizacoes),
+          },
+          {
+            chave: 'tempo',
+            titulo: 'Tempo mediano',
+            filtro: 'numero',
+            valor: l => l.tempo_mediano,
+            alinhar: 'dir',
+            classe: 'tabular-nums text-foreground-secondary',
+            rotuloFiltro: 'Tempo em segundos',
+            render: l => fmtDuracao(l.tempo_mediano),
+          },
+          {
+            chave: 'contato',
+            titulo: 'Contato',
+            filtro: 'numero',
+            valor: l => taxa(l.com_whatsapp, l.visualizacoes),
+            alinhar: 'dir',
+            classe: 'tabular-nums font-medium',
+            render: l => {
               const tx = taxa(l.com_whatsapp, l.visualizacoes)
-              return (
-                <tr key={l.page_path} className="border-b border-border/60 last:border-0">
-                  <td className="max-w-[16rem] px-4 py-2">
-                    <span className="block truncate text-foreground" title={l.page_path}>
-                      {l.page_path}
-                    </span>
-                    <span className="text-[11px] text-foreground-secondary">
-                      {fmtNum(l.visualizacoes)} visualizações
-                      {l.rolagem_mediana != null && ` · rolagem ${l.rolagem_mediana}%`}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-foreground-secondary">
-                    {fmtDuracao(l.tempo_mediano)}
-                  </td>
-                  <td className={`px-4 py-2 text-right tabular-nums font-medium ${corTaxa(tx, media, l.visualizacoes)}`}>
-                    {fmtPct(tx)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      )}
+              return <span className={corTaxa(tx, media, l.visualizacoes)}>{fmtPct(tx)}</span>
+            },
+          },
+        ]}
+        linhas={linhas}
+        chaveLinha={l => l.page_path}
+        vazio="Sem páginas com volume suficiente no período."
+      />
     </Secao>
   )
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Secao } from '../visitors-tabelas'
+import { TabelaOrdenavel } from '../visitors-tabela'
 import { corTaxa, fmtDuracao, fmtNum, fmtPct, larguraRelativa, nomeDoSlug, taxa } from '../visitors-metrics'
 
 interface LinhaVeiculo {
@@ -169,69 +170,95 @@ export function VeiculosPainel() {
           titulo="Cada contato pelo WhatsApp, com a origem"
           dica="Vai do contato individual até a sessão que o originou — o caminho que antes só existia por consulta no banco. Quando a campanha não vem marcada, é o termo buscado que diz o que a pessoa procurava."
         >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-foreground-secondary">
-                  <th className="px-4 py-2 font-medium">Quando</th>
-                  <th className="px-4 py-2 font-medium">Origem</th>
-                  <th className="px-4 py-2 font-medium">O que buscou</th>
-                  <th className="px-4 py-2 font-medium">Onde clicou</th>
-                  <th className="px-4 py-2 font-medium">Local</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dados.cliques_whatsapp.map(c => (
-                  <tr key={c.id} className="border-b border-border/60 last:border-0 align-top">
-                    <td className="whitespace-nowrap px-4 py-2 text-foreground-secondary">
-                      {new Date(c.clicked_at).toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-                        timeZone: 'America/Sao_Paulo',
-                      })}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className="text-foreground">
-                        {c.utm_source}
-                        {c.utm_medium !== '-' && ` / ${c.utm_medium}`}
+          <TabelaOrdenavel
+            colunas={[
+              {
+                chave: 'quando',
+                titulo: 'Quando',
+                valor: c => c.clicked_at,
+                classe: 'whitespace-nowrap text-foreground-secondary',
+                render: c =>
+                  new Date(c.clicked_at).toLocaleString('pt-BR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                    timeZone: 'America/Sao_Paulo',
+                  }),
+              },
+              {
+                chave: 'origem',
+                titulo: 'Origem',
+                filtro: 'texto',
+                valor: c => `${c.utm_source} ${c.utm_medium} ${c.utm_campaign}`,
+                render: c => (
+                  <>
+                    <span className="text-foreground">
+                      {c.utm_source}
+                      {c.utm_medium !== '-' && ` / ${c.utm_medium}`}
+                    </span>
+                    <span className="block text-[11px] text-foreground-secondary">
+                      {c.utm_campaign}
+                      {c.tem_gclid && ' · gclid'}
+                    </span>
+                  </>
+                ),
+              },
+              {
+                chave: 'termo',
+                titulo: 'O que buscou',
+                filtro: 'texto',
+                valor: c => `${c.utm_term ?? ''} ${c.utm_content ?? ''}`,
+                classe: 'max-w-[14rem]',
+                render: c => (
+                  <>
+                    {c.utm_term ? (
+                      <span className="block truncate text-foreground" title={c.utm_term}>
+                        {c.utm_term}
                       </span>
-                      <span className="block text-[11px] text-foreground-secondary">
-                        {c.utm_campaign}
-                        {c.tem_gclid && ' · gclid'}
+                    ) : (
+                      <span className="text-foreground-secondary">—</span>
+                    )}
+                    {c.utm_content && (
+                      <span className="block truncate text-[11px] text-foreground-secondary" title={c.utm_content}>
+                        {c.utm_content}
                       </span>
-                    </td>
-                    <td className="max-w-[14rem] px-4 py-2">
-                      {c.utm_term ? (
-                        <span className="block truncate text-foreground" title={c.utm_term}>
-                          {c.utm_term}
-                        </span>
-                      ) : (
-                        <span className="text-foreground-secondary">—</span>
-                      )}
-                      {c.utm_content && (
-                        <span className="block truncate text-[11px] text-foreground-secondary" title={c.utm_content}>
-                          {c.utm_content}
-                        </span>
-                      )}
-                    </td>
-                    <td className="max-w-[12rem] px-4 py-2">
-                      <span className="block truncate text-foreground-secondary" title={c.page_path ?? ''}>
-                        {c.page_path ?? '—'}
-                      </span>
-                      <span className="block text-[11px] text-foreground-secondary">
-                        {c.vehicle_id ? `veículo ${c.vehicle_id}` : 'sem veículo'}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-foreground-secondary">
-                      {[c.city, c.region].filter(Boolean).join(' / ') || '—'}
-                      {c.device_type && (
-                        <span className="block text-[11px]">{c.device_type}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </>
+                ),
+              },
+              {
+                chave: 'onde',
+                titulo: 'Onde clicou',
+                filtro: 'texto',
+                valor: c => c.page_path,
+                classe: 'max-w-[12rem]',
+                render: c => (
+                  <>
+                    <span className="block truncate text-foreground-secondary" title={c.page_path ?? ''}>
+                      {c.page_path ?? '—'}
+                    </span>
+                    <span className="block text-[11px] text-foreground-secondary">
+                      {c.vehicle_id ? `veículo ${c.vehicle_id}` : 'sem veículo'}
+                    </span>
+                  </>
+                ),
+              },
+              {
+                chave: 'local',
+                titulo: 'Local',
+                filtro: 'texto',
+                valor: c => [c.city, c.region].filter(Boolean).join(' / '),
+                classe: 'whitespace-nowrap text-foreground-secondary',
+                render: c => (
+                  <>
+                    {[c.city, c.region].filter(Boolean).join(' / ') || '—'}
+                    {c.device_type && <span className="block text-[11px]">{c.device_type}</span>}
+                  </>
+                ),
+              },
+            ]}
+            linhas={dados.cliques_whatsapp}
+            chaveLinha={c => c.id}
+            vazio="Nenhum clique no período."
+          />
         </Secao>
       )}
 
@@ -254,43 +281,66 @@ function TabelaVeiculos({
 }) {
   return (
     <Secao titulo={titulo} dica={dica}>
-      {linhas.length === 0 ? (
-        <p className="p-4 text-sm text-foreground-secondary">{vazio ?? 'Sem dados no período.'}</p>
-      ) : (
-        <table className="w-full text-sm">
-          <tbody>
-            {linhas.map(v => {
+      <TabelaOrdenavel
+        colunas={[
+          {
+            chave: 'veiculo',
+            titulo: 'Veículo',
+            filtro: 'texto',
+            valor: v => [v.vehicle_brand, v.vehicle_model, v.vehicle_slug].filter(Boolean).join(' '),
+            classe: 'max-w-[15rem]',
+            render: v => (
+              <>
+                <Link
+                  href={`/veiculo/${v.vehicle_slug}`}
+                  target="_blank"
+                  className="block truncate text-foreground hover:text-primary"
+                  title={v.vehicle_slug}
+                >
+                  {[v.vehicle_brand, v.vehicle_model].filter(Boolean).join(' ') || nomeDoSlug(v.vehicle_slug)}
+                </Link>
+                <span className="text-[11px] text-foreground-secondary">
+                  {reais(v.vehicle_price)} · {fmtNum(v.sessoes)} sessões
+                  {v.tempo_mediano != null && ` · ${fmtDuracao(v.tempo_mediano)}`}
+                </span>
+              </>
+            ),
+          },
+          {
+            chave: 'preco',
+            titulo: 'Preço',
+            filtro: 'numero',
+            valor: v => v.vehicle_price,
+            alinhar: 'dir',
+            classe: 'tabular-nums text-foreground-secondary',
+            render: v => reais(v.vehicle_price),
+          },
+          {
+            chave: 'visualizacoes',
+            titulo: 'Visualizações',
+            filtro: 'numero',
+            valor: v => v.visualizacoes,
+            alinhar: 'dir',
+            classe: 'tabular-nums text-foreground-secondary',
+            render: v => fmtNum(v.visualizacoes),
+          },
+          {
+            chave: 'contato',
+            titulo: 'Contato',
+            filtro: 'numero',
+            valor: v => taxa(v.com_whatsapp, v.visualizacoes),
+            alinhar: 'dir',
+            classe: 'tabular-nums font-medium',
+            render: v => {
               const tx = taxa(v.com_whatsapp, v.visualizacoes)
-              const nome =
-                [v.vehicle_brand, v.vehicle_model].filter(Boolean).join(' ') || nomeDoSlug(v.vehicle_slug)
-              return (
-                <tr key={v.vehicle_slug} className="border-b border-border/60 last:border-0">
-                  <td className="max-w-[15rem] px-4 py-2">
-                    <Link
-                      href={`/veiculo/${v.vehicle_slug}`}
-                      target="_blank"
-                      className="block truncate text-foreground hover:text-primary"
-                      title={v.vehicle_slug}
-                    >
-                      {nome}
-                    </Link>
-                    <span className="text-[11px] text-foreground-secondary">
-                      {reais(v.vehicle_price)} · {fmtNum(v.sessoes)} sessões
-                      {v.tempo_mediano != null && ` · ${fmtDuracao(v.tempo_mediano)}`}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-foreground-secondary">
-                    {fmtNum(v.visualizacoes)}
-                  </td>
-                  <td className={`px-4 py-2 text-right tabular-nums font-medium ${corTaxa(tx, media, v.visualizacoes)}`}>
-                    {v.com_whatsapp === 0 ? '—' : fmtPct(tx)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      )}
+              return <span className={corTaxa(tx, media, v.visualizacoes)}>{v.com_whatsapp === 0 ? '—' : fmtPct(tx)}</span>
+            },
+          },
+        ]}
+        linhas={linhas}
+        chaveLinha={v => v.vehicle_slug}
+        vazio={vazio ?? 'Sem dados no período.'}
+      />
     </Secao>
   )
 }

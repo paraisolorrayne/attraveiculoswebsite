@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { chaveCampanha } from '@/lib/traffic-channel'
 import { rotuloDevice, rotuloMatchType, rotuloNetwork } from '@/lib/parametros-anuncio'
 import { InfoDica } from '../crm/info-dica'
+import { TabelaOrdenavel, type ColunaTabela } from './visitors-tabela'
 import {
 	corBarraTaxa,
 	corTaxa,
@@ -54,9 +55,6 @@ function Vazio({ children }: { children: ReactNode }) {
 	return <p className="px-4 py-8 text-center text-sm text-foreground-secondary">{children}</p>
 }
 
-const TH = 'px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-foreground-secondary whitespace-nowrap'
-const TD = 'px-3 py-2.5 text-sm text-foreground whitespace-nowrap'
-
 function Badge({ cor, children }: { cor: string; children: ReactNode }) {
 	return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cor}`}>{children}</span>
 }
@@ -65,7 +63,7 @@ function Badge({ cor, children }: { cor: string; children: ReactNode }) {
  * Coluna da taxa de conversão: é a métrica que decide investimento, então ganha número grande,
  * cor comparada à média do período e barra proporcional ao melhor canal da tabela.
  */
-function CelulaTaxa({
+function ConteudoTaxa({
 	parte,
 	total,
 	media,
@@ -79,11 +77,9 @@ function CelulaTaxa({
 	const valor = taxa(parte, total)
 	const baixoVolume = total < VOLUME_MINIMO
 	return (
-		<td className={`${TD} min-w-[140px]`}>
+		<>
 			<div className="flex items-center gap-2">
-				<span className={`text-base font-semibold tabular-nums ${corTaxa(valor, media, total)}`}>
-					{fmtPct(valor)}
-				</span>
+				<span className={`text-base font-semibold tabular-nums ${corTaxa(valor, media, total)}`}>{fmtPct(valor)}</span>
 				{baixoVolume && (
 					<span
 						className="text-[10px] text-foreground-secondary"
@@ -94,12 +90,24 @@ function CelulaTaxa({
 				)}
 			</div>
 			<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
-				<div
-					className={`h-full rounded-full ${corBarraTaxa(valor, media, total)}`}
-					style={{ width: larguraRelativa(valor, maximo) }}
-				/>
+				<div className={`h-full rounded-full ${corBarraTaxa(valor, media, total)}`} style={{ width: larguraRelativa(valor, maximo) }} />
 			</div>
-		</td>
+		</>
+	)
+}
+
+/** Barra de volume com o número e o % do total. */
+function ConteudoVolumeBarra({ valor, maximo, total, cor = 'bg-foreground/25' }: { valor: number; maximo: number; total: number; cor?: string }) {
+	return (
+		<>
+			<div className="flex items-baseline gap-2">
+				<span className="font-medium tabular-nums">{fmtNum(valor)}</span>
+				{total > 0 && <span className="text-xs text-foreground-secondary tabular-nums">{fmtPct(taxa(valor, total), 0)}</span>}
+			</div>
+			<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
+				<div className={`h-full rounded-full ${cor}`} style={{ width: larguraRelativa(valor, maximo) }} />
+			</div>
+		</>
 	)
 }
 
@@ -119,72 +127,100 @@ export function TabelaCanais({
 	const maiorTaxa = Math.max(0, ...canais.map(c => taxa(c.whatsapp, c.sessoes)))
 	const maiorVolume = Math.max(0, ...canais.map(c => c.sessoes))
 
+	const colunas: ColunaTabela<LinhaCanal>[] = [
+		{
+			chave: 'canal',
+			titulo: 'Canal',
+			filtro: 'opcoes',
+			valor: c => c.rotulo,
+			render: c => <Badge cor={c.cor}>{c.rotulo}</Badge>,
+		},
+		{
+			chave: 'sessoes',
+			titulo: 'Sessões',
+			filtro: 'numero',
+			valor: c => c.sessoes,
+			classe: 'min-w-[140px]',
+			render: c => <ConteudoVolumeBarra valor={c.sessoes} maximo={maiorVolume} total={totalSessoes} />,
+		},
+		{
+			chave: 'viu_veiculo',
+			titulo: 'Viu veículo',
+			filtro: 'numero',
+			valor: c => c.sessoes_com_veiculo,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: c => (
+				<>
+					{fmtNum(c.sessoes_com_veiculo)}
+					<span className="ml-1 text-xs text-foreground-secondary">{fmtPct(taxa(c.sessoes_com_veiculo, c.sessoes), 0)}</span>
+				</>
+			),
+		},
+		{
+			chave: 'whatsapp',
+			titulo: 'Cliques no WhatsApp',
+			filtro: 'numero',
+			valor: c => c.whatsapp,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: c => fmtNum(c.whatsapp),
+		},
+		{
+			chave: 'conversao',
+			titulo: 'Taxa de conversão',
+			filtro: 'numero',
+			valor: c => taxa(c.whatsapp, c.sessoes),
+			classe: 'min-w-[140px]',
+			render: c => <ConteudoTaxa parte={c.whatsapp} total={c.sessoes} media={mediaConversao} maximo={maiorTaxa} />,
+		},
+		{
+			chave: 'formularios',
+			titulo: 'Formulários',
+			filtro: 'numero',
+			valor: c => c.formularios,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: c => fmtNum(c.formularios),
+		},
+		{
+			chave: 'veiculos_por_sessao',
+			titulo: 'Veículos diferentes por sessão',
+			filtro: 'numero',
+			valor: c => (c.sessoes > 0 ? c.veiculos_distintos / c.sessoes : 0),
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			rotuloFiltro: 'Veículos por sessão',
+			render: c => fmtMedia(c.veiculos_distintos, c.sessoes),
+		},
+		{
+			chave: 'duracao',
+			titulo: 'Duração média',
+			filtro: 'numero',
+			valor: c => c.duracao_media_segundos,
+			alinhar: 'dir',
+			classe: 'tabular-nums text-foreground-secondary',
+			rotuloFiltro: 'Duração em segundos',
+			render: c => (temDuracao ? fmtDuracao(c.duracao_media_segundos) : '—'),
+		},
+	]
+
 	return (
 		<Secao
 			titulo="Canais de tráfego — onde colocar verba"
-			dica="Compare pela coluna Taxa de conversão, não pelo volume de sessões: o canal que traz mais gente costuma não ser o que traz mais conversa. Verde converte acima da média do período; vermelho, bem abaixo. A origem de cada visita vem da marcação do anúncio ou do site de onde a pessoa veio, e a soma das linhas é o total do período. «Veículos diferentes por sessão» conta quantos carros distintos a mesma visita abriu — abrir o mesmo carro quatro vezes conta como um."
+			dica="Compare pela coluna Taxa de conversão, não pelo volume de sessões: o canal que traz mais gente costuma não ser o que traz mais conversa. Verde converte acima da média do período; vermelho, abaixo. Clique no cabeçalho para ordenar."
 			acessorio={
 				<span className="text-xs text-foreground-secondary">
 					Conversão média do período: <strong className="text-foreground">{fmtPct(mediaConversao)}</strong>
 				</span>
 			}
 		>
-			{canais.length === 0 ? (
-				<Vazio>Nenhuma sessão no período selecionado.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-left`}>Sessões</th>
-								<th className={`${TH} text-right`}>Viu veículo</th>
-								<th className={`${TH} text-right`}>Cliques no WhatsApp</th>
-								<th className={`${TH} text-left`}>Taxa de conversão</th>
-								<th className={`${TH} text-right`}>Formulários</th>
-								<th className={`${TH} text-right`}>Veículos diferentes por sessão</th>
-								<th className={`${TH} text-right`}>Duração média</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{canais.map(c => (
-								<tr key={c.canal} className="hover:bg-background-soft/60">
-									<td className={TD}>
-										<Badge cor={c.cor}>{c.rotulo}</Badge>
-									</td>
-									<td className={`${TD} min-w-[140px]`}>
-										<div className="flex items-baseline gap-2">
-											<span className="font-medium tabular-nums">{fmtNum(c.sessoes)}</span>
-											<span className="text-xs text-foreground-secondary tabular-nums">
-												{fmtPct(taxa(c.sessoes, totalSessoes), 0)}
-											</span>
-										</div>
-										<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
-											<div
-												className="h-full rounded-full bg-foreground/25"
-												style={{ width: larguraRelativa(c.sessoes, maiorVolume) }}
-											/>
-										</div>
-									</td>
-									<td className={`${TD} text-right tabular-nums`}>
-										{fmtNum(c.sessoes_com_veiculo)}
-										<span className="ml-1 text-xs text-foreground-secondary">
-											{fmtPct(taxa(c.sessoes_com_veiculo, c.sessoes), 0)}
-										</span>
-									</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.whatsapp)}</td>
-									<CelulaTaxa parte={c.whatsapp} total={c.sessoes} media={mediaConversao} maximo={maiorTaxa} />
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.formularios)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtMedia(c.veiculos_distintos, c.sessoes)}</td>
-									<td className={`${TD} text-right tabular-nums text-foreground-secondary`}>
-										{temDuracao ? fmtDuracao(c.duracao_media_segundos) : '—'}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={colunas}
+				linhas={canais}
+				chaveLinha={c => c.canal}
+				vazio="Nenhuma sessão no período selecionado."
+			/>
 		</Secao>
 	)
 }
@@ -220,129 +256,192 @@ export function TabelaCampanhas({
 				</span>
 			}
 		>
-			{campanhas.length === 0 ? (
-				<Vazio>
-					Nenhuma visita do período chegou com nome de campanha no link. Sem essa marcação nos
-					anúncios, dá para ler o canal, mas não qual campanha trouxe cada visita.
-				</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Campanha</th>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-right`}>Sessões</th>
-								<th className={`${TH} text-right`}>Viu veículo</th>
-								<th className={`${TH} text-right`}>Cliques no WhatsApp</th>
-								<th className={`${TH} text-left`}>Taxa de conversão</th>
-								<th className={`${TH} text-right`}>Formulários</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{campanhas.map(c => (
-								<tr key={c.campanha} className="hover:bg-background-soft/60">
-									<td className={`${TD} max-w-[280px]`}>
-										{/* Link para a página da campanha (criativos, termos, entradas, leads). */}
-										<Link
-											href={`/admin/visitors/campanha/${encodeURIComponent(chaveCampanha(c.campanha))}`}
-											className="block truncate font-medium hover:underline"
-											title={c.campanha}
-										>
-											{c.campanha}
-										</Link>
-										{c.fonte && <p className="text-xs text-foreground-secondary truncate">{c.fonte}</p>}
-									</td>
-									<td className={TD}>
-										<Badge cor={c.cor_canal}>{c.rotulo_canal}</Badge>
-									</td>
-									<td className={`${TD} text-right tabular-nums font-medium`}>{fmtNum(c.sessoes)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.sessoes_com_veiculo)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.whatsapp)}</td>
-									<CelulaTaxa parte={c.whatsapp} total={c.sessoes} media={mediaConversao} maximo={maiorTaxa} />
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.formularios)}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'campanha',
+						titulo: 'Campanha',
+						filtro: 'texto',
+						valor: c => `${c.campanha} ${c.fonte}`,
+						classe: 'max-w-[280px]',
+						render: c => (
+							<>
+								{/* Link para a página da campanha (criativos, termos, entradas, leads). */}
+								<Link
+									href={`/admin/visitors/campanha/${encodeURIComponent(chaveCampanha(c.campanha))}`}
+									className="block truncate font-medium hover:underline"
+									title={c.campanha}
+								>
+									{c.campanha}
+								</Link>
+								{c.fonte && <p className="truncate text-xs text-foreground-secondary">{c.fonte}</p>}
+							</>
+						),
+					},
+					{
+						chave: 'canal',
+						titulo: 'Canal',
+						filtro: 'opcoes',
+						valor: c => c.rotulo_canal,
+						render: c => <Badge cor={c.cor_canal}>{c.rotulo_canal}</Badge>,
+					},
+					{
+						chave: 'sessoes',
+						titulo: 'Sessões',
+						filtro: 'numero',
+						valor: c => c.sessoes,
+						alinhar: 'dir',
+						classe: 'tabular-nums font-medium',
+						render: c => fmtNum(c.sessoes),
+					},
+					{
+						chave: 'viu_veiculo',
+						titulo: 'Viu veículo',
+						filtro: 'numero',
+						valor: c => c.sessoes_com_veiculo,
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: c => fmtNum(c.sessoes_com_veiculo),
+					},
+					{
+						chave: 'whatsapp',
+						titulo: 'Cliques no WhatsApp',
+						filtro: 'numero',
+						valor: c => c.whatsapp,
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: c => fmtNum(c.whatsapp),
+					},
+					{
+						chave: 'conversao',
+						titulo: 'Taxa de conversão',
+						filtro: 'numero',
+						valor: c => taxa(c.whatsapp, c.sessoes),
+						classe: 'min-w-[140px]',
+						render: c => <ConteudoTaxa parte={c.whatsapp} total={c.sessoes} media={mediaConversao} maximo={maiorTaxa} />,
+					},
+					{
+						chave: 'formularios',
+						titulo: 'Formulários',
+						filtro: 'numero',
+						valor: c => c.formularios,
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: c => fmtNum(c.formularios),
+					},
+				]}
+				linhas={campanhas}
+				chaveLinha={c => c.campanha}
+				vazio="Nenhuma visita do período chegou com nome de campanha no link. Sem essa marcação nos anúncios, dá para ler o canal, mas não qual campanha trouxe cada visita."
+			/>
 		</Secao>
 	)
 }
 
 export function ListaVeiculos({ veiculos }: { veiculos: LinhaVeiculo[] }) {
 	const maximo = Math.max(0, ...veiculos.map(v => v.views))
+	const total = veiculos.reduce((s, v) => s + v.views, 0)
 
 	return (
 		<Secao
 			titulo="Veículos mais vistos"
 			dica="Quantas vezes a página de cada veículo foi aberta no período. Só entram os acessos em que o site conseguiu registrar de qual veículo se tratava."
 		>
-			{veiculos.length === 0 ? (
-				<Vazio>
-					Nenhuma abertura de página de veículo com o veículo identificado neste período.
-				</Vazio>
-			) : (
-				<ul className="p-4 space-y-2">
-					{veiculos.map(v => (
-						<li key={v.slug}>
-							<div className="flex items-baseline justify-between gap-3">
-								<span className="text-sm text-foreground truncate" title={v.slug}>
-									{v.marca || v.modelo ? `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() : nomeDoSlug(v.slug)}
-								</span>
-								<span className="text-sm tabular-nums text-foreground-secondary shrink-0">
-									{fmtNum(v.views)} <span className="text-xs">aberturas</span>
-								</span>
-							</div>
-							<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
-								<div
-									className="h-full rounded-full bg-primary"
-									style={{ width: larguraRelativa(v.views, maximo) }}
-								/>
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'veiculo',
+						titulo: 'Veículo',
+						filtro: 'texto',
+						valor: v => `${v.marca ?? ''} ${v.modelo ?? ''} ${v.slug}`,
+						classe: 'max-w-[280px] truncate',
+						render: v => (
+							<span title={v.slug}>
+								{v.marca || v.modelo ? `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() : nomeDoSlug(v.slug)}
+							</span>
+						),
+					},
+					{
+						chave: 'views',
+						titulo: 'Aberturas',
+						filtro: 'numero',
+						valor: v => v.views,
+						classe: 'min-w-[140px]',
+						render: v => <ConteudoVolumeBarra valor={v.views} maximo={maximo} total={total} cor="bg-primary" />,
+					},
+					{
+						chave: 'sessoes',
+						titulo: 'Sessões',
+						filtro: 'numero',
+						valor: v => v.sessoes,
+						alinhar: 'dir',
+						classe: 'tabular-nums text-foreground-secondary',
+						render: v => fmtNum(v.sessoes),
+					},
+				]}
+				linhas={veiculos}
+				chaveLinha={v => v.slug}
+				vazio="Nenhuma abertura de página de veículo com o veículo identificado neste período."
+			/>
 		</Secao>
 	)
 }
 
 export function ListaCidades({ cidades }: { cidades: LinhaCidade[] }) {
 	const maximo = Math.max(0, ...cidades.map(c => c.sessoes))
+	const total = cidades.reduce((s, c) => s + c.sessoes, 0)
 
 	return (
 		<Secao
 			titulo="Cidades"
 			dica="Cidade estimada pelo IP da sessão. Serve para ler alcance geográfico da mídia, não como endereço do cliente."
 		>
-			{cidades.length === 0 ? (
-				<Vazio>Nenhuma sessão no período selecionado.</Vazio>
-			) : (
-				<ul className="p-4 space-y-2">
-					{cidades.map(c => (
-						<li key={c.cidade}>
-							<div className="flex items-baseline justify-between gap-3">
-								<span className="text-sm text-foreground truncate">
-									{c.cidade}
-									{c.regiao && <span className="text-foreground-secondary"> · {c.regiao}</span>}
-								</span>
-								<span className="text-sm tabular-nums text-foreground-secondary shrink-0">
-									{fmtNum(c.sessoes)}
-									<span className="text-xs"> sessões · {fmtNum(c.whatsapp)} clicaram no WhatsApp</span>
-								</span>
-							</div>
-							<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
-								<div
-									className="h-full rounded-full bg-foreground/25"
-									style={{ width: larguraRelativa(c.sessoes, maximo) }}
-								/>
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'cidade',
+						titulo: 'Cidade',
+						filtro: 'texto',
+						valor: c => `${c.cidade} ${c.regiao ?? ''}`,
+						classe: 'max-w-[240px] truncate',
+						render: c => (
+							<>
+								{c.cidade}
+								{c.regiao && <span className="text-foreground-secondary"> · {c.regiao}</span>}
+							</>
+						),
+					},
+					{
+						chave: 'sessoes',
+						titulo: 'Sessões',
+						filtro: 'numero',
+						valor: c => c.sessoes,
+						classe: 'min-w-[140px]',
+						render: c => <ConteudoVolumeBarra valor={c.sessoes} maximo={maximo} total={total} />,
+					},
+					{
+						chave: 'whatsapp',
+						titulo: 'Cliques no WhatsApp',
+						filtro: 'numero',
+						valor: c => c.whatsapp,
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: c => fmtNum(c.whatsapp),
+					},
+					{
+						chave: 'conversao',
+						titulo: 'Conversão',
+						filtro: 'numero',
+						valor: c => taxa(c.whatsapp, c.sessoes),
+						alinhar: 'dir',
+						classe: 'tabular-nums text-foreground-secondary',
+						render: c => fmtPct(taxa(c.whatsapp, c.sessoes)),
+					},
+				]}
+				linhas={cidades}
+				chaveLinha={c => c.cidade}
+				vazio="Nenhuma sessão no período selecionado."
+			/>
 		</Secao>
 	)
 }
@@ -406,52 +505,82 @@ export function MidiaPaga({
 				</div>
 			)}
 
-			{linhas.length === 0 ? (
-				<Vazio>Nenhuma visita de mídia paga no período selecionado.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="text-left text-[11px] uppercase tracking-wide text-foreground-secondary border-b border-border">
-								<th className="px-4 py-2 font-medium">Campanha</th>
-								<th className="px-4 py-2 font-medium">Grupo</th>
-								<th className="px-4 py-2 font-medium">Anúncio</th>
-								<th className="px-4 py-2 font-medium">Termo</th>
-								<th className="px-4 py-2 font-medium text-right">Visitas</th>
-								<th className="px-4 py-2 font-medium text-right">Cliques no WhatsApp</th>
-								<th className="px-4 py-2 font-medium text-right">Taxa</th>
-							</tr>
-						</thead>
-						<tbody>
-							{linhas.map((l, i) => {
-								const t = taxa(l.whatsapp, l.sessoes)
-								return (
-									<tr key={`${l.campanha}|${l.grupo}|${l.conteudo}|${l.termo}|${i}`} className="border-b border-border/60 last:border-0">
-										<td className="px-4 py-2 max-w-[16rem]">
-											<div className="truncate text-foreground" title={l.campanha}>{l.campanha}</div>
-											<div className="text-[10px] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
-										</td>
-										<td className="px-4 py-2 max-w-[10rem]">
-											<span className="block truncate text-foreground-secondary" title={l.grupo}>{l.grupo}</span>
-										</td>
-										<td className="px-4 py-2 max-w-[12rem]">
-											<span className="block truncate text-foreground-secondary" title={l.conteudo}>{l.conteudo}</span>
-										</td>
-										<td className="px-4 py-2 max-w-[12rem]">
-											<span className="block truncate text-foreground-secondary" title={l.termo}>{l.termo}</span>
-										</td>
-										<td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">{fmtNum(l.sessoes)}</td>
-										<td className="px-4 py-2 text-right tabular-nums text-foreground-secondary">{fmtNum(l.whatsapp)}</td>
-										<td className={`px-4 py-2 text-right tabular-nums font-medium ${corTaxa(t, media, l.sessoes)}`}>
-											{fmtPct(t)}
-										</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'campanha',
+						titulo: 'Campanha',
+						filtro: 'texto',
+						valor: l => `${l.campanha} ${l.canal_fonte}`,
+						classe: 'max-w-[16rem]',
+						render: l => (
+							<>
+								<div className="truncate text-foreground" title={l.campanha}>
+									{l.campanha}
+								</div>
+								<div className="text-[10px] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
+							</>
+						),
+					},
+					{
+						chave: 'grupo',
+						titulo: 'Grupo',
+						filtro: 'texto',
+						valor: l => l.grupo,
+						classe: 'max-w-[10rem] truncate text-foreground-secondary',
+						render: l => <span title={l.grupo}>{l.grupo}</span>,
+					},
+					{
+						chave: 'conteudo',
+						titulo: 'Anúncio',
+						filtro: 'texto',
+						valor: l => l.conteudo,
+						classe: 'max-w-[12rem] truncate text-foreground-secondary',
+						render: l => <span title={l.conteudo}>{l.conteudo}</span>,
+					},
+					{
+						chave: 'termo',
+						titulo: 'Termo',
+						filtro: 'texto',
+						valor: l => l.termo,
+						classe: 'max-w-[12rem] truncate text-foreground-secondary',
+						render: l => <span title={l.termo}>{l.termo}</span>,
+					},
+					{
+						chave: 'sessoes',
+						titulo: 'Visitas',
+						filtro: 'numero',
+						valor: l => l.sessoes,
+						alinhar: 'dir',
+						classe: 'tabular-nums text-foreground-secondary',
+						render: l => fmtNum(l.sessoes),
+					},
+					{
+						chave: 'whatsapp',
+						titulo: 'Cliques no WhatsApp',
+						filtro: 'numero',
+						valor: l => l.whatsapp,
+						alinhar: 'dir',
+						classe: 'tabular-nums text-foreground-secondary',
+						render: l => fmtNum(l.whatsapp),
+					},
+					{
+						chave: 'taxa',
+						titulo: 'Taxa',
+						filtro: 'numero',
+						valor: l => taxa(l.whatsapp, l.sessoes),
+						alinhar: 'dir',
+						classe: 'tabular-nums font-medium',
+						render: l => {
+							const t = taxa(l.whatsapp, l.sessoes)
+							return <span className={corTaxa(t, media, l.sessoes)}>{fmtPct(t)}</span>
+						},
+					},
+				]}
+				linhas={linhas}
+				chaveLinha={l => `${l.campanha}|${l.grupo}|${l.conteudo}|${l.termo}`}
+				vazio="Nenhuma visita de mídia paga no período selecionado."
+			/>
 		</Secao>
 	)
 }

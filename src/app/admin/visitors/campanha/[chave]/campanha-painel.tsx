@@ -5,7 +5,8 @@ import Link from 'next/link'
 import type { CanalTrafego } from '@/lib/traffic-channel'
 import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-metrics'
-import { Badge, BarraControles, CRU, CelulaVolume, Erro, TD, TH, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
+import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
+import { TabelaOrdenavel } from '../../visitors-tabela'
 
 interface Dimensao {
 	valor: string
@@ -279,37 +280,54 @@ function Lista({
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
 	return (
 		<Secao titulo={titulo} dica={dica}>
-			{linhas.length === 0 ? (
-				<Vazio>Sem dados.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Valor</th>
-								<th className={`${TH} text-left`}>Sessões</th>
-								<th className={`${TH} text-right`}>WhatsApp</th>
-								<th className={`${TH} text-right`}>Conversão</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{linhas.map(l => (
-								<tr key={l.chave} className="hover:bg-background-soft/60">
-									<td className={`${TD} max-w-[320px]`}>
-										<div className="truncate" title={l.cru}>
-											{l.rotulo}
-										</div>
-										{crus && l.cru !== l.rotulo && <div className={`${CRU} truncate`}>{l.cru}</div>}
-									</td>
-									<CelulaVolume valor={l.sessoes} maximo={maior} total={total} />
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(l.whatsapp)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtPct(taxa(l.whatsapp, l.sessoes))}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'valor',
+						titulo: 'Valor',
+						filtro: 'texto',
+						valor: l => `${l.rotulo} ${l.cru}`,
+						classe: 'max-w-[320px]',
+						render: l => (
+							<>
+								<div className="truncate" title={l.cru}>
+									{l.rotulo}
+								</div>
+								{crus && l.cru !== l.rotulo && <div className={`${CRU} truncate`}>{l.cru}</div>}
+							</>
+						),
+					},
+					{
+						chave: 'sessoes',
+						titulo: 'Sessões',
+						filtro: 'numero',
+						valor: l => l.sessoes,
+						classe: 'min-w-[140px]',
+						render: l => <ConteudoVolume valor={l.sessoes} maximo={maior} total={total} />,
+					},
+					{
+						chave: 'whatsapp',
+						titulo: 'WhatsApp',
+						filtro: 'numero',
+						valor: l => l.whatsapp,
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: l => fmtNum(l.whatsapp),
+					},
+					{
+						chave: 'conversao',
+						titulo: 'Conversão',
+						filtro: 'numero',
+						valor: l => taxa(l.whatsapp, l.sessoes),
+						alinhar: 'dir',
+						classe: 'tabular-nums',
+						render: l => fmtPct(taxa(l.whatsapp, l.sessoes)),
+					},
+				]}
+				linhas={linhas}
+				chaveLinha={l => l.chave}
+				vazio="Sem dados."
+			/>
 		</Secao>
 	)
 }
@@ -353,58 +371,78 @@ function Leads({ leads, crus }: { leads: Dados['leads']; crus: boolean }) {
 	return (
 		<Secao
 			titulo={`Leads — ${leads.length} sessões que clicaram no WhatsApp ou enviaram formulário`}
-			dica="As sessões desta campanha que viraram conversa, da mais recente para a mais antiga (até 100). Clique na sessão para ver a linha do tempo inteira."
+			dica="As sessões desta campanha que viraram conversa, da mais recente para a mais antiga (até 100). Clique na sessão para abrir a jornada inteira."
 		>
-			{leads.length === 0 ? (
-				<Vazio>Nenhum lead desta campanha no período.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Quando</th>
-								<th className={`${TH} text-left`}>Cidade</th>
-								<th className={`${TH} text-left`}>Entrada</th>
-								<th className={`${TH} text-left`}>Veículos</th>
-								<th className={`${TH} text-left`}>Criativo / termo</th>
-								<th className={`${TH} text-left`}>Contato</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{leads.map(l => (
-								<tr key={l.session_id} className="hover:bg-background-soft/60">
-									<td className={TD}>
-										<Link href={`/admin/visitors/sessoes?sessao=${encodeURIComponent(l.session_id)}`} className="hover:underline tabular-nums">
-											{dataHora(l.started_at)}
-										</Link>
-									</td>
-									<td className={TD}>{[l.city, l.region].filter(Boolean).join(' · ') || '—'}</td>
-									<td className={`${TD} max-w-[220px] truncate`} title={l.entrada ?? ''}>
-										{l.entrada ?? '—'}
-									</td>
-									<td className={`${TD} max-w-[260px] truncate`} title={(l.veiculos ?? []).join(', ')}>
-										{(l.veiculos ?? []).map(nomeDoSlug).join(', ') || '—'}
-									</td>
-									<td className={`${TD} max-w-[240px]`}>
-										<div className="truncate" title={[l.utm_content, l.utm_term].filter(Boolean).join(' / ')}>
-											{[l.utm_content, l.utm_term].filter(Boolean).join(' / ') || '—'}
-										</div>
-										{crus && (
-											<div className={`${CRU} truncate`}>
-												{[l.utm_source, l.utm_medium].filter(Boolean).join(' / ')}
-											</div>
-										)}
-									</td>
-									<td className={TD}>
-										{l.contacted_whatsapp && <Badge cor="bg-emerald-500/10 text-emerald-500">WhatsApp</Badge>}{' '}
-										{l.submitted_form && <Badge cor="bg-blue-500/10 text-blue-500">Formulário</Badge>}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={[
+					{
+						chave: 'quando',
+						titulo: 'Quando',
+						valor: l => l.started_at,
+						classe: 'tabular-nums',
+						render: l => (
+							<Link href={`/admin/visitors/sessoes/${encodeURIComponent(l.session_id)}`} className="hover:underline">
+								{dataHora(l.started_at)}
+							</Link>
+						),
+					},
+					{
+						chave: 'cidade',
+						titulo: 'Cidade',
+						filtro: 'texto',
+						valor: l => [l.city, l.region].filter(Boolean).join(' · '),
+						render: l => [l.city, l.region].filter(Boolean).join(' · ') || '—',
+					},
+					{
+						chave: 'entrada',
+						titulo: 'Entrada',
+						filtro: 'texto',
+						valor: l => l.entrada,
+						classe: 'max-w-[220px] truncate',
+						render: l => <span title={l.entrada ?? ''}>{l.entrada ?? '—'}</span>,
+					},
+					{
+						chave: 'veiculos',
+						titulo: 'Veículos',
+						filtro: 'texto',
+						valor: l => (l.veiculos ?? []).join(' '),
+						classe: 'max-w-[260px] truncate',
+						render: l => (
+							<span title={(l.veiculos ?? []).join(', ')}>{(l.veiculos ?? []).map(nomeDoSlug).join(', ') || '—'}</span>
+						),
+					},
+					{
+						chave: 'criativo',
+						titulo: 'Criativo / termo',
+						filtro: 'texto',
+						valor: l => [l.utm_content, l.utm_term].filter(Boolean).join(' / '),
+						classe: 'max-w-[240px]',
+						render: l => (
+							<>
+								<div className="truncate" title={[l.utm_content, l.utm_term].filter(Boolean).join(' / ')}>
+									{[l.utm_content, l.utm_term].filter(Boolean).join(' / ') || '—'}
+								</div>
+								{crus && <div className={`${CRU} truncate`}>{[l.utm_source, l.utm_medium].filter(Boolean).join(' / ')}</div>}
+							</>
+						),
+					},
+					{
+						chave: 'contato',
+						titulo: 'Contato',
+						filtro: 'opcoes',
+						valor: l => (l.contacted_whatsapp ? 'WhatsApp' : l.submitted_form ? 'Formulário' : '—'),
+						render: l => (
+							<>
+								{l.contacted_whatsapp && <Badge cor="bg-emerald-500/10 text-emerald-500">WhatsApp</Badge>}{' '}
+								{l.submitted_form && <Badge cor="bg-blue-500/10 text-blue-500">Formulário</Badge>}
+							</>
+						),
+					},
+				]}
+				linhas={leads}
+				chaveLinha={l => l.session_id}
+				vazio="Nenhum lead desta campanha no período."
+			/>
 		</Secao>
 	)
 }

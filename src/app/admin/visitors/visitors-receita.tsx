@@ -5,6 +5,7 @@ import { AlertTriangle, Link2, Loader2 } from 'lucide-react'
 import type { CanalTrafego } from '@/lib/traffic-channel'
 import { InfoDica } from '../crm/info-dica'
 import { Secao } from './visitors-tabelas'
+import { TabelaOrdenavel } from './visitors-tabela'
 import { fmtNum, fmtPct, larguraRelativa, taxa } from './visitors-metrics'
 
 // Receita por canal — o fechamento do ciclo site → CRM.
@@ -88,8 +89,6 @@ export interface AtribuicaoReceita {
 	origens_crm: LinhaOrigemCrm[]
 }
 
-const TH = 'px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-foreground-secondary whitespace-nowrap'
-const TD = 'px-3 py-2.5 text-sm text-foreground whitespace-nowrap'
 
 function fmtReais(valor: number): string {
 	return valor.toLocaleString('pt-BR', {
@@ -325,30 +324,51 @@ export function SecaoReceitaPorCanal({ dias }: { dias: number }) {
 			</div>
 
 			{dados.canais.length > 0 && (
-				<div className="overflow-x-auto border-t border-border">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-right`}>Leads ligados</th>
-								<th className={`${TH} text-right`}>Vendas</th>
-								<th className={`${TH} text-right`}>Perdidos</th>
-								<th className={`${TH} text-left`}>Receita</th>
-								<th className={`${TH} text-right`}>Ticket médio</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{dados.canais.map(c => (
-								<tr key={c.canal} className="hover:bg-background-soft/60">
-									<td className={TD}>
-										<Badge cor={c.cor}>{c.rotulo}</Badge>
-									</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.cards)}</td>
-									<td className={`${TD} text-right tabular-nums font-medium`}>{fmtNum(c.ganhos)}</td>
-									<td className={`${TD} text-right tabular-nums text-foreground-secondary`}>
-										{fmtNum(c.perdidos)}
-									</td>
-									<td className={`${TD} min-w-[180px]`}>
+				<div className="border-t border-border">
+					<TabelaOrdenavel
+						colunas={[
+							{
+								chave: 'canal',
+								titulo: 'Canal',
+								filtro: 'opcoes',
+								valor: c => c.rotulo,
+								render: c => <Badge cor={c.cor}>{c.rotulo}</Badge>,
+							},
+							{
+								chave: 'cards',
+								titulo: 'Leads ligados',
+								filtro: 'numero',
+								valor: c => c.cards,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: c => fmtNum(c.cards),
+							},
+							{
+								chave: 'ganhos',
+								titulo: 'Vendas',
+								filtro: 'numero',
+								valor: c => c.ganhos,
+								alinhar: 'dir',
+								classe: 'tabular-nums font-medium',
+								render: c => fmtNum(c.ganhos),
+							},
+							{
+								chave: 'perdidos',
+								titulo: 'Perdidos',
+								filtro: 'numero',
+								valor: c => c.perdidos,
+								alinhar: 'dir',
+								classe: 'tabular-nums text-foreground-secondary',
+								render: c => fmtNum(c.perdidos),
+							},
+							{
+								chave: 'receita',
+								titulo: 'Receita',
+								filtro: 'numero',
+								valor: c => c.receita,
+								classe: 'min-w-[180px]',
+								render: c => (
+									<>
 										<div className="flex items-baseline gap-1">
 											<span className="font-semibold tabular-nums">{fmtReais(c.receita)}</span>
 											<SemValor quantos={c.ganhos_sem_valor} />
@@ -359,115 +379,89 @@ export function SecaoReceitaPorCanal({ dias }: { dias: number }) {
 												style={{ width: larguraRelativa(c.receita, maiorReceitaCanal) }}
 											/>
 										</div>
-									</td>
-									<td className={`${TD} text-right tabular-nums text-foreground-secondary`}>
-										{c.ganhos > 0 ? fmtReais(c.receita / c.ganhos) : '—'}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
+									</>
+								),
+							},
+							{
+								chave: 'ticket',
+								titulo: 'Ticket médio',
+								filtro: 'numero',
+								valor: c => (c.ganhos > 0 ? c.receita / c.ganhos : null),
+								alinhar: 'dir',
+								classe: 'tabular-nums text-foreground-secondary',
+								render: c => (c.ganhos > 0 ? fmtReais(c.receita / c.ganhos) : '—'),
+							},
+						]}
+						linhas={dados.canais}
+						chaveLinha={c => c.canal}
+						vazio="Nenhum canal com lead ligado no período."
+					/>
 				</div>
 			)}
 
 			{dados.campanhas.length > 0 && (
-				<div className="overflow-x-auto border-t border-border">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Campanha</th>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-right`}>Leads ligados</th>
-								<th className={`${TH} text-right`}>Vendas</th>
-								<th className={`${TH} text-right`}>Receita</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{dados.campanhas.map(c => (
-								<tr key={c.campanha} className="hover:bg-background-soft/60">
-									<td className={`${TD} max-w-[280px]`}>
-										<p className="truncate font-medium" title={c.campanha}>
-											{c.campanha}
-										</p>
-									</td>
-									<td className={TD}>
-										<Badge cor={c.cor_canal}>{c.rotulo_canal}</Badge>
-									</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.cards)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(c.ganhos)}</td>
-									<td className={`${TD} text-right tabular-nums font-medium`}>
+				<div className="border-t border-border">
+					<TabelaOrdenavel
+						colunas={[
+							{
+								chave: 'campanha',
+								titulo: 'Campanha',
+								filtro: 'texto',
+								valor: c => c.campanha,
+								classe: 'max-w-[280px]',
+								render: c => (
+									<p className="truncate font-medium" title={c.campanha}>
+										{c.campanha}
+									</p>
+								),
+							},
+							{
+								chave: 'canal',
+								titulo: 'Canal',
+								filtro: 'opcoes',
+								valor: c => c.rotulo_canal,
+								render: c => <Badge cor={c.cor_canal}>{c.rotulo_canal}</Badge>,
+							},
+							{
+								chave: 'cards',
+								titulo: 'Leads ligados',
+								filtro: 'numero',
+								valor: c => c.cards,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: c => fmtNum(c.cards),
+							},
+							{
+								chave: 'ganhos',
+								titulo: 'Vendas',
+								filtro: 'numero',
+								valor: c => c.ganhos,
+								alinhar: 'dir',
+								classe: 'tabular-nums',
+								render: c => fmtNum(c.ganhos),
+							},
+							{
+								chave: 'receita',
+								titulo: 'Receita',
+								filtro: 'numero',
+								valor: c => c.receita,
+								alinhar: 'dir',
+								classe: 'tabular-nums font-medium',
+								render: c => (
+									<>
 										{fmtReais(c.receita)}
 										<SemValor quantos={c.ganhos_sem_valor} />
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
+									</>
+								),
+							},
+						]}
+						linhas={dados.campanhas}
+						chaveLinha={c => c.campanha}
+						vazio="Nenhuma campanha com lead ligado no período."
+					/>
 				</div>
 			)}
 
-			{/* A origem declarada pelo CRM não depende de nenhuma ligação — funciona para 100% dos
-			    cards. É o recorte honesto que sobra enquanto o ciclo não fecha, desde que a leitura
-			    de cada valor esteja escrita ao lado (o vocabulário do CRM não é o do site). */}
-			<div className="border-t border-border">
-				<h3 className="flex items-center gap-1.5 px-4 pt-4 pb-1 text-sm font-semibold text-foreground">
-					Origem declarada pelo CRM
-					<InfoDica>
-						A origem como o próprio CRM a registra, com as palavras dele. Não é o canal do site:
-						um lead marcado como &ldquo;Patrocinado&rdquo; tanto pode ser Google quanto Meta, e o
-						CRM não guarda a campanha. Vale para todos os leads, inclusive os que não puderam ser
-						ligados a nenhuma visita — por isso serve de conferência grosseira das tabelas acima.
-					</InfoDica>
-				</h3>
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Origem</th>
-								{/* "Leads", não "Cards": card é o nome interno do CRM e o resto da tela
-								    (KPIs, colunas acima) já chama a mesma coisa de lead. */}
-								<th className={`${TH} text-right`}>Leads</th>
-								<th className={`${TH} text-left`}>Participação</th>
-								<th className={`${TH} text-right`}>Vendas</th>
-								<th className={`${TH} text-right`}>Receita</th>
-								<th className={`${TH} text-left`}>Como ler</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{dados.origens_crm.length === 0 ? (
-								<tr>
-									<td colSpan={6} className="px-3 py-8 text-center text-sm text-foreground-secondary">
-										Nenhum lead do CRM no período selecionado.
-									</td>
-								</tr>
-							) : (
-								dados.origens_crm.map(o => (
-									<tr key={o.origem} className="hover:bg-background-soft/60">
-										<td className={`${TD} font-medium`}>{o.rotulo}</td>
-										<td className={`${TD} text-right tabular-nums`}>{fmtNum(o.cards)}</td>
-										<td className={`${TD} min-w-[120px]`}>
-											<div className="h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
-												<div
-													className="h-full rounded-full bg-foreground/25"
-													style={{ width: larguraRelativa(o.cards, t.cards) }}
-												/>
-											</div>
-										</td>
-										<td className={`${TD} text-right tabular-nums`}>{fmtNum(o.ganhos)}</td>
-										<td className={`${TD} text-right tabular-nums font-medium`}>
-											{fmtReais(o.receita)}
-											<SemValor quantos={o.ganhos_sem_valor} />
-										</td>
-										<td className="px-3 py-2.5 text-xs text-foreground-secondary max-w-[340px] whitespace-normal">
-											{o.leitura}
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-			</div>
 		</Secao>
 	)
 }

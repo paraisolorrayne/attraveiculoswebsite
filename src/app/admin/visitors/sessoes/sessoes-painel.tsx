@@ -530,46 +530,75 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 									</tbody>
 								</table>
 							</div>
-							<div className="overflow-x-auto">
-								<table className="w-full">
-									<thead className="bg-background-soft">
-										<tr>
-											<th className={`${TH} text-left`}>Converteu em</th>
-											<th className={`${TH} text-left`}>Primeira visita</th>
-											<th className={`${TH} text-left`}>Sessão da conversão</th>
-											<th className={`${TH} text-right`}>Dias</th>
-											<th className={`${TH} text-right`}>Sessões</th>
-										</tr>
-									</thead>
-									<tbody className="divide-y divide-border">
-										{dados.jornadas.map(j => (
-											<tr key={j.fingerprint_id} className="hover:bg-background-soft/60">
-												<td className={`${TD} tabular-nums`}>
-													<Link href={`/admin/visitors/sessoes?sessao=${encodeURIComponent(j.conversao.session_id)}&dias=0`} className="hover:underline">
-														{dataHora(j.conversao.started_at)}
-													</Link>
-												</td>
-												<td className={TD}>
-													<Badge cor={j.primeira.cor_canal}>{j.primeira.rotulo_canal}</Badge>
-													<span className="ml-2 text-xs text-foreground-secondary">
-														{j.primeira.rotulo_fonte}
-														{j.primeira.campanha !== '(sem campanha)' && ` · ${j.primeira.campanha}`}
-													</span>
-												</td>
-												<td className={TD}>
-													<Badge cor={j.conversao.cor_canal}>{j.conversao.rotulo_canal}</Badge>
-													<span className="ml-2 text-xs text-foreground-secondary">
-														{j.conversao.rotulo_fonte}
-														{j.conversao.campanha !== '(sem campanha)' && ` · ${j.conversao.campanha}`}
-													</span>
-												</td>
-												<td className={`${TD} text-right tabular-nums`}>{j.dias}</td>
-												<td className={`${TD} text-right tabular-nums`}>{j.sessoes}</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+							<TabelaOrdenavel
+								colunas={[
+									{
+										chave: 'converteu',
+										titulo: 'Converteu em',
+										valor: j => j.conversao.started_at,
+										classe: 'tabular-nums',
+										render: j => (
+											<Link
+												href={`/admin/visitors/sessoes/${encodeURIComponent(j.conversao.session_id)}`}
+												className="hover:underline"
+											>
+												{dataHora(j.conversao.started_at)}
+											</Link>
+										),
+									},
+									{
+										chave: 'primeira',
+										titulo: 'Primeira visita',
+										filtro: 'opcoes',
+										valor: j => j.primeira.rotulo_canal,
+										render: j => (
+											<>
+												<Badge cor={j.primeira.cor_canal}>{j.primeira.rotulo_canal}</Badge>
+												<span className="ml-2 text-xs text-foreground-secondary">
+													{j.primeira.rotulo_fonte}
+													{j.primeira.campanha !== '(sem campanha)' && ` · ${j.primeira.campanha}`}
+												</span>
+											</>
+										),
+									},
+									{
+										chave: 'conversao',
+										titulo: 'Sessão da conversão',
+										filtro: 'opcoes',
+										valor: j => j.conversao.rotulo_canal,
+										render: j => (
+											<>
+												<Badge cor={j.conversao.cor_canal}>{j.conversao.rotulo_canal}</Badge>
+												<span className="ml-2 text-xs text-foreground-secondary">
+													{j.conversao.rotulo_fonte}
+													{j.conversao.campanha !== '(sem campanha)' && ` · ${j.conversao.campanha}`}
+												</span>
+											</>
+										),
+									},
+									{
+										chave: 'dias',
+										titulo: 'Dias',
+										filtro: 'numero',
+										valor: j => j.dias,
+										alinhar: 'dir',
+										classe: 'tabular-nums',
+										render: j => j.dias,
+									},
+									{
+										chave: 'sessoes',
+										titulo: 'Sessões',
+										filtro: 'numero',
+										valor: j => j.sessoes,
+										alinhar: 'dir',
+										classe: 'tabular-nums',
+										render: j => j.sessoes,
+									},
+								]}
+								linhas={dados.jornadas}
+								chaveLinha={j => j.fingerprint_id}
+								vazio="Nenhuma jornada no período."
+							/>
 						</>
 					)}
 				</div>
