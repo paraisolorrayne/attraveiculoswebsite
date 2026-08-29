@@ -64,6 +64,7 @@ const ROTULO_PROBLEMA: Record<string, string> = {
 	fonte_varias_grafias: 'Fonte com várias grafias (tem fonte)',
 	paga_sem_campanha: 'Sessão paga sem campanha',
 	click_id_contradiz_fonte: 'Click id contradiz a fonte',
+	macro_nao_substituida: 'Macro do anúncio não substituída',
 }
 
 const ROTULO_CONVERSAO: Record<string, string> = {

@@ -10,6 +10,7 @@
  *   - Referenciadores: de que domínio a visita veio quando não há UTM;
  *   - Auditoria de marcação: onde a UTM está errada ou faltando.
  */
+import { ehMacroNaoSubstituida } from './marcacao-plataforma'
 import {
 	chaveCampanha,
 	classificarCanal,
@@ -224,6 +225,7 @@ export type TipoProblema =
 	| 'fonte_varias_grafias'
 	| 'paga_sem_campanha'
 	| 'click_id_contradiz_fonte'
+	| 'macro_nao_substituida'
 
 export interface Problema {
 	tipo: TipoProblema
@@ -267,6 +269,10 @@ const TITULOS: Record<TipoProblema, [string, string]> = {
 		'Click id contradiz a fonte',
 		'gclid com utm_source que não é Google, ou fbclid com fonte Google. Um dos dois está errado — normalmente o modelo de rastreamento foi copiado de outra plataforma.',
 	],
+	macro_nao_substituida: [
+		'Macro do anúncio não substituída',
+		'O link chegou com a macro literal — {{campaign.name}} da Meta, {keyword} do Google — em vez do valor. Acontece quando o link é publicado onde a plataforma não expande a macro (story à mão, encurtador, teste). Essas visitas ficam sem campanha identificável.',
+	],
 }
 
 export function auditarMarcacao(grupos: GrupoOrigem[]): Problema[] {
@@ -290,6 +296,13 @@ export function auditarMarcacao(grupos: GrupoOrigem[]): Problema[] {
 		const pago = canal === 'busca_paga' || canal === 'social_pago' || canal === 'outra_midia_paga'
 		const campanha = chaveCampanha(g.utm_campaign)
 
+		for (const [campo, valor] of [
+			['utm_source', g.utm_source],
+			['utm_medium', g.utm_medium],
+			['utm_campaign', g.utm_campaign],
+		] as const) {
+			if (ehMacroNaoSubstituida(valor)) registrar('macro_nao_substituida', g.sessoes, `${campo}=${String(valor).trim()}`)
+		}
 		if (temClick && !fonte) {
 			registrar('click_id_sem_utm', g.sessoes, g.tem_gclid ? 'gclid' : g.tem_fbclid ? 'fbclid' : 'ttclid')
 		}

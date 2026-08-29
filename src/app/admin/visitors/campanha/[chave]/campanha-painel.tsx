@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { CanalTrafego } from '@/lib/traffic-channel'
+import { papeisDaPlataforma, plataformaDominante } from '@/lib/visitors/marcacao-plataforma'
 import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-metrics'
 import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
@@ -97,6 +98,10 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 
 	const r = dados?.resumo
 	const sessoes = r?.sessoes ?? 0
+	// O mesmo utm_content é "conjunto" na Meta e "criativo" no Google; sem isso
+	// a tela dizia "Criativos" para o que é conjunto de anúncios.
+	const plataforma = plataformaDominante(dados?.fontes.map(f => ({ fonte: f.fonte, sessoes: f.sessoes })) ?? [])
+	const papeis = papeisDaPlataforma(plataforma)
 
 	return (
 		<div className="space-y-6">
@@ -151,26 +156,31 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 
 					<div className="grid gap-6 xl:grid-cols-2">
 						<TabelaDimensao
-							titulo="Criativos — utm_content"
-							dica="O que estava em utm_content em cada sessão. Na Meta, costuma ser o nome do anúncio; no Google, o que o modelo de rastreamento mandar. Compare a conversão entre criativos, não o volume."
+							titulo={`${papeis.conteudo.titulo} — utm_content`}
+							dica={`${papeis.conteudo.dica} Compare a conversão entre eles, não o volume.`}
 							linhas={dados.conteudos}
 							total={sessoes}
 							crus={crus}
 						/>
 						<TabelaDimensao
-							titulo="Termos — utm_term"
-							dica="Palavra-chave (Google) ou segmentação (Meta) que gerou o clique. '(sem utm_term)' em campanha de busca indica modelo de rastreamento sem {keyword}."
+							titulo={`${papeis.termo.titulo} — utm_term`}
+							dica={`${papeis.termo.dica} '(sem utm_term)' numa campanha de busca indica modelo de rastreamento sem {keyword}.`}
 							linhas={dados.termos}
 							total={sessoes}
 							crus={crus}
 						/>
-						<TabelaDimensao
-							titulo="Grupos de anúncio — adset_id"
-							dica="Conjunto de anúncios (Meta) ou grupo (Google), pelo ID que a plataforma manda. Só aparece quando o modelo de rastreamento inclui o parâmetro."
-							linhas={dados.grupos_anuncio}
-							total={sessoes}
-							crus={crus}
-						/>
+						{/* Só aparece quando o link traz o ID: com o padrão de nomes da Meta,
+						    o conjunto vem em utm_content e este bloco seria uma coluna
+						    inteira de "(sem grupo)". */}
+						{dados.grupos_anuncio.some(g => g.valor !== '(sem grupo)') && (
+							<TabelaDimensao
+								titulo={`${papeis.grupo.titulo} — adset_id`}
+								dica={papeis.grupo.dica}
+								linhas={dados.grupos_anuncio}
+								total={sessoes}
+								crus={crus}
+							/>
+						)}
 						<Lista
 							titulo="Páginas de entrada"
 							dica="Onde as visitas desta campanha caíram. Anúncio de carro específico deveria cair na ficha dele."

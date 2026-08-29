@@ -490,7 +490,7 @@ export function MidiaPaga({
 	return (
 		<Secao
 			titulo="Anúncios pagos — campanha, grupo e termo"
-			dica="Só visitas de mídia paga. «Grupo» é o adgroup_id do Google ou o conjunto do Meta; «anúncio» é o utm_content (criativo); «termo» é a palavra-chave que acionou. Compare pela taxa, não pelo volume."
+			dica="Só visitas de mídia paga. Atenção ao significado por plataforma: na Meta, utm_content é o CONJUNTO de anúncios e utm_term é o NOME DO ANÚNCIO; no Google, utm_content é a variação do anúncio e utm_term é a palavra-chave buscada. «Grupo» é o adgroup_id/adset_id, quando o link o envia. Compare pela taxa, não pelo volume."
 		>
 			{comFalha.length > 0 && (
 				<div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs leading-snug">
@@ -532,7 +532,7 @@ export function MidiaPaga({
 					},
 					{
 						chave: 'conteudo',
-						titulo: 'Anúncio',
+						titulo: 'Conjunto / conteúdo',
 						filtro: 'texto',
 						valor: l => l.conteudo,
 						classe: 'max-w-[12rem] truncate text-foreground-secondary',
@@ -540,7 +540,7 @@ export function MidiaPaga({
 					},
 					{
 						chave: 'termo',
-						titulo: 'Termo',
+						titulo: 'Anúncio / palavra-chave',
 						filtro: 'texto',
 						valor: l => l.termo,
 						classe: 'max-w-[12rem] truncate text-foreground-secondary',

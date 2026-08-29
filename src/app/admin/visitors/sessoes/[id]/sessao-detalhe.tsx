@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, MessageCircle, Phone, FileText, Volume2 } from 'lucide-react'
 import type { CanalTrafego } from '@/lib/traffic-channel'
+import { papeisDaPlataforma, plataformaDaMarcacao } from '@/lib/visitors/marcacao-plataforma'
 import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, nomeDoSlug } from '../../visitors-metrics'
 import { Badge, CRU, Erro, Vazio } from '../../visitors-ui'
@@ -110,13 +111,16 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 	}, [sessionId])
 
 	const s = dados?.session_summary
+	// utm_content/utm_term significam coisas diferentes por plataforma: na Meta
+	// são conjunto e anúncio; no Google, criativo e palavra-chave buscada.
+	const papeis = papeisDaPlataforma(s ? plataformaDaMarcacao(s) : 'outra')
 	const marcacao = s
 		? ([
 				['utm_source', s.utm_source],
 				['utm_medium', s.utm_medium],
 				['utm_campaign', s.utm_campaign],
-				['utm_content', s.utm_content],
-				['utm_term', s.utm_term],
+				[`utm_content · ${papeis.conteudo.titulo}`, s.utm_content],
+				[`utm_term · ${papeis.termo.titulo}`, s.utm_term],
 				['gclid', s.gclid],
 				['fbclid', s.fbclid],
 				['ttclid', s.ttclid],

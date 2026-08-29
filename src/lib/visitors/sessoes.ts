@@ -18,6 +18,7 @@ import {
 	type CanalTrafego,
 } from '@/lib/traffic-channel'
 import { limparValor, MEIOS_CONHECIDOS, SEM_MEIO, type TipoProblema } from './origens'
+import { ehMacroNaoSubstituida } from './marcacao-plataforma'
 import { ordenarLinhas, type Ordenacao, type ValorDaCelula } from './tabela'
 
 export interface SessaoCrua {
@@ -116,6 +117,14 @@ export function temProblema(s: SessaoDescrita, tipo: TipoProblema): boolean {
 			const canonica = fonte ? normalizarFonte({ utm_source: s.utm_source }) : ''
 			return (!!limparValor(s.gclid) && !!fonte && canonica !== 'google') || (!!limparValor(s.fbclid) && canonica === 'google')
 		}
+		case 'macro_nao_substituida':
+			return (
+				ehMacroNaoSubstituida(s.utm_source) ||
+				ehMacroNaoSubstituida(s.utm_medium) ||
+				ehMacroNaoSubstituida(s.utm_campaign) ||
+				ehMacroNaoSubstituida(s.utm_content) ||
+				ehMacroNaoSubstituida(s.utm_term)
+			)
 		// Grafia múltipla é propriedade do conjunto, não da sessão: aqui vale
 		// "tem campanha/fonte marcada", que é o universo em que ela pode ocorrer.
 		case 'campanha_varias_grafias':

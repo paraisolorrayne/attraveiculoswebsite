@@ -32,6 +32,7 @@ const CONVERSOES: Conversao[] = ['qualquer', 'whatsapp', 'formulario', 'nenhuma'
 const PROBLEMAS: TipoProblema[] = [
 	'click_id_sem_utm', 'fonte_sem_meio', 'meio_sem_fonte', 'meio_desconhecido',
 	'campanha_varias_grafias', 'fonte_varias_grafias', 'paga_sem_campanha', 'click_id_contradiz_fonte',
+	'macro_nao_substituida',
 ]
 
 function texto(v: string | null, max = 200): string | undefined {

@@ -137,3 +137,22 @@ describe('tendenciaPorCanal', () => {
 		expect(tendenciaPorCanal([])).toEqual([])
 	})
 })
+
+describe('auditoria: macro do anúncio não substituída (29/08/2026)', () => {
+	it('acusa a macro da Meta e a do Google, dizendo em que campo veio', () => {
+		const p = auditarMarcacao([
+			g({ utm_source: 'facebook', utm_medium: 'cpc', utm_campaign: '{{campaign.name}}', sessoes: 12 }),
+			g({ utm_source: 'google', utm_medium: 'cpc', utm_campaign: '{campaignid}', sessoes: 3 }),
+		])
+		const item = p.find(x => x.tipo === 'macro_nao_substituida')!
+		expect(item.sessoes).toBe(15)
+		expect(item.exemplos).toContain('utm_campaign={{campaign.name}}')
+	})
+
+	it('campanha com nome de verdade não vira problema', () => {
+		const p = auditarMarcacao([
+			g({ utm_source: 'facebook', utm_medium: 'cpc', utm_campaign: '[EB] [SITE] Visitas ao site', sessoes: 255 }),
+		])
+		expect(p.find(x => x.tipo === 'macro_nao_substituida')).toBeUndefined()
+	})
+})

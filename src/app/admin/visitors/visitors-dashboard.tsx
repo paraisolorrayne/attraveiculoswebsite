@@ -9,7 +9,7 @@ import { InfoDica } from '../crm/info-dica'
 import { ContextoClique, ListaCidades, ListaVeiculos, MidiaPaga, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
 import { TabelaOrdenavel } from './visitors-tabela'
 import { SecaoReceitaPorCanal } from './visitors-receita'
-import { SecaoTermosDeConversao } from './visitors-termos'
+import { SecaoAnunciosDaRede, SecaoTermosDeConversao } from './visitors-termos'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
 
 // Painel de visitantes — SOMENTE LEITURA.
@@ -236,6 +236,9 @@ export function VisitorsDashboard(props: Props) {
 				    depende delas. Dentro, uma falha em /metrics levava junto uma leitura
 				    que continuaria funcionando sozinha. */}
 				<SecaoTermosDeConversao dias={dias} />
+
+				{/* utm_term da rede social = nome do anúncio; leitura separada da de busca. */}
+				<SecaoAnunciosDaRede dias={dias} />
 
 				{/* Visitantes identificados — lista de perfis, independente do período acima */}
 				<Secao

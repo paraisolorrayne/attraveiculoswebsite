@@ -37,6 +37,13 @@ interface Dados {
   termos_abaixo_do_minimo: number
   termos: LinhaTermo[]
   padroes: LinhaPadrao[]
+  /** utm_term vindo de rede social: é NOME DE ANÚNCIO, não palavra buscada. */
+  anuncios: LinhaTermo[]
+  anuncios_media: number
+  anuncios_sessoes: number
+  anuncios_abaixo_do_minimo: number
+  sessoes_sem_plataforma: number
+  sessoes_com_macro: number
 }
 
 /** Rótulos em português: o valor cru do padrão nunca aparece na tela. */
@@ -76,9 +83,10 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
 
   return (
     <Secao
-      titulo="Termos que mais convertem"
+      titulo="Termos de busca que mais convertem"
       dica={
-        'De cada termo de busca que trouxe gente ao site, quanto virou contato — clique de WhatsApp ou envio de formulário. ' +
+        'Só o que veio de BUSCA (Google e afins), onde utm_term é mesmo a palavra que a pessoa digitou. O utm_term da Meta é o nome do anúncio e aparece na seção seguinte — misturar os dois achatava a média. ' +
+        'De cada termo, quanto virou contato — clique de WhatsApp ou envio de formulário. ' +
         'A ordenação é pelo PISO: a taxa que o termo comprova estatisticamente, não a que a amostra sugere. ' +
         'Um termo com 3 conversões em 26 sessões mostra 11,5%, mas comprova 4%; um com 47 em 623 mostra 7,5% e comprova 5,7% — o segundo é a aposta melhor. ' +
         'Conversão aqui é contato iniciado no site, não venda fechada: o CRM chega por webhook e tem ciclo próprio.'
@@ -199,6 +207,14 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
             />
           </div>
 
+          {dados.sessoes_com_macro > 0 && (
+            <p className="border-t border-border px-4 py-3 text-[11px] text-amber-600 dark:text-amber-400">
+              {fmtNum(dados.sessoes_com_macro)} sessão(ões) chegaram com a macro literal (ex.:{' '}
+              <code>{'{{ad.name}}'}</code>) em vez do valor: o link foi publicado onde a plataforma não substitui a
+              macro. Enquanto isso não for corrigido, essas visitas não têm anúncio identificável.
+            </p>
+          )}
+
           {dados.termos_abaixo_do_minimo > 0 && (
             <p className="px-4 py-3 text-[11px] text-foreground-secondary border-t border-border">
               {dados.termos_abaixo_do_minimo} termo(s) com menos de {dados.volume_minimo} sessões ficaram
@@ -206,6 +222,106 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
             </p>
           )}
         </>
+      )}
+    </Secao>
+  )
+}
+
+/**
+ * Nome de anúncio da Meta/TikTok — o mesmo `utm_term`, outra leitura.
+ *
+ * Fica em seção própria porque a pergunta é outra: em busca, o termo diz o que
+ * a pessoa QUER; aqui, diz qual peça a Attra publicou. Somar os dois numa
+ * média só faz o volume da rede social esconder o que os termos comprovam.
+ */
+export function SecaoAnunciosDaRede({ dias }: { dias: number }) {
+  const [dados, setDados] = useState<Dados | null>(null)
+
+  useEffect(() => {
+    let ativo = true
+    fetch(`/api/admin/visitors/termos?dias=${dias}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => {
+        if (ativo && j) setDados(j)
+      })
+      .catch(() => {})
+    return () => {
+      ativo = false
+    }
+  }, [dias])
+
+  if (!dados || dados.anuncios.length === 0) return null
+
+  return (
+    <Secao
+      titulo="Anúncios da rede social que mais convertem"
+      dica={
+        'O utm_term dos anúncios da Meta traz o NOME DO ANÚNCIO ({{ad.name}}), não uma palavra buscada — por isso ' +
+        'esta leitura é separada dos termos de busca. A ordenação segue o mesmo critério: o piso, a taxa que o ' +
+        'anúncio comprova, e não a que a amostra sugere.'
+      }
+      acessorio={
+        <span className="text-xs text-foreground-secondary">
+          {fmtNum(dados.anuncios_sessoes)} sessões · média {fmtPct(dados.anuncios_media)}
+        </span>
+      }
+    >
+      <TabelaOrdenavel
+        colunas={[
+          {
+            chave: 'anuncio',
+            titulo: 'Anúncio',
+            filtro: 'texto',
+            valor: t => t.termo,
+            classe: 'max-w-[22rem] truncate',
+            render: t => <span title={t.termo}>{t.termo}</span>,
+          },
+          {
+            chave: 'sessoes',
+            titulo: 'Sessões',
+            filtro: 'numero',
+            valor: t => t.sessoes,
+            alinhar: 'dir',
+            classe: 'tabular-nums',
+            render: t => fmtNum(t.sessoes),
+          },
+          {
+            chave: 'conversoes',
+            titulo: 'Contatos',
+            filtro: 'numero',
+            valor: t => t.conversoes,
+            alinhar: 'dir',
+            classe: 'tabular-nums',
+            render: t => fmtNum(t.conversoes),
+          },
+          {
+            chave: 'taxa',
+            titulo: 'Taxa',
+            filtro: 'numero',
+            valor: t => t.taxa,
+            alinhar: 'dir',
+            classe: 'tabular-nums text-foreground-secondary',
+            render: t => fmtPct(t.taxa),
+          },
+          {
+            chave: 'piso',
+            titulo: 'Piso',
+            filtro: 'numero',
+            valor: t => t.piso,
+            alinhar: 'dir',
+            classe: 'tabular-nums font-semibold',
+            render: t => <span className={corTaxa(t.piso, dados.anuncios_media, t.sessoes)}>{fmtPct(t.piso)}</span>,
+          },
+        ]}
+        linhas={dados.anuncios}
+        chaveLinha={t => t.termo}
+        vazio="Nenhum anúncio com volume suficiente no período."
+      />
+      {dados.anuncios_abaixo_do_minimo > 0 && (
+        <p className="border-t border-border px-4 py-3 text-[11px] text-foreground-secondary">
+          {dados.anuncios_abaixo_do_minimo} anúncio(s) com menos de {dados.volume_minimo} sessões ficaram fora da
+          tabela — abaixo disso a taxa é ruído.
+        </p>
       )}
     </Secao>
   )
