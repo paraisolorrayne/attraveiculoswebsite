@@ -4,13 +4,17 @@ import { db } from '@/lib/db'
 import { adminComAcessoA } from '@/lib/auth/guard-api'
 import { entradaPorSessao, periodoDaUrl } from '@/lib/visitors/sql-atribuicao'
 import {
+	COLUNAS_ORDENAVEIS,
 	descreverSessao,
 	filtrarSessoes,
+	ordenarSessoes,
 	paginar,
+	valorDaSessao,
 	type Conversao,
 	type FiltrosSessoes,
 	type SessaoCrua,
 } from '@/lib/visitors/sessoes'
+import { opcoesDaColuna, type Ordenacao } from '@/lib/visitors/tabela'
 import type { TipoProblema } from '@/lib/visitors/origens'
 
 /**
@@ -35,6 +39,11 @@ function texto(v: string | null, max = 200): string | undefined {
 	return t ? t.slice(0, max) : undefined
 }
 
+function numero(v: string | null): number | undefined {
+	const n = Number(v)
+	return v !== null && v.trim() !== '' && Number.isFinite(n) ? n : undefined
+}
+
 export async function GET(request: NextRequest) {
 	try {
 		const admin = await adminComAcessoA('/admin/visitors')
@@ -56,8 +65,23 @@ export async function GET(request: NextRequest) {
 			conversao: conversao && CONVERSOES.includes(conversao) ? conversao : undefined,
 			problema: problema && PROBLEMAS.includes(problema) ? problema : undefined,
 			sessao: texto(q.get('sessao'), 80),
+			cidade: texto(q.get('cidade'), 80),
+			aparelho: texto(q.get('aparelho'), 20),
+			veiculos_min: numero(q.get('veiculos_min')),
+			veiculos_max: numero(q.get('veiculos_max')),
+			duracao_min: numero(q.get('duracao_min')),
+			duracao_max: numero(q.get('duracao_max')),
 		}
 		const pagina = Math.max(1, Number(q.get('pagina')) || 1)
+
+		// Ordenação também no servidor: a lista é paginada aqui, e ordenar só a
+		// página aberta mostraria "a sessão mais longa" que é a mais longa das 50
+		// à vista. Sem parâmetro, segue a ordem natural (mais recente primeiro).
+		const chaveOrdem = texto(q.get('ordenar'), 30)
+		const ordenacao: Ordenacao | null =
+			chaveOrdem && (COLUNAS_ORDENAVEIS as readonly string[]).includes(chaveOrdem)
+				? { chave: chaveOrdem, direcao: q.get('direcao') === 'asc' ? 'asc' : 'desc' }
+				: null
 
 		const linhas = await sql<SessaoCrua>`
 			with entrada as (${entradaPorSessao}),
@@ -92,11 +116,19 @@ export async function GET(request: NextRequest) {
 		const truncado = linhas.rows.length > TETO
 		const descritas = linhas.rows.slice(0, TETO).map(descreverSessao)
 		const filtradas = filtrarSessoes(descritas, filtros)
-		const pag = paginar(filtradas, pagina, POR_PAGINA)
+		const pag = paginar(ordenarSessoes(filtradas, ordenacao), pagina, POR_PAGINA)
 
 		return NextResponse.json({
 			periodo: { dias, desde: desde ? desde.toISOString() : null },
 			filtros,
+			ordenacao,
+			// Opções dos selects de filtro: saem do período INTEIRO, não da página
+			// aberta — senão o filtro de canal só ofereceria os canais das 50 linhas
+			// à vista, e escolher um canal que existe no período seria impossível.
+			opcoes: {
+				canal: opcoesDaColuna(descritas, valorDaSessao, 'canal'),
+				aparelho: opcoesDaColuna(descritas, valorDaSessao, 'aparelho'),
+			},
 			truncado,
 			teto: TETO,
 			total_periodo: descritas.length,

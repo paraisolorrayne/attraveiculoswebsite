@@ -11,15 +11,14 @@ import {
 	Badge,
 	BarraControles,
 	CANAL_HEX,
-	CelulaVolume,
+	ConteudoVolume,
 	CRU,
 	Erro,
-	TD,
-	TH,
 	Vazio,
 	diaCurto,
 	useValoresCrus,
 } from '../visitors-ui'
+import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -112,122 +111,192 @@ function TabelaFonteMeio({
 		linhas.reduce((s, l) => s + l.whatsapp, 0),
 		total,
 	)
+	const colunas: ColunaTabela<LinhaFonteMeio>[] = [
+		{
+			chave: 'fonte',
+			titulo: 'Fonte',
+			filtro: 'texto',
+			valor: l => `${l.rotulo_fonte} ${l.grafias.join(' ')}`,
+			render: l => (
+				<>
+					<Link href={linkSessoes({ dias, fonte: l.fonte, meio: l.meio })} className="hover:underline" onClick={e => e.stopPropagation()}>
+						<span className="font-medium">{l.rotulo_fonte}</span>
+					</Link>
+					{crus && l.grafias.length > 0 && (
+						<div className={`${CRU} mt-0.5 max-w-[320px] truncate`} title={l.grafias.join(' · ')}>
+							{l.grafias.join(' · ')}
+						</div>
+					)}
+				</>
+			),
+		},
+		{
+			chave: 'meio',
+			titulo: 'Meio',
+			filtro: 'opcoes',
+			valor: l => l.meio,
+			render: l => <span className={crus ? CRU : 'text-sm'}>{l.meio}</span>,
+		},
+		{
+			chave: 'canal',
+			titulo: 'Canal',
+			filtro: 'opcoes',
+			valor: l => l.rotulo_canal,
+			render: l => <Badge cor={l.cor_canal}>{l.rotulo_canal}</Badge>,
+		},
+		{
+			chave: 'sessoes',
+			titulo: 'Sessões',
+			filtro: 'numero',
+			valor: l => l.sessoes,
+			classe: 'min-w-[140px]',
+			render: l => <ConteudoVolume valor={l.sessoes} maximo={maior} total={total} />,
+		},
+		{
+			chave: 'sessoes_com_veiculo',
+			titulo: 'Viu veículo',
+			filtro: 'numero',
+			valor: l => l.sessoes_com_veiculo,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => (
+				<>
+					{fmtNum(l.sessoes_com_veiculo)}
+					<span className="ml-1 text-xs text-foreground-secondary">{fmtPct(taxa(l.sessoes_com_veiculo, l.sessoes), 0)}</span>
+				</>
+			),
+		},
+		{
+			chave: 'whatsapp',
+			titulo: 'WhatsApp',
+			filtro: 'numero',
+			valor: l => l.whatsapp,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => fmtNum(l.whatsapp),
+		},
+		{
+			chave: 'conversao',
+			titulo: 'Conversão',
+			filtro: 'numero',
+			valor: l => taxa(l.whatsapp, l.sessoes),
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => {
+				const conv = taxa(l.whatsapp, l.sessoes)
+				return <span className={conv >= media && l.whatsapp > 0 ? 'text-emerald-500' : ''}>{fmtPct(conv)}</span>
+			},
+		},
+		{
+			chave: 'formularios',
+			titulo: 'Formulários',
+			filtro: 'numero',
+			valor: l => l.formularios,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => fmtNum(l.formularios),
+		},
+	]
+
 	return (
 		<Secao
 			titulo="Fonte × Meio — como cada visita foi marcada"
-			dica="Fonte é de onde veio (utm_source, ou o referrer quando não há UTM); meio é como (utm_medium: cpc, social, bio…). A fonte aparece unificada — Google, google e google_ads na mesma linha — e as grafias cruas ficam embaixo quando 'Ver valores crus' está ligado. Clique na linha para ver as sessões."
+			dica="Fonte é de onde veio (utm_source, ou o referrer quando não há UTM); meio é como (utm_medium: cpc, social, bio…). A fonte aparece unificada — Google, google e google_ads na mesma linha — e as grafias cruas ficam embaixo quando 'Ver valores crus' está ligado. Clique no cabeçalho para ordenar e em 'Filtrar' para restringir por coluna."
 			acessorio={
 				<span className="text-xs text-foreground-secondary">
 					Conversão média: <strong className="text-foreground">{fmtPct(media)}</strong>
 				</span>
 			}
 		>
-			{linhas.length === 0 ? (
-				<Vazio>Nenhuma sessão no período.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Fonte</th>
-								<th className={`${TH} text-left`}>Meio</th>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-left`}>Sessões</th>
-								<th className={`${TH} text-right`}>Viu veículo</th>
-								<th className={`${TH} text-right`}>WhatsApp</th>
-								<th className={`${TH} text-right`}>Conversão</th>
-								<th className={`${TH} text-right`}>Formulários</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{linhas.map(l => {
-								const conv = taxa(l.whatsapp, l.sessoes)
-								return (
-									<tr key={`${l.fonte} ${l.meio}`} className="hover:bg-background-soft/60">
-										<td className={TD}>
-											<Link href={linkSessoes({ dias, fonte: l.fonte, meio: l.meio })} className="hover:underline">
-												<span className="font-medium">{l.rotulo_fonte}</span>
-											</Link>
-											{crus && l.grafias.length > 0 && (
-												<div className={`${CRU} mt-0.5 max-w-[320px] truncate`} title={l.grafias.join(' · ')}>
-													{l.grafias.join(' · ')}
-												</div>
-											)}
-										</td>
-										<td className={TD}>
-											<span className={crus ? CRU : 'text-sm'}>{l.meio}</span>
-										</td>
-										<td className={TD}>
-											<Badge cor={l.cor_canal}>{l.rotulo_canal}</Badge>
-										</td>
-										<CelulaVolume valor={l.sessoes} maximo={maior} total={total} />
-										<td className={`${TD} text-right tabular-nums`}>
-											{fmtNum(l.sessoes_com_veiculo)}
-											<span className="ml-1 text-xs text-foreground-secondary">{fmtPct(taxa(l.sessoes_com_veiculo, l.sessoes), 0)}</span>
-										</td>
-										<td className={`${TD} text-right tabular-nums`}>{fmtNum(l.whatsapp)}</td>
-										<td className={`${TD} text-right tabular-nums ${conv >= media && l.whatsapp > 0 ? 'text-emerald-500' : ''}`}>
-											{fmtPct(conv)}
-										</td>
-										<td className={`${TD} text-right tabular-nums`}>{fmtNum(l.formularios)}</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={colunas}
+				linhas={linhas}
+				chaveLinha={l => `${l.fonte} ${l.meio}`}
+				vazio="Nenhuma sessão no período."
+			/>
 		</Secao>
 	)
 }
 
 function TabelaReferenciadores({ linhas, total, dias }: { linhas: LinhaReferenciador[]; total: number; dias: number }) {
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
+	const colunas: ColunaTabela<LinhaReferenciador>[] = [
+		{
+			chave: 'dominio',
+			titulo: 'Domínio',
+			filtro: 'texto',
+			valor: l => l.dominio,
+			render: l => (
+				<Link href={linkSessoes({ dias, referrer: l.dominio })} className="font-mono text-xs hover:underline">
+					{l.dominio}
+				</Link>
+			),
+		},
+		{ chave: 'fonte', titulo: 'Fonte', filtro: 'opcoes', valor: l => l.rotulo_fonte, render: l => l.rotulo_fonte },
+		{
+			chave: 'canal',
+			titulo: 'Canal',
+			filtro: 'opcoes',
+			valor: l => l.rotulo_canal,
+			render: l => <Badge cor={l.cor_canal}>{l.rotulo_canal}</Badge>,
+		},
+		{
+			chave: 'sessoes',
+			titulo: 'Sessões',
+			filtro: 'numero',
+			valor: l => l.sessoes,
+			classe: 'min-w-[140px]',
+			render: l => <ConteudoVolume valor={l.sessoes} maximo={maior} total={total} />,
+		},
+		{
+			chave: 'com_utm',
+			titulo: 'Com UTM',
+			filtro: 'numero',
+			valor: l => l.com_utm,
+			alinhar: 'dir',
+			classe: 'tabular-nums text-foreground-secondary',
+			render: l => fmtNum(l.com_utm),
+		},
+		{
+			chave: 'sessoes_com_veiculo',
+			titulo: 'Viu veículo',
+			filtro: 'numero',
+			valor: l => l.sessoes_com_veiculo,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => fmtNum(l.sessoes_com_veiculo),
+		},
+		{
+			chave: 'whatsapp',
+			titulo: 'WhatsApp',
+			filtro: 'numero',
+			valor: l => l.whatsapp,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => fmtNum(l.whatsapp),
+		},
+		{
+			chave: 'conversao',
+			titulo: 'Conversão',
+			filtro: 'numero',
+			valor: l => taxa(l.whatsapp, l.sessoes),
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: l => fmtPct(taxa(l.whatsapp, l.sessoes)),
+		},
+	]
+
 	return (
 		<Secao
 			titulo="Referenciadores — os sites que mandam visita"
 			dica="Domínio de onde a pessoa clicou, quando o navegador informa. Cada assistente de IA e o Linktree da bio do Instagram aparecem separados. 'Com UTM' mostra quantas dessas sessões também traziam marcação — nesse caso é a UTM, não o referrer, que decide o canal."
 		>
-			{linhas.length === 0 ? (
-				<Vazio>Nenhuma sessão com referenciador externo no período.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Domínio</th>
-								<th className={`${TH} text-left`}>Fonte</th>
-								<th className={`${TH} text-left`}>Canal</th>
-								<th className={`${TH} text-left`}>Sessões</th>
-								<th className={`${TH} text-right`}>Com UTM</th>
-								<th className={`${TH} text-right`}>Viu veículo</th>
-								<th className={`${TH} text-right`}>WhatsApp</th>
-								<th className={`${TH} text-right`}>Conversão</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{linhas.map(l => (
-								<tr key={l.dominio} className="hover:bg-background-soft/60">
-									<td className={TD}>
-										<Link href={linkSessoes({ dias, referrer: l.dominio })} className="font-mono text-xs hover:underline">
-											{l.dominio}
-										</Link>
-									</td>
-									<td className={TD}>{l.rotulo_fonte}</td>
-									<td className={TD}>
-										<Badge cor={l.cor_canal}>{l.rotulo_canal}</Badge>
-									</td>
-									<CelulaVolume valor={l.sessoes} maximo={maior} total={total} />
-									<td className={`${TD} text-right tabular-nums text-foreground-secondary`}>{fmtNum(l.com_utm)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(l.sessoes_com_veiculo)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(l.whatsapp)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtPct(taxa(l.whatsapp, l.sessoes))}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={colunas}
+				linhas={linhas}
+				chaveLinha={l => l.dominio}
+				vazio="Nenhuma sessão com referenciador externo no período."
+			/>
 		</Secao>
 	)
 }

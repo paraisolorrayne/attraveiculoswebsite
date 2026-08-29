@@ -27,10 +27,10 @@ export function Vazio({ children }: { children: ReactNode }) {
 	return <p className="px-4 py-8 text-center text-sm text-foreground-secondary">{children}</p>
 }
 
-/** Sessões com barra proporcional ao maior da tabela e % do total. */
-export function CelulaVolume({ valor, maximo, total }: { valor: number; maximo: number; total: number }) {
+/** Sessões com barra proporcional ao maior da tabela e % do total — só o conteúdo. */
+export function ConteudoVolume({ valor, maximo, total }: { valor: number; maximo: number; total: number }) {
 	return (
-		<td className={`${TD} min-w-[140px]`}>
+		<>
 			<div className="flex items-baseline gap-2">
 				<span className="font-medium tabular-nums">{valor.toLocaleString('pt-BR')}</span>
 				{total > 0 && (
@@ -40,6 +40,15 @@ export function CelulaVolume({ valor, maximo, total }: { valor: number; maximo: 
 			<div className="mt-1 h-1.5 w-full rounded-full bg-background-soft overflow-hidden">
 				<div className="h-full rounded-full bg-foreground/25" style={{ width: larguraRelativa(valor, maximo) }} />
 			</div>
+		</>
+	)
+}
+
+/** O mesmo, já dentro do `<td>` — para as tabelas escritas à mão. */
+export function CelulaVolume({ valor, maximo, total }: { valor: number; maximo: number; total: number }) {
+	return (
+		<td className={`${TD} min-w-[140px]`}>
+			<ConteudoVolume valor={valor} maximo={maximo} total={total} />
 		</td>
 	)
 }

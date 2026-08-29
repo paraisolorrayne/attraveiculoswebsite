@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sql } from 'kysely'
 import { adminComAcessoA } from '@/lib/auth/guard-api'
 import { db } from '@/lib/db'
+import { classificarCanal, corCanal, normalizarFonte, rotuloCampanha, rotuloCanal, rotuloFonte } from '@/lib/traffic-channel'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
@@ -136,6 +138,51 @@ export async function GET(request: NextRequest) {
       .where('session_id', '=', sessionDbId)
       .orderBy('created_at', 'asc').limit(200).execute()
 
+    // ── Step 5b: outras visitas do MESMO visitante ──
+    // A pergunta que a tela da sessão precisa responder é "de onde essa pessoa
+    // veio da primeira vez?" — e a resposta quase nunca está na sessão que
+    // converteu (ver a matriz primeira × última origem). Aqui vêm todas as
+    // visitas do mesmo fingerprint, com o canal de cada uma.
+    const outrasBrutas = await db.selectFrom('visitor_sessions')
+      .select([
+        'session_id', 'started_at', 'duration_seconds', 'city', 'region',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_id',
+        'gclid', 'fbclid', 'ttclid', 'referrer_domain',
+        'contacted_whatsapp', 'submitted_form', 'page_views_count',
+      ])
+      .where('fingerprint_id', '=', session.fingerprint_id)
+      .orderBy('started_at', 'asc')
+      .limit(200)
+      .execute()
+
+    const outrasSessoes = outrasBrutas.map(o => {
+      const canal = classificarCanal(o)
+      const fonte = normalizarFonte(o)
+      return {
+        session_id: o.session_id,
+        started_at: o.started_at,
+        duration_seconds: o.duration_seconds,
+        cidade: [o.city, o.region].filter(Boolean).join(' · ') || null,
+        canal,
+        rotulo_canal: rotuloCanal(canal),
+        cor_canal: corCanal(canal),
+        rotulo_fonte: rotuloFonte(fonte),
+        campanha: rotuloCampanha(o.utm_campaign, o.utm_id),
+        page_views_count: o.page_views_count,
+        contacted_whatsapp: o.contacted_whatsapp,
+        submitted_form: o.submitted_form,
+        atual: o.session_id === session.session_id,
+      }
+    })
+
+    // Quantos veículos DIFERENTES esta sessão abriu (mesma definição do painel).
+    const veiculos = await sql<{ slug: string; marca: string | null; modelo: string | null }>`
+      select distinct pv.vehicle_slug as slug, max(pv.vehicle_brand) as marca, max(pv.vehicle_model) as modelo
+      from visitor_page_views pv
+      where pv.session_id = ${sessionDbId} and pv.vehicle_slug is not null
+      group by pv.vehicle_slug
+    `.execute(db)
+
     // ── Step 6: Build summary ──
     const likelyOrigin = determineLikelyOrigin(session as unknown as Record<string, unknown>, extractedParams)
 
@@ -184,7 +231,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
+        outras_sessoes: outrasSessoes,
+        veiculos: veiculos.rows,
         session_summary: {
+          fingerprint_id: session.fingerprint_id,
+          device_type: null as string | null,
           session_id: session.session_id,
           session_db_id: sessionDbId,
           session_start: session.started_at || session.created_at,

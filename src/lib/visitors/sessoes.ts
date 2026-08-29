@@ -18,6 +18,7 @@ import {
 	type CanalTrafego,
 } from '@/lib/traffic-channel'
 import { limparValor, MEIOS_CONHECIDOS, SEM_MEIO, type TipoProblema } from './origens'
+import { ordenarLinhas, type Ordenacao, type ValorDaCelula } from './tabela'
 
 export interface SessaoCrua {
 	session_id: string
@@ -84,6 +85,13 @@ export interface FiltrosSessoes {
 	conversao?: Conversao
 	problema?: TipoProblema
 	sessao?: string
+	/** Filtros por coluna acrescentados em 29/08/2026, junto da ordenação. */
+	cidade?: string
+	aparelho?: string
+	veiculos_min?: number
+	veiculos_max?: number
+	duracao_min?: number
+	duracao_max?: number
 }
 
 const PAGO = new Set<CanalTrafego>(['busca_paga', 'social_pago', 'outra_midia_paga'])
@@ -123,6 +131,8 @@ export function filtrarSessoes(sessoes: SessaoDescrita[], f: FiltrosSessoes): Se
 	const campanha = (f.campanha ?? '').trim().toLowerCase()
 	const meio = (f.meio ?? '').trim().toLowerCase()
 	const fonte = (f.fonte ?? '').trim().toLowerCase()
+	const cidade = (f.cidade ?? '').trim().toLowerCase()
+	const aparelho = (f.aparelho ?? '').trim().toLowerCase()
 	return sessoes.filter(s => {
 		if (f.sessao && s.session_id !== f.sessao) return false
 		if (f.canal && s.canal !== f.canal) return false
@@ -136,8 +146,51 @@ export function filtrarSessoes(sessoes: SessaoDescrita[], f: FiltrosSessoes): Se
 		if (f.conversao === 'qualquer' && !(s.contacted_whatsapp || s.submitted_form)) return false
 		if (f.conversao === 'nenhuma' && (s.contacted_whatsapp || s.submitted_form)) return false
 		if (f.problema && !temProblema(s, f.problema)) return false
+		if (cidade && !`${s.city ?? ''} ${s.region ?? ''}`.toLowerCase().includes(cidade)) return false
+		if (aparelho && (s.device_type ?? '').toLowerCase() !== aparelho) return false
+		if (f.veiculos_min !== undefined && s.veiculos < f.veiculos_min) return false
+		if (f.veiculos_max !== undefined && s.veiculos > f.veiculos_max) return false
+		// Sessão sem duração registrada não passa em filtro de duração — nem no
+		// mínimo nem no máximo: ausência de dado não é "durou 0 segundo" (a
+		// coluna só existe para sessão encerrada).
+		if (f.duracao_min !== undefined || f.duracao_max !== undefined) {
+			if (s.duration_seconds === null) return false
+			if (f.duracao_min !== undefined && s.duration_seconds < f.duracao_min) return false
+			if (f.duracao_max !== undefined && s.duration_seconds > f.duracao_max) return false
+		}
 		return true
 	})
+}
+
+/**
+ * Valor bruto de cada coluna da lista de sessões, para ordenar no servidor
+ * (a lista é paginada lá; ordenar só a página aberta mostraria "a maior
+ * duração" que é a maior das 50 linhas à vista).
+ */
+export function valorDaSessao(s: SessaoDescrita, chave: string): ValorDaCelula {
+	switch (chave) {
+		case 'quando': return s.started_at
+		case 'canal': return s.rotulo_canal
+		case 'fonte': return `${s.rotulo_fonte} / ${s.meio}`
+		case 'campanha': return s.campanha
+		case 'referrer': return s.referrer_domain
+		case 'entrada': return s.entrada
+		case 'cidade': return [s.city, s.region].filter(Boolean).join(' · ')
+		case 'aparelho': return s.device_type
+		case 'veiculos': return s.veiculos
+		case 'duracao': return s.duration_seconds
+		case 'contato': return s.contacted_whatsapp ? 2 : s.submitted_form ? 1 : 0
+		default: return null
+	}
+}
+
+export const COLUNAS_ORDENAVEIS = [
+	'quando', 'canal', 'fonte', 'campanha', 'referrer', 'entrada', 'cidade', 'aparelho', 'veiculos', 'duracao', 'contato',
+] as const
+
+export function ordenarSessoes(sessoes: SessaoDescrita[], ordenacao: Ordenacao | null): SessaoDescrita[] {
+	if (!ordenacao || !(COLUNAS_ORDENAVEIS as readonly string[]).includes(ordenacao.chave)) return sessoes
+	return ordenarLinhas(sessoes, valorDaSessao, ordenacao)
 }
 
 export function paginar<T>(itens: T[], pagina: number, porPagina: number): { pagina: number; paginas: number; itens: T[] } {

@@ -6,7 +6,8 @@ import { CANAIS_ORDEM, CANAL_ROTULOS } from '@/lib/traffic-channel'
 import type { LinhaCanalEntrada, LinhaPaginaEntrada } from '@/lib/visitors/entradas'
 import { Secao } from '../visitors-tabelas'
 import { fmtNum, fmtPct, nomeDoSlug, taxa } from '../visitors-metrics'
-import { Badge, BarraControles, CANAL_HEX, CelulaVolume, Erro, TD, TH, Vazio } from '../visitors-ui'
+import { Badge, BarraControles, CANAL_HEX, ConteudoVolume, Erro, Vazio } from '../visitors-ui'
+import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -137,58 +138,92 @@ function PorCanal({ canais, dias }: { canais: LinhaCanalEntrada[]; dias: number 
 
 function PorPagina({ paginas, total, dias }: { paginas: LinhaPaginaEntrada[]; total: number; dias: number }) {
 	const maior = Math.max(0, ...paginas.map(p => p.sessoes))
+	const colunas: ColunaTabela<LinhaPaginaEntrada>[] = [
+		{
+			chave: 'pagina',
+			titulo: 'Página',
+			filtro: 'texto',
+			valor: p => `${nomeDaPagina(p)} ${p.page_path}`,
+			classe: 'max-w-[320px]',
+			render: p => (
+				<>
+					<Link href={linkSessoes({ dias, entrada: p.page_path })} className="block truncate hover:underline" title={p.page_path}>
+						{nomeDaPagina(p)}
+					</Link>
+					{p.vehicle_slug && <div className="truncate font-mono text-[11px] text-foreground-secondary">{p.page_path}</div>}
+				</>
+			),
+		},
+		{
+			chave: 'sessoes',
+			titulo: 'Sessões',
+			filtro: 'numero',
+			valor: p => p.sessoes,
+			classe: 'min-w-[140px]',
+			render: p => <ConteudoVolume valor={p.sessoes} maximo={maior} total={total} />,
+		},
+		{
+			chave: 'canais',
+			titulo: 'Mistura de canais',
+			classe: 'min-w-[160px]',
+			render: p => (
+				<div className="flex h-2.5 w-full overflow-hidden rounded-full bg-background-soft" title={mistura(p)}>
+					{CANAIS_ORDEM.map(c => {
+						const v = p.por_canal[c] ?? 0
+						if (!v) return null
+						return <div key={c} style={{ width: `${(v / p.sessoes) * 100}%`, backgroundColor: CANAL_HEX[c] }} />
+					})}
+				</div>
+			),
+		},
+		{
+			chave: 'fontes',
+			titulo: 'Fontes',
+			filtro: 'texto',
+			valor: p => p.fontes.map(f => f.rotulo_fonte).join(' '),
+			classe: 'text-xs text-foreground-secondary',
+			render: p => p.fontes.map(f => `${f.rotulo_fonte} ${fmtPct(taxa(f.sessoes, p.sessoes), 0)}`).join(' · '),
+		},
+		{
+			chave: 'whatsapp',
+			titulo: 'WhatsApp',
+			filtro: 'numero',
+			valor: p => p.whatsapp,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: p => fmtNum(p.whatsapp),
+		},
+		{
+			chave: 'conversao',
+			titulo: 'Conversão',
+			filtro: 'numero',
+			valor: p => taxa(p.whatsapp, p.sessoes),
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: p => fmtPct(taxa(p.whatsapp, p.sessoes)),
+		},
+		{
+			chave: 'formularios',
+			titulo: 'Formulários',
+			filtro: 'numero',
+			valor: p => p.formularios,
+			alinhar: 'dir',
+			classe: 'tabular-nums',
+			render: p => fmtNum(p.formularios),
+		},
+	]
+
 	return (
 		<Secao
 			titulo="Páginas de entrada — quem chega por elas"
 			dica="Cada linha é uma página em que sessões começaram. A barra colorida mostra a mistura de canais dessa página; 'Fontes' são as três origens que mais trazem gente para ela. Página com muita entrada e pouca conversa é candidata a revisão."
 		>
-			{paginas.length === 0 ? (
-				<Vazio>Sem páginas de entrada no período.</Vazio>
-			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full">
-						<thead className="bg-background-soft">
-							<tr>
-								<th className={`${TH} text-left`}>Página</th>
-								<th className={`${TH} text-left`}>Sessões</th>
-								<th className={`${TH} text-left`}>Mistura de canais</th>
-								<th className={`${TH} text-left`}>Fontes</th>
-								<th className={`${TH} text-right`}>WhatsApp</th>
-								<th className={`${TH} text-right`}>Conversão</th>
-								<th className={`${TH} text-right`}>Formulários</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-border">
-							{paginas.map(p => (
-								<tr key={p.page_path} className="hover:bg-background-soft/60">
-									<td className={`${TD} max-w-[320px]`}>
-										<Link href={linkSessoes({ dias, entrada: p.page_path })} className="block truncate hover:underline" title={p.page_path}>
-											{nomeDaPagina(p)}
-										</Link>
-										{p.vehicle_slug && <div className="truncate font-mono text-[11px] text-foreground-secondary">{p.page_path}</div>}
-									</td>
-									<CelulaVolume valor={p.sessoes} maximo={maior} total={total} />
-									<td className={`${TD} min-w-[160px]`}>
-										<div className="flex h-2.5 w-full overflow-hidden rounded-full bg-background-soft" title={mistura(p)}>
-											{CANAIS_ORDEM.map(c => {
-												const v = p.por_canal[c] ?? 0
-												if (!v) return null
-												return <div key={c} style={{ width: `${(v / p.sessoes) * 100}%`, backgroundColor: CANAL_HEX[c] }} />
-											})}
-										</div>
-									</td>
-									<td className={`${TD} text-xs text-foreground-secondary`}>
-										{p.fontes.map(f => `${f.rotulo_fonte} ${fmtPct(taxa(f.sessoes, p.sessoes), 0)}`).join(' · ')}
-									</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(p.whatsapp)}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtPct(taxa(p.whatsapp, p.sessoes))}</td>
-									<td className={`${TD} text-right tabular-nums`}>{fmtNum(p.formularios)}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
+			<TabelaOrdenavel
+				colunas={colunas}
+				linhas={paginas}
+				chaveLinha={p => p.page_path}
+				vazio="Sem páginas de entrada no período."
+			/>
 		</Secao>
 	)
 }

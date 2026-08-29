@@ -3,6 +3,7 @@ import {
 	descreverSessao,
 	filtrarSessoes,
 	montarJornadas,
+	ordenarSessoes,
 	paginar,
 	temProblema,
 	type SessaoCrua,
@@ -140,5 +141,48 @@ describe('montarJornadas — primeira × última origem', () => {
 		]
 		const p = [t({ fingerprint_id: 'f1', session_id: 's1', started_at: '2026-08-01T10:00:00Z' })]
 		expect(montarJornadas(c, p, { f1: 3 }).jornadas).toHaveLength(1)
+	})
+})
+
+describe('filtros por coluna e ordenação (29/08/2026)', () => {
+	const linhas = [
+		s({ session_id: 'a', city: 'Uberlândia', region: 'Minas Gerais', device_type: 'mobile', veiculos: 3, duration_seconds: 200 }),
+		s({ session_id: 'b', city: 'São Paulo', region: 'São Paulo', device_type: 'desktop', veiculos: 0, duration_seconds: 30 }),
+		s({ session_id: 'c', city: null, region: null, device_type: 'mobile', veiculos: 1, duration_seconds: null }),
+	].map(descreverSessao)
+	const ids = (f: Parameters<typeof filtrarSessoes>[1]) => filtrarSessoes(linhas, f).map(x => x.session_id)
+
+	it('cidade casa cidade ou estado, sem caixa', () => {
+		expect(ids({ cidade: 'uberl' })).toEqual(['a'])
+		expect(ids({ cidade: 'são paulo' })).toEqual(['b'])
+	})
+
+	it('aparelho casa exato', () => {
+		expect(ids({ aparelho: 'mobile' })).toEqual(['a', 'c'])
+	})
+
+	it('veículos e duração aceitam mínimo e máximo', () => {
+		expect(ids({ veiculos_min: 1 })).toEqual(['a', 'c'])
+		expect(ids({ veiculos_max: 0 })).toEqual(['b'])
+		expect(ids({ duracao_min: 100 })).toEqual(['a'])
+	})
+
+	it('sessão sem duração não passa em filtro de duração — ausência não é zero', () => {
+		expect(ids({ duracao_max: 60 })).toEqual(['b'])
+	})
+
+	it('ordena por coluna, com vazios no fim, e ignora coluna desconhecida', () => {
+		expect(ordenarSessoes(linhas, { chave: 'veiculos', direcao: 'desc' }).map(x => x.session_id)).toEqual(['a', 'c', 'b'])
+		expect(ordenarSessoes(linhas, { chave: 'duracao', direcao: 'asc' }).map(x => x.session_id)).toEqual(['b', 'a', 'c'])
+		expect(ordenarSessoes(linhas, { chave: 'inventada', direcao: 'asc' })).toBe(linhas)
+	})
+
+	it('ordena por contato: WhatsApp na frente de formulário, e sem contato por último', () => {
+		const comContato = [
+			s({ session_id: 'x' }),
+			s({ session_id: 'y', submitted_form: true }),
+			s({ session_id: 'z', contacted_whatsapp: true }),
+		].map(descreverSessao)
+		expect(ordenarSessoes(comContato, { chave: 'contato', direcao: 'desc' }).map(x => x.session_id)).toEqual(['z', 'y', 'x'])
 	})
 })
