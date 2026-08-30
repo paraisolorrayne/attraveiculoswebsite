@@ -8,14 +8,13 @@
  * está calibrado (grade, cores, stops do gradiente). Aqui só há formulário,
  * escolha da foto e export.
  *
- * POR QUE EM REACT, E NÃO DENTRO DO HTML DO GERADOR:
- * content/admin/gerador-criativos.html é um arquivo único auto-contido, com um
- * <script> sem módulos e assets em base64 (1,2 MB). O story-vendido.ts é um
- * módulo ES com import/export e depende de fontes servidas por URL. Enfiá-lo
- * ali significaria ou inlinar o módulo à mão — perdendo o vínculo com o fonte —
- * ou converter o HTML inteiro para módulos. Como a página do gerador já é
- * React, o Story entra como ABA dela: mesma porta de entrada para o operador,
- * sem inchar um arquivo que já tem histórico de quebrar.
+ * O Story é uma ABA da página do gerador: mesma porta de entrada para o
+ * operador, duas peças diferentes.
+ *
+ * Este arquivo abria com um parágrafo explicando por que o Story era React
+ * enquanto a aba Criativos era um HTML servido por iframe. Em 30/08/2026 a
+ * outra aba virou React também, sobre o mesmo desenho em módulo ES, e a
+ * pergunta deixou de existir — as duas seguem o mesmo padrão.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'

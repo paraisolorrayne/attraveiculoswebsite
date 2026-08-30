@@ -4,15 +4,25 @@ Prova que `content/admin/creative/gerador/` desenha exatamente o mesmo que o
 `<script>` de `content/admin/gerador-criativos.html`. 35 casos cobrindo os seis
 formatos, Stories e Feed, com os extremos de cada controle.
 
-**Vida útil:** só roda enquanto o HTML antigo existir. Some junto com ele
-quando a tela em React entrar no ar (Task 7 do plano).
+**O HTML antigo não está mais na árvore** — ele saiu em 30/08/2026, junto com a
+troca. Para rodar a regressão de novo, recupere-o do histórico:
+
+```sh
+git show b6d4059:content/admin/gerador-criativos.html > /tmp/reg/antigo.html
+```
+
+(`b6d4059` é o último commit em que ele existia; `git log --diff-filter=D --
+content/admin/gerador-criativos.html` acha o commit que o removeu.)
+
+Isto é guardado porque a prova vale para o futuro: se alguém mexer no desenho e
+quiser saber se saiu do que estava aprovado, este é o aparato que responde.
 
 ## Como rodar
 
 ```sh
 mkdir -p /tmp/reg && cd /tmp/reg
 cp -R public/gerador .
-cp content/admin/gerador-criativos.html antigo.html
+git show b6d4059:content/admin/gerador-criativos.html > antigo.html
 cp scripts/regressao-gerador/regressao.html .
 cp ~/Downloads/attra-fotos-teste/*.webp .
 ./node_modules/.bin/esbuild content/admin/creative/gerador/index.ts \

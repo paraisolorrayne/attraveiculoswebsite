@@ -20,12 +20,6 @@ jobs:
 
       - run: npm ci
 
-      # Guarda do gerador de criativos: o .ts gerado precisa bater com o HTML
-      # fonte. Já houve divergência de 72 linhas em produção, e quem
-      # regenerasse teria revertido a mudança sem perceber.
-      - name: Gerador de criativos em dia com o fonte
-        run: node scripts/check-gerador-criativos.mjs
-
       - name: Testes
         run: npm test
 

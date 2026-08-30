@@ -336,17 +336,30 @@ embutidas e preferência de logo persistida em `localStorage`.
   dois PNGs (`NOME-STORIES-v1.png`, `NOME-FEED-v1.png`) e **envia os dois automaticamente**
   ao board do Marketing (`POST /api/admin/marketing/creatives`, um card por formato,
   coluna `marketing_creatives.format`). Não há mais checkbox "enviar ao patrocinado".
-- O Feed não tem prévia na tela: nasce num canvas fora da tela na hora de baixar (os
-  `render*` do HTML leem a altura em `H` e têm um ramo `FEED`).
+- O Feed não tem prévia na tela: nasce num canvas fora da tela na hora de baixar (cada
+  formato lê a altura e tem um ramo `FEED`).
 - Formatos válidos e apresentação (rótulo, proporção, sufixo) vivem em
   `src/lib/marketing-creatives.ts`.
 
-- **Como funciona:** a página embute via iframe a rota
-  `GET /api/admin/marketing/gerador-criativos`, que exige admin logado e serve o HTML.
-- **Fonte da verdade:** `content/admin/gerador-criativos.html`. O HTML é embutido no build
-  como string em `gerador-html.ts` (arquivo gerado — não editar).
-- **Para atualizar a ferramenta:** edite o HTML em `content/admin/` e rode
-  `node scripts/gen-gerador-criativos.mjs`.
+- **Como funciona:** página React, aba `Criativos` de `/admin/gerador-criativos`. Não há
+  mais iframe: até 30/08/2026 a aba servia `content/admin/gerador-criativos.html` (1,2 MB,
+  desenho num `<script>` sem módulos, imagens em base64) pela rota
+  `GET /api/admin/marketing/gerador-criativos`. O HTML, a rota, o `gerador-html.ts` gerado
+  e os scripts `gen-`/`check-gerador-criativos.mjs` foram removidos junto com o guard de CI
+  que os vigiava.
+- **Onde fica o quê:**
+  - desenho: `content/admin/creative/gerador/` — `index.ts` despacha, um arquivo por
+    formato em `formatos/`, helpers em `desenho.ts`, enquadramento em `enquadramento.ts`.
+    Nada aqui conhece React.
+  - tela: `src/app/admin/gerador-criativos/criativos/` — `use-gerador.ts` (estado e o laço
+    de desenho), `campos.tsx` (controles), `baixar.ts` (export), `criativos-admin.tsx`
+    (as quatro integrações).
+  - imagens fixas: `public/gerador/` (eram 1,04 MB de base64 dentro do HTML).
+- **Fontes:** o canvas pede a família `Montserrat` literal, que o `next/font` do layout
+  não publica (nome hasheado, e sem os pesos 200/800/900). Por isso a tela carrega a MESMA
+  folha do Google que o HTML carregava — ver `content/admin/creative/gerador/fontes.ts`.
+- **Ao mexer no desenho:** a conversão foi validada por regressão pixel a pixel contra o
+  HTML antigo, 35 casos, zero diferença (`scripts/regressao-gerador/`).
 
 ---
 
