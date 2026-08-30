@@ -81,6 +81,15 @@ export interface EstadoCriativo {
 	fatiapiso: number
 	/** Rotação do carro recortado no Editorial, em graus. */
 	edRot: number
+	/**
+	 * Força da sombra projetada pelo carro recortado, de 0 a 100.
+	 *
+	 * O padrão 5 é baixo de propósito: com o piso da própria foto por baixo,
+	 * sombra forte lê como mancha. O código antigo usava `|| 55` aqui, o que
+	 * fazia arrastar o slider até zero devolver 55 — o oposto do que o operador
+	 * tinha acabado de fazer.
+	 */
+	sombra: number
 	pisoTipo: PisoTipo
 
 	f1: OpcoesFoto
@@ -161,6 +170,7 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	pisoy: 0,
 	fatiapiso: 30,
 	edRot: 0,
+	sombra: 5,
 	pisoTipo: 'perola',
 	// Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
 	// gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas
