@@ -1,0 +1,245 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Regressão do gerador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { font: 13px ui-monospace, monospace; background:#14151a; color:#e6e6ea; margin:0; padding:16px; }
+  #saida { white-space: pre; line-height: 1.55; }
+  iframe { position:fixed; left:-9999px; width:1400px; height:1200px; }
+  .ok { color:#57c07d } .mau { color:#ff6b6b }
+  canvas.amostra { width:180px; border:1px solid #333; margin:4px; vertical-align:top }
+</style>
+<h2 style="font:600 15px Inter,sans-serif">Regressão pixel a pixel — HTML antigo × motor novo</h2>
+<div id="saida">carregando…</div>
+<div id="amostras"></div>
+<iframe id="velho" src="/antigo.html"></iframe>
+
+<script type="module">
+import { render, ESTADO_INICIAL, IMAGENS_VAZIAS, carregarAssets, ALTURA_STORIES, ALTURA_FEED, LARGURA } from '/motor.js'
+
+/* Mesma semente do iframe: o grão é sorteado, e sem fixá-lo os dois motores
+ * nunca poderiam bater ao pixel. É o único consumidor de Math.random dos dois
+ * lados (conferido por grep), então as duas sequências ficam alinhadas. */
+;(function(){ let a = 0x9e3779b9
+  Math.random = function(){ a |= 0; a = a + 0x6D2B79F5 | 0
+    let t = Math.imul(a ^ a >>> 15, 1 | a)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+})()
+
+const saida = document.getElementById('saida')
+const log = (t, cls) => { saida.insertAdjacentHTML('beforeend', cls ? `<span class="${cls}">${t}</span>\n` : t + '\n') }
+
+const carregar = src => new Promise((ok, erro) => {
+  const i = new Image(); i.onload = () => ok(i); i.onerror = () => erro(new Error(src)); i.src = src
+})
+
+/* Um "recorte" determinístico: apaga a metade de baixo em degradê, imitando o
+ * PNG com alfa que o rembg devolve. Os dois motores recebem o MESMO objeto. */
+async function recortar(img) {
+  const c = document.createElement('canvas')
+  c.width = img.naturalWidth; c.height = img.naturalHeight
+  const x = c.getContext('2d')
+  x.drawImage(img, 0, 0)
+  x.globalCompositeOperation = 'destination-out'
+  const g = x.createLinearGradient(0, c.height * 0.62, 0, c.height)
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)')
+  x.fillStyle = g; x.fillRect(0, 0, c.width, c.height)
+  x.globalCompositeOperation = 'destination-out'
+  x.fillRect(0, 0, c.width * 0.08, c.height)
+  x.fillRect(c.width * 0.92, 0, c.width * 0.08, c.height)
+  return carregar(c.toDataURL('image/png'))
+}
+
+const FOTOS = {
+  g63: 'g63-frente34.webp', g63t: 'g63-traseira34.webp',
+  mcl: 'mclaren-gt-frente34.webp', mclt: 'mclaren-gt-traseira.webp',
+  ram: 'ram-2500-frente34.webp', ramt: 'ram-2500-traseira34.webp',
+}
+
+const CASOS = [
+  // ---- Clássico ----
+  { n: 'classico padrão', e: {}, f: { foto1: 'g63', foto2: 'g63t' } },
+  { n: 'classico FEED', h: 'feed', e: {}, f: { foto1: 'g63', foto2: 'g63t' } },
+  { n: 'classico corte/pisoy no extremo', e: { corte: 200, pisoy: 160 }, f: { foto1: 'mcl', foto2: 'mclt' } },
+  { n: 'classico corte/pisoy no mínimo', e: { corte: -160, pisoy: -60 }, f: { foto1: 'mcl', foto2: 'mclt' } },
+  { n: 'classico piso concreto', e: { pisoTipo: 'concreto' }, f: { foto1: 'ram', foto2: 'ramt' } },
+  { n: 'classico piso asfalto', e: { pisoTipo: 'asfalto' }, f: { foto1: 'ram', foto2: 'ramt' } },
+  { n: 'classico sem foto (placeholder)', e: {}, f: {} },
+  { n: 'classico texto vazio', e: { marca: '', modelo: '', ano: '', preco: '', km: '', b1: '', b2: '', b3: '' }, f: { foto1: 'g63' } },
+  { n: 'classico modelo gigante', e: { modelo: 'MERCEDES-AMG G 63 EDITION 55 BITURBO 4MATIC', kmextra: 'ÚNICO DONO' }, f: { foto1: 'g63' } },
+  { n: 'classico logo do operador', e: {}, f: { foto1: 'g63' }, logo: true },
+  { n: 'classico zoom/pan extremos', e: { f1: { zoom: 2.5, x: 0, y: 1 }, f2: { zoom: 0.55, x: 1, y: 0 } }, f: { foto1: 'g63', foto2: 'g63t' } },
+
+  // ---- Clássico Loja ----
+  { n: 'classico-loja padrão', t: 'classico-loja', e: {}, f: { foto1: 'g63' } },
+  { n: 'classico-loja FEED', t: 'classico-loja', h: 'feed', e: {}, f: { foto1: 'g63' } },
+  { n: 'classico-loja com recorte', t: 'classico-loja', e: {}, f: { foto1: 'g63' }, cut: true },
+  { n: 'classico-loja recorte + sombra 130', t: 'classico-loja', e: { sombra: 130, fatiapiso: 55 }, f: { foto1: 'mcl' }, cut: true },
+  { n: 'classico-loja recorte + sombra 0', t: 'classico-loja', e: { sombra: 0, fatiapiso: 10 }, f: { foto1: 'mcl' }, cut: true },
+  { n: 'classico-loja RAM (texto alto)', t: 'classico-loja', e: { modelo: 'RAM 2500 LARAMIE NIGHT EDITION', b1: 'Motor 6.7 Cummins turbodiesel 6 cilindros', b2: 'Tração 4x4 com reduzida e bloqueio de diferencial', b3: 'Capacidade de reboque de 3.500 kg' }, f: { foto1: 'ram' }, cut: true },
+  { n: 'classico-loja FEED + recorte', t: 'classico-loja', h: 'feed', e: {}, f: { foto1: 'ram' }, cut: true },
+
+  // ---- Destaque ----
+  { n: 'destaque padrão', t: 'destaque', e: {}, f: { foto1: 'mcl' } },
+  { n: 'destaque FEED', t: 'destaque', h: 'feed', e: {}, f: { foto1: 'mcl' } },
+  { n: 'destaque selos múltiplos', t: 'destaque', e: { selo: 'BLINDADO, 7 LUGARES, ZERO KM, FULL PPF' }, f: { foto1: 'mcl' } },
+  { n: 'destaque sem selo nem foto', t: 'destaque', e: { selo: '' }, f: {} },
+
+  // ---- Estoque ----
+  { n: 'estoque 3 carros', t: 'estoque', e: {}, f: {}, est: ['g63', 'mcl', 'ram'] },
+  { n: 'estoque FEED', t: 'estoque', h: 'feed', e: {}, f: {}, est: ['g63', 'mcl', 'ram'] },
+  { n: 'estoque 4 carros', t: 'estoque', e: { estoque: [
+      { nome: 'Porsche 911 Carrera', ano: '2025/2026', km: '1.290', preco: '1.250.000', tag: 'BLINDADO' },
+      { nome: 'Mercedes AMG S 63 E Performance', ano: '2025/2025', km: '3.392', preco: '1.890.000', tag: 'BLINDADO' },
+      { nome: 'Audi RS Q8 TFSI', ano: '2020/2021', km: '12.584', preco: '790.000', tag: '' },
+      { nome: 'RAM 2500 Laramie', ano: '2023/2024', km: '18.000', preco: '620.000', tag: 'DIESEL' },
+    ] }, f: {}, est: ['g63', 'mcl', 'ram', 'ramt'] },
+  { n: 'estoque 1 carro nome longo', t: 'estoque', e: { estoque: [
+      { nome: 'Mercedes-AMG G 63 Edition 55 Biturbo 4Matic Blindado', ano: '2024/2025', km: '4.100', preco: '2.390.000', tag: 'BLINDADO' },
+      { nome: '', ano: '', km: '', preco: '', tag: '' },
+      { nome: '', ano: '', km: '', preco: '', tag: '' },
+      { nome: '', ano: '', km: '', preco: '', tag: '' },
+    ] }, f: {}, est: ['g63'] },
+  { n: 'estoque vazio', t: 'estoque', e: { estoque: [
+      { nome: '', ano: '', km: '', preco: '', tag: '' }, { nome: '', ano: '', km: '', preco: '', tag: '' },
+      { nome: '', ano: '', km: '', preco: '', tag: '' }, { nome: '', ano: '', km: '', preco: '', tag: '' },
+    ] }, f: {} },
+
+  // ---- Editorial ----
+  { n: 'editorial com recorte', t: 'editorial', e: {}, f: { foto1: 'mcl' }, cut: true },
+  { n: 'editorial FEED', t: 'editorial', h: 'feed', e: {}, f: { foto1: 'mcl' }, cut: true },
+  { n: 'editorial rotação +12', t: 'editorial', e: { edRot: 12 }, f: { foto1: 'g63' }, cut: true },
+  { n: 'editorial rotação -12 sem recorte', t: 'editorial', e: { edRot: -12 }, f: { foto1: 'g63' } },
+  { n: 'editorial sem foto', t: 'editorial', e: {}, f: {} },
+
+  // ---- Ficha ----
+  { n: 'ficha padrão', t: 'ficha', e: {}, f: { foto1: 'g63', foto2: 'g63t', foto3: 'mcl', foto4: 'mclt' } },
+  { n: 'ficha FEED', t: 'ficha', h: 'feed', e: {}, f: { foto1: 'g63', foto2: 'g63t', foto3: 'mcl', foto4: 'mclt' } },
+  { n: 'ficha sem garantia/cores', t: 'ficha', e: { garantia: '', corext: '', corint: '', rot1: '', rot2: '' }, f: { foto1: 'ram' } },
+]
+
+const TEXTOS = ['marca','modelo','ano','preco','km','kmextra','b1','b2','b3','selo','rot1','corext','rot2','corint','garantia','et1','et2']
+const NUMEROS = ['corte','pisoy','fatiapiso','sombra']
+
+function montarEstado(caso) {
+  return { ...structuredClone(ESTADO_INICIAL), tipo: caso.t || 'classico', ...structuredClone(caso.e || {}) }
+}
+
+function aplicarNoVelho(win, estado, imagens) {
+  const doc = win.document
+  const set = (id, v) => { const el = doc.getElementById(id); if (!el) throw new Error('sem input #' + id); el.value = String(v) }
+  for (const k of TEXTOS) set(k, estado[k])
+  for (const k of NUMEROS) set(k, estado[k])
+  estado.estoque.forEach((c, i) => {
+    set('e_nome' + i, c.nome); set('e_ano' + i, c.ano); set('e_km' + i, c.km)
+    set('e_preco' + i, c.preco); set('e_tag' + i, c.tag)
+  })
+  const s = win.__ponte.state
+  s.tipo = estado.tipo
+  s.f1 = { ...estado.f1 }; s.f2 = { ...estado.f2 }; s.f3 = { ...estado.f3 }; s.f4 = { ...estado.f4 }
+  s.edRot = estado.edRot; s.pisoTipo = estado.pisoTipo; s.slotFoto = estado.slotFoto
+  s.foto1 = imagens.foto1; s.foto2 = imagens.foto2; s.foto3 = imagens.foto3; s.foto4 = imagens.foto4
+  s.foto1Cut = imagens.foto1Cut; s.logo = imagens.logo
+  s.estFotos = imagens.estFotos.slice()
+}
+
+function diferenca(a, b) {
+  let n = 0, pior = 0, primeiro = null
+  for (let i = 0; i < a.length; i += 4) {
+    const d = Math.abs(a[i] - b[i]) + Math.abs(a[i+1] - b[i+1]) + Math.abs(a[i+2] - b[i+2]) + Math.abs(a[i+3] - b[i+3])
+    if (d) { n++; if (d > pior) pior = d; if (!primeiro) { const p = i / 4; primeiro = [p % LARGURA, Math.floor(p / LARGURA)] } }
+  }
+  return { n, pior, primeiro }
+}
+
+async function principal() {
+  const iframe = document.getElementById('velho')
+  await new Promise(r => iframe.addEventListener('load', r, { once: true }))
+  const win = iframe.contentWindow
+  await win.document.fonts.ready
+  await document.fonts.ready
+  // dá tempo das imagens embutidas do HTML antigo decodificarem
+  await new Promise(r => setTimeout(r, 1500))
+  if (!win.__ponte) { log('PONTE AUSENTE — o script do HTML antigo quebrou antes do fim', 'mau'); return }
+
+  const assets = await carregarAssets()
+  const cache = {}
+  for (const [k, arq] of Object.entries(FOTOS)) cache[k] = await carregar('/' + arq)
+  const cortes = {}
+  for (const k of ['g63', 'mcl', 'ram']) cortes[k] = await recortar(cache[k])
+  const logoOperador = await carregar('/gerador/logo-branca.png')
+
+  /* Os dois motores desenham no MESMO canvas — o do próprio HTML antigo.
+   *
+   * Duas armadilhas já custaram um diagnóstico falso aqui:
+   *   1. willReadFrequently:true força rasterização por CPU; o canvas da tela
+   *      usa GPU. A mesma drawImage saía com Δ até 83.
+   *   2. Mesmo os dois na GPU, canvases DIFERENTES ditheram gradiente diferente:
+   *      o mesmo createLinearGradient dava Δ=1 em 590 mil pixels, só porque um
+   *      é on-screen reduzido por CSS e o outro não.
+   * Compartilhando a superfície, o que sobrar de diferença é código. */
+
+  saida.textContent = ''
+  let falhas = 0
+
+  for (const caso of CASOS) {
+    const H = caso.h === 'feed' ? ALTURA_FEED : ALTURA_STORIES
+    const estado = montarEstado(caso)
+    const imagens = { ...structuredClone(IMAGENS_VAZIAS) }
+    for (const [slot, chave] of Object.entries(caso.f || {})) imagens[slot] = cache[chave]
+    imagens.estFotos = (caso.est || []).concat([null, null, null, null]).slice(0, 4).map(k => k ? cache[k] : null)
+    if (caso.cut) imagens.foto1Cut = cortes[Object.values(caso.f)[0]] || null
+    if (caso.logo) imagens.logo = logoOperador
+
+    const cvAlvo = H === ALTURA_FEED ? win.__ponte.cvFeed : win.__ponte.cv
+    const ctxAlvo = cvAlvo.getContext('2d')
+
+    /* Cada motor desenha DUAS vezes e vale a segunda. O Chrome começa um canvas
+     * em rasterização por software e o promove para GPU depois dos primeiros
+     * desenhos; sem absorver essa transição, o primeiro caso de cada canvas
+     * acusava Δ=48 sozinho. Os dois motores são idempotentes (verificado nos
+     * 36 casos), então a segunda passada é a leitura honesta. */
+
+    // ---- lado antigo ----
+    aplicarNoVelho(win, estado, imagens)
+    ctxAlvo.reset()
+    if (H === ALTURA_FEED) { win.__ponte.renderFeed(); win.__ponte.renderFeed() }
+    else { win.__ponte.render(); win.__ponte.render() }
+    const pxVelho = ctxAlvo.getImageData(0, 0, LARGURA, H).data.slice()
+
+    // ---- lado novo, na mesma superfície ----
+    ctxAlvo.reset()
+    render(ctxAlvo, estado, imagens, assets, H)
+    render(ctxAlvo, estado, imagens, assets, H)
+    const pxNovo = ctxAlvo.getImageData(0, 0, LARGURA, H).data
+
+    const { n, pior, primeiro } = diferenca(pxVelho, pxNovo)
+    const total = LARGURA * H
+    if (n === 0) log(`  ok   ${caso.n}`, 'ok')
+    else {
+      falhas++
+      log(`  DIF  ${caso.n} — ${n} px (${(n / total * 100).toFixed(3)}%), pior Δ=${pior}, 1º em ${primeiro}`, 'mau')
+      const amostra = (cv, rot) => {
+        const c = document.createElement('canvas'); c.width = LARGURA; c.height = H; c.className = 'amostra'
+        c.getContext('2d').drawImage(cv, 0, 0); c.title = rot + ' — ' + caso.n
+        document.getElementById('amostras').appendChild(c)
+      }
+      if (falhas <= 3) amostra(cvAlvo, 'novo (o antigo foi sobrescrito)')
+    }
+  }
+
+  log('')
+  log(falhas === 0
+    ? `TODOS OS ${CASOS.length} CASOS IDÊNTICOS AO PIXEL`
+    : `${falhas} de ${CASOS.length} casos com diferença`, falhas === 0 ? 'ok' : 'mau')
+  window.__dbg = { assets, cache, cortes, win, montarEstado, aplicarNoVelho, render, diferenca, CASOS }
+  window.__pronto = true
+  window.__falhas = falhas
+  window.__resumo = saida.textContent
+}
+
+principal().catch(e => { log('ERRO: ' + e.message + '\n' + e.stack, 'mau'); window.__pronto = true; window.__falhas = -1; window.__resumo = saida.textContent })
+</script>

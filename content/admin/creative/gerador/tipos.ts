@@ -166,8 +166,11 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 		{ nome: 'Audi RS Q8 TFSI', ano: '2020/2021', km: '12.584', preco: '790.000', tag: '' },
 		{ nome: '', ano: '', km: '', preco: '', tag: '' },
 	],
-	corte: 0,
-	pisoy: 0,
+	// Estes dois nascem negativos porque os sliders do HTML nascem assim
+	// (corte value="-32", pisoy value="-18"). Zerar aqui abriria a peça padrão
+	// diferente do que os controles mostram.
+	corte: -32,
+	pisoy: -18,
 	fatiapiso: 30,
 	edRot: 0,
 	sombra: 5,
