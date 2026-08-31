@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+	distanciaDeCor,
 	haloCss,
 	hexParaRgb,
 	luminanciaRelativa,
@@ -135,5 +136,53 @@ describe('paletaLegivel', () => {
 	it('monta o rgba do halo', () => {
 		const p = paletaLegivel(fundoUniforme(128))
 		expect(haloCss(p)).toMatch(/^rgba\(\d+,\d+,\d+,[\d.]+\)$/)
+	})
+})
+
+describe('luminanciaRelativa — tabela e conta direta', () => {
+	it('a tabela devolve exatamente a conta, para os 256 inteiros', () => {
+		// A tabela existe por desempenho (era o maior custo da medição por
+		// quadro). Se ela divergisse da fórmula, o contraste medido mudaria em
+		// silêncio — este teste é o que garante que é otimização, não atalho.
+		const direto = (c: number) => {
+			const v = c / 255
+			return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+		}
+		for (let c = 0; c < 256; c++) {
+			const esperado = 0.2126 * direto(c) + 0.7152 * direto(c) + 0.0722 * direto(c)
+			expect(luminanciaRelativa(c, c, c)).toBeCloseTo(esperado, 12)
+		}
+	})
+
+	it('aceita valores fracionários, que só os testes produzem', () => {
+		const meio = luminanciaRelativa(127.5, 127.5, 127.5)
+		expect(meio).toBeGreaterThan(luminanciaRelativa(127, 127, 127))
+		expect(meio).toBeLessThan(luminanciaRelativa(128, 128, 128))
+	})
+})
+
+describe('distanciaDeCor', () => {
+	it('é zero para cores iguais', () => {
+		expect(distanciaDeCor([120, 130, 140], [120, 130, 140])).toBe(0)
+	})
+
+	it('satura em 1 nos opostos', () => {
+		expect(distanciaDeCor([0, 0, 0], [255, 255, 255])).toBe(1)
+	})
+
+	it('não depende da ordem', () => {
+		const a: [number, number, number] = [40, 90, 150]
+		const b: [number, number, number] = [200, 120, 60]
+		expect(distanciaDeCor(a, b)).toBeCloseTo(distanciaDeCor(b, a), 12)
+	})
+
+	it('ordena as diferenças de piso que a emenda precisa distinguir', () => {
+		// Dois pisos quase iguais pedem véu quase nulo; asfalto contra concreto
+		// pede véu de verdade. O que importa é a ORDEM, não o valor absoluto.
+		const concreto: [number, number, number] = [150, 148, 145]
+		const concretoOutro: [number, number, number] = [156, 154, 150]
+		const asfalto: [number, number, number] = [58, 58, 60]
+		expect(distanciaDeCor(concreto, concretoOutro)).toBeLessThan(0.05)
+		expect(distanciaDeCor(concreto, asfalto)).toBeGreaterThan(0.4)
 	})
 })

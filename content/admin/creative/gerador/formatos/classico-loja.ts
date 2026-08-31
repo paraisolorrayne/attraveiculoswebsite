@@ -18,7 +18,7 @@ import {
 	spacedWidth,
 	type PosicaoDoRecorte,
 } from '../desenho'
-import { haloCss, medirFundo, paletaLegivel } from '../contraste'
+import { amostrar, fundoDaCaixa, haloCss, paletaLegivel, type Amostra } from '../contraste'
 import { ALTURA_FEED, ALTURA_STORIES, LARGURA as W, type ContextoDesenho } from '../tipos'
 
 export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
@@ -259,8 +259,12 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const yPreco = PISO_TOP + 54
 	const larguraPreco = textoPreco ? spacedWidth(ctx, textoPreco, FONTE_PRECO, 10) : 0
 	// Em 48px os algarismos sobem ~38px da linha de base e descem ~8.
+	// UMA leitura do bloco inteiro serve às três caixas. Cada getImageData de um
+	// canvas da GPU espera o desenho terminar; cinco leituras por quadro
+	// custavam 16,7ms nesta peça — mais que o render inteiro.
+	const amostraTexto: Amostra | null = amostrar(ctx.canvas, 100, PISO_TOP, W - 200, 380)
 	const fundoPreco = textoPreco
-		? medirFundo(ctx, W / 2 - larguraPreco / 2 - 8, yPreco - 40, larguraPreco + 16, 52)
+		? fundoDaCaixa(amostraTexto, W / 2 - larguraPreco / 2 - 8, yPreco - 40, larguraPreco + 16, 52)
 		: null
 	// O preço tem 48px — texto grande pelo WCAG, onde 3:1 basta. Exigir 4,5 ali
 	// só engrossaria o contorno do maior elemento da peça.
@@ -275,7 +279,7 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	// para amostrar o fundo.
 	const larguraKm = textoKm ? spacedWidth(ctx, textoKm, '500 24px Montserrat, sans-serif', 5) : 0
 	const fundoKm = textoKm
-		? medirFundo(ctx, W / 2 - larguraKm / 2 - 8, yKm - 20, larguraKm + 16, 28)
+		? fundoDaCaixa(amostraTexto, W / 2 - larguraKm / 2 - 8, yKm - 20, larguraKm + 16, 28)
 		: null
 	// O KM era #6f6f74 — cinza médio sobre concreto médio, ~2,6:1, a linha
 	// sumia. Vira grafite, um passo abaixo do preço: a hierarquia entre as duas
@@ -342,7 +346,7 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const ultimaBase = by + (items.length - 1) * (lineH + gap)
 	const fundoBullets =
 		items.length > 0
-			? medirFundo(ctx, 142, by - alturaMaxItem - 6, textX - 142 + larguraMaxItem + 12, ultimaBase - by + alturaMaxItem + 18)
+			? fundoDaCaixa(amostraTexto, 142, by - alturaMaxItem - 6, textX - 142 + larguraMaxItem + 12, ultimaBase - by + alturaMaxItem + 18)
 			: null
 	const pBullet = paletaLegivel(fundoBullets, { alvo: 4.5, corEscura: '#141416', corClara: '#f2f2f5' })
 	// O ícone é traço, não texto: acompanha a cor do destaque, mas dispensa o

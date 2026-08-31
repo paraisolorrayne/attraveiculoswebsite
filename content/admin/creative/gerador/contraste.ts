@@ -30,9 +30,29 @@
  * luz", e não é — o sRGB é codificado com gama. Sem linearizar, cinza médio
  * mede claro demais e o texto escuro passa num fundo em que ele some.
  */
-export function luminanciaRelativa(r: number, g: number, b: number): number {
-	const linear = (c: number) => {
+/**
+ * Tabela sRGB->linear para os 256 valores inteiros.
+ *
+ * A conta tem um `** 2.4` por canal, e o histograma do fundo a chama três vezes
+ * por pixel em dezenas de milhares de pixels por quadro. Medido: era o maior
+ * item do custo que a medição acrescentou ao render. A entrada é sempre um
+ * inteiro de 0 a 255, então a tabela dá o MESMO resultado — não é aproximação.
+ */
+const LINEAR = (() => {
+	const t = new Float64Array(256)
+	for (let c = 0; c < 256; c++) {
 		const s = c / 255
+		t[c] = s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+	}
+	return t
+})()
+
+export function luminanciaRelativa(r: number, g: number, b: number): number {
+	// Valores fora da grade inteira (só os testes usam) caem na conta direta.
+	if ((r | 0) === r && (g | 0) === g && (b | 0) === b && r >= 0 && r < 256 && g >= 0 && g < 256 && b >= 0 && b < 256)
+		return 0.2126 * LINEAR[r] + 0.7152 * LINEAR[g] + 0.0722 * LINEAR[b]
+	const linear = (c: number) => {
+		const s = Math.min(1, Math.max(0, c / 255))
 		return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
 	}
 	return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
@@ -66,33 +86,31 @@ export interface FundoMedido {
 }
 
 /**
- * Resolução em que a região é amostrada. 160x48 = 7.680 amostras, o bastante
- * para percentis estáveis.
+ * Resolução em que uma região é amostrada.
  *
- * Reduzir não é só economia: cada pixel do miniatura é a MÉDIA de uns 4x2 do
+ * Reduzir não é só economia: cada pixel da miniatura é a MÉDIA de vários do
  * original, e essa é a escala perceptual certa aqui. Um pixel preto solto no
- * meio do concreto não torna nada ilegível; uma mancha do tamanho de uma letra,
- * sim — e essa sobrevive à redução.
+ * concreto não torna nada ilegível; uma mancha do tamanho de uma letra, sim — e
+ * essa sobrevive à redução.
  */
-const AMOSTRA_L = 160
-const AMOSTRA_A = 48
+const AMOSTRA_L = 220
+const AMOSTRA_A = 132
 
 /**
  * Canvas de trabalho reaproveitado entre chamadas.
  *
  * `willReadFrequently` AQUI é o ponto todo: ele força rasterização por CPU, e
- * ler 7.680 pixels da CPU custa uma fração de ler 82 mil da GPU. Medido nesta
- * peça: leitura direta do canvas grande custa +6,3ms por quadro; por aqui,
- * +1,2ms. (O mesmo willReadFrequently seria um erro no canvas da PEÇA — ele
- * muda a rasterização e com ela os pixels; ver scripts/regressao-gerador.)
+ * ler alguns milhares de pixels da CPU custa uma fração de ler dezenas de
+ * milhares da GPU. (O mesmo willReadFrequently seria um erro no canvas da PEÇA:
+ * ele muda a rasterização e com ela os pixels — ver scripts/regressao-gerador.)
  */
-let mini: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null
-function canvasDeAmostra() {
+let mini: CanvasRenderingContext2D | null = null
+function canvasDeAmostra(): CanvasRenderingContext2D {
 	if (!mini) {
 		const canvas = document.createElement('canvas')
 		canvas.width = AMOSTRA_L
 		canvas.height = AMOSTRA_A
-		mini = { canvas, ctx: canvas.getContext('2d', { willReadFrequently: true })! }
+		mini = canvas.getContext('2d', { willReadFrequently: true })!
 	}
 	return mini
 }
@@ -103,66 +121,161 @@ export function limparCanvasDeAmostra(): void {
 }
 
 /**
- * Lê a região do canvas e devolve a distribuição de luminância.
+ * Uma região já lida, com o mapeamento de volta às coordenadas de origem.
+ *
+ * Existe para que UMA leitura sirva a várias perguntas. Cada `getImageData` de
+ * um canvas da GPU obriga o navegador a esperar o desenho terminar; medido
+ * nesta peça, cinco leituras por quadro custavam 16,7ms — o quádruplo do render
+ * inteiro. Lendo o bloco de texto de uma vez e consultando as caixas dentro
+ * dele, sobram duas leituras.
+ */
+export interface Amostra {
+	dados: Uint8ClampedArray
+	larg: number
+	alt: number
+	x: number
+	y: number
+	w: number
+	h: number
+}
+
+/** Lê uma região de um canvas ou imagem para o canvas reduzido. */
+export function amostrar(
+	fonte: CanvasImageSource,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+): Amostra | null {
+	const X = Math.max(0, Math.floor(x))
+	const Y = Math.max(0, Math.floor(y))
+	const L = Math.floor(w)
+	const A = Math.floor(h)
+	if (L <= 0 || A <= 0) return null
+	try {
+		const m = canvasDeAmostra()
+		m.clearRect(0, 0, AMOSTRA_L, AMOSTRA_A)
+		m.drawImage(fonte, X, Y, L, A, 0, 0, AMOSTRA_L, AMOSTRA_A)
+		return {
+			dados: m.getImageData(0, 0, AMOSTRA_L, AMOSTRA_A).data,
+			larg: AMOSTRA_L,
+			alt: AMOSTRA_A,
+			x: X,
+			y: Y,
+			w: L,
+			h: A,
+		}
+	} catch {
+		// Canvas tingido por foto de outra origem: quem chama cai no padrão.
+		return null
+	}
+}
+
+/** Converte uma caixa em coordenadas de origem para índices da amostra. */
+function recorteNaAmostra(a: Amostra, x: number, y: number, w: number, h: number) {
+	const ex = a.larg / a.w
+	const ey = a.alt / a.h
+	const x0 = Math.max(0, Math.min(a.larg - 1, Math.floor((x - a.x) * ex)))
+	const y0 = Math.max(0, Math.min(a.alt - 1, Math.floor((y - a.y) * ey)))
+	const x1 = Math.max(x0 + 1, Math.min(a.larg, Math.ceil((x - a.x + w) * ex)))
+	const y1 = Math.max(y0 + 1, Math.min(a.alt, Math.ceil((y - a.y + h) * ey)))
+	return { x0, y0, x1, y1 }
+}
+
+/**
+ * Distribuição de luminância de uma caixa dentro da amostra.
  *
  * Percentis, não média. Um fundo meio escuro e meio claro tem média no meio, e
  * a média mente exatamente no caso que mais importa: o texto fica ilegível na
  * metade errada. Quem manda na decisão é a mediana; quem manda na verificação é
  * o percentil que dói para a cor escolhida.
  *
- * Os percentis são 10 e 90, não 0 e 100: um punhado de pixels pretos numa fresta
- * de sombra não pode obrigar a peça inteira a mudar de paleta.
+ * Os percentis são 10 e 90, não 0 e 100: um punhado de pixels escuros numa
+ * fresta de sombra não pode obrigar a peça inteira a mudar de paleta.
  */
-export function medirFundo(
-	ctx: CanvasRenderingContext2D,
+export function fundoDaCaixa(
+	a: Amostra | null,
 	x: number,
 	y: number,
 	w: number,
 	h: number,
 ): FundoMedido | null {
-	const X = Math.max(0, Math.floor(x))
-	const Y = Math.max(0, Math.floor(y))
-	const L = Math.floor(w)
-	const A = Math.floor(h)
-	if (L <= 0 || A <= 0) return null
-
-	let dados: Uint8ClampedArray
-	try {
-		const m = canvasDeAmostra()
-		m.ctx.clearRect(0, 0, AMOSTRA_L, AMOSTRA_A)
-		m.ctx.drawImage(ctx.canvas, X, Y, L, A, 0, 0, AMOSTRA_L, AMOSTRA_A)
-		dados = m.ctx.getImageData(0, 0, AMOSTRA_L, AMOSTRA_A).data
-	} catch {
-		// Canvas tingido por foto de outra origem. Não é motivo para não
-		// desenhar: quem chama cai na paleta padrão.
-		return null
-	}
-
-	// Histograma de 64 baldes em vez de ordenar milhares de valores: os
-	// percentis não precisam de precisão maior que 1/64 de luminância, e isto
-	// roda a cada quadro enquanto o operador arrasta um slider.
+	if (!a) return null
+	const { x0, y0, x1, y1 } = recorteNaAmostra(a, x, y, w, h)
 	const BALDES = 64
 	const hist = new Uint32Array(BALDES)
 	let total = 0
-	for (let i = 0; i < dados.length; i += 4) {
-		if (dados[i + 3] < 8) continue // transparente não é fundo
-		const lum = luminanciaRelativa(dados[i], dados[i + 1], dados[i + 2])
-		hist[Math.min(BALDES - 1, Math.floor(lum * BALDES))]++
-		total++
+	for (let py = y0; py < y1; py++) {
+		for (let px = x0; px < x1; px++) {
+			const i = (py * a.larg + px) * 4
+			if (a.dados[i + 3] < 8) continue
+			const lum = luminanciaRelativa(a.dados[i], a.dados[i + 1], a.dados[i + 2])
+			hist[Math.min(BALDES - 1, Math.floor(lum * BALDES))]++
+			total++
+		}
 	}
 	if (!total) return null
-
 	const percentil = (p: number) => {
 		const alvo = total * p
-		let acumulado = 0
+		let acc = 0
 		for (let b = 0; b < BALDES; b++) {
-			acumulado += hist[b]
-			if (acumulado >= alvo) return (b + 0.5) / BALDES
+			acc += hist[b]
+			if (acc >= alvo) return (b + 0.5) / BALDES
 		}
 		return 1
 	}
-
 	return { escuro: percentil(0.1), mediana: percentil(0.5), claro: percentil(0.9) }
+}
+
+/**
+ * Cor média de uma caixa dentro da amostra, em sRGB.
+ *
+ * Serve à emenda do chão, não ao texto: ali não interessa quão claro o fundo é,
+ * e sim QUE COR ele tem, para a tira de piso da foto ser puxada na direção do
+ * piso da fachada.
+ */
+export function corMediaDaCaixa(
+	a: Amostra | null,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+): [number, number, number] | null {
+	if (!a) return null
+	const { x0, y0, x1, y1 } = recorteNaAmostra(a, x, y, w, h)
+	let r = 0
+	let g = 0
+	let b = 0
+	let n = 0
+	for (let py = y0; py < y1; py++) {
+		for (let px = x0; px < x1; px++) {
+			const i = (py * a.larg + px) * 4
+			// Pondera pelo alfa: pixel meio transparente conta meio. Sem isso, a
+			// borda esfumada da máscara puxaria a média para o vazio.
+			const al = a.dados[i + 3] / 255
+			if (al < 0.03) continue
+			r += a.dados[i] * al
+			g += a.dados[i + 1] * al
+			b += a.dados[i + 2] * al
+			n += al
+		}
+	}
+	return n > 0 ? [r / n, g / n, b / n] : null
+}
+
+/**
+ * Distância entre duas cores, de 0 a 1.
+ *
+ * Euclidiana em sRGB com os pesos da luminância: não é um ΔE de verdade, mas
+ * ordena diferenças de piso bem o bastante para decidir QUANTO véu aplicar — e
+ * a decisão seguinte é contínua, não um limiar que erra feio se a métrica
+ * escorregar um pouco.
+ */
+export function distanciaDeCor(a: [number, number, number], b: [number, number, number]): number {
+	const dr = (a[0] - b[0]) / 255
+	const dg = (a[1] - b[1]) / 255
+	const db = (a[2] - b[2]) / 255
+	return Math.min(1, Math.sqrt(0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db) / 0.6)
 }
 
 export interface PaletaTexto {
