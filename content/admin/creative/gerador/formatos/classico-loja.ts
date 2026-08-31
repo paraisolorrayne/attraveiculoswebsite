@@ -106,16 +106,22 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		// Aqui não há trava de legibilidade porque não precisa: neste formato a
 		// cor do texto já é medida do fundo (ver contraste.ts), e o espelho é
 		// desenhado antes dessa medição — então o preço se adapta ao que sobrar.
-		const topoDoCorte = FEED ? H - 40 : CUT_ - 20
+		// O corte é DIAGONAL: começa em CUT-20 à direita e em CUT+20 à esquerda.
+		// A correção ia só até a borda ALTA, e sobrava uma cunha de fachada crua
+		// entre o piso e a foto de baixo — uma tira clara, mais grossa do lado
+		// esquerdo. Vai até a borda BAIXA; o que passar dali é coberto pela
+		// própria faixa da foto de baixo, desenhada depois.
+		const bordaAltaDoCorte = FEED ? H - 40 : CUT_ - 20
+		const bordaBaixaDoCorte = FEED ? H : CUT_ + 24
 		const base = Math.round(r.base)
-		if (base > BANDA_TOPO && base < topoDoCorte) {
+		if (base > BANDA_TOPO && base < bordaAltaDoCorte) {
 			// Mede o chão dos dois lados da divisa e corrige a EXPOSIÇÃO da
 			// fachada até o corte, preservando o grão dela.
-			const am = amostrar(ctx.canvas, 0, base - 26, W, Math.min(200, topoDoCorte - base + 26))
+			const am = amostrar(ctx.canvas, 0, base - 26, W, Math.min(200, bordaAltaDoCorte - base + 26))
 			const deCima = corMediaDaCaixa(am, 0, base - 22, W, 18)
 			const deBaixo = corMediaDaCaixa(am, 0, base + 8, W, 60)
 			if (deCima && deBaixo) {
-				casarPisoAbaixoDaDivisa(ctx, base, W, topoDoCorte - base, deCima, deBaixo)
+				casarPisoAbaixoDaDivisa(ctx, base, W, bordaBaixaDoCorte - base, deCima, deBaixo)
 				suavizarDivisa(ctx, base, W)
 			}
 		}
