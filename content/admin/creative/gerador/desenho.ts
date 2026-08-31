@@ -391,14 +391,18 @@ export function drawLogoBlack(
  * nunca pode tocá-lo.
  */
 /**
- * Espessura da base da foto usada como fonte do espelho.
+ * Altura máxima de cada trecho de reflexo, em pixels da própria foto.
  *
- * Não é só "quanto copiar": é o que decide se a continuação parece piso ou
- * parece estria. Com 8px o esticão era de 16x e a menor variação horizontal da
- * foto virava listra vertical. Com 24 o fator cai para ~4x e sobra estrutura
- * vertical suficiente para ler como chão.
+ * O reflexo é desenhado em escala 1:1 — cada linha da foto vira UMA linha, sem
+ * ampliação. Antes uma tira de 24px era esticada sobre até 340, uma ampliação
+ * de 14x: o chão saía borrado e estriado, como se tivesse sido puxado. O grão
+ * do concreto só sobrevive em 1:1.
+ *
+ * Quando o trajeto é mais longo que este teto, o reflexo continua em ping-pong
+ * (desce, sobe, desce). Cada virada casa linha a linha com a anterior, então
+ * não há emenda entre os trechos — e o grão nunca muda de tamanho.
  */
-const TIRA_ESPELHO = 24
+const FONTE_MAX = 190
 
 /** Canvas do espelho, reaproveitado entre quadros. */
 let espelhoCache: CanvasRenderingContext2D | null = null
@@ -447,23 +451,33 @@ export function espelharBaseDaFoto(
 	 */
 	dissolveNoFim = 1,
 ): void {
-	if (forca <= 0.02 || alcance < 8 || y < TIRA_ESPELHO) return
+	if (forca <= 0.02 || alcance < 8) return
+	const fonte = Math.min(FONTE_MAX, y)
+	if (fonte < 8) return
 	const oc = canvasDoEspelho(largura, alcance)
 	oc.clearRect(0, 0, largura, alcance)
 	oc.globalCompositeOperation = 'source-over'
-	// ESPELHO DE VERDADE: a tira entra invertida, para a linha que encosta na
-	// divisa ser a VIZINHA dela (y-1), e não a do topo da tira.
-	//
-	// Sem inverter, a primeira linha desenhada era a de y-TIRA, e o degrau
-	// simplesmente mudava de lugar em vez de fechar — foi o que fez o G 63 cair
-	// de 78% para 7% de melhora quando engrossei a tira. Invertido, a
-	// continuidade na divisa é exata por construção, e o que se vê abaixo é um
-	// reflexo do chão, que é como piso polido se comporta de verdade.
-	oc.save()
-	oc.translate(0, alcance)
-	oc.scale(1, -1)
-	oc.drawImage(ctx.canvas, 0, y - TIRA_ESPELHO, largura, TIRA_ESPELHO, 0, 0, largura, alcance)
-	oc.restore()
+
+	// Trecho 0 sobe (a linha vizinha da divisa vira a primeira do reflexo);
+	// o trecho seguinte desce a partir da linha mais alta que o anterior
+	// alcançou, e assim por diante. Sempre 1:1.
+	let escrito = 0
+	let subindo = true
+	while (escrito < alcance) {
+		const h = Math.min(fonte, alcance - escrito)
+		oc.save()
+		if (subindo) {
+			oc.translate(0, escrito + h)
+			oc.scale(1, -1)
+			oc.drawImage(ctx.canvas, 0, y - h, largura, h, 0, 0, largura, h)
+		} else {
+			oc.drawImage(ctx.canvas, 0, y - fonte, largura, h, 0, escrito, largura, h)
+		}
+		oc.restore()
+		escrito += h
+		subindo = !subindo
+	}
+
 	oc.globalCompositeOperation = 'destination-out'
 	const dissolve = oc.createLinearGradient(0, 0, 0, alcance)
 	const inicioDaQueda = Math.max(0, Math.min(0.95, 1 - dissolveNoFim))
