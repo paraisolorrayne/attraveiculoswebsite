@@ -46,12 +46,16 @@ Abra `http://localhost:8767/regressao.html`. O esperado é
 ## O que a regressão já NÃO cobre
 
 Ela prova que o porte saiu idêntico ao HTML antigo, e isso está feito. A partir
-de 31/08/2026 o **Clássico Loja diverge de propósito**: a cor do preço, do KM e
+de 31/08/2026 o **Clássico e o Clássico Loja divergem de propósito**: a cor do preço, do KM e
 dos destaques deixou de ser constante e passa a sair de uma medição do fundo
 (ver `content/admin/creative/gerador/contraste.ts`). Rodar a regressão hoje
 acusa diferença nos casos desse formato — e deve acusar mesmo.
 
-Os outros cinco formatos continuam idênticos, e para eles o aparato segue
+No Clássico, a divisa entre a foto e a faixa de piso deixou de ser seca: a base
+da foto é espelhada para dentro da faixa e dissolvida, então a região logo
+abaixo de PISO_TOP também difere.
+
+Os outros quatro formatos continuam idênticos, e para eles o aparato segue
 valendo.
 
 ## Três confundidores que custaram diagnóstico falso

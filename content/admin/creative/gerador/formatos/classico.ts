@@ -13,8 +13,126 @@
  *
  * Porte 1:1 de `renderClassicoOriginal` do HTML do gerador.
  */
+import {
+	amostrar,
+	corMediaDaCaixa,
+	distanciaDeCor,
+	hexParaRgb,
+	luminanciaRelativa,
+	razaoDeContraste,
+} from '../contraste'
 import { drawLogoWhite, drawPhoto, drawPhotoFeather, placeholder, spacedText, spacedWidth } from '../desenho'
 import { ALTURA_FEED, LARGURA as W, type ContextoDesenho } from '../tipos'
+
+/**
+ * Até onde o casamento da divisa se dissolve, piso adentro.
+ *
+ * Curto de propósito. O preço começa 24px abaixo da divisa (base em +62, corpo
+ * de 48px), e quanto mais longe a rampa vai, mais ela escurece o fundo do
+ * número que mais importa na peça.
+ */
+const ALCANCE_EMENDA = 90
+/** Espessura da base da foto usada como fonte do espelho. */
+const TIRA_ESPELHO = 8
+
+/** Canvas do espelho, reaproveitado entre quadros. */
+let espelhoCache: CanvasRenderingContext2D | null = null
+function canvasDoEspelho(w: number, h: number): CanvasRenderingContext2D {
+	if (!espelhoCache) espelhoCache = document.createElement('canvas').getContext('2d')!
+	const c = espelhoCache.canvas
+	if (c.width < w || c.height < h) {
+		c.width = Math.max(c.width, w)
+		c.height = Math.max(c.height, h)
+	}
+	return espelhoCache
+}
+/** Contraste que o preço não pode perder por causa da emenda. */
+const CONTRASTE_MINIMO = 4.5
+
+/**
+ * Aproxima o TOPO DA FAIXA ao tom do piso da foto, para a divisa não ler como
+ * uma linha cortada.
+ *
+ * POR QUE MEXER NA FAIXA E NÃO NA FOTO. Já houve duas tentativas do outro lado,
+ * e as duas estão comentadas logo abaixo: uma dissolvência de 56px no topo do
+ * piso (que invadia as rodas em carros baixos, e por isso FUSAO_H é 0) e um véu
+ * branco sobre os últimos 110px da foto (que lavava a borracha do pneu e a
+ * sombra de contato). Ambas falharam pelo mesmo motivo — mexiam no veículo, que
+ * é o assunto da peça. A faixa, ao contrário, é pintada por nós: puxá-la na
+ * direção do piso da foto não tira nada de ninguém.
+ *
+ * Só roda com foto no lugar: sem ela, o que está acima da divisa é o aviso de
+ * "envie a foto principal", e espelhá-lo dentro do piso não faria sentido.
+ *
+ * A FORÇA É LIMITADA PELA LEGIBILIDADE. O preço fica a 62px da divisa, dentro
+ * do alcance do degradê. Escurecer a faixa ali sem olhar derrubaria o contraste
+ * do número que mais importa na peça — então a emenda só vai até onde o preço
+ * ainda fecha 4,5:1, e cede o resto.
+ */
+function casarFaixaComOPisoDaFoto(
+	ctx: CanvasRenderingContext2D,
+	o: { PISO_TOP: number; W: number; corDoPreco: string; feed: boolean },
+): void {
+	const { PISO_TOP, W, corDoPreco } = o
+	if (PISO_TOP < 60) return
+
+	// Uma leitura cobre os dois lados da divisa: a faixa já está pintada abaixo,
+	// e acima dela continua a foto (a fusão é 0, então nada se sobrepõe).
+	const amostra = amostrar(ctx.canvas, 0, PISO_TOP - 56, W, 126)
+	// A janela do piso é ESTREITA e colada na divisa: são esses pixels que fazem
+	// o degrau. Medi 50px primeiro e a sombra sob o carro entrou na média — o
+	// alvo saiu mais escuro que a borda real, o véu passou do ponto e o degrau
+	// do G 63 aumentou 61%. O que importa aqui é a cor que ENCOSTA na faixa.
+	const doPiso = corMediaDaCaixa(amostra, 0, PISO_TOP - 22, W, 18)
+	const daFaixa = corMediaDaCaixa(amostra, 0, PISO_TOP + 10, W, 60)
+	if (!doPiso || !daFaixa) return
+
+	if (distanciaDeCor(doPiso, daFaixa) < 0.02) return // os dois pisos já casam
+
+	// A rampa começa CASANDO (alfa 1 na divisa) e morre piso adentro.
+	//
+	// A primeira versão usava a própria distância entre as cores como força, e
+	// isso corrige de menos exatamente quando a diferença é maior — o contrário
+	// do que uma transição precisa fazer. Aqui o degrau é fechado por
+	// construção, e quem limita é a legibilidade, não a magnitude.
+	let forca = 1
+
+	// Trava de legibilidade, no TOPO do glifo do preço — é ali que o fundo fica
+	// mais escuro, e é o glifo inteiro que precisa passar, não só a linha de base.
+	const topoDoPreco = (o.feed ? 54 : 62) - 38
+	const lumTexto = luminanciaRelativa(...hexParaRgb(corDoPreco))
+	const restante = Math.max(0, 1 - topoDoPreco / ALCANCE_EMENDA)
+	const contrasteCom = (f: number) => {
+		const a = f * restante
+		const mistura = daFaixa.map((c, i) => c * (1 - a) + doPiso[i] * a) as [number, number, number]
+		return razaoDeContraste(lumTexto, luminanciaRelativa(...mistura))
+	}
+	while (forca > 0.02 && contrasteCom(forca) < CONTRASTE_MINIMO) forca -= 0.05
+	if (forca < 0.02) return
+
+	// COLUNA A COLUNA, não um tom chapado.
+	//
+	// Um tom só não resolve: a base da foto não tem uma cor, tem várias ao longo
+	// da largura — piso claro nas laterais, sombra de contato sob o carro. Medi
+	// a média da largura inteira primeiro, e o carro puxou o alvo 15 níveis para
+	// baixo: a faixa casou com uma cor que não existe em lugar nenhum da divisa,
+	// e nas laterais o degrau ficou igual ao que era.
+	//
+	// Aqui a própria base da foto é esticada para dentro da faixa e dissolvida.
+	// Cada coluna encontra a sua continuação, e o degrau fecha em toda a largura
+	// — inclusive sob o carro, onde a sombra de contato continua como sombra.
+	const oc = canvasDoEspelho(W, ALCANCE_EMENDA)
+	oc.clearRect(0, 0, W, ALCANCE_EMENDA)
+	oc.globalCompositeOperation = 'source-over'
+	oc.drawImage(ctx.canvas, 0, PISO_TOP - TIRA_ESPELHO, W, TIRA_ESPELHO, 0, 0, W, ALCANCE_EMENDA)
+	oc.globalCompositeOperation = 'destination-out'
+	const dissolve = oc.createLinearGradient(0, 0, 0, ALCANCE_EMENDA)
+	dissolve.addColorStop(0, `rgba(0,0,0,${1 - forca})`)
+	dissolve.addColorStop(1, 'rgba(0,0,0,1)')
+	oc.fillStyle = dissolve
+	oc.fillRect(0, 0, W, ALCANCE_EMENDA)
+	ctx.drawImage(oc.canvas, 0, 0, W, ALCANCE_EMENDA, 0, PISO_TOP, W, ALCANCE_EMENDA)
+}
 
 export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
 	const FEED = H === ALTURA_FEED // 1080×1350: só a foto principal, rodapé fecha mais cedo
@@ -134,6 +252,13 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 	// borda — o slider do piso não pode empurrá-lo para fora da peça.
 	const PISO_TOP = FEED ? Math.min(PHOTO1_H + pisoShift, H - 340) : PHOTO1_H + pisoShift
 
+	// paleta dos textos conforme o fundo
+	const dark = piso === 'asfalto'
+	// fundo escuro: branco puro + sombra pra legibilidade; claro: cinza-grafite
+	const tx = dark
+		? { preco: '#ffffff', km: '#dfe0e6', bullet: '#ffffff', icone: '#f1f1f5' }
+		: { preco: '#35353b', km: '#6f6f74', bullet: '#141416', icone: '#1a1a1c' }
+
 	{
 		// Pérola/Concreto/Asfalto = piso texturizado REAL (imagem embutida).
 		// Pérola reusa a textura do concreto com um véu pérola por cima: clareia
@@ -186,6 +311,9 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 		sombraBase.addColorStop(1, `rgba(0,0,0,${sa})`)
 		ctx.fillStyle = sombraBase
 		ctx.fillRect(0, CUT - 160, W, DIAG_L - (CUT - 160))
+
+		if (imagens.foto1) casarFaixaComOPisoDaFoto(ctx, { PISO_TOP, W, corDoPreco: tx.preco, feed: FEED })
+
 		ctx.restore()
 	}
 
@@ -198,12 +326,6 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 	// parecia flutuar. A divisa seca é preferível a estragar o veículo, que é o
 	// assunto da peça. (A fusão do topo do piso já era 0 pelo mesmo motivo.)
 
-	// paleta dos textos conforme o fundo
-	const dark = piso === 'asfalto'
-	// fundo escuro: branco puro + sombra pra legibilidade; claro: cinza-grafite
-	const tx = dark
-		? { preco: '#ffffff', km: '#dfe0e6', bullet: '#ffffff', icone: '#f1f1f5' }
-		: { preco: '#35353b', km: '#6f6f74', bullet: '#141416', icone: '#1a1a1c' }
 	if (dark) {
 		ctx.shadowColor = 'rgba(0,0,0,.55)'
 		ctx.shadowBlur = 8
