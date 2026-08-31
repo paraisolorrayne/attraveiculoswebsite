@@ -18,6 +18,7 @@ import {
 	spacedWidth,
 	type PosicaoDoRecorte,
 } from '../desenho'
+import { haloCss, medirFundo, paletaLegivel } from '../contraste'
 import { ALTURA_FEED, ALTURA_STORIES, LARGURA as W, type ContextoDesenho } from '../tipos'
 
 export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
@@ -230,46 +231,74 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	// SEM véu sobre a foto — ver a nota no Clássico original: o degradê branco
 	// lavava a borracha do pneu e a sombra de contato, e o carro parecia flutuar.
 
-	// paleta dos textos conforme o fundo
-	// Piso desta foto é concreto CLARO — medido: luminância 148-188 abaixo da
-	// linha 800, contra 9-34 na vitrine. Texto escuro. (Era claro enquanto o
-	// fundo era o pátio de asfalto; trocar a imagem sem trocar isto deixa texto
-	// branco sobre concreto claro, ilegível.)
-	const dark = false
-	// O KM era #6f6f74 — cinza médio sobre concreto médio, contraste ~2,6:1, a
-	// linha sumia. Vira grafite, um passo abaixo do preço: a hierarquia entre as
-	// duas linhas passa a vir do CORPO (48px/300 contra 24px/500), não de apagar
-	// a de baixo até ela não ser mais lida.
-	const tx = { preco: '#2b2b31', km: '#3d3d44', bullet: '#141416', icone: '#1a1a1c' }
-
+	// PALETA DOS TEXTOS: MEDIDA, NÃO FIXADA.
+	//
 	// Preço e KM caem sobre a FOTO, e o chão dela muda a cada veículo: asfalto
-	// escuro no G 63, concreto claro na McLaren. Só a cor não resolve — o mesmo
-	// grafite que lê bem no claro afunda no escuro. O halo claro dá a borda que
-	// falta nos dois casos, e é limpo logo depois: se ficasse ligado, vazaria
-	// para os destaques e para o carro recortado, que é redesenhado no fim.
-	ctx.shadowColor = 'rgba(255,255,255,.45)'
+	// escuro no G 63, concreto claro na McLaren. Aqui havia `const dark = false`
+	// e uma paleta escrita à mão, calibradas numa medição única da fachada —
+	// com um aviso de que trocar a imagem sem trocar a constante deixaria texto
+	// branco sobre concreto claro. No G 63 o preço media 1,00:1: invisível.
+	//
+	// Agora o fundo é lido do próprio canvas, na faixa exata onde o texto cai, e
+	// a cor sai da medição. Ver contraste.ts para o porquê de percentis em vez
+	// de média, e de contraste em vez de harmonização de cores.
+	// A MEDIÇÃO É NA CAIXA DO TEXTO, NÃO NUMA FAIXA LARGA.
+	//
+	// Primeira tentativa aqui mediu a faixa inteira (x 160..920). A caixa real
+	// do preço é x 368..714: mais da metade da amostra vinha de FORA do texto, e
+	// era ela que decidia a cor. Medido no G 63 recortado: sob o glifo o fundo
+	// tem luminância 0,371, onde o texto escuro dá 5,6:1 e o claro 2,3:1 — e a
+	// faixa larga, puxada pelas bordas escuras, mandava escolher o claro. Piorou
+	// quatro dos cinco casos antes de eu medir de novo.
+	//
+	// Por isso a largura sai do próprio spacedWidth, com o mesmo espaçamento do
+	// desenho: o que se mede é exatamente onde a letra vai cair.
+	const FONTE_PRECO = '400 48px Montserrat, sans-serif'
+	const preco = estado.preco.trim().replace(/^R\$\s*/i, '')
+	const textoPreco = preco ? 'R$ ' + preco : ''
+	const yPreco = PISO_TOP + 54
+	const larguraPreco = textoPreco ? spacedWidth(ctx, textoPreco, FONTE_PRECO, 10) : 0
+	// Em 48px os algarismos sobem ~38px da linha de base e descem ~8.
+	const fundoPreco = textoPreco
+		? medirFundo(ctx, W / 2 - larguraPreco / 2 - 8, yPreco - 40, larguraPreco + 16, 52)
+		: null
+	// O preço tem 48px — texto grande pelo WCAG, onde 3:1 basta. Exigir 4,5 ali
+	// só engrossaria o contorno do maior elemento da peça.
+	const pPreco = paletaLegivel(fundoPreco, { alvo: 3, corEscura: '#2b2b31', corClara: '#f4f4f7' })
+
+	const kmParts: string[] = []
+	if (estado.km.trim()) kmParts.push(estado.km.trim() + ' KM')
+	if (estado.kmextra.trim()) kmParts.push(estado.kmextra.trim().toUpperCase())
+	const textoKm = kmParts.join('  |  ')
+	const yKm = PISO_TOP + 102
+	// Mede com o peso 500; o 600 muda a largura em poucos pixels e a caixa é só
+	// para amostrar o fundo.
+	const larguraKm = textoKm ? spacedWidth(ctx, textoKm, '500 24px Montserrat, sans-serif', 5) : 0
+	const fundoKm = textoKm
+		? medirFundo(ctx, W / 2 - larguraKm / 2 - 8, yKm - 20, larguraKm + 16, 28)
+		: null
+	// O KM era #6f6f74 — cinza médio sobre concreto médio, ~2,6:1, a linha
+	// sumia. Vira grafite, um passo abaixo do preço: a hierarquia entre as duas
+	// linhas vem do CORPO (48px contra 24px), não de apagar a de baixo.
+	const pKm = paletaLegivel(fundoKm, { alvo: 4.5, corEscura: '#3d3d44', corClara: '#e9e9ef' })
+	const dark = pKm.textoClaro
+
+	// O halo dá a borda que o fundo não dá, e cada texto tem a sua força: ele só
+	// aparece se a cor sozinha não fechou o alvo. É limpo logo depois — ligado,
+	// vazaria para os destaques e para o carro, que é redesenhado no fim.
+	ctx.shadowColor = haloCss(pPreco)
 	ctx.shadowBlur = 10
 	ctx.shadowOffsetY = 0
 
 	// Peso 400 no claro (era 300): em 48px a haste do 300 é fina demais, o halo
 	// comia metade dela e o preço saía MAIS FRACO que o KM logo abaixo — a
 	// hierarquia invertida, com o número que mais importa sendo o que menos lê.
-	const preco = estado.preco.trim().replace(/^R\$\s*/i, '')
-	if (preco) spacedText(ctx, 'R$ ' + preco, W / 2, PISO_TOP + 54, '400 48px Montserrat, sans-serif', 10, tx.preco)
+	if (textoPreco) spacedText(ctx, textoPreco, W / 2, yPreco, FONTE_PRECO, 10, pPreco.cor)
 
-	const kmParts: string[] = []
-	if (estado.km.trim()) kmParts.push(estado.km.trim() + ' KM')
-	if (estado.kmextra.trim()) kmParts.push(estado.kmextra.trim().toUpperCase())
-	if (kmParts.length)
-		spacedText(
-			ctx,
-			kmParts.join('  |  '),
-			W / 2,
-			PISO_TOP + 102,
-			(dark ? '600' : '500') + ' 24px Montserrat, sans-serif',
-			5,
-			tx.km,
-		)
+	if (textoKm) {
+		ctx.shadowColor = haloCss(pKm)
+		spacedText(ctx, textoKm, W / 2, yKm, (dark ? '600' : '500') + ' 24px Montserrat, sans-serif', 5, pKm.cor)
+	}
 
 	ctx.shadowColor = 'transparent'
 	ctx.shadowBlur = 0
@@ -300,22 +329,49 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const totalH = items.length * lineH + gap * Math.max(0, items.length - 1)
 	let by = areaTop + Math.max(0, (areaBot - areaTop - totalH) / 2) + 30
 
+	// Os destaques caem sobre o mesmo chão variável do preço, e sofriam do mesmo
+	// mal: quase-preto (#141416) some no asfalto do G 63 tanto quanto o preço
+	// sumia. Mede-se a faixa deles, que é outra e fica mais abaixo.
+	// Mesma correção do preço: a caixa é a das LINHAS (do ícone ao fim do texto
+	// mais largo), não a área inteira reservada aos destaques.
+	const larguraMaxItem = items.reduce((m, it) => {
+		ctx.font = `700 ${it.size}px Montserrat, sans-serif`
+		return Math.max(m, ctx.measureText(it.text).width)
+	}, 0)
+	const alturaMaxItem = items.reduce((m, it) => Math.max(m, it.size), 0)
+	const ultimaBase = by + (items.length - 1) * (lineH + gap)
+	const fundoBullets =
+		items.length > 0
+			? medirFundo(ctx, 142, by - alturaMaxItem - 6, textX - 142 + larguraMaxItem + 12, ultimaBase - by + alturaMaxItem + 18)
+			: null
+	const pBullet = paletaLegivel(fundoBullets, { alvo: 4.5, corEscura: '#141416', corClara: '#f2f2f5' })
+	// O ícone é traço, não texto: acompanha a cor do destaque, mas dispensa o
+	// alvo do WCAG — um círculo de 3,5px de traço não é lido, é visto.
+	const corIcone = pBullet.textoClaro ? '#e8e8ee' : '#1a1a1c'
+
+	if (pBullet.haloAlfa > 0) {
+		ctx.shadowColor = haloCss(pBullet)
+		ctx.shadowBlur = 10
+		ctx.shadowOffsetY = 0
+	}
 	for (const it of items) {
 		const iy = by - 11
-		ctx.strokeStyle = tx.icone
+		ctx.strokeStyle = corIcone
 		ctx.lineWidth = 3.5
 		ctx.beginPath()
 		ctx.arc(158, iy, 16, 0, Math.PI * 2)
 		ctx.stroke()
-		ctx.fillStyle = tx.icone
+		ctx.fillStyle = corIcone
 		ctx.beginPath()
 		ctx.arc(158, iy, 7.5, 0, Math.PI * 2)
 		ctx.fill()
 		ctx.font = `700 ${it.size}px Montserrat, sans-serif`
-		ctx.fillStyle = tx.bullet
+		ctx.fillStyle = pBullet.cor
 		ctx.fillText(it.text, textX, by)
 		by += lineH + gap
 	}
+	ctx.shadowColor = 'transparent'
+	ctx.shadowBlur = 0
 
 	// O veículo é redesenhado por ÚLTIMO — prioridade máxima na peça.
 	// Com o slider vertical livre, carro e texto podem se encontrar nos
