@@ -25,7 +25,8 @@ import {
 	drawLogoWhite,
 	drawPhoto,
 	drawPhotoFeather,
-	espelharBaseDaFoto,
+	casarPisoAbaixoDaDivisa,
+	suavizarDivisa,
 	placeholder,
 	spacedText,
 	spacedWidth,
@@ -43,24 +44,22 @@ const ALCANCE_EMENDA = 90
 /** Contraste que o preço não pode perder por causa da emenda. */
 const CONTRASTE_MINIMO = 4.5
 /**
- * Aproxima o TOPO DA FAIXA ao tom do piso da foto, para a divisa não ler como
- * uma linha cortada.
+ * Faz a faixa de piso pintada assumir o tom do chão da foto, junto à divisa.
  *
  * POR QUE MEXER NA FAIXA E NÃO NA FOTO. Já houve duas tentativas do outro lado,
- * e as duas estão comentadas logo abaixo: uma dissolvência de 56px no topo do
+ * e as duas estão comentadas neste arquivo: uma dissolvência de 56px no topo do
  * piso (que invadia as rodas em carros baixos, e por isso FUSAO_H é 0) e um véu
- * branco sobre os últimos 110px da foto (que lavava a borracha do pneu e a
- * sombra de contato). Ambas falharam pelo mesmo motivo — mexiam no veículo, que
- * é o assunto da peça. A faixa, ao contrário, é pintada por nós: puxá-la na
- * direção do piso da foto não tira nada de ninguém.
+ * branco sobre os últimos 110px da foto (que lavava a borracha do pneu). Ambas
+ * falharam por mexer no veículo, que é o assunto da peça. A faixa é pintada por
+ * nós: corrigir a exposição dela não tira nada de ninguém.
+ *
+ * A FORÇA É LIMITADA PELA LEGIBILIDADE. O preço fica a 62px da divisa, dentro do
+ * trajeto da correção. Escurecer a faixa ali sem olhar derrubaria o contraste do
+ * número que mais importa na peça — então o casamento só vai até onde o preço
+ * ainda fecha 4,5:1, e cede o resto.
  *
  * Só roda com foto no lugar: sem ela, o que está acima da divisa é o aviso de
- * "envie a foto principal", e espelhá-lo dentro do piso não faria sentido.
- *
- * A FORÇA É LIMITADA PELA LEGIBILIDADE. O preço fica a 62px da divisa, dentro
- * do alcance do degradê. Escurecer a faixa ali sem olhar derrubaria o contraste
- * do número que mais importa na peça — então a emenda só vai até onde o preço
- * ainda fecha 4,5:1, e cede o resto.
+ * "envie a foto principal", e casar o piso com ele não faria sentido.
  */
 function casarFaixaComOPisoDaFoto(
 	ctx: CanvasRenderingContext2D,
@@ -74,47 +73,29 @@ function casarFaixaComOPisoDaFoto(
 	const amostra = amostrar(ctx.canvas, 0, PISO_TOP - 56, W, 126)
 	// A janela do piso é ESTREITA e colada na divisa: são esses pixels que fazem
 	// o degrau. Medi 50px primeiro e a sombra sob o carro entrou na média — o
-	// alvo saiu mais escuro que a borda real, o véu passou do ponto e o degrau
-	// do G 63 aumentou 61%. O que importa aqui é a cor que ENCOSTA na faixa.
+	// alvo saiu mais escuro que a borda real e o degrau do G 63 aumentou 61%.
 	const doPiso = corMediaDaCaixa(amostra, 0, PISO_TOP - 22, W, 18)
 	const daFaixa = corMediaDaCaixa(amostra, 0, PISO_TOP + 10, W, 60)
 	if (!doPiso || !daFaixa) return
-
 	if (distanciaDeCor(doPiso, daFaixa) < 0.02) return // os dois pisos já casam
 
-	// A rampa começa CASANDO (alfa 1 na divisa) e morre piso adentro.
-	//
-	// A primeira versão usava a própria distância entre as cores como força, e
-	// isso corrige de menos exatamente quando a diferença é maior — o contrário
-	// do que uma transição precisa fazer. Aqui o degrau é fechado por
-	// construção, e quem limita é a legibilidade, não a magnitude.
-	let forca = 1
-
-	// Trava de legibilidade, no TOPO do glifo do preço — é ali que o fundo fica
-	// mais escuro, e é o glifo inteiro que precisa passar, não só a linha de base.
+	// Quanto do caminho até o tom da foto a faixa pode andar sem comprometer o
+	// preço. Avaliado no TOPO do glifo, onde o fundo fica mais escuro — é o
+	// glifo inteiro que precisa passar, não só a linha de base.
 	const topoDoPreco = (o.feed ? 54 : 62) - 38
 	const lumTexto = luminanciaRelativa(...hexParaRgb(corDoPreco))
-	const restante = Math.max(0, 1 - topoDoPreco / ALCANCE_EMENDA)
-	const contrasteCom = (f: number) => {
-		const a = f * restante
-		const mistura = daFaixa.map((c, i) => c * (1 - a) + doPiso[i] * a) as [number, number, number]
-		return razaoDeContraste(lumTexto, luminanciaRelativa(...mistura))
-	}
-	while (forca > 0.02 && contrasteCom(forca) < CONTRASTE_MINIMO) forca -= 0.05
-	if (forca < 0.02) return
+	const sobra = Math.max(0, 1 - topoDoPreco / ALCANCE_EMENDA)
+	const misturar = (k: number) =>
+		daFaixa.map((c, i) => c * (1 - k) + doPiso[i] * k) as [number, number, number]
+	const contrasteCom = (k: number) =>
+		razaoDeContraste(lumTexto, luminanciaRelativa(...misturar(k * sobra)))
 
-	// COLUNA A COLUNA, não um tom chapado.
-	//
-	// Um tom só não resolve: a base da foto não tem uma cor, tem várias ao longo
-	// da largura — piso claro nas laterais, sombra de contato sob o carro. Medi
-	// a média da largura inteira primeiro, e o carro puxou o alvo 15 níveis para
-	// baixo: a faixa casou com uma cor que não existe em lugar nenhum da divisa,
-	// e nas laterais o degrau ficou igual ao que era.
-	//
-	// Aqui a própria base da foto é esticada para dentro da faixa e dissolvida.
-	// Cada coluna encontra a sua continuação, e o degrau fecha em toda a largura
-	// — inclusive sob o carro, onde a sombra de contato continua como sombra.
-	espelharBaseDaFoto(ctx, PISO_TOP, W, ALCANCE_EMENDA, forca)
+	let k = 1
+	while (k > 0.05 && contrasteCom(k) < CONTRASTE_MINIMO) k -= 0.05
+	if (k <= 0.05) return
+
+	casarPisoAbaixoDaDivisa(ctx, PISO_TOP, W, ALCANCE_EMENDA, misturar(k), daFaixa, 0.45)
+	suavizarDivisa(ctx, PISO_TOP, W)
 }
 
 export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {

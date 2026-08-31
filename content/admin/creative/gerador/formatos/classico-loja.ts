@@ -12,26 +12,15 @@ import {
 	drawLogoWhite,
 	drawPhoto,
 	drawPhotoBanda,
-	espelharBaseDaFoto,
+	suavizarDivisa,
+	casarPisoAbaixoDaDivisa,
 	placeholder,
 	spacedText,
 	spacedWidth,
 } from '../desenho'
-import { amostrar, fundoDaCaixa, haloCss, paletaLegivel, type Amostra } from '../contraste'
+import { amostrar, corMediaDaCaixa, fundoDaCaixa, haloCss, paletaLegivel, type Amostra } from '../contraste'
 import { ALTURA_FEED, ALTURA_STORIES, LARGURA as W, type ContextoDesenho } from '../tipos'
 
-/**
- * O piso da foto segue até o CORTE, não só até a emenda.
- *
- * Antes o reflexo tinha 90px e dissolvia na fachada — a divisa sumia, mas o
- * chão virava o concreto da fachada no meio do bloco de texto, e a peça lia
- * como dois pisos diferentes. Agora ele atravessa o bloco inteiro e só se
- * desmancha nos últimos 30%, junto ao corte da foto de baixo.
- */
-const DISSOLVE_NO_FIM = 0.3
-/** Limites do trajeto, para casos extremos de enquadramento. */
-const ALCANCE_MIN = 60
-const ALCANCE_MAX = 340
 
 export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
 	const FEED = H === ALTURA_FEED // 1080×1350: só a foto principal, rodapé fecha mais cedo
@@ -119,15 +108,17 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		// desenhado antes dessa medição — então o preço se adapta ao que sobrar.
 		const topoDoCorte = FEED ? H - 40 : CUT_ - 20
 		const base = Math.round(r.base)
-		if (base > BANDA_TOPO && base < topoDoCorte)
-			espelharBaseDaFoto(
-				ctx,
-				base,
-				W,
-				Math.max(ALCANCE_MIN, Math.min(ALCANCE_MAX, topoDoCorte - base)),
-				1,
-				DISSOLVE_NO_FIM,
-			)
+		if (base > BANDA_TOPO && base < topoDoCorte) {
+			// Mede o chão dos dois lados da divisa e corrige a EXPOSIÇÃO da
+			// fachada até o corte, preservando o grão dela.
+			const am = amostrar(ctx.canvas, 0, base - 26, W, Math.min(200, topoDoCorte - base + 26))
+			const deCima = corMediaDaCaixa(am, 0, base - 22, W, 18)
+			const deBaixo = corMediaDaCaixa(am, 0, base + 8, W, 60)
+			if (deCima && deBaixo) {
+				casarPisoAbaixoDaDivisa(ctx, base, W, topoDoCorte - base, deCima, deBaixo)
+				suavizarDivisa(ctx, base, W)
+			}
+		}
 	} else {
 		ctx.fillStyle = 'rgba(255,255,255,.45)'
 		ctx.font = '600 26px Montserrat, sans-serif'

@@ -390,104 +390,120 @@ export function drawLogoBlack(
  * é o assunto da peça". O carro tem prioridade máxima; efeito de acabamento
  * nunca pode tocá-lo.
  */
-/**
- * Altura máxima de cada trecho de reflexo, em pixels da própria foto.
- *
- * O reflexo é desenhado em escala 1:1 — cada linha da foto vira UMA linha, sem
- * ampliação. Antes uma tira de 24px era esticada sobre até 340, uma ampliação
- * de 14x: o chão saía borrado e estriado, como se tivesse sido puxado. O grão
- * do concreto só sobrevive em 1:1.
- *
- * Quando o trajeto é mais longo que este teto, o reflexo continua em ping-pong
- * (desce, sobe, desce). Cada virada casa linha a linha com a anterior, então
- * não há emenda entre os trechos — e o grão nunca muda de tamanho.
- */
-const FONTE_MAX = 190
-
-/** Canvas do espelho, reaproveitado entre quadros. */
-let espelhoCache: CanvasRenderingContext2D | null = null
-function canvasDoEspelho(w: number, h: number): CanvasRenderingContext2D {
-	if (!espelhoCache) espelhoCache = document.createElement('canvas').getContext('2d')!
-	const c = espelhoCache.canvas
+/** Canvas de trabalho da emenda, reaproveitado entre quadros. */
+let emendaCache: CanvasRenderingContext2D | null = null
+function canvasDaEmenda(w: number, h: number): CanvasRenderingContext2D {
+	if (!emendaCache) emendaCache = document.createElement('canvas').getContext('2d')!
+	const c = emendaCache.canvas
 	if (c.width < w || c.height < h) {
 		c.width = Math.max(c.width, w)
 		c.height = Math.max(c.height, h)
 	}
-	return espelhoCache
+	return emendaCache
 }
 
 /**
- * Estica a base da foto para dentro do que vem abaixo, dissolvendo.
+ * Faz o que está ABAIXO da divisa ter o tom do chão que está ACIMA dela.
  *
- * Serve às duas emendas do gerador: no Clássico, foto contra a faixa de piso
- * pintada; no Clássico Loja, foto contra a fachada. Nos dois casos a foto acaba
- * numa linha reta e o que está do outro lado tem outra cor — o corte aparece.
+ * O problema: a foto acaba numa linha reta e o que vem depois — a faixa pintada
+ * no Clássico, a fachada no Clássico Loja — é outro piso, com outra luz. O corte
+ * aparece, e a peça lê como dois chãos.
  *
- * COLUNA A COLUNA, e é o ponto todo. A base de uma foto não tem UMA cor: tem
- * piso claro nas laterais e sombra de contato sob o carro. Um tom chapado casa
- * com uma cor que não existe em ponto nenhum da divisa (medido: o carro puxava
- * o alvo 15 níveis e o degrau lateral ficava igual ao que era). Esticando a
- * própria base, cada coluna encontra a sua continuação e a sombra segue sombra.
+ * AS DUAS TENTATIVAS QUE NÃO PRESTARAM, para ninguém repetir:
  *
- * Não toca no veículo: só escreve ABAIXO de `y`, onde a foto já acabou. Isso
- * importa porque as duas tentativas anteriores de suavizar essa passagem
- * falharam justamente por mexer no carro — uma dissolvência de 56px que invadia
- * as rodas e um véu branco que lavava a borracha do pneu.
+ *   1. Esticar uma tira da base da foto sobre o trecho. Ampliação de até 14x:
+ *      o chão saía borrado e estriado. "Parece que foi esticado", e estava.
+ *   2. Espelhar a base em 1:1, em ping-pong. Resolvia o borrão e fechava o
+ *      degrau em zero — mas era um espelho de verdade: a junta do concreto
+ *      descia e voltava a subir. Lê como reflexo, não como piso.
+ *
+ * O que funciona é não inventar textura nenhuma. O piso de baixo JÁ EXISTE e já
+ * tem grão real, no tamanho certo, sem repetição. Falta só o tom. Então em vez
+ * de desenhar chão, corrigimos a exposição do chão que está lá:
+ *
+ *   - piso de baixo mais claro que o de cima  -> `multiply` escurece
+ *   - piso de baixo mais escuro               -> `screen` clareia
+ *
+ * Multiplicar e clarear são operações PROPORCIONAIS: mexem no nível e deixam a
+ * modulação intacta. Um véu de cor chapada, ao contrário, achataria a textura na
+ * mesma medida em que corrigisse o tom.
  */
-export function espelharBaseDaFoto(
+export function casarPisoAbaixoDaDivisa(
 	ctx: CanvasRenderingContext2D,
 	y: number,
 	largura: number,
 	alcance: number,
-	forca: number,
-	/**
-	 * Fração final do alcance em que o reflexo se dissolve.
-	 *
-	 * 1 = dissolve ao longo de todo o trajeto (é o que o Clássico quer: a faixa
-	 * pintada tem tom próprio e deve reaparecer). Valores menores seguram o
-	 * reflexo em pé e só o desmancham perto do fim — é o que o Clássico Loja
-	 * quer, onde o piso da foto precisa CHEGAR ao corte em vez de virar fachada
-	 * no meio do caminho.
-	 */
-	dissolveNoFim = 1,
+	deCima: [number, number, number],
+	deBaixo: [number, number, number],
+	/** Fração final do trajeto em que a correção se desfaz. 0 = vai inteira. */
+	soltarNoFim = 0,
 ): void {
-	if (forca <= 0.02 || alcance < 8) return
-	const fonte = Math.min(FONTE_MAX, y)
-	if (fonte < 8) return
-	const oc = canvasDoEspelho(largura, alcance)
+	if (alcance < 8) return
+
+	// Fator por canal. Clampado: correções violentas denunciam a emenda mais do
+	// que o degrau que elas vieram consertar.
+	const LIMITE = 0.45
+	const escurecer = deCima[0] + deCima[1] + deCima[2] < deBaixo[0] + deBaixo[1] + deBaixo[2]
+	const canais = [0, 1, 2].map(i => {
+		const alto = Math.max(1, deBaixo[i])
+		const baixo = Math.max(1, deCima[i])
+		if (escurecer) return Math.round(255 * Math.max(1 - LIMITE, Math.min(1, baixo / alto)))
+		// screen: resultado = 1-(1-a)(1-b) → resolve-se para b
+		const a = deBaixo[i] / 255
+		const alvo = deCima[i] / 255
+		const b = a >= 1 ? 0 : (alvo - a) / (1 - a)
+		return Math.round(255 * Math.max(0, Math.min(LIMITE, b)))
+	})
+	const neutro = escurecer ? 255 : 0
+	if (canais.every(c => Math.abs(c - neutro) < 3)) return // já casam
+
+	const oc = canvasDaEmenda(largura, alcance)
 	oc.clearRect(0, 0, largura, alcance)
 	oc.globalCompositeOperation = 'source-over'
-
-	// Trecho 0 sobe (a linha vizinha da divisa vira a primeira do reflexo);
-	// o trecho seguinte desce a partir da linha mais alta que o anterior
-	// alcançou, e assim por diante. Sempre 1:1.
-	let escrito = 0
-	let subindo = true
-	while (escrito < alcance) {
-		const h = Math.min(fonte, alcance - escrito)
-		oc.save()
-		if (subindo) {
-			oc.translate(0, escrito + h)
-			oc.scale(1, -1)
-			oc.drawImage(ctx.canvas, 0, y - h, largura, h, 0, 0, largura, h)
-		} else {
-			oc.drawImage(ctx.canvas, 0, y - fonte, largura, h, 0, escrito, largura, h)
-		}
-		oc.restore()
-		escrito += h
-		subindo = !subindo
+	const g = oc.createLinearGradient(0, 0, 0, alcance)
+	const cor = `rgb(${canais[0]},${canais[1]},${canais[2]})`
+	g.addColorStop(0, cor)
+	if (soltarNoFim > 0) {
+		g.addColorStop(Math.max(0, Math.min(0.95, 1 - soltarNoFim)), cor)
+		g.addColorStop(1, `rgb(${neutro},${neutro},${neutro})`)
+	} else {
+		g.addColorStop(1, cor)
 	}
-
-	oc.globalCompositeOperation = 'destination-out'
-	const dissolve = oc.createLinearGradient(0, 0, 0, alcance)
-	const inicioDaQueda = Math.max(0, Math.min(0.95, 1 - dissolveNoFim))
-	dissolve.addColorStop(0, `rgba(0,0,0,${1 - forca})`)
-	if (inicioDaQueda > 0) dissolve.addColorStop(inicioDaQueda, `rgba(0,0,0,${1 - forca})`)
-	dissolve.addColorStop(1, 'rgba(0,0,0,1)')
-	oc.fillStyle = dissolve
+	oc.fillStyle = g
 	oc.fillRect(0, 0, largura, alcance)
-	oc.globalCompositeOperation = 'source-over'
+
+	ctx.save()
+	ctx.beginPath()
+	ctx.rect(0, y, largura, alcance)
+	ctx.clip()
+	ctx.globalCompositeOperation = escurecer ? 'multiply' : 'screen'
 	ctx.drawImage(oc.canvas, 0, 0, largura, alcance, 0, y, largura, alcance)
+	ctx.restore()
+}
+
+/**
+ * Esfuma a última linha da foto sobre o que vem abaixo.
+ *
+ * Só apaga a aresta de 1px que sobra depois do casamento de tom — 16px de
+ * dissolvência, curtos demais para borrar qualquer coisa e curtos demais para
+ * alcançar as rodas, que é o que estragou as tentativas antigas de fundir a
+ * foto no piso.
+ */
+export function suavizarDivisa(ctx: CanvasRenderingContext2D, y: number, largura: number): void {
+	const H = 16
+	if (y < H) return
+	const oc = canvasDaEmenda(largura, H)
+	oc.clearRect(0, 0, largura, H)
+	oc.globalCompositeOperation = 'source-over'
+	oc.drawImage(ctx.canvas, 0, y - H, largura, H, 0, 0, largura, H)
+	oc.globalCompositeOperation = 'destination-out'
+	const g = oc.createLinearGradient(0, 0, 0, H)
+	g.addColorStop(0, 'rgba(0,0,0,0.25)')
+	g.addColorStop(1, 'rgba(0,0,0,1)')
+	oc.fillStyle = g
+	oc.fillRect(0, 0, largura, H)
+	oc.globalCompositeOperation = 'source-over'
+	ctx.drawImage(oc.canvas, 0, 0, largura, H, 0, y, largura, H)
 }
 
 export function drawPhotoBanda(
