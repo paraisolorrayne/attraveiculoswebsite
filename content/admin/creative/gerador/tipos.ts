@@ -125,7 +125,7 @@ export interface ContextoDesenho {
 }
 
 export const ESTADO_INICIAL: EstadoCriativo = {
-	tipo: 'classico',
+	tipo: 'classico-loja',
 	marca: 'MERCEDES-BENZ',
 	modelo: 'C-300 AMG LINE',
 	ano: '2024',
@@ -155,12 +155,14 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	corte: -32,
 	pisoy: -18,
 	pisoTipo: 'concreto',
-	// Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
-	// gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas
-	// bordas e sobe o corte para o veículo ficar abaixo do título. Tem que casar
-	// com os valores iniciais dos sliders, senão a peça abre diferente do que
-	// eles mostram.
-	f1: { zoom: 0.88, x: 0.5, y: 0.18 },
+	// Neutro, porque o formato padrão é o Clássico Loja.
+	//
+	// O 0,88/0,18 que ficava aqui é a calibração da Lorrayne (04/08/2026) para o
+	// Clássico ORIGINAL, onde a foto entra na faixa 0..1000 e o zoom recuado
+	// mantém o carro abaixo do título. Ele não sumiu: `enquadramentoAutomatico`
+	// o aplica sozinho ao escolher uma foto no Clássico. Aqui vale o neutro, que
+	// é o que o Clássico Loja quer.
+	f1: { zoom: 1, x: 0.5, y: 0.5 },
 	f2: { zoom: 1, x: 0.5, y: 0.5 },
 	f3: { zoom: 1, x: 0.5, y: 0.5 },
 	f4: { zoom: 1, x: 0.5, y: 0.5 },

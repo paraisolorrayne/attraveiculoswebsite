@@ -32,11 +32,11 @@ export { enquadramentoAutomatico } from './enquadramento'
 
 /** Os formatos na ordem em que aparecem na tela. */
 export const FORMATOS: { id: FormatoId; nome: string; descricao: string }[] = [
+	{ id: 'classico-loja', nome: 'Clássico Loja', descricao: 'fundo da loja' },
 	{ id: 'classico', nome: 'Clássico', descricao: 'escuro, foto grande' },
 	{ id: 'destaque', nome: 'Destaque', descricao: 'claro, ficha técnica' },
 	{ id: 'estoque', nome: 'Estoque', descricao: 'lista de até 4 carros' },
 	{ id: 'ficha', nome: 'Ficha', descricao: 'claro, 2 detalhes + destaque' },
-	{ id: 'classico-loja', nome: 'Clássico Loja', descricao: 'fundo da loja' },
 ]
 
 export function render(

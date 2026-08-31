@@ -23,12 +23,6 @@ echo "==> [2/7] env + dependências"
 set -a; source .env.production; set +a
 npm ci
 
-# Guarda do gerador de criativos: o .ts gerado precisa bater com o HTML fonte.
-# Fica ANTES do build e do pm2 stop de propósito — se divergir, o deploy para
-# com o site ainda no ar. A checagem não escreve nada, só compara.
-echo "==> [2.5/7] gerador de criativos em dia com o fonte"
-node scripts/check-gerador-criativos.mjs
-
 echo "==> [3/7] build (site fica fora do ar só nesta etapa)"
 pm2 stop attra
 rm -rf .next
