@@ -51,9 +51,9 @@ dos destaques deixou de ser constante e passa a sair de uma medição do fundo
 (ver `content/admin/creative/gerador/contraste.ts`). Rodar a regressão hoje
 acusa diferença nos casos desse formato — e deve acusar mesmo.
 
-No Clássico, a divisa entre a foto e a faixa de piso deixou de ser seca: a base
-da foto é espelhada para dentro da faixa e dissolvida, então a região logo
-abaixo de PISO_TOP também difere.
+Nos dois, a divisa em que a foto acaba deixou de ser seca: a base da foto é
+espelhada para dentro do que vem abaixo (a faixa pintada no Clássico, a fachada
+no Clássico Loja) e dissolvida. A região logo abaixo dessa divisa difere.
 
 Os outros quatro formatos continuam idênticos, e para eles o aparato segue
 valendo.

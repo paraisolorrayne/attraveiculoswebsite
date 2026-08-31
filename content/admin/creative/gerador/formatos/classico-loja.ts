@@ -12,6 +12,7 @@ import {
 	drawLogoWhite,
 	drawPhoto,
 	drawPhotoBanda,
+	espelharBaseDaFoto,
 	fotoComPisoApagado,
 	placeholder,
 	spacedText,
@@ -20,6 +21,15 @@ import {
 } from '../desenho'
 import { amostrar, fundoDaCaixa, haloCss, paletaLegivel, type Amostra } from '../contraste'
 import { ALTURA_FEED, ALTURA_STORIES, LARGURA as W, type ContextoDesenho } from '../tipos'
+
+/**
+ * Até onde a base da foto se dissolve na fachada.
+ *
+ * Mais longo que no Clássico (90) porque aqui não há faixa pintada esperando do
+ * outro lado: o espelho precisa entregar a foto à fachada, que é outra
+ * fotografia, e a passagem tem de ser lenta o bastante para não virar aresta.
+ */
+const ALCANCE_EMENDA = 90
 
 export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
 	const FEED = H === ALTURA_FEED // 1080×1350: só a foto principal, rodapé fecha mais cedo
@@ -119,6 +129,18 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		const r = drawPhotoBanda(ctx, H, imagens.foto1, 0, BANDA_TOPO, W, BANDA_H, estado.f1)
 		topGap = Math.max(0, r.topo)
 		baseDaFoto = r.base
+		// A EMENDA DO CHÃO, no caminho da foto inteira.
+		//
+		// drawPhotoBanda esfuma SÓ o topo ("nunca o carro"), então embaixo a foto
+		// termina numa linha reta contra a fachada — e as duas foram fotografadas
+		// com luz diferente. É a emenda que aparece no uso normal: sem recorte,
+		// que é como a maioria das peças sai.
+		//
+		// Aqui não há trava de legibilidade porque não precisa: neste formato a
+		// cor do texto já é medida do fundo (ver contraste.ts), e o espelho é
+		// desenhado antes dessa medição — então o preço se adapta ao que sobrar.
+		if (r.base > BANDA_TOPO && r.base < H - 40)
+			espelharBaseDaFoto(ctx, Math.round(r.base), W, ALCANCE_EMENDA, 1)
 	} else {
 		ctx.fillStyle = 'rgba(255,255,255,.45)'
 		ctx.font = '600 26px Montserrat, sans-serif'

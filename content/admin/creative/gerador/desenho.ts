@@ -671,6 +671,80 @@ export function fotoComPisoApagado(
  * é o assunto da peça". O carro tem prioridade máxima; efeito de acabamento
  * nunca pode tocá-lo.
  */
+/**
+ * Espessura da base da foto usada como fonte do espelho.
+ *
+ * Não é só "quanto copiar": é o que decide se a continuação parece piso ou
+ * parece estria. Com 8px o esticão era de 16x e a menor variação horizontal da
+ * foto virava listra vertical. Com 24 o fator cai para ~4x e sobra estrutura
+ * vertical suficiente para ler como chão.
+ */
+const TIRA_ESPELHO = 24
+
+/** Canvas do espelho, reaproveitado entre quadros. */
+let espelhoCache: CanvasRenderingContext2D | null = null
+function canvasDoEspelho(w: number, h: number): CanvasRenderingContext2D {
+	if (!espelhoCache) espelhoCache = document.createElement('canvas').getContext('2d')!
+	const c = espelhoCache.canvas
+	if (c.width < w || c.height < h) {
+		c.width = Math.max(c.width, w)
+		c.height = Math.max(c.height, h)
+	}
+	return espelhoCache
+}
+
+/**
+ * Estica a base da foto para dentro do que vem abaixo, dissolvendo.
+ *
+ * Serve às duas emendas do gerador: no Clássico, foto contra a faixa de piso
+ * pintada; no Clássico Loja, foto contra a fachada. Nos dois casos a foto acaba
+ * numa linha reta e o que está do outro lado tem outra cor — o corte aparece.
+ *
+ * COLUNA A COLUNA, e é o ponto todo. A base de uma foto não tem UMA cor: tem
+ * piso claro nas laterais e sombra de contato sob o carro. Um tom chapado casa
+ * com uma cor que não existe em ponto nenhum da divisa (medido: o carro puxava
+ * o alvo 15 níveis e o degrau lateral ficava igual ao que era). Esticando a
+ * própria base, cada coluna encontra a sua continuação e a sombra segue sombra.
+ *
+ * Não toca no veículo: só escreve ABAIXO de `y`, onde a foto já acabou. Isso
+ * importa porque as duas tentativas anteriores de suavizar essa passagem
+ * falharam justamente por mexer no carro — uma dissolvência de 56px que invadia
+ * as rodas e um véu branco que lavava a borracha do pneu.
+ */
+export function espelharBaseDaFoto(
+	ctx: CanvasRenderingContext2D,
+	y: number,
+	largura: number,
+	alcance: number,
+	forca: number,
+): void {
+	if (forca <= 0.02 || alcance < 8 || y < TIRA_ESPELHO) return
+	const oc = canvasDoEspelho(largura, alcance)
+	oc.clearRect(0, 0, largura, alcance)
+	oc.globalCompositeOperation = 'source-over'
+	// ESPELHO DE VERDADE: a tira entra invertida, para a linha que encosta na
+	// divisa ser a VIZINHA dela (y-1), e não a do topo da tira.
+	//
+	// Sem inverter, a primeira linha desenhada era a de y-TIRA, e o degrau
+	// simplesmente mudava de lugar em vez de fechar — foi o que fez o G 63 cair
+	// de 78% para 7% de melhora quando engrossei a tira. Invertido, a
+	// continuidade na divisa é exata por construção, e o que se vê abaixo é um
+	// reflexo do chão, que é como piso polido se comporta de verdade.
+	oc.save()
+	oc.translate(0, alcance)
+	oc.scale(1, -1)
+	oc.drawImage(ctx.canvas, 0, y - TIRA_ESPELHO, largura, TIRA_ESPELHO, 0, 0, largura, alcance)
+	oc.restore()
+	oc.globalCompositeOperation = 'destination-out'
+	const dissolve = oc.createLinearGradient(0, 0, 0, alcance)
+	dissolve.addColorStop(0, `rgba(0,0,0,${1 - forca})`)
+	dissolve.addColorStop(1, 'rgba(0,0,0,1)')
+	oc.fillStyle = dissolve
+	oc.fillRect(0, 0, largura, alcance)
+	oc.globalCompositeOperation = 'source-over'
+	ctx.drawImage(oc.canvas, 0, 0, largura, alcance, 0, y, largura, alcance)
+}
+
 export function drawPhotoBanda(
 	ctx: CanvasRenderingContext2D,
 	altura: number,

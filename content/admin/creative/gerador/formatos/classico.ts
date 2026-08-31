@@ -21,7 +21,15 @@ import {
 	luminanciaRelativa,
 	razaoDeContraste,
 } from '../contraste'
-import { drawLogoWhite, drawPhoto, drawPhotoFeather, placeholder, spacedText, spacedWidth } from '../desenho'
+import {
+	drawLogoWhite,
+	drawPhoto,
+	drawPhotoFeather,
+	espelharBaseDaFoto,
+	placeholder,
+	spacedText,
+	spacedWidth,
+} from '../desenho'
 import { ALTURA_FEED, LARGURA as W, type ContextoDesenho } from '../tipos'
 
 /**
@@ -32,23 +40,8 @@ import { ALTURA_FEED, LARGURA as W, type ContextoDesenho } from '../tipos'
  * número que mais importa na peça.
  */
 const ALCANCE_EMENDA = 90
-/** Espessura da base da foto usada como fonte do espelho. */
-const TIRA_ESPELHO = 8
-
-/** Canvas do espelho, reaproveitado entre quadros. */
-let espelhoCache: CanvasRenderingContext2D | null = null
-function canvasDoEspelho(w: number, h: number): CanvasRenderingContext2D {
-	if (!espelhoCache) espelhoCache = document.createElement('canvas').getContext('2d')!
-	const c = espelhoCache.canvas
-	if (c.width < w || c.height < h) {
-		c.width = Math.max(c.width, w)
-		c.height = Math.max(c.height, h)
-	}
-	return espelhoCache
-}
 /** Contraste que o preço não pode perder por causa da emenda. */
 const CONTRASTE_MINIMO = 4.5
-
 /**
  * Aproxima o TOPO DA FAIXA ao tom do piso da foto, para a divisa não ler como
  * uma linha cortada.
@@ -121,17 +114,7 @@ function casarFaixaComOPisoDaFoto(
 	// Aqui a própria base da foto é esticada para dentro da faixa e dissolvida.
 	// Cada coluna encontra a sua continuação, e o degrau fecha em toda a largura
 	// — inclusive sob o carro, onde a sombra de contato continua como sombra.
-	const oc = canvasDoEspelho(W, ALCANCE_EMENDA)
-	oc.clearRect(0, 0, W, ALCANCE_EMENDA)
-	oc.globalCompositeOperation = 'source-over'
-	oc.drawImage(ctx.canvas, 0, PISO_TOP - TIRA_ESPELHO, W, TIRA_ESPELHO, 0, 0, W, ALCANCE_EMENDA)
-	oc.globalCompositeOperation = 'destination-out'
-	const dissolve = oc.createLinearGradient(0, 0, 0, ALCANCE_EMENDA)
-	dissolve.addColorStop(0, `rgba(0,0,0,${1 - forca})`)
-	dissolve.addColorStop(1, 'rgba(0,0,0,1)')
-	oc.fillStyle = dissolve
-	oc.fillRect(0, 0, W, ALCANCE_EMENDA)
-	ctx.drawImage(oc.canvas, 0, 0, W, ALCANCE_EMENDA, 0, PISO_TOP, W, ALCANCE_EMENDA)
+	espelharBaseDaFoto(ctx, PISO_TOP, W, ALCANCE_EMENDA, forca)
 }
 
 export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
