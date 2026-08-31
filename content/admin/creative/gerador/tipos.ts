@@ -18,7 +18,7 @@ export const ALTURA_FEED = 1350
 
 export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'editorial' | 'ficha'
 
-export type PisoTipo = 'perola' | 'concreto' | 'asfalto'
+export type PisoTipo = 'concreto' | 'asfalto'
 
 export type SlotFoto = 'foto1' | 'foto2' | 'foto3' | 'foto4'
 
@@ -159,7 +159,7 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	corte: -32,
 	pisoy: -18,
 	edRot: 0,
-	pisoTipo: 'perola',
+	pisoTipo: 'concreto',
 	// Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
 	// gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas
 	// bordas e sobe o corte para o veículo ficar abaixo do título. Tem que casar

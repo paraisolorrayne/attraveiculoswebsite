@@ -243,7 +243,6 @@ function CarroDaLista({
 /* --------------------------------------------------------------- o painel */
 
 const PISOS: { id: PisoTipo; nome: string; descricao: string }[] = [
-	{ id: 'perola', nome: 'Pérola', descricao: 'sólido claro' },
 	{ id: 'concreto', nome: 'Concreto', descricao: 'piso claro real' },
 	{ id: 'asfalto', nome: 'Asfalto', descricao: 'piso escuro real' },
 ]

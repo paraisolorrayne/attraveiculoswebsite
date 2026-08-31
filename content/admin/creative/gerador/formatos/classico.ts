@@ -222,9 +222,9 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 	// (o `areaPath` do HTML não entrou: era declarado e nunca chamado — o piso
 	// é desenhado pelo caminho montado logo abaixo.)
 
-	// Fundo da área de texto: Pérola (sólido), Concreto ou Asfalto
+	// Fundo da área de texto: Concreto ou Asfalto
 	// (texturas reais fundidas dentro da foto por máscara de alpha).
-	const piso = estado.pisoTipo || 'perola'
+	const piso = estado.pisoTipo || 'concreto'
 	// sem fusão no topo: a dissolvência de 56px invadia as rodas em carros
 	// baixos. A divisa fica seca e a continuidade vem do véu (abaixo), como no
 	// tratamento manual do Photoshop.
@@ -237,15 +237,22 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 
 	// paleta dos textos conforme o fundo
 	const dark = piso === 'asfalto'
-	// fundo escuro: branco puro + sombra pra legibilidade; claro: cinza-grafite
+	// Fundo escuro: branco puro + sombra. Fundo claro: grafite.
+	//
+	// O preço era #35353b e o KM #6f6f74, calibrados quando a faixa era o Pérola
+	// (rgb 232) — com o Pérola fora, a faixa é o Concreto cru (rgb 192) e o preço
+	// caiu de 5,39:1 para 3,78:1 no G 63. Escurecer o texto recupera o contraste
+	// sem enfraquecer a emenda, que é a outra saída e custaria a divisa.
 	const tx = dark
 		? { preco: '#ffffff', km: '#dfe0e6', bullet: '#ffffff', icone: '#f1f1f5' }
-		: { preco: '#35353b', km: '#6f6f74', bullet: '#141416', icone: '#1a1a1c' }
+		: { preco: '#232329', km: '#5c5c62', bullet: '#141416', icone: '#1a1a1c' }
 
 	{
-		// Pérola/Concreto/Asfalto = piso texturizado REAL (imagem embutida).
-		// Pérola reusa a textura do concreto com um véu pérola por cima: clareia
-		// até um tom pérola limpo mantendo o grão real — como piso polido do Photoshop.
+		// Concreto/Asfalto = piso texturizado REAL (imagem embutida).
+		//
+		// Havia um terceiro, "Pérola", que reusava a textura do concreto com um
+		// véu claro por cima. Saiu a pedido em 31/08/2026, e o Concreto passou a
+		// ser o padrão — era ele por baixo do véu.
 		const img = piso === 'asfalto' ? assets.pisoAsfalto : assets.pisoConcreto
 		// overlap dentro da foto = tamanho da máscara → textura chega 100% opaca na divisa
 		const bandTop = PISO_TOP - FUSAO_H
@@ -267,19 +274,7 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 			ox.drawImage(img, (W - img.width * ps) / 2, (bandH - img.height * ps) / 2, img.width * ps, img.height * ps)
 			ctx.drawImage(osc, 0, bandTop)
 		} else {
-			ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : piso === 'perola' ? '#eef1f2' : '#eceeed'
-			ctx.fillRect(0, bandTop, W, bandH)
-		}
-		// véu pérola: clareia a textura do concreto até o tom pérola, sem perder o grão
-		if (piso === 'perola') {
-			// fade-in do véu na zona de fusão (bandTop..PISO_TOP) → sem divisa nítida
-			// Continuidade: o véu entra no MESMO tom em que o da foto terminou
-			// (.42) e encorpa piso adentro, então não há degrau na divisa.
-			const veu = ctx.createLinearGradient(0, bandTop, 0, DIAG_L)
-			veu.addColorStop(0, 'rgba(246,248,249,.42)')
-			veu.addColorStop(Math.min(1, 160 / bandH), 'rgba(246,248,249,.78)')
-			veu.addColorStop(1, 'rgba(236,240,242,.68)')
-			ctx.fillStyle = veu
+			ctx.fillStyle = piso === 'asfalto' ? '#3a3a3c' : '#eceeed'
 			ctx.fillRect(0, bandTop, W, bandH)
 		}
 		// sombras internas discretas (intensidade conforme o tom do piso)
