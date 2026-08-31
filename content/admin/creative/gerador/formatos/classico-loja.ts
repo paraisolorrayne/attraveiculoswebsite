@@ -253,7 +253,14 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	//
 	// Por isso a largura sai do próprio spacedWidth, com o mesmo espaçamento do
 	// desenho: o que se mede é exatamente onde a letra vai cair.
-	const FONTE_PRECO = '400 48px Montserrat, sans-serif'
+	// Peso 600, e não o 400 de antes.
+	//
+	// Os destaques logo abaixo são 700, e o preço em 400 lia como o elemento
+	// mais FRACO do bloco — a hierarquia invertida, com o número que mais
+	// importa parecendo apagado. Já havia sido 300 e subido para 400 pelo mesmo
+	// motivo; 600 é o que faz o corpo de 48px pesar mais que o de 34 dos
+	// destaques, que é o que a hierarquia pede.
+	const FONTE_PRECO = '600 48px Montserrat, sans-serif'
 	const preco = estado.preco.trim().replace(/^R\$\s*/i, '')
 	const textoPreco = preco ? 'R$ ' + preco : ''
 	const yPreco = PISO_TOP + 54
@@ -272,7 +279,7 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	// Agora ele cai sobre o CHÃO DA FOTO, que muda a cada veículo e tem textura:
 	// medido na McLaren, 3,49:1 passava no papel e lia mal na peça. O custo de
 	// exigir mais é um halo um pouco mais forte, que só aparece quando precisa.
-	const pPreco = paletaLegivel(fundoPreco, { alvo: 4.5, corEscura: '#2b2b31', corClara: '#f4f4f7' })
+	const pPreco = paletaLegivel(fundoPreco, { alvo: 4.5, corEscura: '#1c1c22', corClara: '#f7f7fa' })
 
 	const kmParts: string[] = []
 	if (estado.km.trim()) kmParts.push(estado.km.trim() + ' KM')

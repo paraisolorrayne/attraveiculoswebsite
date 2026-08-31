@@ -10,7 +10,6 @@ import type { Assets } from './tipos'
 const ARQUIVOS = {
 	logoBranca: '/gerador/logo-branca.png',
 	logoPreta: '/gerador/logo-preta.jpg',
-	fundoEditorial: '/gerador/fundo-editorial.jpg',
 	fachadaClassico: '/gerador/fachada-classico.jpg',
 	fachadaLoja: '/gerador/fachada-loja.jpg',
 	pisoConcreto: '/gerador/piso-concreto.jpg',
@@ -59,11 +58,10 @@ let cache: Promise<Assets> | null = null
  */
 export function carregarAssets(): Promise<Assets> {
 	cache ??= (async (): Promise<Assets> => {
-		const [logoBranca, logoPretaCrua, fundoEditorial, fachadaClassico, fachadaLoja, pisoConcreto, pisoAsfalto] =
+		const [logoBranca, logoPretaCrua, fachadaClassico, fachadaLoja, pisoConcreto, pisoAsfalto] =
 			await Promise.all([
 				carregar(ARQUIVOS.logoBranca),
 				carregar(ARQUIVOS.logoPreta),
-				carregar(ARQUIVOS.fundoEditorial),
 				carregar(ARQUIVOS.fachadaClassico),
 				carregar(ARQUIVOS.fachadaLoja),
 				carregar(ARQUIVOS.pisoConcreto),
@@ -72,7 +70,6 @@ export function carregarAssets(): Promise<Assets> {
 		return {
 			logoBranca,
 			logoPreta: brancoParaTransparente(logoPretaCrua),
-			fundoEditorial,
 			fachadaClassico,
 			fachadaLoja,
 			pisoConcreto,

@@ -226,7 +226,7 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 	// sem enfraquecer a emenda, que é a outra saída e custaria a divisa.
 	const tx = dark
 		? { preco: '#ffffff', km: '#dfe0e6', bullet: '#ffffff', icone: '#f1f1f5' }
-		: { preco: '#232329', km: '#5c5c62', bullet: '#141416', icone: '#1a1a1c' }
+		: { preco: '#1c1c22', km: '#55555b', bullet: '#141416', icone: '#1a1a1c' }
 
 	{
 		// Concreto/Asfalto = piso texturizado REAL (imagem embutida).
@@ -298,7 +298,7 @@ export function renderClassicoOriginal({ ctx, estado, imagens, assets, altura: H
 			'R$ ' + preco,
 			W / 2,
 			PISO_TOP + (FEED ? 54 : 62),
-			(dark ? '400' : '300') + ' 48px Montserrat, sans-serif',
+			(dark ? '500' : '600') + ' 48px Montserrat, sans-serif',
 			10,
 			tx.preco,
 		)

@@ -16,7 +16,7 @@ export const ALTURA_STORIES = 1920
 /** Feed 4:5 da Meta — a mesma composição, só com a foto principal. */
 export const ALTURA_FEED = 1350
 
-export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'editorial' | 'ficha'
+export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'ficha'
 
 export type PisoTipo = 'concreto' | 'asfalto'
 
@@ -77,8 +77,6 @@ export interface EstadoCriativo {
 	corte: number
 	/** Deslocamento vertical do bloco de texto sobre o piso. */
 	pisoy: number
-	/** Rotação do carro recortado no Editorial, em graus. */
-	edRot: number
 	pisoTipo: PisoTipo
 
 	f1: OpcoesFoto
@@ -108,8 +106,6 @@ export interface Assets {
 	logoBranca: HTMLImageElement
 	/** Logo preta com o branco já convertido em transparente. */
 	logoPreta: CanvasImageSource
-	/** Estúdio do Editorial. */
-	fundoEditorial: HTMLImageElement
 	/** Close do letreiro, fundo do topo do Clássico original. */
 	fachadaClassico: HTMLImageElement
 	/** Foto inteira da loja, fundo do Clássico Loja. */
@@ -158,7 +154,6 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	// diferente do que os controles mostram.
 	corte: -32,
 	pisoy: -18,
-	edRot: 0,
 	pisoTipo: 'concreto',
 	// Enquadramento padrão da foto de cima, calibrado pela Lorrayne no próprio
 	// gerador (04/08/2026): recua o zoom para o carro não abrir espremido nas

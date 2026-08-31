@@ -31,7 +31,7 @@ import {
 	type SlotFoto,
 } from '@content/admin/creative/gerador'
 import { FOLHA_GOOGLE } from '@content/admin/creative/gerador/fontes'
-import { CampoArquivo, CampoFaixa, CampoTexto, Dica, Escolha, PainelCampos, Secao } from './campos'
+import { CampoArquivo, CampoTexto, Dica, Escolha, PainelCampos, Secao } from './campos'
 import { exportarPeca } from './baixar'
 import { urlFotoEstoque, useGerador } from './use-gerador'
 
@@ -313,18 +313,6 @@ export function CriativosAdmin() {
 						aoEscolher={g.trocarFormato}
 					/>
 				</Secao>
-
-				{estado.tipo === 'editorial' && (
-					<Secao titulo="Editorial — posição do veículo">
-						<CampoFaixa
-							rotulo="Rotação do veículo (°)"
-							min={-180}
-							max={180}
-							valor={estado.edRot}
-							aoMudar={v => campo('edRot', v)}
-						/>
-					</Secao>
-				)}
 
 				{estado.tipo !== 'estoque' && (
 					<Secao titulo="Buscar do estoque (opcional)">

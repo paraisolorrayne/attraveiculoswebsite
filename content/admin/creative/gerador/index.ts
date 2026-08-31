@@ -13,7 +13,6 @@
 import { renderClassicoLoja } from './formatos/classico-loja'
 import { renderClassicoOriginal } from './formatos/classico'
 import { renderDestaque } from './formatos/destaque'
-import { renderEditorial } from './formatos/editorial'
 import { renderEstoque } from './formatos/estoque'
 import { renderFicha } from './formatos/ficha'
 import {
@@ -36,7 +35,6 @@ export const FORMATOS: { id: FormatoId; nome: string; descricao: string }[] = [
 	{ id: 'classico', nome: 'Clássico', descricao: 'escuro, foto grande' },
 	{ id: 'destaque', nome: 'Destaque', descricao: 'claro, ficha técnica' },
 	{ id: 'estoque', nome: 'Estoque', descricao: 'lista de até 4 carros' },
-	{ id: 'editorial', nome: 'Editorial', descricao: 'luxo, minimalista' },
 	{ id: 'ficha', nome: 'Ficha', descricao: 'claro, 2 detalhes + destaque' },
 	{ id: 'classico-loja', nome: 'Clássico Loja', descricao: 'fundo da loja' },
 ]
@@ -59,8 +57,6 @@ export function render(
 			return renderDestaque(contexto)
 		case 'estoque':
 			return renderEstoque(contexto)
-		case 'editorial':
-			return renderEditorial(contexto)
 		case 'ficha':
 			return renderFicha(contexto)
 		case 'classico-loja':

@@ -330,6 +330,11 @@ Ferramenta standalone (HTML auto-contido, canvas 1080×1920) para montar criativ
 stories/anúncios no padrão visual da Attra: fotos com zoom/enquadramento, logos oficiais
 embutidas e preferência de logo persistida em `localStorage`.
 
+- **Cinco formatos:** Clássico, Clássico Loja, Destaque, Estoque e Ficha. O Editorial
+  saiu em 31/08/2026 junto com o recorte por IA — ele existia para pousar o carro
+  RECORTADO num estúdio e, sem recorte, desenhava a foto retangular flutuando.
+- **Sem recorte de fundo.** A rota `/gerador-criativos/rembg` foi removida. O rembg do
+  SITE (`src/lib/vehicle-hero-asset.ts`, usado em `/veiculos`) é outro e continua.
 - **Dois formatos por peça:** o botão "Baixar Stories + Feed" gera o Stories 1080×1920 e,
   da mesma composição, o **Feed 1080×1350 (4:5, o formato que a Meta usa no feed de
   anúncios)** — só com a foto principal, sem foto traseira/tira de detalhes. Baixa os
