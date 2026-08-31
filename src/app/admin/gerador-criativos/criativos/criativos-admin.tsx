@@ -11,13 +11,17 @@
  *
  * As integrações, na ordem em que o operador as encontra:
  *   1. buscar no estoque   → preenche campos, galeria de fotos, link do status
- *   2. remover fundo (IA)  → Editorial e Clássico Loja
- *   3. baixar              → Stories + Feed, e os dois vão ao board do Marketing
- *   4. publicar no status  → WhatsApp, 24h, sem desfazer
+ *   2. baixar              → Stories + Feed, e os dois vão ao board do Marketing
+ *   3. publicar no status  → WhatsApp, 24h, sem desfazer
+ *
+ * Havia uma quarta: remover fundo por IA (Replicate), que alimentava o
+ * Editorial e um segundo caminho do Clássico Loja. Saiu em 31/08/2026. A rota
+ * /api/admin/marketing/gerador-criativos/rembg foi junto; o rembg do SITE
+ * (src/lib/vehicle-hero-asset.ts, usado em /veiculos) é outro e continua.
  */
 
 import { useCallback, useRef, useState } from 'react'
-import { Download, Loader2, Scissors, Search, Send, Undo2 } from 'lucide-react'
+import { Download, Loader2, Search, Send } from 'lucide-react'
 import {
 	ALTURA_STORIES,
 	carregar,
@@ -70,20 +74,9 @@ function lerArquivo(file: File): Promise<{ img: HTMLImageElement; dados: string 
 	})
 }
 
-/** O rembg não precisa de mais que ~2000px; reduzir evita HTTP 413 e acelera. */
-function reduzirParaEnvio(img: HTMLImageElement): string {
-	const max = 2048
-	const sc = Math.min(1, max / Math.max(img.width, img.height))
-	const c = document.createElement('canvas')
-	c.width = Math.round(img.width * sc)
-	c.height = Math.round(img.height * sc)
-	c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-	return c.toDataURL('image/jpeg', 0.88)
-}
-
 export function CriativosAdmin() {
 	const g = useGerador()
-	const { estado, campo, imagens, origemFoto1, assets, pronto, erro } = g
+	const { estado, campo, imagens, assets, pronto, erro } = g
 
 	const [busca, setBusca] = useState('')
 	const [buscando, setBuscando] = useState(false)
@@ -92,11 +85,6 @@ export function CriativosAdmin() {
 	const [usadas, setUsadas] = useState<Record<string, SlotFoto>>({})
 	const [avisoBusca, setAvisoBusca] = useState<string | null>(null)
 
-	const [recortando, setRecortando] = useState(false)
-	const [msgRecorte, setMsgRecorte] = useState(
-		'Envie a Foto principal e clique acima — o carro é recortado (~10-30s via IA) e composto no estúdio. Sem o recorte, a foto aparece inteira.',
-	)
-	const [temRecorte, setTemRecorte] = useState(false)
 
 	const [baixando, setBaixando] = useState(false)
 	const [msgDownload, setMsgDownload] = useState(
@@ -157,7 +145,7 @@ export function CriativosAdmin() {
 				const url = fotos[Math.min(pos, fotos.length) - 1]
 				if (!url) return
 				void carregar(urlFotoEstoque(url)).then(img => {
-					g.aplicarFoto(SLOTS_FICHA[i], img, i === 0 ? { url } : undefined)
+					g.aplicarFoto(SLOTS_FICHA[i], img)
 				})
 			})
 		},
@@ -207,12 +195,7 @@ export function CriativosAdmin() {
 	function usarFotoDaGaleria(url: string, comShift: boolean) {
 		const destino: SlotFoto = estado.tipo === 'ficha' ? slotAtual.current : comShift ? 'foto2' : 'foto1'
 		void carregar(urlFotoEstoque(url)).then(img => {
-			// foto do estoque: o rembg recebe a URL pública, sem upload
-			g.aplicarFoto(destino, img, destino === 'foto1' ? { url } : undefined)
-			if (destino === 'foto1') {
-				setTemRecorte(false)
-				setMsgRecorte('Foto do estoque selecionada — clique em REMOVER FUNDO para recortar.')
-			}
+			g.aplicarFoto(destino, img)
 			setUsadas(u => {
 				const novo: Record<string, SlotFoto> = {}
 				for (const [k, v] of Object.entries(u)) if (v !== destino) novo[k] = v
@@ -231,13 +214,7 @@ export function CriativosAdmin() {
 
 	function aoEscolherFotoDoComputador(slot: 'foto1' | 'foto2' | 'foto3' | 'foto4', file: File) {
 		void lerArquivo(file)
-			.then(({ img }) => {
-				g.aplicarFoto(slot, img, slot === 'foto1' ? { dados: reduzirParaEnvio(img) } : undefined)
-				if (slot === 'foto1') {
-					setTemRecorte(false)
-					setMsgRecorte('Foto nova carregada — clique em REMOVER FUNDO para recortar.')
-				}
-			})
+			.then(({ img }) => g.aplicarFoto(slot, img))
 			.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
 	}
 
@@ -250,65 +227,7 @@ export function CriativosAdmin() {
 			.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
 	}
 
-	/* ------------------------------------------------- 2. remover fundo (IA) */
-
-	async function removerFundo() {
-		const { dados, url } = origemFoto1.current
-		if (!dados && !url) {
-			setMsgRecorte('Envie a Foto principal (ou selecione uma do estoque) primeiro.')
-			return
-		}
-		if (imagens.current.foto1Cut) {
-			setMsgRecorte('Esta foto já está recortada — troque a foto para recortar outra.')
-			return
-		}
-		setRecortando(true)
-		setMsgRecorte('Recortando o fundo via IA… (10-30s, não feche a aba)')
-		try {
-			const r = await fetch('/api/admin/marketing/gerador-criativos/rembg', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(url ? { imageUrl: url } : { image: dados }),
-			})
-			const d = await r.json().catch(() => ({}))
-			if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
-			if (!d.accepted) {
-				// Recorte ruim é pior que recorte nenhum: o carro sai com buraco no
-				// vidro. Nesse caso a peça fica com a foto original, inteira.
-				imagens.current.foto1Cut = null
-				const nota = typeof d.score === 'number' ? `${d.score}%` : '?'
-				setMsgRecorte(
-					`Recorte incerto (${nota}) — usando a foto ORIGINAL pra preservar a qualidade. O carro aparece inteiro.`,
-				)
-				g.redesenhar()
-				return
-			}
-			const img = await carregar(d.image)
-			imagens.current.foto1Cut = img
-			// O enquadramento padrão do Clássico (zoom .88, y .18) foi calibrado
-			// para foto inteira; aplicado ao recorte, afundava o carro ~80px e
-			// empurrava o bloco de texto para cima da foto 2.
-			campo('f1', { zoom: 1, x: 0.5, y: 0.5 })
-			setTemRecorte(true)
-			const conf = typeof d.score === 'number' ? ` (confiança ${d.score}%)` : ''
-			setMsgRecorte(`Fundo removido ✓${conf} — ajuste zoom/posição nos sliders da Foto 1.`)
-		} catch (e) {
-			setMsgRecorte(`Falha no recorte: ${e instanceof Error ? e.message : String(e)}`)
-		} finally {
-			setRecortando(false)
-		}
-	}
-
-	// Desfazer o recorte. Antes a única saída era reenviar a foto — e comparar
-	// com e sem recorte é a operação mais frequente aqui.
-	function desfazerRecorte() {
-		imagens.current.foto1Cut = null
-		setTemRecorte(false)
-		setMsgRecorte('Voltou para a foto original, com o fundo dela.')
-		g.redesenhar()
-	}
-
-	/* ---------------------------------------------------------- 3. baixar */
+	/* ---------------------------------------------------------- 2. baixar */
 
 	async function baixar() {
 		if (!g.canvasRef.current || !assets) return
@@ -329,7 +248,7 @@ export function CriativosAdmin() {
 		}
 	}
 
-	/* ------------------------------------------- 4. publicar no status */
+	/* ------------------------------------------- 3. publicar no status */
 
 	async function publicarNoStatus() {
 		const texto = legenda.trim()
@@ -379,8 +298,6 @@ export function CriativosAdmin() {
 
 	/* ------------------------------------------------------------ a tela */
 
-	const mostraRecorte = estado.tipo === 'editorial' || estado.tipo === 'classico-loja'
-
 	return (
 		<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
 			{/* O React 19 iça este link para o <head>. É a MESMA folha que o HTML
@@ -397,67 +314,15 @@ export function CriativosAdmin() {
 					/>
 				</Secao>
 
-				{mostraRecorte && (
-					<Secao
-						titulo={
-							estado.tipo === 'editorial'
-								? 'Editorial — recorte da foto'
-								: 'Recorte — apaga só o piso da foto'
-						}
-					>
-						<button
-							type="button"
-							onClick={() => void removerFundo()}
-							disabled={recortando}
-							className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-3 text-sm font-medium text-foreground hover:bg-background-soft disabled:opacity-50"
-						>
-							{recortando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scissors className="h-4 w-4" />}
-							REMOVER FUNDO DA FOTO (IA)
-						</button>
-						{temRecorte && (
-							<button
-								type="button"
-								onClick={desfazerRecorte}
-								className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
-							>
-								<Undo2 className="h-3.5 w-3.5" />
-								Voltar à foto original
-							</button>
-						)}
-
-						{estado.tipo === 'editorial' && (
-							<CampoFaixa
-								rotulo="Rotação do veículo (°)"
-								min={-180}
-								max={180}
-								valor={estado.edRot}
-								aoMudar={v => campo('edRot', v)}
-							/>
-						)}
-
-						{estado.tipo === 'classico-loja' && (
-							<>
-								<CampoFaixa
-									rotulo="Apagar o piso — quanto da base da foto"
-									min={10}
-									max={55}
-									valor={estado.fatiapiso}
-									aoMudar={v => campo('fatiapiso', v)}
-								/>
-								<Dica>
-									Só essa fatia de BAIXO da foto perde o fundo. O resto entra inteiro — é o que
-									protege vidros e reflexos de virarem buraco.
-								</Dica>
-								<CampoFaixa
-									rotulo="Força da sombra"
-									min={0}
-									max={130}
-									valor={estado.sombra}
-									aoMudar={v => campo('sombra', v)}
-								/>
-							</>
-						)}
-						<Dica>{msgRecorte}</Dica>
+				{estado.tipo === 'editorial' && (
+					<Secao titulo="Editorial — posição do veículo">
+						<CampoFaixa
+							rotulo="Rotação do veículo (°)"
+							min={-180}
+							max={180}
+							valor={estado.edRot}
+							aoMudar={v => campo('edRot', v)}
+						/>
 					</Secao>
 				)}
 

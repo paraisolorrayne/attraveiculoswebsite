@@ -10,7 +10,6 @@
  * `state`, as imagens) virou parâmetro.
  */
 import { enquadrar } from './enquadramento'
-import { amostrar, corMediaDaCaixa, distanciaDeCor } from './contraste'
 import { LARGURA, type Assets, type ImagensDoOperador, type OpcoesFoto } from './tipos'
 
 /** Vermelho oficial Attra — R154 G28 B28. */
@@ -360,64 +359,7 @@ export function drawLogoBlack(
 	ctx.drawImage(logo, cx - maxW / 2, cy - lh / 2, maxW, lh)
 }
 
-/** Caixa real do veículo dentro do recorte (limites do alpha), em frações. */
-export function bboxDoRecorte(recorte: HTMLImageElement): { x0: number; x1: number; y0: number; y1: number } {
-	const cache = recorte as HTMLImageElement & { _bbox?: { x0: number; x1: number; y0: number; y1: number } }
-	if (cache._bbox) return cache._bbox
-	const P = 220
-	const oc = document.createElement('canvas')
-	oc.width = P
-	oc.height = P
-	const o = oc.getContext('2d')!
-	o.drawImage(recorte, 0, 0, P, P)
-	const px = o.getImageData(0, 0, P, P).data
-	let x0 = P
-	let x1 = 0
-	let y0 = P
-	let y1 = 0
-	for (let y = 0; y < P; y++)
-		for (let x = 0; x < P; x++) {
-			if (px[(y * P + x) * 4 + 3] > 24) {
-				if (x < x0) x0 = x
-				if (x > x1) x1 = x
-				if (y < y0) y0 = y
-				if (y > y1) y1 = y
-			}
-		}
-	return (cache._bbox = { x0: x0 / P, x1: (x1 + 1) / P, y0: y0 / P, y1: (y1 + 1) / P })
-}
 
-/**
- * Linha em que o carro encosta no chão, em coordenadas da peça.
- *
- * Vem da última linha OPACA do recorte — a base do pneu, não a borda da foto.
- * É o que permite a divisa do piso se posicionar sozinha: em carro alto (G 63,
- * picape) a divisa fixa cortava as rodas, e o operador tinha que corrigir na
- * mão toda vez.
- */
-export function baseDoRecorte(recorte: HTMLImageElement, dy: number, dh: number): number {
-	const P = 220 // amostra reduzida: basta a linha
-	const oc = document.createElement('canvas')
-	oc.width = P
-	oc.height = P
-	const o = oc.getContext('2d')!
-	o.drawImage(recorte, 0, 0, P, P)
-	const px = o.getImageData(0, 0, P, P).data
-	for (let y = P - 1; y >= 0; y--) {
-		for (let x = 0; x < P; x += 2) {
-			if (px[(y * P + x) * 4 + 3] > 24) return dy + (y / P) * dh
-		}
-	}
-	return dy + dh
-}
-
-export interface PosicaoDoRecorte {
-	dx: number
-	dy: number
-	dw: number
-	dh: number
-	baseDoCarro: number
-}
 
 /**
  * Foto com SÓ O PISO apagado, na janela do Clássico — a versão que a Lorrayne
@@ -429,231 +371,8 @@ export interface PosicaoDoRecorte {
  * (G 63, 14/08). E a base é ancorada no pé da janela, como no modo foto
  * inteira: as rodas nunca são cortadas, em nenhum ajuste.
  */
-/**
- * Canvas do véu, reaproveitado entre quadros — alocar um por quadro era metade
- * do custo da emenda.
- */
-let veuCache: CanvasRenderingContext2D | null = null
-function canvasDoVeu(w: number, h: number): CanvasRenderingContext2D {
-	if (!veuCache) veuCache = document.createElement('canvas').getContext('2d')!
-	const c = veuCache.canvas
-	if (c.width < w || c.height < h) {
-		c.width = Math.max(c.width, w)
-		c.height = Math.max(c.height, h)
-	}
-	return veuCache
-}
 
-/** Altura da faixa em que o véu da emenda se dissolve, em fração da foto. */
-const FAIXA_EMENDA = 0.18
-/** Opacidade máxima do véu: acima disto ele deixa de corrigir e começa a pintar. */
-const EMENDA_MAX = 0.5
 
-/**
- * Aproxima o tom da tira de piso da foto ao do piso da fachada.
- *
- * Mede dos DOIS LADOS do carro — é ali que existe emenda — e só nas janelas
- * imediatamente acima e abaixo da divisa. Medir a faixa inteira incluiria o
- * veículo e puxaria o alvo para a cor da lataria.
- *
- * Se o carro ocupa a largura toda, ou se as duas cores já são próximas, não faz
- * nada: véu sem motivo é sujeira.
- */
-function aplicarEmendaDoChao(
-	ctx: CanvasRenderingContext2D,
-	fc: CanvasRenderingContext2D,
-	foto: HTMLImageElement,
-	recorte: HTMLImageElement,
-	g: { dx: number; dy: number; dw: number; dh: number; L: number; A: number; yCorte: number },
-): void {
-	const { dx, dy, dw, dh, L, A, yCorte } = g
-	const faixa = Math.round(A * FAIXA_EMENDA)
-	if (faixa < 8 || yCorte < faixa) return
-
-	// Janelas laterais, fora da caixa do carro.
-	const bb = bboxDoRecorte(recorte)
-	const margemEsq = bb.x0 * L
-	const margemDir = (1 - bb.x1) * L
-	const lado = Math.floor(Math.min(Math.max(margemEsq, margemDir), L * 0.25))
-	if (lado < 12) return // o carro toma a largura toda: não há emenda visível
-
-	const usaEsquerda = margemEsq >= margemDir
-	const xLocal = usaEsquerda ? 0 : L - lado
-	const xTela = dx + (usaEsquerda ? 0 : dw - (lado * dw) / L)
-	const larguraTela = (lado * dw) / L
-
-	// O piso da foto sai da PRÓPRIA IMAGEM, não do canvas composto: ler de um
-	// <img> não obriga a esperar o desenho da peça terminar, e o resultado é o
-	// mesmo — acima da divisa a foto entra intacta.
-	const ex = foto.naturalWidth / L
-	const ey = foto.naturalHeight / A
-	const doPiso = corMediaDaCaixa(
-		amostrar(foto, xLocal * ex, (yCorte - faixa) * ey, lado * ex, faixa * ey),
-		xLocal * ex,
-		(yCorte - faixa) * ey,
-		lado * ex,
-		faixa * ey,
-	)
-	// Abaixo da divisa, no canvas: a fachada. Amostrada ANTES das sombras, que
-	// ainda não foram desenhadas neste ponto — senão mediríamos a penumbra.
-	const yFachada = dy + ((yCorte + 26) * dh) / A
-	const hFachada = Math.max(8, (faixa * dh) / A)
-	const daFachada = corMediaDaCaixa(
-		amostrar(ctx.canvas, xTela, yFachada, larguraTela, hFachada),
-		xTela,
-		yFachada,
-		larguraTela,
-		hFachada,
-	)
-	if (!doPiso || !daFachada) return
-
-	const alfa = Math.min(EMENDA_MAX, distanciaDeCor(doPiso, daFachada))
-	if (alfa < 0.02) return // já casam: não há o que corrigir
-
-	// O véu tem o tamanho da FAIXA, não o da foto.
-	//
-	// A primeira versão alocava um canvas L×A por quadro e compunha duas vezes
-	// em cima dele. Com recorte, o render do formato subiu de 6,7ms para 25,1ms
-	// — o dobro do orçamento de um quadro, e o slider engasgava na mão. A faixa
-	// é ~18% da altura, e o canvas é reaproveitado entre quadros.
-	const [r, vg, b] = daFachada.map(Math.round)
-	const topo = Math.max(0, yCorte - faixa)
-	const bandaH = yCorte + 24 - topo
-	const vc = canvasDoVeu(L, bandaH)
-	vc.clearRect(0, 0, L, bandaH)
-	const grad = vc.createLinearGradient(0, 0, 0, bandaH)
-	grad.addColorStop(0, `rgba(${r},${vg},${b},0)`)
-	grad.addColorStop(1, `rgba(${r},${vg},${b},${alfa})`)
-	vc.fillStyle = grad
-	vc.fillRect(0, 0, L, bandaH)
-	// O carro sai do véu. O recorte é desenhado na máscara como 0,0,L,A, então
-	// a fatia dele que corresponde à faixa é proporcional.
-	const escalaY = recorte.naturalHeight / A
-	vc.globalCompositeOperation = 'destination-out'
-	vc.drawImage(
-		recorte,
-		0,
-		topo * escalaY,
-		recorte.naturalWidth,
-		bandaH * escalaY,
-		0,
-		0,
-		L,
-		bandaH,
-	)
-	vc.globalCompositeOperation = 'source-over'
-
-	// `source-atop`: pinta só onde a foto já existe, respeitando a máscara.
-	fc.globalCompositeOperation = 'source-atop'
-	fc.drawImage(vc.canvas, 0, 0, L, bandaH, 0, topo, L, bandaH)
-	fc.globalCompositeOperation = 'source-over'
-}
-
-export function fotoComPisoApagado(
-	ctx: CanvasRenderingContext2D,
-	altura: number,
-	foto: HTMLImageElement,
-	recorte: HTMLImageElement,
-	rx: number,
-	ry: number,
-	rw: number,
-	rh: number,
-	opt: OpcoesFoto | undefined,
-	fatia: number,
-	forcaSombra: number,
-): PosicaoDoRecorte {
-	const o = opt ?? NEUTRO
-	// Posição vertical LIVRE (opt.y). Numa rodada eu apliquei aqui a âncora de
-	// base do modo foto-inteira e o slider ↕ ficou sem efeito nenhum — erro meu.
-	// Aqui a âncora é desnecessária: o texto se prende à base REAL do carro
-	// (medida no alpha), então mover a foto move o bloco de texto junto e nada
-	// é cortado.
-	const scale = Math.max(rw / foto.width, rh / foto.height) * o.zoom
-	const dw = foto.width * scale
-	const dh = foto.height * scale
-	const dx = rx + (rw - dw) / 2 - (o.x - 0.5) * Math.max(dw - rw, rw * 0.6)
-	const dy = ry + (rh - dh) / 2 - (o.y - 0.5) * Math.max(dh - rh, rh * 0.6)
-
-	const L = Math.max(1, Math.ceil(dw))
-	const A = Math.max(1, Math.ceil(dh))
-	const yCorte = Math.round(A * (1 - fatia)) // onde o apagamento começa
-
-	const m = document.createElement('canvas')
-	m.width = L
-	m.height = A
-	const mc = m.getContext('2d')!
-	mc.drawImage(recorte, 0, 0, L, A) // alpha do carro embaixo…
-	mc.fillStyle = '#fff'
-	mc.fillRect(0, 0, L, yCorte) // …foto intacta acima
-	// 24px de degradê: a divisa não vira régua, e sobra uma tira do piso
-	// ORIGINAL colada no carro — onde vive a sombra de contato real.
-	const g = mc.createLinearGradient(0, yCorte, 0, yCorte + 24)
-	g.addColorStop(0, 'rgba(255,255,255,1)')
-	g.addColorStop(1, 'rgba(255,255,255,0)')
-	mc.fillStyle = g
-	mc.fillRect(0, yCorte, L, 24)
-
-	const f = document.createElement('canvas')
-	f.width = L
-	f.height = A
-	const fc = f.getContext('2d')!
-	fc.imageSmoothingQuality = 'high'
-	fc.drawImage(foto, 0, 0, L, A)
-	fc.globalCompositeOperation = 'destination-in'
-	fc.drawImage(m, 0, 0)
-	fc.globalCompositeOperation = 'source-over'
-	// SEM fusão no topo. Eu havia posto 70px aqui e não era nada do combinado:
-	// a foto tem que entrar inteira acima da fatia do piso.
-
-	// ---------- EMENDA DO CHÃO ----------
-	//
-	// Onde o piso da foto acaba, começa o da fachada, e os dois foram
-	// fotografados com luz diferente. A divisa aparece como um degrau de cor
-	// atravessando a peça — nas laterais do carro, que é onde há emenda (atrás
-	// dele o carro tapa).
-	//
-	// A correção é puxar SÓ A TIRA de piso na direção do tom da fachada, com um
-	// degradê que morre para cima. Não é harmonização de imagem: é um véu do
-	// tom medido, e o carro está protegido dele pelo próprio recorte.
-	//
-	// O aviso que existe no Clássico — "SEM véu sobre a foto, o degradê lavava a
-	// borracha do pneu e o carro parecia flutuar" — vale e está respeitado: lá o
-	// véu cobria tudo, aqui ele é recortado pelo alpha do carro e confinado à
-	// faixa da divisa.
-	aplicarEmendaDoChao(ctx, fc, foto, recorte, { dx, dy, dw, dh, L, A, yCorte })
-
-	// Sombra ANTES da foto: onde a máscara apagou o chão ela aparece; onde a
-	// foto é opaca (carro, tira de piso original) ela fica escondida atrás —
-	// nunca por cima do veículo. Duas camadas: ambiente larga + contato curta.
-	const baseD = baseDoRecorte(recorte, dy, dh)
-	const forca = forcaSombra / 100
-	const sil = document.createElement('canvas')
-	sil.width = L
-	sil.height = A
-	const sc = sil.getContext('2d')!
-	sc.drawImage(recorte, 0, 0, L, A)
-	sc.globalCompositeOperation = 'source-in'
-	sc.fillStyle = '#000'
-	sc.fillRect(0, 0, L, A)
-	ctx.save()
-	// Clip só do topo até o fim da peça: embaixo nada corta o veículo — o que
-	// sobra ali já foi apagado pela máscara, e o texto se ancora abaixo dele.
-	ctx.beginPath()
-	ctx.rect(rx, ry, rw, altura - ry)
-	ctx.clip()
-	ctx.filter = 'blur(32px)'
-	ctx.globalAlpha = 0.28 * forca
-	ctx.drawImage(sil, dx + dw * 0.03, baseD - dh * 0.13, dw * 0.94, dh * 0.2)
-	ctx.filter = 'blur(8px)'
-	ctx.globalAlpha = 0.8 * forca
-	ctx.drawImage(sil, dx + dw * 0.1, baseD - dh * 0.045, dw * 0.8, dh * 0.065)
-	ctx.filter = 'none'
-	ctx.globalAlpha = 1
-	ctx.drawImage(f, dx, dy)
-	ctx.restore()
-
-	return { dx, dy, dw, dh, baseDoCarro: baseD }
-}
 
 /**
  * Foto inteira na banda do carro, com fusão SÓ no topo.
@@ -717,6 +436,16 @@ export function espelharBaseDaFoto(
 	largura: number,
 	alcance: number,
 	forca: number,
+	/**
+	 * Fração final do alcance em que o reflexo se dissolve.
+	 *
+	 * 1 = dissolve ao longo de todo o trajeto (é o que o Clássico quer: a faixa
+	 * pintada tem tom próprio e deve reaparecer). Valores menores seguram o
+	 * reflexo em pé e só o desmancham perto do fim — é o que o Clássico Loja
+	 * quer, onde o piso da foto precisa CHEGAR ao corte em vez de virar fachada
+	 * no meio do caminho.
+	 */
+	dissolveNoFim = 1,
 ): void {
 	if (forca <= 0.02 || alcance < 8 || y < TIRA_ESPELHO) return
 	const oc = canvasDoEspelho(largura, alcance)
@@ -737,7 +466,9 @@ export function espelharBaseDaFoto(
 	oc.restore()
 	oc.globalCompositeOperation = 'destination-out'
 	const dissolve = oc.createLinearGradient(0, 0, 0, alcance)
+	const inicioDaQueda = Math.max(0, Math.min(0.95, 1 - dissolveNoFim))
 	dissolve.addColorStop(0, `rgba(0,0,0,${1 - forca})`)
+	if (inicioDaQueda > 0) dissolve.addColorStop(inicioDaQueda, `rgba(0,0,0,${1 - forca})`)
 	dissolve.addColorStop(1, 'rgba(0,0,0,1)')
 	oc.fillStyle = dissolve
 	oc.fillRect(0, 0, largura, alcance)

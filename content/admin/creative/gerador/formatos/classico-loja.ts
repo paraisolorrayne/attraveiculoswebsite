@@ -13,23 +13,25 @@ import {
 	drawPhoto,
 	drawPhotoBanda,
 	espelharBaseDaFoto,
-	fotoComPisoApagado,
 	placeholder,
 	spacedText,
 	spacedWidth,
-	type PosicaoDoRecorte,
 } from '../desenho'
 import { amostrar, fundoDaCaixa, haloCss, paletaLegivel, type Amostra } from '../contraste'
 import { ALTURA_FEED, ALTURA_STORIES, LARGURA as W, type ContextoDesenho } from '../tipos'
 
 /**
- * Até onde a base da foto se dissolve na fachada.
+ * O piso da foto segue até o CORTE, não só até a emenda.
  *
- * Mais longo que no Clássico (90) porque aqui não há faixa pintada esperando do
- * outro lado: o espelho precisa entregar a foto à fachada, que é outra
- * fotografia, e a passagem tem de ser lenta o bastante para não virar aresta.
+ * Antes o reflexo tinha 90px e dissolvia na fachada — a divisa sumia, mas o
+ * chão virava o concreto da fachada no meio do bloco de texto, e a peça lia
+ * como dois pisos diferentes. Agora ele atravessa o bloco inteiro e só se
+ * desmancha nos últimos 30%, junto ao corte da foto de baixo.
  */
-const ALCANCE_EMENDA = 90
+const DISSOLVE_NO_FIM = 0.3
+/** Limites do trajeto, para casos extremos de enquadramento. */
+const ALCANCE_MIN = 60
+const ALCANCE_MAX = 340
 
 export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
 	const FEED = H === ALTURA_FEED // 1080×1350: só a foto principal, rodapé fecha mais cedo
@@ -58,13 +60,11 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		ctx.fillRect(0, 0, W, H)
 	}
 
-	// foto do carro com bordas esfumadas, fundida na fachada
-	// Com recorte, a foto é desenhada DEPOIS da faixa de piso — o piso precisa
-	// aparecer por trás do carro, no lugar do chão que a máscara apagou. Sem
-	// recorte, tudo segue como antes.
-	const comRecorte = !!(imagens.foto1 && imagens.foto1Cut)
-	let baseDoCarro: number | null = null
-	let posCarro: PosicaoDoRecorte | null = null
+	// A foto entra INTEIRA na banda, sempre.
+	//
+	// Havia aqui um segundo caminho, com o fundo removido por IA: a foto era
+	// mascarada pelo recorte, o piso dela apagado numa fatia e o carro
+	// redesenhado por último. Saiu em 31/08/2026 junto com o próprio recorte.
 	let baseDaFoto: number | null = null
 
 	// Até onde o carro pode descer sem espremer o texto.
@@ -103,29 +103,7 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const BANDA_H = Math.max(300, Math.min(520, BASE_MAX + Math.min(0, pisoShiftPre) - BANDA_TOPO))
 
 	let topGap = PHOTO1_H
-	if (comRecorte) {
-		// Apaga SÓ O PISO da foto (fatia do slider); o resto entra intacto.
-		// A janela é a mesma do modo foto inteira (abaixo do título), então o
-		// letreiro do fundo nunca é coberto — e o preço se ancora na base real do
-		// carro, medida no alpha do recorte.
-		const fatia = (estado.fatiapiso || 30) / 100
-		const r = fotoComPisoApagado(
-			ctx,
-			H,
-			imagens.foto1!,
-			imagens.foto1Cut!,
-			0,
-			BANDA_TOPO,
-			W,
-			BANDA_H,
-			estado.f1,
-			fatia,
-			estado.sombra,
-		)
-		topGap = Math.max(540, r.dy)
-		baseDoCarro = r.baseDoCarro
-		posCarro = r
-	} else if (imagens.foto1) {
+	if (imagens.foto1) {
 		const r = drawPhotoBanda(ctx, H, imagens.foto1, 0, BANDA_TOPO, W, BANDA_H, estado.f1)
 		topGap = Math.max(0, r.topo)
 		baseDaFoto = r.base
@@ -139,8 +117,17 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		// Aqui não há trava de legibilidade porque não precisa: neste formato a
 		// cor do texto já é medida do fundo (ver contraste.ts), e o espelho é
 		// desenhado antes dessa medição — então o preço se adapta ao que sobrar.
-		if (r.base > BANDA_TOPO && r.base < H - 40)
-			espelharBaseDaFoto(ctx, Math.round(r.base), W, ALCANCE_EMENDA, 1)
+		const topoDoCorte = FEED ? H - 40 : CUT_ - 20
+		const base = Math.round(r.base)
+		if (base > BANDA_TOPO && base < topoDoCorte)
+			espelharBaseDaFoto(
+				ctx,
+				base,
+				W,
+				Math.max(ALCANCE_MIN, Math.min(ALCANCE_MAX, topoDoCorte - base)),
+				1,
+				DISSOLVE_NO_FIM,
+			)
 	} else {
 		ctx.fillStyle = 'rgba(255,255,255,.45)'
 		ctx.font = '600 26px Montserrat, sans-serif'
@@ -236,18 +223,12 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	// O `pisoy` sobra como ajuste fino da altura do bloco de texto, e o `corte`
 	// continua definindo onde entra a foto de baixo.
 	const pisoShift = pisoShiftPre
-	// Com recorte: ancora na base real do carro. Sem recorte: no pé da banda da
-	// foto — o texto nunca depende de onde o slider ↕ deixou a foto.
-	// A divisa acompanha a base do veículo, MAS nunca passa de BASE_MAX: além
-	// dele o bloco de texto não caberia inteiro e os destaques eram cortados.
-	// A trava é no TEXTO, não na foto — travar a foto prendia o slider em quase
-	// toda a faixa, que não é o que se quer: o enquadramento continua livre.
+	// O texto ancora no pé da foto, MAS a divisa nunca passa de BASE_MAX: além
+	// dele o bloco não caberia inteiro e os destaques eram cortados. A trava é
+	// no TEXTO, não na foto — travar a foto prendia o slider em quase toda a
+	// faixa, que não é o que se quer: o enquadramento continua livre.
 	const pisoBruto =
-		baseDoCarro !== null
-			? Math.round(baseDoCarro) + 30 // recorte: base real do carro
-			: baseDaFoto !== null
-				? Math.round(baseDaFoto)
-				: BANDA_TOPO + BANDA_H + 4 // foto inteira: base da faixa
+		baseDaFoto !== null ? Math.round(baseDaFoto) : BANDA_TOPO + BANDA_H + 4
 	const PISO_TOP = Math.min(pisoBruto, BASE_MAX) + pisoShift
 
 	// SEM véu sobre a foto — ver a nota no Clássico original: o degradê branco
@@ -288,9 +269,13 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const fundoPreco = textoPreco
 		? fundoDaCaixa(amostraTexto, W / 2 - larguraPreco / 2 - 8, yPreco - 40, larguraPreco + 16, 52)
 		: null
-	// O preço tem 48px — texto grande pelo WCAG, onde 3:1 basta. Exigir 4,5 ali
-	// só engrossaria o contorno do maior elemento da peça.
-	const pPreco = paletaLegivel(fundoPreco, { alvo: 3, corEscura: '#2b2b31', corClara: '#f4f4f7' })
+	// 4,5:1 no preço, e não os 3:1 que o WCAG permitiria a 48px.
+	//
+	// Enquanto o texto caía sobre a fachada — fundo previsível — 3:1 bastava.
+	// Agora ele cai sobre o CHÃO DA FOTO, que muda a cada veículo e tem textura:
+	// medido na McLaren, 3,49:1 passava no papel e lia mal na peça. O custo de
+	// exigir mais é um halo um pouco mais forte, que só aparece quando precisa.
+	const pPreco = paletaLegivel(fundoPreco, { alvo: 4.5, corEscura: '#2b2b31', corClara: '#f4f4f7' })
 
 	const kmParts: string[] = []
 	if (estado.km.trim()) kmParts.push(estado.km.trim() + ' KM')
@@ -398,18 +383,6 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	}
 	ctx.shadowColor = 'transparent'
 	ctx.shadowBlur = 0
-
-	// O veículo é redesenhado por ÚLTIMO — prioridade máxima na peça.
-	// Com o slider vertical livre, carro e texto podem se encontrar nos
-	// extremos; nesse encontro quem fica por cima é sempre o carro.
-	if (comRecorte && posCarro && imagens.foto1Cut) {
-		ctx.save()
-		ctx.beginPath()
-		ctx.rect(0, 540, W, H - 540)
-		ctx.clip()
-		ctx.drawImage(imagens.foto1Cut, posCarro.dx, posCarro.dy, posCarro.dw, posCarro.dh)
-		ctx.restore()
-	}
 
 	ctx.shadowColor = 'transparent'
 	ctx.shadowBlur = 0

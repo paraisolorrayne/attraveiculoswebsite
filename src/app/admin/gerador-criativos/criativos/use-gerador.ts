@@ -46,12 +46,6 @@ export interface Gerador {
 	canvasRef: React.RefObject<HTMLCanvasElement | null>
 	estado: EstadoCriativo
 	imagens: React.RefObject<ImagensDoOperador>
-	/**
-	 * De onde veio a foto principal. Fica FORA de EstadoCriativo de propósito:
-	 * nada aqui é lido pelo desenho, só pelo recorte por IA. Misturar as duas
-	 * coisas transformaria o contrato de desenho num saco de recados.
-	 */
-	origemFoto1: React.RefObject<OrigemFoto>
 	assets: Assets | null
 	pronto: boolean
 	erro: string | null
@@ -59,23 +53,14 @@ export interface Gerador {
 	redesenhar: () => void
 	campo: <K extends keyof EstadoCriativo>(chave: K, valor: EstadoCriativo[K]) => void
 	trocarFormato: (tipo: FormatoId) => void
-	aplicarFoto: (slot: SlotFoto, img: HTMLImageElement, origem?: OrigemFoto) => void
+	aplicarFoto: (slot: SlotFoto, img: HTMLImageElement) => void
 	definirLogo: (img: HTMLImageElement | null, dataUrl?: string) => void
-}
-
-/** De onde veio a foto principal — o rembg precisa saber para escolher o corpo. */
-export interface OrigemFoto {
-	/** dataURL reduzido, quando o operador enviou do computador. */
-	dados?: string | null
-	/** URL pública, quando a foto veio do estoque. */
-	url?: string | null
 }
 
 export function useGerador(): Gerador {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [estado, setEstado] = useState<EstadoCriativo>(() => structuredClone(ESTADO_INICIAL))
 	const imagens = useRef<ImagensDoOperador>(structuredClone(IMAGENS_VAZIAS))
-	const origemFoto1 = useRef<OrigemFoto>({ dados: null, url: null })
 	const [versao, setVersao] = useState(0)
 	const [assets, setAssets] = useState<Assets | null>(null)
 	const [erro, setErro] = useState<string | null>(null)
@@ -168,13 +153,9 @@ export function useGerador(): Gerador {
 		})
 	}, [])
 
-	const aplicarFoto = useCallback((slot: SlotFoto, img: HTMLImageElement, origem?: OrigemFoto) => {
+	const aplicarFoto = useCallback((slot: SlotFoto, img: HTMLImageElement) => {
 		imagens.current[slot] = img
 		if (slot === 'foto1') {
-			// Foto nova invalida o recorte anterior — senão o carro recortado de
-			// um carro sobrava na peça do seguinte.
-			imagens.current.foto1Cut = null
-			origemFoto1.current = { dados: origem?.dados ?? null, url: origem?.url ?? null }
 			setEstado(e => ({ ...e, f1: enquadramentoAutomatico(img, e.tipo) }))
 		} else {
 			redesenhar()
@@ -196,7 +177,6 @@ export function useGerador(): Gerador {
 		canvasRef,
 		estado,
 		imagens,
-		origemFoto1,
 		assets,
 		pronto: !!assets,
 		erro,

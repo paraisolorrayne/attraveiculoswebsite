@@ -37,7 +37,7 @@ export function renderEditorial({ ctx, estado, imagens, assets, altura: H }: Con
 	drawLogoWhite(ctx, assets, imagens, W / 2, 128, 250)
 
 	// ---------- carro (recortado pela IA) no palco ----------
-	const carro = imagens.foto1Cut || imagens.foto1
+	const carro = imagens.foto1
 	if (carro) {
 		const bx = 30
 		const bw = W - 60
@@ -60,8 +60,8 @@ export function renderEditorial({ ctx, estado, imagens, assets, altura: H }: Con
 			ctx.translate(-rcx, -rcy)
 		}
 
-		// sombra elíptica suave no piso (só quando o carro está recortado)
-		if (imagens.foto1Cut) {
+		// sombra elíptica suave no piso
+		{
 			const scx = dx + dw / 2
 			const scy = dy + dh - 8
 			const sombra = ctx.createRadialGradient(scx, scy, 0, scx, scy, dw * 0.42)
@@ -84,7 +84,7 @@ export function renderEditorial({ ctx, estado, imagens, assets, altura: H }: Con
 		ctx.fillStyle = 'rgba(255,255,255,.4)'
 		ctx.font = '400 24px ' + ED.fonte
 		ctx.textAlign = 'center'
-		ctx.fillText('ENVIE A FOTO PRINCIPAL E USE "REMOVER FUNDO"', W / 2, 900)
+		ctx.fillText('ENVIE A FOTO PRINCIPAL DO VEÍCULO', W / 2, 900)
 		ctx.textAlign = 'left'
 	}
 

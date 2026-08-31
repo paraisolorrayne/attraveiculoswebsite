@@ -306,7 +306,19 @@ export interface OpcoesPaleta {
 	corClara?: string
 }
 
-/** Teto do halo: acima disto ele deixa de ser contorno e vira mancha. */
+/**
+ * Teto do halo: acima disto ele deixa de ser contorno e vira mancha.
+ *
+ * O teto não é estético, é físico: o halo é desenhado como sombra AO REDOR do
+ * glifo e sangra para dentro do traço, clareando o próprio miolo da letra.
+ * Passado certo ponto ele derruba o contraste em vez de subir.
+ *
+ * Medido, tentando calibrar o modelo para ser mais conservador e assim pedir
+ * halos mais fortes: na RAM o contraste real do preço CAIU de 8,53:1 para
+ * 5,55:1, e a McLaren — o caso que se queria resolver — não saiu de 3,5:1. Quem
+ * for tentar apertar o halo de novo vai reencontrar isto. O lever certo para
+ * fundo de tom médio não é o halo: é mudar o fundo.
+ */
 const HALO_MAX = 0.9
 
 /**
