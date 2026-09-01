@@ -26,6 +26,7 @@ import {
 	type SlotFoto,
 } from '@content/admin/creative/gerador'
 import { fontesDoGerador } from '@content/admin/creative/gerador/fontes'
+import type { ChaveFoto, CriativoGuardado, FotoGuardada } from '@content/admin/creative/gerador/historico'
 
 /** A logo do operador sobrevive ao F5 — o HTML guardava sob esta mesma chave. */
 const CHAVE_LOGO = 'attra_logo'
@@ -46,6 +47,13 @@ export interface Gerador {
 	canvasRef: React.RefObject<HTMLCanvasElement | null>
 	estado: EstadoCriativo
 	imagens: React.RefObject<ImagensDoOperador>
+	/**
+	 * De onde veio cada foto. Fica FORA de EstadoCriativo porque o desenho não
+	 * lê nada disto — serve só ao histórico, que precisa saber se guarda uma URL
+	 * (foto do estoque, recarregável) ou o arquivo inteiro (veio do computador e
+	 * não existe em mais lugar nenhum).
+	 */
+	origens: React.RefObject<Partial<Record<ChaveFoto, FotoGuardada>>>
 	assets: Assets | null
 	pronto: boolean
 	erro: string | null
@@ -53,14 +61,19 @@ export interface Gerador {
 	redesenhar: () => void
 	campo: <K extends keyof EstadoCriativo>(chave: K, valor: EstadoCriativo[K]) => void
 	trocarFormato: (tipo: FormatoId) => void
-	aplicarFoto: (slot: SlotFoto, img: HTMLImageElement) => void
-	definirLogo: (img: HTMLImageElement | null, dataUrl?: string) => void
+	aplicarFoto: (slot: SlotFoto, img: HTMLImageElement, origem?: FotoGuardada) => void
+	/** Guarda a origem de uma foto que não passa por aplicarFoto (Estoque, logo). */
+	registrarOrigem: (chave: ChaveFoto, origem: FotoGuardada) => void
+	/** Recarrega uma peça inteira do histórico. */
+	restaurar: (c: CriativoGuardado) => Promise<void>
+	definirLogo: (img: HTMLImageElement | null, dataUrl?: string, arquivo?: Blob) => void
 }
 
 export function useGerador(): Gerador {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const [estado, setEstado] = useState<EstadoCriativo>(() => structuredClone(ESTADO_INICIAL))
 	const imagens = useRef<ImagensDoOperador>(structuredClone(IMAGENS_VAZIAS))
+	const origens = useRef<Partial<Record<ChaveFoto, FotoGuardada>>>({})
 	const [versao, setVersao] = useState(0)
 	const [assets, setAssets] = useState<Assets | null>(null)
 	const [erro, setErro] = useState<string | null>(null)
@@ -153,17 +166,71 @@ export function useGerador(): Gerador {
 		})
 	}, [])
 
-	const aplicarFoto = useCallback((slot: SlotFoto, img: HTMLImageElement) => {
-		imagens.current[slot] = img
-		if (slot === 'foto1') {
-			setEstado(e => ({ ...e, f1: enquadramentoAutomatico(img, e.tipo) }))
-		} else {
-			redesenhar()
-		}
-	}, [redesenhar])
+	const aplicarFoto = useCallback(
+		(slot: SlotFoto, img: HTMLImageElement, origem?: FotoGuardada) => {
+			imagens.current[slot] = img
+			if (origem) origens.current[slot] = origem
+			if (slot === 'foto1') {
+				setEstado(e => ({ ...e, f1: enquadramentoAutomatico(img, e.tipo) }))
+			} else {
+				redesenhar()
+			}
+		},
+		[redesenhar],
+	)
 
-	const definirLogo = useCallback((img: HTMLImageElement | null, dataUrl?: string) => {
+	const registrarOrigem = useCallback((chave: ChaveFoto, origem: FotoGuardada) => {
+		origens.current[chave] = origem
+	}, [])
+
+	/**
+	 * Recarrega uma peça do histórico.
+	 *
+	 * As fotos voltam em paralelo e só então o estado é aplicado — pôr o estado
+	 * antes faria a peça abrir com os textos certos e as fotos da peça ANTERIOR
+	 * por alguns quadros, que é o tipo de piscada que faz o operador achar que
+	 * salvou errado.
+	 */
+	const restaurar = useCallback(
+		async (c: CriativoGuardado) => {
+			const novas = structuredClone(IMAGENS_VAZIAS)
+			const urlsTemporarias: string[] = []
+			await Promise.all(
+				Object.entries(c.fotos).map(async ([chave, foto]) => {
+					if (!foto) return
+					let src: string
+					if (foto.origem === 'estoque') {
+						src = foto.url
+					} else {
+						src = URL.createObjectURL(foto.arquivo)
+						urlsTemporarias.push(src)
+					}
+					try {
+						const img = await carregar(src)
+						const m = /^est([0-3])$/.exec(chave)
+						if (m) novas.estFotos[Number(m[1])] = img
+						else novas[chave as 'foto1' | 'foto2' | 'foto3' | 'foto4' | 'logo'] = img
+					} catch {
+						// Foto que não volta (URL do estoque que saiu do ar) não pode
+						// derrubar a restauração do resto da peça.
+					}
+				}),
+			)
+			// O canvas desenha a partir do bitmap, não da URL: segurar os object
+			// URLs depois disso só vazaria memória.
+			for (const u of urlsTemporarias) URL.revokeObjectURL(u)
+			imagens.current = novas
+			origens.current = { ...c.fotos }
+			setEstado(structuredClone(c.estado))
+			redesenhar()
+		},
+		[redesenhar],
+	)
+
+	const definirLogo = useCallback((img: HTMLImageElement | null, dataUrl?: string, arquivo?: Blob) => {
 		imagens.current.logo = img
+		if (img && arquivo) origens.current.logo = { origem: 'arquivo', arquivo }
+		else delete origens.current.logo
 		try {
 			if (img && dataUrl) localStorage.setItem(CHAVE_LOGO, dataUrl)
 			else localStorage.removeItem(CHAVE_LOGO)
@@ -177,6 +244,7 @@ export function useGerador(): Gerador {
 		canvasRef,
 		estado,
 		imagens,
+		origens,
 		assets,
 		pronto: !!assets,
 		erro,
@@ -185,6 +253,8 @@ export function useGerador(): Gerador {
 		campo,
 		trocarFormato,
 		aplicarFoto,
+		registrarOrigem,
+		restaurar,
 		definirLogo,
 	}
 }

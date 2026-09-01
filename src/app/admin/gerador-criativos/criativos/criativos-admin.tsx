@@ -20,8 +20,8 @@
  * (src/lib/vehicle-hero-asset.ts, usado em /veiculos) é outro e continua.
  */
 
-import { useCallback, useRef, useState } from 'react'
-import { Download, Loader2, Search, Send } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Clock3, Download, Loader2, Pencil, Search, Send, Trash2 } from 'lucide-react'
 import {
 	ALTURA_STORIES,
 	carregar,
@@ -32,7 +32,14 @@ import {
 } from '@content/admin/creative/gerador'
 import { FOLHA_GOOGLE } from '@content/admin/creative/gerador/fontes'
 import { CampoArquivo, CampoTexto, Dica, Escolha, PainelCampos, Secao } from './campos'
-import { exportarPeca } from './baixar'
+import { exportarPeca, nomeDaPeca } from './baixar'
+import {
+	guardar,
+	listar,
+	miniaturaDe,
+	remover,
+	type CriativoGuardado,
+} from '@content/admin/creative/gerador/historico'
 import { urlFotoEstoque, useGerador } from './use-gerador'
 
 interface VeiculoEstoque {
@@ -96,8 +103,48 @@ export function CriativosAdmin() {
 	const [publicando, setPublicando] = useState(false)
 	const [msgStatus, setMsgStatus] = useState('')
 
+	const [historico, setHistorico] = useState<CriativoGuardado[]>([])
+	const [miniaturas, setMiniaturas] = useState<Record<string, string>>({})
+
 	const slotAtual = useRef<SlotFoto>('foto1')
 	const [slotVisivel, setSlotVisivel] = useState<SlotFoto>('foto1')
+
+	/* --------------------------------------- histórico das últimas 24h */
+
+	// As miniaturas viram object URLs, que precisam ser revogados — senão cada
+	// recarga da lista vaza um blob por card. O controle fica num ref, e NÃO
+	// dentro do updater de estado: o React chama updaters duas vezes em
+	// StrictMode, e revogar ali derrubaria as URLs que a segunda chamada acabou
+	// de criar, deixando os cards sem imagem em desenvolvimento.
+	const urlsDasMiniaturas = useRef<string[]>([])
+
+	const recarregarHistorico = useCallback(async () => {
+		const itens = await listar()
+		for (const u of urlsDasMiniaturas.current) URL.revokeObjectURL(u)
+		const novas = Object.fromEntries(itens.map(i => [i.id, URL.createObjectURL(i.miniatura)]))
+		urlsDasMiniaturas.current = Object.values(novas)
+		setHistorico(itens)
+		setMiniaturas(novas)
+	}, [])
+
+	useEffect(() => {
+		void recarregarHistorico()
+		return () => {
+			for (const u of urlsDasMiniaturas.current) URL.revokeObjectURL(u)
+			urlsDasMiniaturas.current = []
+		}
+	}, [recarregarHistorico])
+
+	async function editar(c: CriativoGuardado) {
+		await g.restaurar(c)
+		setMsgDownload(`Editando "${c.nome}", gerado às ${new Date(c.quando).toLocaleTimeString('pt-BR')}.`)
+		window.scrollTo({ top: 0, behavior: 'smooth' })
+	}
+
+	async function descartar(id: string) {
+		await remover(id)
+		await recarregarHistorico()
+	}
 
 	/* ------------------------------------------------ 1. busca no estoque */
 
@@ -145,7 +192,7 @@ export function CriativosAdmin() {
 				const url = fotos[Math.min(pos, fotos.length) - 1]
 				if (!url) return
 				void carregar(urlFotoEstoque(url)).then(img => {
-					g.aplicarFoto(SLOTS_FICHA[i], img)
+					g.aplicarFoto(SLOTS_FICHA[i], img, { origem: 'estoque', url: urlFotoEstoque(url) })
 				})
 			})
 		},
@@ -195,7 +242,7 @@ export function CriativosAdmin() {
 	function usarFotoDaGaleria(url: string, comShift: boolean) {
 		const destino: SlotFoto = estado.tipo === 'ficha' ? slotAtual.current : comShift ? 'foto2' : 'foto1'
 		void carregar(urlFotoEstoque(url)).then(img => {
-			g.aplicarFoto(destino, img)
+			g.aplicarFoto(destino, img, { origem: 'estoque', url: urlFotoEstoque(url) })
 			setUsadas(u => {
 				const novo: Record<string, SlotFoto> = {}
 				for (const [k, v] of Object.entries(u)) if (v !== destino) novo[k] = v
@@ -214,7 +261,7 @@ export function CriativosAdmin() {
 
 	function aoEscolherFotoDoComputador(slot: 'foto1' | 'foto2' | 'foto3' | 'foto4', file: File) {
 		void lerArquivo(file)
-			.then(({ img }) => g.aplicarFoto(slot, img))
+			.then(({ img }) => g.aplicarFoto(slot, img, { origem: 'arquivo', arquivo: file }))
 			.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
 	}
 
@@ -222,6 +269,7 @@ export function CriativosAdmin() {
 		void lerArquivo(file)
 			.then(({ img }) => {
 				imagens.current.estFotos[indice] = img
+				g.registrarOrigem(`est${indice as 0 | 1 | 2 | 3}`, { origem: 'arquivo', arquivo: file })
 				g.redesenhar()
 			})
 			.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
@@ -241,6 +289,19 @@ export function CriativosAdmin() {
 				setMsgDownload,
 			)
 			setMsgDownload(r.mensagem)
+			// O histórico entra DEPOIS do download: se guardar falhar (cota, janela
+			// anônima), o operador já tem os PNGs na mão.
+			const mini = await miniaturaDe(g.canvasRef.current)
+			if (mini) {
+				await guardar({
+					nome: [estado.marca, estado.modelo].map(t => t.trim()).filter(Boolean).join(' ') || nomeDaPeca(estado),
+					formato: estado.tipo,
+					estado: structuredClone(estado),
+					fotos: { ...g.origens.current },
+					miniatura: mini,
+				})
+				await recarregarHistorico()
+			}
 		} catch (e) {
 			setMsgDownload(`Não foi possível exportar: ${e instanceof Error ? e.message : String(e)}`)
 		} finally {
@@ -306,6 +367,63 @@ export function CriativosAdmin() {
 			<link rel="stylesheet" href={FOLHA_GOOGLE} />
 
 			<div className="space-y-5">
+				{historico.length > 0 && (
+					<Secao titulo={`Criativos gerados nas últimas 24h (${historico.length})`}>
+						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+							{historico.map(c => (
+								<div
+									key={c.id}
+									className="flex flex-col overflow-hidden rounded-lg border border-border bg-background"
+								>
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={miniaturas[c.id]}
+										alt={c.nome}
+										className="block w-full bg-background-soft object-cover"
+										style={{ aspectRatio: '9 / 16' }}
+									/>
+									<div className="flex flex-1 flex-col gap-2 p-2">
+										<div>
+											<p className="truncate text-xs font-medium text-foreground" title={c.nome}>
+												{c.nome}
+											</p>
+											<p className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+												<Clock3 className="h-3 w-3" />
+												{new Date(c.quando).toLocaleString('pt-BR', {
+													dateStyle: 'short',
+													timeStyle: 'short',
+												})}
+											</p>
+										</div>
+										<div className="mt-auto flex gap-1.5">
+											<button
+												type="button"
+												onClick={() => void editar(c)}
+												className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-white hover:bg-primary/90"
+											>
+												<Pencil className="h-3 w-3" />
+												Editar
+											</button>
+											<button
+												type="button"
+												onClick={() => void descartar(c.id)}
+												title="Remover do histórico"
+												className="rounded-md border border-border px-2 py-1.5 text-foreground-secondary hover:bg-background-soft"
+											>
+												<Trash2 className="h-3 w-3" />
+											</button>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+						<Dica>
+							Guardado só neste navegador, e apagado sozinho depois de 24h. Editar recarrega a peça
+							inteira — campos, enquadramento e fotos — no estado em que ela foi gerada.
+						</Dica>
+					</Secao>
+				)}
+
 				<Secao titulo="Tipo de criativo">
 					<Escolha<FormatoId>
 						opcoes={FORMATOS}
@@ -434,7 +552,7 @@ export function CriativosAdmin() {
 						aceita="image/png"
 						aoEscolher={f =>
 							void lerArquivo(f)
-								.then(({ img, dados }) => g.definirLogo(img, dados))
+								.then(({ img, dados }) => g.definirLogo(img, dados, f))
 								.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
 						}
 					/>
