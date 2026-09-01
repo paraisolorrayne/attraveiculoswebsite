@@ -20,11 +20,13 @@
 
 import { useState } from 'react'
 import { CriativosAdmin } from './criativos/criativos-admin'
+import { DossieAdmin } from './dossie/dossie-admin'
 import { StoryVendidoAdmin } from './story-vendido-admin'
 
 const ABAS = [
   { id: 'criativos', rotulo: 'Criativos' },
   { id: 'vendido', rotulo: 'Story Vendido' },
+  { id: 'dossie', rotulo: 'Dossiê' },
 ] as const
 
 type Aba = (typeof ABAS)[number]['id']
@@ -59,6 +61,9 @@ export function GeradorCriativosAdmin() {
         </div>
         <div hidden={aba !== 'vendido'}>
           <StoryVendidoAdmin />
+        </div>
+        <div hidden={aba !== 'dossie'}>
+          <DossieAdmin visivel={aba === 'dossie'} />
         </div>
       </div>
     </div>
