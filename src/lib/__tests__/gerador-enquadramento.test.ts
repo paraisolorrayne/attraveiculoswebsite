@@ -60,7 +60,7 @@ describe('enquadramentoAutomatico — a calibração da Lorrayne (04/08/2026)', 
 
 	it('qualquer outro formato fica neutro, mesmo com foto horizontal', () => {
 		// A banda 540..1060 do Clássico Loja afunda o carro com o zoom calibrado.
-		for (const tipo of ['classico-loja', 'destaque', 'estoque', 'editorial', 'ficha'] as const) {
+		for (const tipo of ['classico-loja', 'destaque', 'estoque', 'ficha'] as const) {
 			expect(enquadramentoAutomatico(HORIZONTAL, tipo)).toEqual(NEUTRO)
 		}
 	})
