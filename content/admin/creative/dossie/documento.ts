@@ -13,23 +13,9 @@
  * Puppeteer nem de biblioteca de PDF — nenhuma dependência nova, e o que o
  * operador vê na prévia é exatamente o que sai impresso.
  */
+import { CSS_DAS_CAPAS, paginaCapa } from './capas'
+import { comDestaques, escapar, LOGO } from './comum'
 import { cartaAoCliente, FOTOS_FIXAS, FOTOS_POR_PAGINA_GALERIA, type Dossie } from './tipos'
-
-/** Negrito com **asteriscos**, que é como a carta marca os destaques. */
-function comDestaques(texto: string): string {
-	return escapar(texto).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-}
-
-function escapar(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-}
-
-/** Logo da Attra, servida de /public — a mesma dos criativos. */
-const LOGO = '/gerador/logo-branca.png'
 
 const CSS = `
 :root{
@@ -62,22 +48,7 @@ body{
 .cabecalho .num{color:var(--sangue); margin-right:.6em}
 .cabecalho .dir{color:var(--papel-fraco); font-weight:500}
 
-/* ---------- capa ---------- */
-.capa .foto{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
-.capa .veu{
-  position:absolute; inset:0;
-  background:linear-gradient(160deg,rgba(11,11,13,.94) 0 32%,rgba(11,11,13,.10) 55%,rgba(11,11,13,.92) 88%);
-}
-.capa .rotulo{position:absolute; top:16mm; left:14mm; font-size:15pt; letter-spacing:.32em; font-weight:300; line-height:1.5}
-.capa .risco{position:absolute; top:12mm; left:14mm; width:3mm; height:9mm; background:var(--sangue)}
-.capa .pe{position:absolute; left:14mm; right:14mm; bottom:14mm}
-.capa .marca{font-size:15pt; letter-spacing:.10em; font-weight:300}
-.capa .modelo{font-size:44pt; font-weight:800; letter-spacing:.01em; line-height:1; margin:1mm 0 2mm}
-.capa .assinatura{font-size:9pt; letter-spacing:.28em; color:var(--papel-fraco); text-align:right; border-top:1px solid var(--linha); padding-top:2mm}
-.capa .campos{display:flex; gap:14mm; margin-top:7mm}
-.capa .campos div span{display:block; font-size:6.5pt; letter-spacing:.24em; color:var(--papel-fraco)}
-.capa .campos div b{font-size:9.5pt; letter-spacing:.18em; font-weight:700}
-.capa .logo{position:absolute; right:14mm; bottom:13mm; width:32mm}
+${CSS_DAS_CAPAS}
 
 /* ---------- moldura (carta e contracapa) ---------- */
 .moldura{position:absolute; inset:8mm; border:1px solid var(--sangue)}
@@ -166,30 +137,6 @@ body{
   .pagina{margin:0; box-shadow:none}
 }
 `
-
-function paginaCapa(d: Dossie): string {
-	const campos = [
-		['ANO', d.ano],
-		['COR', d.cor],
-		['KM', d.km],
-	]
-		.filter(([, v]) => v)
-		.map(([r, v]) => `<div><span>${escapar(r)}</span><b>${escapar(v)}</b></div>`)
-		.join('')
-	return `<section class="pagina capa">
-  ${d.fotos[0] ? `<img class="foto" src="${escapar(d.fotos[0])}" alt="">` : ''}
-  <div class="veu"></div>
-  <div class="risco"></div>
-  <div class="rotulo">DOSSIÊ<br>TÉCNICO</div>
-  <div class="pe">
-    <div class="marca">${escapar(d.marca.toUpperCase())}</div>
-    <div class="modelo">${escapar(d.modelo.toUpperCase())}</div>
-    ${d.assinatura ? `<div class="assinatura">${escapar(d.assinatura.toUpperCase())}</div>` : ''}
-    <div class="campos">${campos}</div>
-  </div>
-  <img class="logo" src="${LOGO}" alt="Attra Veículos">
-</section>`
-}
 
 function paginaCarta(d: Dossie): string {
 	const paragrafos = cartaAoCliente(d.marca, d.modelo).map(p => `<p>${comDestaques(p)}</p>`).join('')
@@ -345,15 +292,31 @@ export function contarPaginas(d: Dossie): number {
 	return 5 + galeria // capa, carta, visão geral, ficha, diferenciais + galeria + ... a final entra abaixo
 }
 
+/**
+ * Enfeite só da PRÉVIA: sombra e respiro entre as páginas.
+ *
+ * A ESCALA NÃO É FEITA AQUI. Tentei medir a largura por dentro do iframe e
+ * aplicar zoom; não funciona, porque ele nasce dentro de um `div hidden` e o
+ * documento mede zero — o fator saía negativo, o zoom era descartado e a
+ * página ficava em tamanho real. Quem sabe a largura é o PAI, e é lá que a
+ * escala é aplicada (ver dossie-admin.tsx).
+ */
+const ENFEITE_DA_PREVIA = `
+<style>
+  html,body{overflow-x:hidden}
+  body{padding:4mm 0}
+  .pagina{margin:0 auto 4mm; box-shadow:0 4px 24px rgba(0,0,0,.5)}
+</style>`
+
 /** O documento inteiro, autocontido. */
-export function montarDossie(d: Dossie): string {
+export function montarDossie(d: Dossie, opcoes: { ajustarNaLargura?: boolean } = {}): string {
 	return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <title>Dossiê Técnico — ${escapar(`${d.marca} ${d.modelo}`.trim())}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<style>${CSS}</style></head><body>
+<style>${CSS}</style>${opcoes.ajustarNaLargura ? ENFEITE_DA_PREVIA : ''}</head><body>
 ${paginaCapa(d)}
 ${paginaCarta(d)}
 ${paginaVisaoGeral(d)}

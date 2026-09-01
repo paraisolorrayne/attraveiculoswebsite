@@ -13,6 +13,8 @@
  * resto em branco, de propósito, em vez de chutar.
  */
 
+import type { EstiloCapa } from './capas'
+
 /** Uma linha rótulo/valor das tabelas da ficha técnica. */
 export interface LinhaFicha {
 	rotulo: string
@@ -26,6 +28,9 @@ export interface GrupoDiferencial {
 }
 
 export interface Dossie {
+	/** Qual das três capas usar — ver capas.ts. */
+	estiloCapa: EstiloCapa
+
 	// ---------- identificação, usada em várias páginas ----------
 	marca: string
 	modelo: string
@@ -93,6 +98,7 @@ export const FOTOS_POR_PAGINA_GALERIA = 2
 export const FOTOS_FIXAS = 3
 
 export const DOSSIE_INICIAL: Dossie = {
+	estiloCapa: 'corte',
 	marca: '',
 	modelo: '',
 	assinatura: '',

@@ -63,7 +63,7 @@ export function GeradorCriativosAdmin() {
           <StoryVendidoAdmin />
         </div>
         <div hidden={aba !== 'dossie'}>
-          <DossieAdmin />
+          <DossieAdmin visivel={aba === 'dossie'} />
         </div>
       </div>
     </div>

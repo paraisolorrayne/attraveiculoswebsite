@@ -15,7 +15,7 @@
  * cliente.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, Loader2, Printer, Search } from 'lucide-react'
 import {
 	DOSSIE_INICIAL,
@@ -25,6 +25,7 @@ import {
 	type LinhaFicha,
 } from '@content/admin/creative/dossie/tipos'
 import { montarDossie } from '@content/admin/creative/dossie/documento'
+import { ESTILOS_DE_CAPA } from '@content/admin/creative/dossie/capas'
 import { CampoTexto, Dica, Secao } from '../criativos/campos'
 import { urlFotoEstoque } from '../criativos/use-gerador'
 
@@ -45,7 +46,13 @@ interface VeiculoEstoque {
 
 const fmtBR = (n: number | string) => Number(n).toLocaleString('pt-BR')
 
-export function DossieAdmin() {
+/** 210 x 297mm em pixels de CSS — uma folha A4 a 96dpi. */
+const LARGURA_A4 = (210 / 25.4) * 96
+const ALTURA_A4 = (297 / 25.4) * 96
+/** A folha mais a respiração que a prévia desenha em volta dela (4mm + 4mm). */
+const ALTURA_NA_PREVIA = ALTURA_A4 + (8 / 25.4) * 96
+
+export function DossieAdmin({ visivel }: { visivel: boolean }) {
 	const [d, setD] = useState<Dossie>(() => structuredClone(DOSSIE_INICIAL))
 	const [busca, setBusca] = useState('')
 	const [buscando, setBuscando] = useState(false)
@@ -125,7 +132,55 @@ export function DossieAdmin() {
 		)
 	}
 
-	const html = useMemo(() => montarDossie(d), [d])
+	/**
+	 * A prévia mostra a folha INTEIRA, não um pedaço dela com barra de rolagem.
+	 *
+	 * O iframe é montado no tamanho real de uma folha (794 x 1123px = A4 a 96dpi)
+	 * e encolhido por `transform`. A escala cabe nas DUAS medidas da moldura: só
+	 * pela largura a página ficaria alta demais e o operador teria de rolar para
+	 * ver o pé de cada página, que é a mesma queixa da barra lateral virada de
+	 * lado. Medir por dentro do iframe não funciona — ele nasce num `div hidden`
+	 * e reporta zero; quem manda no tamanho é a coluna, e é ela que observamos.
+	 */
+	const molduraRef = useRef<HTMLDivElement>(null)
+	const [escala, setEscala] = useState(0.5)
+	useEffect(() => {
+		const el = molduraRef.current
+		if (!el) return
+		let vivo = true
+		const medir = () => {
+			const l = el.clientWidth
+			const a = el.clientHeight
+			if (l > 50 && a > 50) {
+				setEscala(Math.min(l / LARGURA_A4, a / ALTURA_NA_PREVIA))
+				return true
+			}
+			return false
+		}
+		// A aba fica MONTADA e escondida com `hidden` (ver a casca do gerador), e
+		// enquanto estiver assim a coluna mede zero. O ResizeObserver não avisa
+		// nessa transição, então a escala ficava presa no palpite inicial: quem
+		// avisa é o `visivel` que vem de cima. As tentativas por quadro cobrem o
+		// intervalo até o layout assentar depois que a aba aparece.
+		let tentativas = 0
+		const tentar = () => {
+			if (!vivo || medir() || tentativas++ > 60) return
+			requestAnimationFrame(tentar)
+		}
+		tentar()
+		const obs = new ResizeObserver(medir)
+		obs.observe(el)
+		return () => {
+			vivo = false
+			obs.disconnect()
+		}
+	}, [visivel])
+
+	// Duas versões do mesmo documento: a da prévia encolhe para caber na coluna
+	// (senão o operador rola de lado para ver metade da página), e a que vai para
+	// a impressão sai em A4 de verdade.
+	const htmlPrevia = useMemo(() => montarDossie(d, { ajustarNaLargura: true }), [d])
+	const htmlImpressao = useMemo(() => montarDossie(d), [d])
 
 	const fotosDeGaleria = Math.max(0, d.fotos.length - FOTOS_FIXAS - 3)
 	const paginasReais =
@@ -137,7 +192,7 @@ export function DossieAdmin() {
 			setAviso('O navegador bloqueou a janela. Libere os pop-ups deste site e tente de novo.')
 			return
 		}
-		j.document.write(html)
+		j.document.write(htmlImpressao)
 		j.document.close()
 	}
 
@@ -198,6 +253,25 @@ export function DossieAdmin() {
 				</Secao>
 
 				<Secao titulo="Capa e identificação">
+					<div className="grid grid-cols-3 gap-2">
+						{ESTILOS_DE_CAPA.map(e => (
+							<button
+								key={e.id}
+								type="button"
+								onClick={() => campo('estiloCapa', e.id)}
+								aria-pressed={d.estiloCapa === e.id}
+								className={
+									'rounded-md border px-3 py-2 text-left transition-colors ' +
+									(d.estiloCapa === e.id
+										? 'border-primary bg-primary/10'
+										: 'border-border hover:border-foreground-secondary')
+								}
+							>
+								<span className="block text-sm font-medium text-foreground">{e.rotulo}</span>
+								<span className="block text-xs text-foreground-secondary">{e.resumo}</span>
+							</button>
+						))}
+					</div>
 					<div className="grid grid-cols-2 gap-3">
 						<CampoTexto rotulo="Marca" valor={d.marca} aoMudar={v => campo('marca', v)} />
 						<CampoTexto rotulo="Modelo" valor={d.modelo} aoMudar={v => campo('modelo', v)} />
@@ -332,11 +406,29 @@ export function DossieAdmin() {
 					</span>
 					<span>A4 · 210 × 297 mm</span>
 				</div>
-				<iframe
-					title="Prévia do dossiê"
-					srcDoc={html}
-					className="block h-[70vh] w-full rounded-lg border border-border bg-[#3a3a3f]"
-				/>
+				<div
+					ref={molduraRef}
+					className="flex justify-center overflow-hidden rounded-lg border border-border bg-[#3a3a3f]"
+					style={{ height: '78vh' }}
+				>
+					{/* O `transform` encolhe o desenho e não a caixa: sem este invólucro
+					    com a largura já reduzida, a moldura continua sendo empurrada
+					    pelos 794px do iframe. */}
+					<div style={{ width: LARGURA_A4 * escala, height: '100%', overflow: 'hidden' }}>
+						<iframe
+							title="Prévia do dossiê"
+							srcDoc={htmlPrevia}
+							style={{
+								width: LARGURA_A4,
+								height: `${100 / escala}%`,
+								transform: `scale(${escala})`,
+								transformOrigin: 'top left',
+								border: 0,
+								display: 'block',
+							}}
+						/>
+					</div>
+				</div>
 				<button
 					type="button"
 					onClick={abrirParaImprimir}
