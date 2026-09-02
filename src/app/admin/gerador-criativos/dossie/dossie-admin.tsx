@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Loader2, Printer, Search } from 'lucide-react'
+import { FileText, Loader2, Printer, Search, Upload } from 'lucide-react'
 import {
 	DOSSIE_INICIAL,
 	FOTOS_FIXAS,
@@ -32,6 +32,7 @@ import {
 	slotsDoDossie,
 	type SlotDeFoto,
 } from '@content/admin/creative/dossie/slots'
+import { ehFotoEnviada, prepararFotoEnviada } from '@content/admin/creative/dossie/foto-enviada'
 import { CampoTexto, Dica, Secao } from '../criativos/campos'
 import { urlFotoEstoque } from '../criativos/use-gerador'
 
@@ -166,6 +167,34 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 			setSlotEmFoco(i => (i + 1) % slots.length)
 		},
 		[slots, slotEmFoco, aplicarNoSlot],
+	)
+
+	/**
+	 * As `blob:` URLs criadas aqui, para devolver ao navegador quando a aba sair.
+	 *
+	 * Fica num ref e NÃO dentro do atualizador de estado: em StrictMode o React
+	 * roda o atualizador duas vezes, e revogar dentro dele apagaria a foto que
+	 * acabou de entrar. Mesma armadilha das miniaturas do histórico de criativos.
+	 */
+	const blobsCriados = useRef<string[]>([])
+	useEffect(() => {
+		const criados = blobsCriados.current
+		return () => criados.forEach(u => URL.revokeObjectURL(u))
+	}, [])
+
+	const enviarDoComputador = useCallback(
+		async (slot: SlotDeFoto, arquivo: File | undefined) => {
+			if (!arquivo) return
+			try {
+				const { url } = await prepararFotoEnviada(arquivo)
+				blobsCriados.current.push(url)
+				aplicarNoSlot(slot, url)
+				setAviso(null)
+			} catch (e) {
+				setAviso(e instanceof Error ? e.message : 'Não consegui usar essa imagem.')
+			}
+		},
+		[aplicarNoSlot],
 	)
 
 	/**
@@ -422,37 +451,65 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 							{slots.map((slot, i) => {
 								const url = fotoDoSlot(d, slot)
 								const ativo = i === slotEmFoco
+								const enviada = ehFotoEnviada(url)
 								return (
-									<button
+									// Div, e não button: dentro dele há DOIS controles — escolher o
+									// destino e enviar do computador —, e botão dentro de botão é
+									// HTML inválido e inacessível pelo teclado.
+									<div
 										key={`${slot.indice}`}
-										type="button"
-										onClick={() => setSlotEmFoco(i)}
-										aria-pressed={ativo}
-										title={`${slot.rotulo} · ${slot.pagina}`}
 										className={
-											'overflow-hidden rounded-md border-2 text-left transition-colors ' +
+											'relative overflow-hidden rounded-md border-2 transition-colors ' +
 											(ativo ? 'border-primary' : 'border-border hover:border-foreground-secondary')
 										}
 									>
-										<span className="block h-16 w-full bg-background">
-											{url ? (
-												// eslint-disable-next-line @next/next/no-img-element
-												<img src={url} alt="" className="h-16 w-full object-cover" />
-											) : (
-												<span className="flex h-16 w-full items-center justify-center text-[10px] text-foreground-secondary">
-													vazio
+										<button
+											type="button"
+											onClick={() => setSlotEmFoco(i)}
+											aria-pressed={ativo}
+											title={`${slot.rotulo} · ${slot.pagina}`}
+											className="block w-full text-left"
+										>
+											<span className="block h-16 w-full bg-background">
+												{url ? (
+													// eslint-disable-next-line @next/next/no-img-element
+													<img src={url} alt="" className="h-16 w-full object-cover" />
+												) : (
+													<span className="flex h-16 w-full items-center justify-center text-[10px] text-foreground-secondary">
+														vazio
+													</span>
+												)}
+											</span>
+											<span className="block px-1.5 py-1">
+												<span className="block truncate text-[11px] font-medium text-foreground">
+													{slot.rotulo}
 												</span>
-											)}
-										</span>
-										<span className="block px-1.5 py-1">
-											<span className="block truncate text-[11px] font-medium text-foreground">
-												{slot.rotulo}
+												<span className="block truncate text-[10px] text-foreground-secondary">
+													{enviada ? 'foto enviada' : slot.pagina}
+												</span>
 											</span>
-											<span className="block truncate text-[10px] text-foreground-secondary">
-												{slot.pagina}
-											</span>
-										</span>
-									</button>
+										</button>
+
+										<label
+											title={`Enviar uma foto do computador para ${slot.rotulo}`}
+											className="absolute right-1 top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-background/85 text-foreground-secondary transition-colors hover:bg-primary hover:text-white"
+										>
+											<Upload className="h-3.5 w-3.5" />
+											<span className="sr-only">Enviar foto para {slot.rotulo}</span>
+											<input
+												type="file"
+												accept="image/*"
+												className="hidden"
+												onChange={e => {
+													void enviarDoComputador(slot, e.target.files?.[0])
+													// Zera para que reenviar o MESMO arquivo dispare o
+													// evento de novo — sem isso, corrigir um envio errado
+													// escolhendo o mesmo arquivo não faz nada.
+													e.target.value = ''
+												}}
+											/>
+										</label>
+									</div>
 								)
 							})}
 						</div>
@@ -490,8 +547,9 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 					)}
 
 					<Dica>
-						O destino avança sozinho a cada foto escolhida, então dá para percorrer os slots em
-						sequência. Hoje há material para{' '}
+						Cada slot tem um <strong>↑</strong> no canto para enviar uma foto do computador — ela
+						substitui só aquele slot. Pelas fotos do veículo, o destino avança sozinho a cada
+						escolha, então dá para percorrer os slots em sequência. Hoje há material para{' '}
 						<strong>{Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)} páginas</strong> de galeria.
 					</Dica>
 				</Secao>
