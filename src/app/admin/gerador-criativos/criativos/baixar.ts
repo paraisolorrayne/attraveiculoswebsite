@@ -47,15 +47,39 @@ function gerarPng(canvas: HTMLCanvasElement): Promise<Blob> {
 	})
 }
 
-function baixarBlob(blob: Blob, arquivo: string) {
+/** Espera n milissegundos. */
+const esperar = (ms: number) => new Promise<void>(ok => setTimeout(ok, ms))
+
+/**
+ * Baixa um blob — e só volta quando o navegador já assumiu o download.
+ *
+ * POR QUE ESPERAR, se `a.click()` é síncrono. Ele dispara o download, mas quem
+ * o conclui é o navegador, num passo próprio. A versão anterior fazia
+ * `a.click(); a.remove()` na mesma linha e chamava os dois arquivos em
+ * sequência imediata — os dois cliques saíam com 2ms de diferença. Dava certo
+ * quase sempre, e quando não dava, o que faltava era sempre o STORIES: ele é o
+ * primeiro da fila e o maior dos dois (2,7 MB contra 1,7 MB do Feed), então é
+ * o que ainda não tinha sido assumido quando o elemento sumia embaixo dele. O
+ * operador recebia só o Feed e não tinha como saber que faltou metade.
+ *
+ * Duas correções, porque são duas causas somadas: o elemento só sai um tique
+ * depois do clique, e os dois downloads passaram a ocorrer em tarefas
+ * separadas (ver `exportarPeca`) — dois downloads no mesmo tique também
+ * esbarram na heurística de "múltiplos downloads automáticos" do Chrome.
+ */
+async function baixarBlob(blob: Blob, arquivo: string): Promise<void> {
 	const url = URL.createObjectURL(blob)
 	const a = document.createElement('a')
 	a.href = url
 	a.download = arquivo
+	a.rel = 'noopener'
 	document.body.appendChild(a)
 	a.click()
+	await esperar(400)
 	a.remove()
-	setTimeout(() => URL.revokeObjectURL(url), 4000)
+	// Generoso de propósito: revogar cedo demais aborta um download que o
+	// navegador ainda esteja gravando em disco.
+	setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 async function enviarAoMarketing(blob: Blob, nome: string, formato: 'stories' | 'feed') {
@@ -102,8 +126,9 @@ export async function exportarPeca(
 	const canvasFeed = renderFeed(estado, imagens, assets)
 	const [stories, feed] = await Promise.all([gerarPng(canvasStories), gerarPng(canvasFeed)])
 
-	baixarBlob(stories, `${nome}-STORIES-v1.png`)
-	baixarBlob(feed, `${nome}-FEED-v1.png`)
+	// Um de cada vez, e não os dois em sequência imediata — ver `baixarBlob`.
+	await baixarBlob(stories, `${nome}-STORIES-v1.png`)
+	await baixarBlob(feed, `${nome}-FEED-v1.png`)
 
 	aoAndar?.('Enviando os dois ao Marketing…')
 	const envios = await Promise.allSettled([
