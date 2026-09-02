@@ -267,7 +267,9 @@ function paginasGaleria(d: Dossie): string {
 }
 
 function paginaFinal(d: Dossie): string {
-	const ultima = d.fotos[d.fotos.length - 1]
+	// Slot próprio; a queda para a última da lista existe só para os dossiês
+	// montados antes de a contracapa ganhar campo (ver slots.ts).
+	const ultima = d.fotoFinal || d.fotos[d.fotos.length - 1]
 	return `<section class="pagina fim">
   ${ultima ? `<img class="foto" src="${escapar(ultima)}" alt="">` : ''}
   <div class="veu"></div>

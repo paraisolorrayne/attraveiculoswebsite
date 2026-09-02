@@ -26,6 +26,12 @@ import {
 } from '@content/admin/creative/dossie/tipos'
 import { montarDossie } from '@content/admin/creative/dossie/documento'
 import { ESTILOS_DE_CAPA } from '@content/admin/creative/dossie/capas'
+import {
+	comFotoNoSlot,
+	fotoDoSlot,
+	slotsDoDossie,
+	type SlotDeFoto,
+} from '@content/admin/creative/dossie/slots'
 import { CampoTexto, Dica, Secao } from '../criativos/campos'
 import { urlFotoEstoque } from '../criativos/use-gerador'
 
@@ -124,13 +130,43 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 			performance: x.performance.map(l =>
 				l.rotulo === 'TRANSMISSÃO' && v.transmission ? { ...l, valor: v.transmission } : l,
 			),
+			// A galeria guarda TODAS as fotos do veículo; `fotos` fica com a
+			// distribuição inicial pelos slots, na ordem que a API devolveu. É essa
+			// separação que permite trocar um slot sem perder as outras opções.
+			galeria: (v.photos ?? []).map(urlFotoEstoque),
 			fotos: (v.photos ?? []).map(urlFotoEstoque),
+			fotoFinal: '',
 		}))
 		setResultados([])
 		setAviso(
 			'Trouxe o que o estoque tem. A ficha técnica não vem dele — motor, torque, dimensões e freios ficam com você.',
 		)
 	}
+
+	/**
+	 * Qual slot recebe a próxima foto clicada na galeria.
+	 *
+	 * Mesma mecânica da aba Criativos: escolhe-se o destino e clica-se na foto.
+	 * Aqui o destino avança sozinho depois de cada escolha, porque o dossiê tem
+	 * uma dúzia de slots e trocar um por um seria dois cliques cada.
+	 */
+	const [slotEmFoco, setSlotEmFoco] = useState(0)
+	const slots = useMemo(() => slotsDoDossie(d), [d])
+
+	const aplicarNoSlot = useCallback(
+		(slot: SlotDeFoto, url: string) => setD(x => comFotoNoSlot(x, slot, url)),
+		[],
+	)
+
+	const usarDaGaleria = useCallback(
+		(url: string) => {
+			const slot = slots[slotEmFoco]
+			if (!slot) return
+			aplicarNoSlot(slot, url)
+			setSlotEmFoco(i => (i + 1) % slots.length)
+		},
+		[slots, slotEmFoco, aplicarNoSlot],
+	)
 
 	/**
 	 * A prévia mostra a folha INTEIRA, não um pedaço dela com barra de rolagem.
@@ -370,19 +406,97 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 					</Dica>
 				</Secao>
 
-				<Secao titulo="Galeria e contracapa">
+				<Secao titulo="Fotos">
 					<CampoTexto
 						rotulo="Páginas de galeria (2 fotos cada)"
 						valor={String(d.paginasDeGaleria)}
 						aoMudar={v => campo('paginasDeGaleria', Math.max(0, Math.min(20, Number(v) || 0)))}
 						inputMode="numeric"
 					/>
+
+					<div>
+						<span className="mb-2 block text-xs font-medium text-foreground-secondary">
+							Onde cada foto entra — clique para escolher o destino
+						</span>
+						<div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+							{slots.map((slot, i) => {
+								const url = fotoDoSlot(d, slot)
+								const ativo = i === slotEmFoco
+								return (
+									<button
+										key={`${slot.indice}`}
+										type="button"
+										onClick={() => setSlotEmFoco(i)}
+										aria-pressed={ativo}
+										title={`${slot.rotulo} · ${slot.pagina}`}
+										className={
+											'overflow-hidden rounded-md border-2 text-left transition-colors ' +
+											(ativo ? 'border-primary' : 'border-border hover:border-foreground-secondary')
+										}
+									>
+										<span className="block h-16 w-full bg-background">
+											{url ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img src={url} alt="" className="h-16 w-full object-cover" />
+											) : (
+												<span className="flex h-16 w-full items-center justify-center text-[10px] text-foreground-secondary">
+													vazio
+												</span>
+											)}
+										</span>
+										<span className="block px-1.5 py-1">
+											<span className="block truncate text-[11px] font-medium text-foreground">
+												{slot.rotulo}
+											</span>
+											<span className="block truncate text-[10px] text-foreground-secondary">
+												{slot.pagina}
+											</span>
+										</span>
+									</button>
+								)
+							})}
+						</div>
+					</div>
+
+					{d.galeria.length > 0 ? (
+						<div>
+							<span className="mb-2 block text-xs font-medium text-foreground-secondary">
+								Fotos do veículo ({d.galeria.length}) — clique para aplicar em{' '}
+								<strong className="text-foreground">{slots[slotEmFoco]?.rotulo}</strong>
+							</span>
+							<div className="flex flex-wrap gap-2">
+								{d.galeria.map(u => {
+									const emUso = slots.find(sl => fotoDoSlot(d, sl) === u)
+									return (
+										<button
+											key={u}
+											type="button"
+											onClick={() => usarDaGaleria(u)}
+											title={emUso ? `Em uso: ${emUso.rotulo}` : 'Clique para aplicar no destino'}
+											className={
+												'overflow-hidden rounded-md border-2 transition-colors ' +
+												(emUso ? 'border-primary' : 'border-transparent hover:border-border')
+											}
+										>
+											{/* eslint-disable-next-line @next/next/no-img-element */}
+											<img src={u} alt="" className="h-14 w-20 object-cover" />
+										</button>
+									)
+								})}
+							</div>
+						</div>
+					) : (
+						<Dica>Busque um veículo no estoque para trazer as fotos.</Dica>
+					)}
+
 					<Dica>
-						{d.fotos.length} fotos vieram do estoque. As três primeiras são capa, visão geral e ficha; as
-						três seguintes formam a tira dos diferenciais; o resto alimenta a galeria e a última fecha o
-						documento. Hoje há material para{' '}
+						O destino avança sozinho a cada foto escolhida, então dá para percorrer os slots em
+						sequência. Hoje há material para{' '}
 						<strong>{Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)} páginas</strong> de galeria.
 					</Dica>
+				</Secao>
+
+				<Secao titulo="Contracapa">
 					<label className="block">
 						<span className="mb-1 block text-xs font-medium text-foreground-secondary">
 							Chamada da contracapa

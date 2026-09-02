@@ -65,8 +65,19 @@ export interface Dossie {
 	diferenciais: GrupoDiferencial[]
 
 	// ---------- fotos ----------
-	/** URLs, na ordem em que aparecem. As três primeiras são capa, hero e ficha. */
+	/**
+	 * URLs por POSIÇÃO — o mapa de qual posição vai para onde está em slots.ts.
+	 * Buracos são string vazia, nunca `undefined`.
+	 */
 	fotos: string[]
+	/**
+	 * A foto da contracapa. Campo próprio desde 02/09/2026: antes o documento
+	 * usava `fotos[fotos.length - 1]`, e a última foto da galeria aparecia duas
+	 * vezes no mesmo dossiê. Vazio mantém o comportamento antigo.
+	 */
+	fotoFinal: string
+	/** Todas as fotos do veículo escolhido, para o operador trocar slot por slot. */
+	galeria: string[]
 	/** Quantas páginas de galeria (duas fotos cada). */
 	paginasDeGaleria: number
 
@@ -148,6 +159,8 @@ export const DOSSIE_INICIAL: Dossie = {
 		{ titulo: 'PERFORMANCE & CONDUÇÃO', itens: ['', '', ''] },
 	],
 	fotos: [],
+	fotoFinal: '',
+	galeria: [],
 	paginasDeGaleria: 8,
 	chamada:
 		'Consulte nossa equipe para agendar uma visita, solicitar condições de negociação ou avaliar seu veículo na troca.',
