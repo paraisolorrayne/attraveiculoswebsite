@@ -369,7 +369,7 @@ function paginaFinal(d: Dossie): string {
     <div class="modelo">${escapar(d.modelo.toUpperCase())}</div>
     ${d.assinatura ? `<div class="assinatura">${escapar(d.assinatura.toUpperCase())}</div>` : ''}
     <p class="chamada">${escapar(d.chamada)}</p>
-    <div class="contatos">ATTRAVEICULOS.COM.BR <b>•</b> @ATTRAVEICULOS <b>•</b> UBERLÂNDIA · MG</div>
+    <div class="contatos">ATTRAVEICULOS.COM.BR <b>•</b> @ATTRA.VEICULOS <b>•</b> UBERLÂNDIA · MG</div>
     <div class="rodape"><img src="${LOGO}" alt=""><div>CURADORIA DE SUPERCARROS E VEÍCULOS PREMIUM</div></div>
   </div>
 </section>`
