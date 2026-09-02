@@ -19,8 +19,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, Loader2, Printer, Search, Upload } from 'lucide-react'
 import {
 	DOSSIE_INICIAL,
-	FOTOS_FIXAS,
 	FOTOS_POR_PAGINA_GALERIA,
+	LIMITE_OPCIONAIS,
+	MODELOS,
 	type Dossie,
 	type LinhaFicha,
 } from '@content/admin/creative/dossie/tipos'
@@ -29,6 +30,8 @@ import { ESTILOS_DE_CAPA } from '@content/admin/creative/dossie/capas'
 import {
 	comFotoNoSlot,
 	fotoDoSlot,
+	paginasDeGaleria,
+	primeiraDaGaleria,
 	slotsDoDossie,
 	type SlotDeFoto,
 } from '@content/admin/creative/dossie/slots'
@@ -247,9 +250,11 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 	const htmlPrevia = useMemo(() => montarDossie(d, { ajustarNaLargura: true }), [d])
 	const htmlImpressao = useMemo(() => montarDossie(d), [d])
 
-	const fotosDeGaleria = Math.max(0, d.fotos.length - FOTOS_FIXAS - 3)
+	const fotosDeGaleria = d.fotos.slice(primeiraDaGaleria(d)).filter(f => f.trim()).length
 	const paginasReais =
-		5 + Math.min(d.paginasDeGaleria, Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)) + 1
+		(d.modeloDoDossie === 'enxuto' ? 2 : 5) +
+		Math.min(paginasDeGaleria(d), Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)) +
+		1
 
 	function abrirParaImprimir() {
 		const j = window.open('', '_blank')
@@ -315,6 +320,63 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 						</ul>
 					)}
 					{aviso && <Dica>{aviso}</Dica>}
+				</Secao>
+
+				<Secao titulo="Modelo do documento">
+					<div className="grid grid-cols-2 gap-2">
+						{MODELOS.map(m => (
+							<button
+								key={m.id}
+								type="button"
+								onClick={() => campo('modeloDoDossie', m.id)}
+								aria-pressed={d.modeloDoDossie === m.id}
+								className={
+									'rounded-md border px-3 py-2 text-left transition-colors ' +
+									(d.modeloDoDossie === m.id
+										? 'border-primary bg-primary/10'
+										: 'border-border hover:border-foreground-secondary')
+								}
+							>
+								<span className="block text-sm font-medium text-foreground">{m.rotulo}</span>
+								<span className="block text-xs text-foreground-secondary">{m.resumo}</span>
+							</button>
+						))}
+					</div>
+					<Dica>
+						O enxuto troca a carta e as três páginas de ficha por uma página de resumo com
+						marca, modelo, ano, km, cor, motor e os opcionais — e como sobram menos posições
+						fixas de foto, o mesmo carro rende mais páginas de imagem. Trocar de modelo
+						remapeia quais fotos caem em quais slots.
+					</Dica>
+
+					{d.modeloDoDossie === 'enxuto' && (
+						<label className="block">
+							<span className="mb-1 flex items-baseline justify-between gap-3 text-xs font-medium text-foreground-secondary">
+								<span>Opcionais (texto livre, aparece no resumo)</span>
+								<span
+									className={
+										'tabular-nums ' +
+										(d.opcionaisTexto.length > LIMITE_OPCIONAIS ? 'font-semibold text-primary' : '')
+									}
+								>
+									{d.opcionaisTexto.length} / {LIMITE_OPCIONAIS}
+								</span>
+							</span>
+							<textarea
+								rows={5}
+								value={d.opcionaisTexto}
+								onChange={e => campo('opcionaisTexto', e.target.value)}
+								placeholder={'Teto solar panorâmico, bancos AMG Performance em Nappa,\nfreios cerâmicos, pacote Night II.\n\nLinha em branco separa parágrafos.'}
+								className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+							/>
+							{d.opcionaisTexto.length > LIMITE_OPCIONAIS && (
+								<span className="mt-1 block text-xs text-primary">
+									Perto do limite da página — passando disso, o fim do texto é cortado na
+									impressão. A faixa de foto já encolheu o quanto podia para abrir espaço.
+								</span>
+							)}
+						</label>
+					)}
 				</Secao>
 
 				<Secao titulo="Capa e identificação">
@@ -436,12 +498,23 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 				</Secao>
 
 				<Secao titulo="Fotos">
-					<CampoTexto
-						rotulo="Páginas de galeria (2 fotos cada)"
-						valor={String(d.paginasDeGaleria)}
-						aoMudar={v => campo('paginasDeGaleria', Math.max(0, Math.min(20, Number(v) || 0)))}
-						inputMode="numeric"
-					/>
+					{d.modeloDoDossie === 'enxuto' ? (
+						<Dica>
+							Todas as {fotosDeGaleria} fotos entram na galeria, duas por página —{' '}
+							<strong>
+								{Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)}{' '}
+								{Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA) === 1 ? 'página' : 'páginas'}
+							</strong>
+							. No enxuto o número não é escolhido: fixá-lo descartaria foto em silêncio.
+						</Dica>
+					) : (
+						<CampoTexto
+							rotulo="Páginas de galeria (2 fotos cada)"
+							valor={String(d.paginasDeGaleria)}
+							aoMudar={v => campo('paginasDeGaleria', Math.max(0, Math.min(20, Number(v) || 0)))}
+							inputMode="numeric"
+						/>
+					)}
 
 					<div>
 						<span className="mb-2 block text-xs font-medium text-foreground-secondary">
@@ -549,8 +622,7 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 					<Dica>
 						Cada slot tem um <strong>↑</strong> no canto para enviar uma foto do computador — ela
 						substitui só aquele slot. Pelas fotos do veículo, o destino avança sozinho a cada
-						escolha, então dá para percorrer os slots em sequência. Hoje há material para{' '}
-						<strong>{Math.ceil(fotosDeGaleria / FOTOS_POR_PAGINA_GALERIA)} páginas</strong> de galeria.
+						escolha, então dá para percorrer os slots em sequência.
 					</Dica>
 				</Secao>
 

@@ -27,7 +27,30 @@ export interface GrupoDiferencial {
 	itens: string[]
 }
 
+/**
+ * Quanto documento o cliente recebe.
+ *
+ *   completo  As 22 páginas do dossiê original: capa, carta ao cliente, visão
+ *             geral, ficha técnica, diferenciais, galeria e contracapa.
+ *   enxuto    Capa, UMA página de resumo da ficha, e o resto são as fotos do
+ *             carro. Some a carta (o texto grande), somem as páginas separadas
+ *             de visão geral, ficha e diferenciais — o que elas diziam cabe
+ *             condensado numa página só.
+ *
+ * O enxuto não é o completo com páginas apagadas: como sobram menos posições
+ * fixas de foto, a galeria começa mais cedo e o mesmo carro rende mais páginas
+ * de imagem.
+ */
+export type ModeloDossie = 'completo' | 'enxuto'
+
+export const MODELOS: { id: ModeloDossie; rotulo: string; resumo: string }[] = [
+	{ id: 'completo', rotulo: 'Completo', resumo: 'Carta, visão geral, ficha e diferenciais' },
+	{ id: 'enxuto', rotulo: 'Enxuto', resumo: 'Resumo da ficha e o resto em fotos' },
+]
+
 export interface Dossie {
+	/** Quanto documento o cliente recebe — ver ModeloDossie. */
+	modeloDoDossie: ModeloDossie
 	/** Qual das três capas usar — ver capas.ts. */
 	estiloCapa: EstiloCapa
 
@@ -59,6 +82,15 @@ export interface Dossie {
 	suspensao: LinhaFicha[]
 	/** Nota em itálico sob a tabela de performance. */
 	notaPerformance: string
+
+	/**
+	 * Opcionais em texto livre, na página de resumo do modelo enxuto.
+	 *
+	 * Texto corrido de propósito, e não a lista estruturada de `diferenciais`:
+	 * no enxuto o operador quer digitar o que o carro tem e imprimir, sem
+	 * distribuir item por item em três grupos com título.
+	 */
+	opcionaisTexto: string
 
 	// ---------- 05 diferenciais ----------
 	introDiferenciais: string
@@ -102,6 +134,26 @@ export function cartaAoCliente(marca: string, modelo: string): string[] {
 	]
 }
 
+/**
+ * Quanto texto de opcionais cabe na página de resumo, em caracteres.
+ *
+ * MEDIDO, não estimado (02/09/2026), variando o texto de 800 a 3200 caracteres
+ * e lendo a altura ocupada contra os 297mm da folha:
+ *
+ *   vazio a ~900   a faixa cresce até o teto de 118mm e fecha a página
+ *         ~1.700   a faixa volta aos 66mm e o texto ocupa o resto
+ *          2.400   faixa no piso de 26mm: o limite físico, sem folga nenhuma
+ *          2.800   passa 87px — o fim do texto seria cortado na impressão
+ *
+ * O aviso dispara em 2.200, e não em 2.400: o limite físico varia com o
+ * tamanho dos outros campos (um "Motor" de duas linhas come espaço), e avisar
+ * só no exato significa não avisar em metade dos casos.
+ *
+ * A tela avisa e NÃO trunca. Cortar o texto do operador sem ele ver é pior que
+ * imprimir uma página apertada — quem escreveu é quem sabe o que encurtar.
+ */
+export const LIMITE_OPCIONAIS = 2200
+
 /** Quantas fotos a galeria consome, duas por página. */
 export const FOTOS_POR_PAGINA_GALERIA = 2
 
@@ -109,6 +161,7 @@ export const FOTOS_POR_PAGINA_GALERIA = 2
 export const FOTOS_FIXAS = 3
 
 export const DOSSIE_INICIAL: Dossie = {
+	modeloDoDossie: 'completo',
 	estiloCapa: 'corte',
 	marca: '',
 	modelo: '',
@@ -151,6 +204,7 @@ export const DOSSIE_INICIAL: Dossie = {
 		{ rotulo: 'PORTAS', valor: '' },
 	],
 	notaPerformance: '',
+	opcionaisTexto: '',
 	introDiferenciais:
 		'Este veículo foi configurado com um pacote de opcionais altamente exclusivo, que eleva ainda mais sua presença, desempenho e acabamento.',
 	diferenciais: [

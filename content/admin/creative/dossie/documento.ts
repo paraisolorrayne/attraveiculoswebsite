@@ -15,7 +15,12 @@
  */
 import { CSS_DAS_CAPAS, paginaCapa } from './capas'
 import { comDestaques, escapar, LOGO } from './comum'
-import { cartaAoCliente, FOTOS_FIXAS, FOTOS_POR_PAGINA_GALERIA, type Dossie } from './tipos'
+import { paginasDeGaleria, primeiraDaGaleria } from './slots'
+import {
+	cartaAoCliente,
+	FOTOS_POR_PAGINA_GALERIA,
+	type Dossie,
+} from './tipos'
 
 const CSS = `
 :root{
@@ -109,6 +114,30 @@ ${CSS_DAS_CAPAS}
 .grupo-dif{margin-bottom:7mm}
 .grupo-dif .cabeca{display:flex; align-items:center; gap:3.5mm; margin-bottom:3mm; border-bottom:1px solid var(--linha); padding-bottom:2.5mm}
 .grupo-dif h4{font-size:8.5pt; letter-spacing:.18em; font-weight:600; color:var(--sangue)}
+
+/* ---------- resumo (modelo enxuto) ---------- */
+/* Uma página só, no lugar de visão geral + ficha + diferenciais. A faixa de
+   foto é mais baixa que o "hero" da visão geral porque aqui embaixo dela vai
+   TUDO: a grade de campos, a tabela de performance e o selo. */
+/* A FAIXA CEDE ESPAÇO AO TEXTO, em vez de empurrá-lo para fora da folha.
+   Medido: com a ficha inteira preenchida e valores longos, a página passava
+   79px (≈21mm) do A4 e o selo de documentação era cortado na impressão — sem
+   erro nenhum, só sumia.
+
+   Com a página em coluna flex a faixa vira o amortecedor nos dois sentidos:
+   encolhe até 26mm quando o texto é longo, e cresce até 118mm quando é curto,
+   em vez de deixar um terço da folha em branco embaixo do selo. */
+.resumo-pg{display:flex; flex-direction:column}
+.resumo-pg .cabecalho{flex:none}
+.resumo-pg .faixa{width:100%; flex:1 1 66mm; min-height:26mm; max-height:118mm; object-fit:cover; display:block}
+.resumo-pg .corpo{flex:none; padding:8mm 12mm}
+.resumo-pg .grade{margin-bottom:7mm}
+.resumo-pg .bloco{margin-top:6mm}
+.resumo-pg .bloco h3{font-size:8pt; letter-spacing:.2em; font-weight:700; color:var(--papel-fraco); margin-bottom:3mm; text-transform:uppercase}
+.resumo-pg .grade{grid-template-columns:repeat(4,1fr)}
+.resumo-pg .opcionais p{font-size:10pt; line-height:1.65; margin-bottom:3mm}
+.resumo-pg .opcionais p:last-child{margin-bottom:0}
+.resumo-pg .selo{margin-top:7mm}
 
 /* ---------- galeria ---------- */
 .galeria{display:grid; grid-template-rows:1fr 1fr; height:100%; gap:0}
@@ -249,13 +278,72 @@ function paginaDiferenciais(d: Dossie): string {
 </section>`
 }
 
+/**
+ * A página 2 do modelo enxuto.
+ *
+ * SEIS CAMPOS E OS OPCIONAIS, e nada de tabela de performance ou dimensões
+ * (decisão da Lorrayne, 02/09/2026). O enxuto existe para o cliente ver o carro
+ * — quem quiser torque e entre-eixos pede o completo. Marca, modelo, ano, km,
+ * cor e motor identificam a unidade; os opcionais são o que ela tem de
+ * diferente, em texto corrido.
+ *
+ * Mostra só o que está preenchido: um campo vazio some, em vez de imprimir
+ * rótulo órfão. É a mesma regra do resto do documento — o estoque não traz
+ * ficha técnica, e o dossiê tem de sair bem com meia ficha.
+ */
+function paginaResumo(d: Dossie): string {
+	// Cada campo tem queda para o equivalente da capa: quem preencheu só "Ano"
+	// não deve ver a linha sumir porque "Ano / Modelo" ficou vazio.
+	const motorDaFicha = d.performance.find(l => l.rotulo.startsWith('MOTOR'))?.valor ?? ''
+	const campos: [string, string][] = [
+		['ANO', d.anoModelo || d.ano],
+		['QUILOMETRAGEM', d.quilometragem || d.km],
+		['COR', d.corExterna || d.cor],
+		['MOTOR', d.motorizacao || motorDaFicha],
+	]
+	const grade = campos.filter(([, v]) => v.trim())
+	// Parágrafos separados por linha em branco, como o operador digitou.
+	const opcionais = d.opcionaisTexto
+		.split(/\n\s*\n/)
+		.map(b => b.trim())
+		.filter(Boolean)
+		.map(b => `<p>${comDestaques(b).replace(/\n/g, '<br>')}</p>`)
+		.join('')
+	return `<section class="pagina resumo-pg">
+  ${cabecalho('02', 'RESUMO', d)}
+  ${d.fotos[1] ? `<img class="faixa" src="${escapar(d.fotos[1])}" alt="">` : ''}
+  <div class="corpo">
+    <div class="eyebrow">FICHA DO VEÍCULO</div>
+    <div class="titulo">${escapar(`${d.marca} ${d.modelo}`.trim())}</div>
+    ${
+			grade.length
+				? `<div class="grade">${grade
+						.map(([r, v]) => `<div><span>${escapar(r)}</span><b>${escapar(v)}</b></div>`)
+						.join('')}</div>`
+				: ''
+		}
+    ${opcionais ? `<div class="bloco"><h3>Opcionais e destaques</h3><div class="opcionais">${opcionais}</div></div>` : ''}
+    ${
+			d.documentacaoTitulo
+				? `<div class="selo"><span>DOCUMENTAÇÃO &amp; PROCEDÊNCIA</span><b>${escapar(d.documentacaoTitulo)}</b><small>${escapar(d.documentacaoDetalhe)}</small></div>`
+				: ''
+		}
+  </div>
+</section>`
+}
+
 function paginasGaleria(d: Dossie): string {
-	const disponiveis = d.fotos.slice(FOTOS_FIXAS + 3)
+	const disponiveis = d.fotos.slice(primeiraDaGaleria(d))
 	const paginas: string[] = []
-	for (let p = 0; p < d.paginasDeGaleria; p++) {
-		const par = disponiveis.slice(p * FOTOS_POR_PAGINA_GALERIA, (p + 1) * FOTOS_POR_PAGINA_GALERIA)
-		if (!par.length) break
-		const primeira = p === 0
+	for (let p = 0; p < paginasDeGaleria(d); p++) {
+		// Um slot vazio no meio da lista não pode virar <img src=""> — sai como
+		// imagem quebrada no PDF. A página fica com uma foto só, e as posições
+		// dos slots seguintes não mudam de lugar.
+		const par = disponiveis
+			.slice(p * FOTOS_POR_PAGINA_GALERIA, (p + 1) * FOTOS_POR_PAGINA_GALERIA)
+			.filter(f => f.trim())
+		if (!par.length) continue
+		const primeira = paginas.length === 0
 		paginas.push(`<section class="pagina">
   <div class="galeria${primeira ? ' com-cabecalho' : ''}">
     ${primeira ? cabecalho('06', 'GALERIA', d) : ''}
@@ -289,9 +377,11 @@ function paginaFinal(d: Dossie): string {
 
 /** Quantas páginas o dossiê terá com os dados atuais. */
 export function contarPaginas(d: Dossie): number {
-	const disponiveis = Math.max(0, d.fotos.length - FOTOS_FIXAS - 3)
-	const galeria = Math.min(d.paginasDeGaleria, Math.ceil(disponiveis / FOTOS_POR_PAGINA_GALERIA))
-	return 5 + galeria // capa, carta, visão geral, ficha, diferenciais + galeria + ... a final entra abaixo
+	const disponiveis = d.fotos.slice(primeiraDaGaleria(d)).filter(f => f.trim()).length
+	const galeria = Math.min(paginasDeGaleria(d), Math.ceil(disponiveis / FOTOS_POR_PAGINA_GALERIA))
+	// Completo: capa, carta, visão geral, ficha, diferenciais (5). Enxuto: capa
+	// e resumo (2). A contracapa entra no total do chamador.
+	return (d.modeloDoDossie === 'enxuto' ? 2 : 5) + galeria
 }
 
 /**
@@ -320,10 +410,14 @@ export function montarDossie(d: Dossie, opcoes: { ajustarNaLargura?: boolean } =
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>${CSS}</style>${opcoes.ajustarNaLargura ? ENFEITE_DA_PREVIA : ''}</head><body>
 ${paginaCapa(d)}
-${paginaCarta(d)}
+${
+	d.modeloDoDossie === 'enxuto'
+		? paginaResumo(d)
+		: `${paginaCarta(d)}
 ${paginaVisaoGeral(d)}
 ${paginaFicha(d)}
-${paginaDiferenciais(d)}
+${paginaDiferenciais(d)}`
+}
 ${paginasGaleria(d)}
 ${paginaFinal(d)}
 </body></html>`

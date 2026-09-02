@@ -41,27 +41,59 @@ export const FOTOS_DA_TIRA = 3
 export const CONTRACAPA = 'final' as const
 
 /**
+ * Em que posição a galeria começa — depende do modelo, porque o enxuto não tem
+ * as páginas de ficha e diferenciais e portanto não gasta aquelas posições.
+ *
+ * Exportada porque `documento.ts` precisa do MESMO número: se os dois
+ * discordarem, a tela mostra uma foto num slot e o documento imprime outra.
+ */
+export function primeiraDaGaleria(d: Dossie): number {
+	return d.modeloDoDossie === 'enxuto' ? 2 : FOTOS_FIXAS + FOTOS_DA_TIRA
+}
+
+/**
+ * Quantas páginas de galeria o dossiê tem de fato.
+ *
+ * NO ENXUTO ELAS SÃO CALCULADAS, não configuradas: o modelo existe para mostrar
+ * o carro, e o número fixo (8 por padrão) descartava foto em silêncio — um
+ * veículo com 20 fotos precisa de 9 páginas, e as duas últimas sumiam sem
+ * aviso nenhum. Aqui todas entram, duas por página.
+ *
+ * No completo o número segue sendo escolha do operador: lá a galeria é um
+ * anexo do documento, e nem toda foto de estoque merece uma página.
+ */
+export function paginasDeGaleria(d: Dossie): number {
+	if (d.modeloDoDossie !== 'enxuto') return d.paginasDeGaleria
+	const disponiveis = d.fotos.slice(primeiraDaGaleria(d)).filter(f => f.trim()).length
+	return Math.ceil(disponiveis / FOTOS_POR_PAGINA_GALERIA)
+}
+
+/**
  * Os slots do dossiê atual. A quantidade da galeria depende de
- * `paginasDeGaleria`, então a lista é calculada, não constante.
+ * `paginasDeGaleria`, e quais posições são fixas depende do modelo — por isso a
+ * lista é calculada, não constante.
  */
 export function slotsDoDossie(d: Dossie): SlotDeFoto[] {
-	const slots: SlotDeFoto[] = [
-		{ indice: 0, rotulo: 'Capa', pagina: 'Capa' },
-		{ indice: 1, rotulo: 'Destaque', pagina: 'Visão geral' },
-		{ indice: 2, rotulo: 'Retrato', pagina: 'Ficha técnica' },
-	]
-	for (let i = 0; i < FOTOS_DA_TIRA; i++) {
-		slots.push({
-			indice: FOTOS_FIXAS + i,
-			rotulo: `Tira ${i + 1}`,
-			pagina: 'Diferenciais',
-		})
+	const enxuto = d.modeloDoDossie === 'enxuto'
+	const slots: SlotDeFoto[] = [{ indice: 0, rotulo: 'Capa', pagina: 'Capa' }]
+	if (enxuto) {
+		slots.push({ indice: 1, rotulo: 'Faixa', pagina: 'Resumo' })
+	} else {
+		slots.push({ indice: 1, rotulo: 'Destaque', pagina: 'Visão geral' })
+		slots.push({ indice: 2, rotulo: 'Retrato', pagina: 'Ficha técnica' })
+		for (let i = 0; i < FOTOS_DA_TIRA; i++) {
+			slots.push({
+				indice: FOTOS_FIXAS + i,
+				rotulo: `Tira ${i + 1}`,
+				pagina: 'Diferenciais',
+			})
+		}
 	}
-	const primeiraDaGaleria = FOTOS_FIXAS + FOTOS_DA_TIRA
-	for (let p = 0; p < d.paginasDeGaleria; p++) {
+	const inicio = primeiraDaGaleria(d)
+	for (let p = 0; p < paginasDeGaleria(d); p++) {
 		for (let i = 0; i < FOTOS_POR_PAGINA_GALERIA; i++) {
 			slots.push({
-				indice: primeiraDaGaleria + p * FOTOS_POR_PAGINA_GALERIA + i,
+				indice: inicio + p * FOTOS_POR_PAGINA_GALERIA + i,
 				rotulo: `Galeria ${p * FOTOS_POR_PAGINA_GALERIA + i + 1}`,
 				pagina: `Galeria · página ${p + 1}`,
 			})
