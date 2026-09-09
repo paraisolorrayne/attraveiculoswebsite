@@ -39,6 +39,31 @@ const RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${ATTRA_CHA
 const REVALIDATE_SECONDS = 3600 // 1h — não precisa checar vídeo novo com mais frequência
 const TIMEOUT_MS = 4000
 
+/**
+ * Vídeo servido quando o feed não responde. TEMPORÁRIO — ver abaixo.
+ *
+ * O endpoint de RSS do YouTube (`/feeds/videos.xml`) começou a devolver 404
+ * em 09/09/2026, e não só para a Attra: Google Developers, MKBHD e qualquer
+ * outro canal respondem igual, em todas as variantes (`channel_id`, `user`,
+ * `playlist_id`). O resto do YouTube segue de pé — home, página de vídeo e
+ * oembed respondem 200 —, então é o endpoint que caiu ou foi aposentado.
+ *
+ * Sem isto o hero simplesmente esconde a coluna de vídeo, que é a degradação
+ * correta para uma falha passageira e ruim para uma que dure dias. A Lorrayne
+ * escolheu (09/09/2026) fixar o último vídeo publicado até o feed voltar ou
+ * migrarmos de fonte.
+ *
+ * NÃO É PARA FICAR. Assim que o feed responder, o automático volta sozinho —
+ * a reserva só entra quando não há resposta. Se a migração para a API oficial
+ * acontecer, esta constante sai junto.
+ */
+const VIDEO_DE_RESERVA: YouTubeVideo = {
+	videoId: 'MHrfLeOVz2I',
+	title: 'O ESTOQUE MAIS EXCLUSIVO DE FERRARI’S ESTÁ AQUI NA ATTRA VEÍCULOS.',
+	publishedAt: '2026-09-04T13:21:16+00:00',
+	views: null,
+}
+
 export interface YouTubeVideo {
 	videoId: string
 	title: string
@@ -88,7 +113,11 @@ export function escolherPublicado(videos: YouTubeVideo[]): YouTubeVideo | null {
 }
 
 /**
- * O vídeo do hero. Null em qualquer falha — o caller esconde a coluna de vídeo.
+ * O vídeo do hero.
+ *
+ * Cai na reserva quando o feed não responde ou vem vazio — nunca devolve null
+ * enquanto `VIDEO_DE_RESERVA` existir. Assim que o feed voltar, o resultado
+ * dele tem precedência e a reserva deixa de ser usada sem ninguém mexer.
  */
 export async function getLatestAttraVideo(): Promise<YouTubeVideo | null> {
 	try {
@@ -98,12 +127,14 @@ export async function getLatestAttraVideo(): Promise<YouTubeVideo | null> {
 			next: { revalidate: REVALIDATE_SECONDS },
 		})
 		if (!resp.ok) {
-			console.error('[youtube-feed] RSS HTTP', resp.status)
-			return null
+			console.error('[youtube-feed] RSS HTTP', resp.status, '— usando o vídeo de reserva')
+			return VIDEO_DE_RESERVA
 		}
-		return escolherPublicado(parsearFeed(await resp.text()))
+		// Feed respondeu mas veio sem entrada aproveitável: a reserva ainda é
+		// melhor que hero sem vídeo.
+		return escolherPublicado(parsearFeed(await resp.text())) ?? VIDEO_DE_RESERVA
 	} catch (error) {
-		console.error('[youtube-feed] failed:', error)
-		return null
+		console.error('[youtube-feed] failed:', error, '— usando o vídeo de reserva')
+		return VIDEO_DE_RESERVA
 	}
 }

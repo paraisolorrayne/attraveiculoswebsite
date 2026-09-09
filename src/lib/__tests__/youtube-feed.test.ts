@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { escolherPublicado, parsearFeed, type YouTubeVideo } from '../youtube-feed'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { escolherPublicado, getLatestAttraVideo, parsearFeed, type YouTubeVideo } from '../youtube-feed'
 
 /**
  * O hero mostrava o primeiro vídeo do RSS, e o RSS lista ESTREIAS AGENDADAS
@@ -111,5 +111,51 @@ describe('escolherPublicado', () => {
 	it('devolve null para feed vazio', () => {
 		const vazio: YouTubeVideo[] = []
 		expect(escolherPublicado(vazio)).toBeNull()
+	})
+})
+
+/**
+ * O endpoint de RSS do YouTube passou a devolver 404 em 09/09/2026 — para todo
+ * canal, não só o da Attra. O hero ficou sem vídeo, porque a degradação até
+ * então era esconder a coluna: correta para falha de minutos, ruim para uma
+ * que dure dias. Enquanto o feed não volta, a reserva entra no lugar.
+ */
+describe('getLatestAttraVideo — reserva enquanto o feed está fora', () => {
+	afterEach(() => vi.unstubAllGlobals())
+
+	const responderCom = (init: { ok: boolean; status?: number; body?: string }) =>
+		vi.stubGlobal('fetch', vi.fn(async () => ({
+			ok: init.ok,
+			status: init.status ?? (init.ok ? 200 : 404),
+			text: async () => init.body ?? '',
+		})))
+
+	it('serve a reserva quando o feed responde 404', async () => {
+		responderCom({ ok: false, status: 404 })
+		expect((await getLatestAttraVideo())?.videoId).toBe('MHrfLeOVz2I')
+	})
+
+	it('serve a reserva quando a rede falha', async () => {
+		vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('timeout') }))
+		expect((await getLatestAttraVideo())?.videoId).toBe('MHrfLeOVz2I')
+	})
+
+	it('serve a reserva quando o feed volta vazio', async () => {
+		responderCom({ ok: true, body: '<feed></feed>' })
+		expect((await getLatestAttraVideo())?.videoId).toBe('MHrfLeOVz2I')
+	})
+
+	/** O que importa quando o YouTube voltar: o feed manda, sem ninguém mexer. */
+	it('o feed tem precedência assim que volta a responder', async () => {
+		responderCom({ ok: true, body: COM_ESTREIA })
+		expect((await getLatestAttraVideo())?.videoId).toBe('LVX2JylkQJY')
+	})
+
+	it('e a reserva não mascara a regra da estreia', async () => {
+		const soEstreia = feed([entrada('MHrfLeOVz2I', 'estreia', '0')])
+		// Só ela no feed e em zero: a regra devolve o mais recente, não a reserva
+		// por acaso ser o mesmo id — o caminho é o do feed.
+		responderCom({ ok: true, body: soEstreia })
+		expect((await getLatestAttraVideo())?.videoId).toBe('MHrfLeOVz2I')
 	})
 })
