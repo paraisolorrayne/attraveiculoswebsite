@@ -84,7 +84,7 @@ export function colunaDoCard(c: { etapa: string; fonte_evento: string | null }):
 	// fonte_evento: um card em `novo` chega com fonte `alerta` e cairia em
 	// "Assumido pelo vendedor", afirmando um aceite que não aconteceu.
 	if (c.etapa === ETAPA_AGUARDANDO) return 'aguardando'
-	return c.fonte_evento === 'reporte' ? 'movimentando' : 'assumido'
+	return c.fonte_evento === 'reporte' || c.fonte_evento === 'movimentacao_manual' ? 'movimentando' : 'assumido'
 }
 
 export const SITUACOES: Record<string, { label: string; classe: string }> = {
@@ -136,6 +136,7 @@ export const FONTES_EVENTO: Record<string, string> = {
 	perda: 'Perda registrada',
 	sistema: 'Ajuste do sistema',
 	correcao_manual: 'Correção manual (gestor)',
+	movimentacao_manual: 'Movimentação manual (gestor)',
 	backfill_lead_novo: 'Importação inicial',
 }
 

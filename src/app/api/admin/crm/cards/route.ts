@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { sql } from 'kysely'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { db } from '@/lib/db'
+import { configuracaoRetornoCrm } from '@/lib/crm-retorno'
 import {
   extrairRefSessao,
   pareceUuid,
@@ -189,7 +190,7 @@ async function origensDosCards(
 // estourar, o painel avisa em vez de mentir: `truncado` no corpo da resposta.
 const LIMITE_CARDS = 5000
 
-// Visão CRM (somente leitura). Acesso: admin e owner.
+// Visão CRM. Acesso: admin e owner.
 export async function GET() {
   const admin = await getCurrentAdmin()
   if (!admin || !['admin', 'owner'].includes(admin.role)) {
@@ -214,7 +215,13 @@ export async function GET() {
     const cards = data.map(card => ({ ...card, origem_campanha: origens.get(card.id) ?? null }))
     // `truncado` só é verdade quando o teto foi atingido de fato — a UI mostra
     // o aviso em vez de deixar o gestor achar que está vendo tudo.
-    return NextResponse.json({ cards, truncado: data.length === LIMITE_CARDS, limite: LIMITE_CARDS })
+    const retornoConfigurado = !!configuracaoRetornoCrm()
+    const pendentes = retornoConfigurado
+      ? await db.selectFrom('crm_eventos_saida').select(eb => eb.fn.countAll<string>().as('total'))
+        .where('entregue_em', 'is', null).executeTakeFirstOrThrow()
+      : null
+    return NextResponse.json({ cards, truncado: data.length === LIMITE_CARDS, limite: LIMITE_CARDS,
+      edicao_habilitada: retornoConfigurado, retornos_pendentes: Number(pendentes?.total ?? 0) })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'query failed' }, { status: 500 })
   }

@@ -537,6 +537,18 @@ export interface CrmCardsTable {
   atualizado_em: Timestamp
 }
 
+export interface CrmEventosSaidaTable {
+  sequencia: Generated<string>
+  id: string
+  card_id: string
+  corpo: string
+  criado_em: Timestamp
+  entregue_em: Timestamp | null
+  tentativas: Generated<number>
+  proxima_tentativa_em: Timestamp
+  ultimo_erro: string | null
+}
+
 export interface InventorySnapshotsTable {
   id: Generated<string>
   source: string
@@ -603,6 +615,7 @@ export interface Database {
   newsletter_campaigns: NewsletterCampaignsTable
   newsletter_subscribers: NewsletterSubscribersTable
   crm_cards: CrmCardsTable
+  crm_eventos_saida: CrmEventosSaidaTable
   inventory_snapshots: InventorySnapshotsTable
   indexnow_submissions: IndexnowSubmissionsTable
   admin_users: AdminUsersTable
@@ -630,7 +643,7 @@ export const TABELAS_DO_CODIGO = [
   'news_sources', 'news_articles', 'marketing_strategies', 'marketing_tasks',
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
-  'newsletter_subscribers', 'crm_cards', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
+  'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
 ] as const satisfies readonly (keyof Database)[]
 
 /**
