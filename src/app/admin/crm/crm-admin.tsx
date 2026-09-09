@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-	Loader2, RefreshCw, X, Search,
+	Loader2, RefreshCw, X, Search, Maximize2, Minimize2, Inbox, SlidersHorizontal,
 	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
 import { COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS } from './crm-constants'
 import { InfoDica } from './info-dica'
+import { CrmEditar } from './crm-editar'
+import type { ColunaKanban } from './crm-constants'
+import styles from './crm-workspace.module.css'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 import { inicioDoPeriodoBRT } from '@/lib/crm-periodo'
 import { termosDaBusca, cardCasaBusca } from '@/lib/crm-busca'
@@ -122,6 +125,17 @@ export function CrmAdmin() {
 	const [loading, setLoading] = useState(true)
 	const [erro, setErro] = useState<string | null>(null)
 	const [selecionado, setSelecionado] = useState<CrmCard | null>(null)
+	const [colunaDestino, setColunaDestino] = useState<ColunaKanban['id'] | undefined>()
+	const [edicaoHabilitada, setEdicaoHabilitada] = useState(false)
+	const [retornosPendentes, setRetornosPendentes] = useState(0)
+	const [avisoEdicao, setAvisoEdicao] = useState<string | null>(null)
+	const [expandido, setExpandido] = useState(false)
+	const [colunaEmFoco, setColunaEmFoco] = useState<string | null>(null)
+	const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
+	const abrirCard = (card: CrmCard, coluna?: ColunaKanban['id']) => {
+		setColunaDestino(coluna)
+		setSelecionado(card)
+	}
 	const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
 	const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = tudo
 	const [busca, setBusca] = useState('') // nome do cliente ou carro
@@ -134,6 +148,7 @@ export function CrmAdmin() {
 		// visual do redesign em ambientes sem banco.
 		if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1') {
 			setCards(DEMO_CARDS)
+			setUltimaAtualizacao(new Date())
 			setLoading(false)
 			return
 		}
@@ -145,6 +160,9 @@ export function CrmAdmin() {
 			if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
 			setCards(d.cards || [])
 			setTruncado(!!d.truncado)
+			setEdicaoHabilitada(!!d.edicao_habilitada)
+			setRetornosPendentes(d.retornos_pendentes ?? 0)
+			setUltimaAtualizacao(new Date())
 		} catch (e) {
 			setErro(e instanceof Error ? e.message : 'Falha ao carregar')
 		} finally {
@@ -159,15 +177,23 @@ export function CrmAdmin() {
 		return () => clearInterval(t)
 	}, [load])
 
-	// Esc fecha o modal de detalhes
+	// Esc fecha os detalhes primeiro; depois sai do modo expandido.
 	useEffect(() => {
-		if (!selecionado) return
+		if (!selecionado && !expandido) return
+		const anterior = document.body.style.overflow
+		document.body.style.overflow = 'hidden'
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setSelecionado(null)
+			if (e.key === 'Escape') {
+				if (selecionado) setSelecionado(null)
+				else setExpandido(false)
+			}
 		}
 		window.addEventListener('keydown', onKey)
-		return () => window.removeEventListener('keydown', onKey)
-	}, [selecionado])
+		return () => {
+			window.removeEventListener('keydown', onKey)
+			document.body.style.overflow = anterior
+		}
+	}, [selecionado, expandido])
 
 	// Cards em branco (só etapa, situação e data) saem do quadro: não dá para
 	// agir sobre eles e ainda inflavam a contagem das colunas. O total some é
@@ -239,17 +265,27 @@ export function CrmAdmin() {
 	]
 
 	return (
-		<div className="max-w-full px-4 sm:px-6 py-8">
-			<div className="flex items-center justify-between mb-4 max-w-[1600px] mx-auto flex-wrap gap-3">
+		<div className={`${styles.workspace} ${expandido ? styles.expanded : ''}`}>
+			<div className={styles.heading}>
 				<div>
-					<h1 className="text-2xl font-bold text-foreground">CRM</h1>
-					<p className="text-sm text-foreground-secondary mt-1">
-						Espelho do funil de vendas — somente leitura. As atualizações dos
-						vendedores aparecem aqui automaticamente.
-					</p>
+					<p className={styles.eyebrow}>Operação comercial</p>
+					<h1 className={styles.title}>CRM de vendas</h1>
 				</div>
-				<div className="flex items-center gap-3 flex-wrap justify-end">
-					<div className="relative">
+				<div className={styles.headingActions}>
+					<span className={styles.sync}>
+						<span className={`h-1.5 w-1.5 rounded-full ${erro ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+						{loading ? 'Atualizando…' : ultimaAtualizacao ? `Atualizado às ${ultimaAtualizacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Aguardando dados'}
+					</span>
+					<button onClick={load} disabled={loading} className={styles.button} aria-label="Atualizar CRM">
+						<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /><span>Atualizar</span>
+					</button>
+					<button onClick={() => setExpandido(v => !v)} className={styles.button} aria-label={expandido ? 'Sair do modo expandido' : 'Expandir CRM'} aria-pressed={expandido}>
+						{expandido ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}<span>{expandido ? 'Recolher' : 'Expandir'}</span>
+					</button>
+				</div>
+			</div>
+			<div className={styles.toolbar}>
+					<div className={styles.search}>
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
 						<input
 							type="search"
@@ -265,7 +301,7 @@ export function CrmAdmin() {
 							}}
 							placeholder="Buscar cliente ou carro"
 							aria-label="Buscar por nome do cliente ou carro"
-							className="w-56 pl-9 pr-9 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:border-foreground-secondary/50 [&::-webkit-search-cancel-button]:hidden"
+							className="text-foreground placeholder:text-foreground-secondary [&::-webkit-search-cancel-button]:hidden"
 						/>
 						{busca !== '' && (
 							<button
@@ -277,11 +313,12 @@ export function CrmAdmin() {
 							</button>
 						)}
 					</div>
-					<span className="flex items-center gap-1.5">
+					<div className={styles.filter}>
+						<span className={styles.filterLabel}>Período</span>
 						<select
 							value={filtroDias}
 							onChange={e => setFiltroDias(Number(e.target.value))}
-							className="px-3 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors"
+							aria-label="Filtrar por período"
 						>
 							{PERIODOS.map(p => (
 								<option key={p.dias} value={p.dias}>{p.label}</option>
@@ -294,48 +331,49 @@ export function CrmAdmin() {
 							pela data do alerta, ativos pela última movimentação, encerrados pela data
 							em que foram ganhos/perdidos de fato.
 						</InfoDica>
-					</span>
+					</div>
 					{vendedores.length > 0 && (
+						<div className={styles.filter}>
 						<select
 							value={filtroVendedor}
 							onChange={e => setFiltroVendedor(e.target.value)}
-							className="px-3 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors max-w-[200px]"
 							title="Filtrar por vendedor"
+							aria-label="Filtrar por vendedor"
 						>
 							<option value="">Todos os vendedores</option>
 							{vendedores.map(v => (
 								<option key={v} value={v}>{v}</option>
 							))}
 						</select>
+						</div>
 					)}
-					<button
-						onClick={load}
-						disabled={loading}
-						className="flex items-center gap-2 px-4 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors disabled:opacity-50"
-					>
-						<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-						Atualizar
-					</button>
-				</div>
+					<div className={styles.toolbarEnd}>
+						{(filtroDias !== 0 || filtroVendedor || busca) && <button className={styles.button} onClick={() => { setFiltroDias(0); setFiltroVendedor(''); setBusca('') }}><X className="h-3 w-3" />Limpar filtros</button>}
+						<span className="flex items-center gap-1.5 text-[11px] text-foreground-secondary"><SlidersHorizontal className="h-3 w-3" />{cardsFiltrados.length} leads no quadro</span>
+					</div>
 			</div>
 
+			{avisoEdicao && <p role="status" className="text-sm text-foreground">{avisoEdicao}</p>}
+			{retornosPendentes > 0 && <p role="status" className="p-3 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm">
+				{retornosPendentes} alteração(ões) aguardando envio ao sistema. O envio será tentado novamente automaticamente.
+			</p>}
 			{/* KPIs do período */}
 			{cards.length > 0 && (
-				<div className="max-w-[1600px] mx-auto mb-6 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+				<div className={styles.metrics}>
 					{kpis.map(k => (
-						<div key={k.rotulo} className="p-3 bg-background-card border border-border rounded-xl">
-							<div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
+						<div key={k.rotulo} className={styles.metric} data-tone={k.rotulo === 'Ganhos' ? 'ganho' : k.rotulo === 'Aguardando aceite' ? 'aguardando' : undefined}>
+							<div className={styles.metricLabel}>
 								{k.rotulo}
 								<InfoDica>{k.dica}</InfoDica>
 							</div>
-							<div className="mt-1 text-xl font-semibold text-foreground truncate">{k.valor}</div>
+							<div className={styles.metricValue}>{k.valor}</div>
 						</div>
 					))}
 				</div>
 			)}
 
 			{erro && (
-				<div className="max-w-[1600px] mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-red-500/10 text-red-500 border border-red-500/30">
+				<div className="px-4 py-3 rounded-lg text-sm bg-red-500/10 text-red-500 border border-red-500/30">
 					Não foi possível carregar os leads agora. Tente atualizar em instantes.
 				</div>
 			)}
@@ -344,7 +382,7 @@ export function CrmAdmin() {
 			    um cliente antigo com "Hoje" ligado devolve nada e parece que o
 			    lead não existe no CRM. */}
 			{foraDoPeriodo > 0 && (
-				<div className="max-w-[1600px] mx-auto mb-4 px-4 py-3 rounded-lg text-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center justify-between gap-3 flex-wrap">
+				<div className="px-4 py-3 rounded-lg text-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center justify-between gap-3 flex-wrap">
 					<span>
 						{foraDoPeriodo === 1
 							? 'Mais 1 lead com esse nome/carro está fora do período selecionado.'
@@ -364,7 +402,7 @@ export function CrmAdmin() {
 					<Loader2 className="w-6 h-6 animate-spin mx-auto" />
 				</div>
 			) : cards.length === 0 && !erro ? (
-				<div className="max-w-[1600px] mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
+				<div className="w-full p-12 text-center bg-background-card border border-border rounded-xl">
 					<p className="text-foreground font-medium">Nenhum lead ainda</p>
 					<p className="text-sm text-foreground-secondary mt-2">
 						Este painel é alimentado automaticamente. Assim que o primeiro
@@ -372,7 +410,7 @@ export function CrmAdmin() {
 					</p>
 				</div>
 			) : cardsFiltrados.length === 0 ? (
-				<div className="max-w-[1600px] mx-auto p-12 text-center bg-background-card border border-border rounded-xl">
+				<div className="w-full p-12 text-center bg-background-card border border-border rounded-xl">
 					<p className="text-foreground font-medium">
 						{buscando ? `Nenhum lead para “${busca.trim()}”` : 'Nenhum lead para os filtros selecionados'}
 					</p>
@@ -391,58 +429,80 @@ export function CrmAdmin() {
 					)}
 				</div>
 			) : (
-				<div className="flex gap-4 overflow-x-auto pb-4 max-w-[1600px] mx-auto">
+				<div className={styles.board} aria-label="Funil de vendas">
 					{COLUNAS_KANBAN.map(col => {
 						const daColuna = cardsFiltrados.filter(c => colunaDoCard(c) === col.id)
 						const somaColuna = daColuna.reduce((s, c) => s + (c.valor !== null ? Number(c.valor) : 0), 0)
 						return (
-							// As colunas dividem a largura disponível em vez de terem 320px
-							// fixos: com 4 colunas fixas a soma estourava o container e a
-							// última ficava cortada mesmo em tela larga. O min-width mantém
-							// o scroll horizontal em telas estreitas.
-							<div key={col.id} className="flex-1 min-w-[19rem] max-w-[26rem]">
+							<section key={col.id} className={styles.column} data-stage={col.id} data-drag-over={colunaEmFoco === col.id} aria-label={col.label}
+								onDragOver={e => { if (edicaoHabilitada && e.dataTransfer.types.includes('application/x-crm-card')) { e.preventDefault(); setColunaEmFoco(col.id) } }}
+								onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setColunaEmFoco(null) }}
+								onDrop={e => {
+									setColunaEmFoco(null)
+									if (!edicaoHabilitada) return
+									e.preventDefault()
+									const card = cards.find(c => c.id === e.dataTransfer.getData('application/x-crm-card'))
+									if (card && colunaDoCard(card) !== col.id) abrirCard(card, col.id)
+								}}>
 								{/* Faixa tingida na cor da coluna: label + contagem + soma dos valores */}
-								<div className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 mb-3 ${col.badge}`}>
-									<h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide min-w-0">
-										<span className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
-										<span className="truncate">{col.label}</span>
+								<div className={styles.columnHeader}>
+									<div className={styles.columnTitle}>
+										<h2>{col.label.replace('Encerrado — ', '').replace('Assumido pelo vendedor', 'Assumidos')}</h2>
+										<span className={styles.columnCount}>{daColuna.length}</span>
 										<InfoDica>{col.descricao}</InfoDica>
-									</h2>
-									<span className="text-xs whitespace-nowrap">
-										{daColuna.length}
-										<span className="opacity-70"> · {somaColuna > 0 ? fmtValorAbrev(somaColuna) : '–'}</span>
-									</span>
+									</div>
+									<div className={styles.columnTotal}>
+										<span>{somaColuna > 0 ? fmtValorAbrev(somaColuna) : 'Sem valor informado'}</span>
+										<span title={col.descricao}>{col.encerrada ? 'Encerrados' : 'Em aberto'}</span>
+									</div>
 								</div>
-								<div className="space-y-3">
+								<div className={styles.columnCards} tabIndex={0} aria-label={`Cards: ${col.label}`}>
+									{daColuna.length === 0 && <div className={styles.emptyColumn}><Inbox className="h-5 w-5 opacity-50" /><span>Nenhum lead nesta etapa</span></div>}
 									{daColuna.map(c => (
+										<div key={c.id} draggable={edicaoHabilitada} onDragEnd={() => setColunaEmFoco(null)} onDragStart={e => {
+											e.dataTransfer.setData('application/x-crm-card', c.id)
+											e.dataTransfer.effectAllowed = 'move'
+										}}>
 										<CardKanban
 											key={c.id}
 											card={c}
 											encerrada={col.encerrada}
 											aguardando={col.id === 'aguardando'}
 											agora={agora}
-											onSelect={setSelecionado}
+											onSelect={c => abrirCard(c)}
 										/>
+										</div>
 									))}
 								</div>
-							</div>
+							</section>
 						)
 					})}
 				</div>
 			)}
 
 			{selecionado && (
-				<DetalhesModal card={selecionado} onClose={() => setSelecionado(null)} />
+				<DetalhesModal card={selecionado} onClose={() => setSelecionado(null)} editor={
+					<CrmEditar key={`${selecionado.id}:${colunaDestino ?? ''}`} card={selecionado} vendedores={vendedores}
+						colunaInicial={colunaDestino} habilitado={edicaoHabilitada} onSaved={(card, sincronizacao) => {
+							setCards(prev => prev.map(c => c.id === card.id ? card : c))
+							setSelecionado(null)
+							setAvisoEdicao(sincronizacao === 'pendente'
+								? 'Alteração salva. O envio ao sistema está pendente e será tentado novamente.'
+								: sincronizacao === 'enviado' ? 'Alteração salva e enviada ao sistema.' : 'Nenhuma alteração necessária.')
+							void load()
+						}} />
+				} />
 			)}
 
 			{truncado && (
-				<div className="max-w-[1600px] mx-auto mt-4 px-4 py-3 rounded-lg text-sm bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+				<div className="px-4 py-3 rounded-lg text-sm bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
 					O painel atingiu o teto de cards carregados — os leads mais parados ficaram
 					de fora e as contagens abaixo estão incompletas. Avise o time do site.
 				</div>
 			)}
 
-			<p className="max-w-[1600px] mx-auto mt-6 text-xs text-foreground-secondary">
+			<div className={styles.footer}>
+			<span>
 				{ocultosSemInfo > 0 && (
 					<>
 						{ocultosSemInfo === 1
@@ -457,13 +517,21 @@ export function CrmAdmin() {
 					</>
 				)}
 				Atualização automática a cada 60s
-			</p>
+			</span>
+			<span>{edicaoHabilitada ? 'Arraste para mover · Clique para gerenciar' : 'Clique em um card para ver os detalhes'}</span>
+			</div>
 		</div>
 	)
 }
 
-// Modal de detalhes — 100% somente leitura (nenhuma ação/edição)
-function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }) {
+function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () => void; editor: React.ReactNode }) {
+	const painel = useRef<HTMLDivElement>(null)
+	const fechar = useRef<HTMLButtonElement>(null)
+	useEffect(() => {
+		const anterior = document.activeElement as HTMLElement | null
+		fechar.current?.focus()
+		return () => anterior?.focus()
+	}, [])
 	const estilo = colunaInfo(card)
 	// Campos legados do v1, mantidos se ainda vierem no JSONB
 	const observacoes = dadoStr(card.dados, 'observacoes_alerta')
@@ -488,12 +556,23 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+			className={styles.drawerBackdrop}
 			onClick={onClose}
 		>
 			<div
-				className="bg-background-card border border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+				className={styles.drawer}
+				ref={painel}
+				role="dialog" aria-modal="true" aria-label={`Atendimento de ${card.nome || 'cliente sem nome'}`}
 				onClick={e => e.stopPropagation()}
+				onKeyDown={e => {
+					if (e.key !== 'Tab') return
+					const focaveis = Array.from(painel.current?.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex="0"]') ?? [])
+						.filter(el => !el.matches(':disabled') && el.getClientRects().length > 0)
+					const primeiro = focaveis[0]
+					const ultimo = focaveis[focaveis.length - 1]
+					if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo?.focus() }
+					if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro?.focus() }
+				}}
 			>
 				{/* Header */}
 				<div className="flex items-start justify-between gap-3 p-4 border-b border-border">
@@ -516,6 +595,7 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 							</span>
 						)}
 						<button
+							ref={fechar}
 							onClick={onClose}
 							aria-label="Fechar"
 							className="p-2 hover:bg-background rounded-lg transition-colors"
@@ -527,13 +607,14 @@ function DetalhesModal({ card, onClose }: { card: CrmCard; onClose: () => void }
 
 				{/* Conteúdo */}
 				<div className="p-4 overflow-y-auto space-y-4">
+					{editor}
 					<dl className="grid grid-cols-2 gap-x-4 gap-y-3">
 						{infos.filter(i => i.valor).map(i => (
 							<div key={i.rotulo}>
 								<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">
 									{i.rotulo}
 								</dt>
-								<dd className="text-sm text-foreground mt-0.5">{i.valor}</dd>
+								<dd className="text-sm text-foreground mt-0.5 break-words">{i.valor}</dd>
 							</div>
 						))}
 					</dl>

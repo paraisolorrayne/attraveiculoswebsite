@@ -4,6 +4,7 @@ import { Phone, Car, AlertTriangle, CalendarClock, ArrowLeftRight, Megaphone, Ho
 import { situacaoInfo } from './crm-constants'
 import { dataReferenciaPeriodo, dataAlerta } from '@/lib/crm-datas'
 import { atrasoAceite, fmtHorasComerciais } from '@/lib/crm-periodo'
+import styles from './crm-workspace.module.css'
 
 // Card do kanban do CRM — slots fixos de identificação (com "–" quando o
 // dado não veio do webhook) + blocos narrativos condicionais.
@@ -179,7 +180,6 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 }) {
 	const proximaAtrasada = !!c.proxima_acao_em && new Date(c.proxima_acao_em).getTime() < agora
 	const motivo = encerrada ? motivoDoCard(c) : null
-	const primeiroNome = c.vendedor?.trim().split(/\s+/)[0] ?? null
 	// Dois relógios no mesmo card se contradizem: o genérico conta tempo
 	// corrido e a faixa de espera conta horário comercial — "14h" e "2h sem
 	// aceite" lado a lado, para o mesmo lead. Quando a faixa aparece, ela é a
@@ -197,26 +197,26 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 					onSelect(c)
 				}
 			}}
-			className="p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-foreground-secondary/40 transition-colors"
+			className={styles.card}
 		>
 			{/* Nome + situação */}
 			<div className="flex items-start justify-between gap-2">
 				{/* min-w-0: sem isso o nome não encolhe dentro do flex e empurra o
 				    badge para fora do card em vez de cortar com reticências */}
-				<div className="font-medium text-foreground text-sm truncate min-w-0">
-					{c.nome || <Traco />}
+				<div className="font-semibold text-foreground text-[13px] leading-snug line-clamp-2 min-w-0" title={c.nome || c.telefone || 'Sem nome'}>
+					{c.nome || c.telefone || 'Sem nome'}
 				</div>
-				{c.situacao && <BadgeSituacao situacao={c.situacao} />}
+				{!mostraEspera && (
+					<span className="shrink-0"><span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span></span>
+				)}
 			</div>
 
 			{/* Valor + tempo */}
-			<div className="mt-1 flex items-center justify-between gap-2">
-				<span className="text-base font-semibold text-foreground whitespace-nowrap">
+			<div className="mt-2 flex flex-wrap items-center justify-between gap-1.5">
+				<span className="text-[15px] tracking-tight font-semibold text-foreground whitespace-nowrap tabular-nums">
 					{fmtValor(c.valor) ?? <Traco />}
 				</span>
-				{!mostraEspera && (
-					<span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span>
-				)}
+				{c.situacao && <BadgeSituacao situacao={c.situacao} />}
 			</div>
 
 			{/* Veículo de interesse (slot fixo) + troca (condicional) */}
@@ -255,7 +255,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 
 			{/* Andamento — a última fala do vendedor */}
 			{c.andamento && (
-				<div className="mt-2 border-l-2 border-blue-400/60 pl-2 text-xs italic text-foreground line-clamp-3">
+				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-[11px] leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
 					{c.andamento}
 				</div>
 			)}
@@ -287,18 +287,27 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 				</div>
 			)}
 
-			{/* Rodapé: telefone · origem · vendedor (slots fixos) */}
-			<div className="mt-2 pt-2 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
+			{/* Responsável sempre legível; o atalho de contato tem o telefone no título. */}
+			<div className="mt-3 pt-2.5 border-t border-border/60 flex items-center justify-between gap-2 text-xs">
+				<div className="flex items-center gap-1.5 min-w-0">
+					{c.vendedor && <AvatarVendedor nome={c.vendedor} />}
+					<div className="min-w-0">
+						<p className="text-[11px] text-foreground truncate" title={c.vendedor ?? undefined}>{c.vendedor || 'Sem vendedor'}</p>
+						{c.origem && <p className="text-[10px] text-foreground-secondary truncate" title={c.origem}>{c.origem}</p>}
+					</div>
+				</div>
 				{c.telefone && linkWhatsApp(c.telefone) ? (
 					<a
 						href={linkWhatsApp(c.telefone)!}
 						target="_blank"
 						rel="noopener noreferrer"
 						onClick={e => e.stopPropagation()}
-						className="flex items-center gap-1 text-green-600 hover:underline whitespace-nowrap flex-shrink-0"
+						onKeyDown={e => e.stopPropagation()}
+						title={`WhatsApp: ${c.telefone}`}
+						aria-label={`Conversar no WhatsApp: ${c.telefone}`}
+						className="flex h-7 w-7 items-center justify-center rounded-md border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 shrink-0"
 					>
 						<Phone className="w-3 h-3" />
-						{c.telefone}
 					</a>
 				) : (
 					<span className="flex items-center gap-1 text-foreground-secondary">
@@ -306,21 +315,6 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 						<Traco />
 					</span>
 				)}
-				{/* A origem é a única do rodapé que pode encolher: telefone cortado
-				    fica inútil e o vendedor já tem o avatar como âncora */}
-				<span className="text-[10px] uppercase tracking-wide text-foreground-secondary truncate min-w-0">
-					{c.origem || <Traco />}
-				</span>
-				<span className="flex items-center gap-1.5 min-w-0">
-					{c.vendedor ? (
-						<>
-							<AvatarVendedor nome={c.vendedor} />
-							<span className="text-[11px] text-foreground-secondary truncate">{primeiroNome}</span>
-						</>
-					) : (
-						<Traco />
-					)}
-				</span>
 			</div>
 		</div>
 	)
