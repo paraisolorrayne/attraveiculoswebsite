@@ -556,11 +556,11 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 
 	return (
 		<div
-			className={styles.drawerBackdrop}
+			className={styles.janelaFundo}
 			onClick={onClose}
 		>
 			<div
-				className={styles.drawer}
+				className={styles.janela}
 				ref={painel}
 				role="dialog" aria-modal="true" aria-label={`Atendimento de ${card.nome || 'cliente sem nome'}`}
 				onClick={e => e.stopPropagation()}
@@ -575,7 +575,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 				}}
 			>
 				{/* Header */}
-				<div className="flex items-start justify-between gap-3 p-4 border-b border-border">
+				<div className="flex items-start justify-between gap-3 p-5 border-b border-border">
 					<div className="min-w-0">
 						<h2 className="text-lg font-semibold text-foreground truncate">
 							{card.nome || 'Sem nome'}
@@ -606,9 +606,9 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 				</div>
 
 				{/* Conteúdo */}
-				<div className="p-4 overflow-y-auto space-y-4">
+				<div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
 					{editor}
-					<dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+					<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 						{infos.filter(i => i.valor).map(i => (
 							<div key={i.rotulo}>
 								<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">
@@ -678,7 +678,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 								</>
 							)}
 						</h3>
-						<dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+						<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 							{linhaDoTempo.filter(d => d.valor).map(d => (
 								<div key={d.rotulo}>
 									<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">

@@ -39,15 +39,20 @@ export function CrmEditar({ card, vendedores, colunaInicial, habilitado, onSaved
 		<h3 className="font-medium text-foreground text-sm">Gerenciar atendimento</h3>
 		{!habilitado && <p className="text-sm text-foreground-secondary">A edição será liberada quando a conexão de retorno ao sistema estiver configurada.</p>}
 		<fieldset disabled={!habilitado || salvando} className="space-y-3">
-			<label className="block text-xs text-foreground-secondary">Coluna
-				<select aria-label="Coluna" value={coluna} onChange={e => setColuna(e.target.value as ColunaKanban['id'])} className={inputClass}>
-					{COLUNAS_KANBAN.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-				</select>
-			</label>
-			<label className="block text-xs text-foreground-secondary">Vendedor responsável
-				<input list="crm-vendedores" value={vendedor} maxLength={150} onChange={e => setVendedor(e.target.value)} placeholder="Sem vendedor" className={inputClass} />
-				<datalist id="crm-vendedores">{vendedores.map(v => <option key={v} value={v} />)}</datalist>
-			</label>
+			{/* Lado a lado a partir de 640px: na janela de 920px, dois campos curtos
+			    empilhados em largura total ficam esticados e jogam o botão de salvar
+			    para longe de quem acabou de escolher a coluna. */}
+			<div className="grid gap-3 sm:grid-cols-2">
+				<label className="block text-xs text-foreground-secondary">Coluna
+					<select aria-label="Coluna" value={coluna} onChange={e => setColuna(e.target.value as ColunaKanban['id'])} className={inputClass}>
+						{COLUNAS_KANBAN.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+					</select>
+				</label>
+				<label className="block text-xs text-foreground-secondary">Vendedor responsável
+					<input list="crm-vendedores" value={vendedor} maxLength={150} onChange={e => setVendedor(e.target.value)} placeholder="Sem vendedor" className={inputClass} />
+					<datalist id="crm-vendedores">{vendedores.map(v => <option key={v} value={v} />)}</datalist>
+				</label>
+			</div>
 			<p className="text-xs text-foreground-secondary">Escolha um nome existente ou informe o vendedor. Deixe vazio para retirar a atribuição.</p>
 			{coluna === 'perdido' && colunaDoCard(card) !== 'perdido' && <label className="block text-xs text-foreground-secondary">Motivo do encerramento
 				<textarea required maxLength={2000} value={motivo} onChange={e => setMotivo(e.target.value)} className={inputClass} />

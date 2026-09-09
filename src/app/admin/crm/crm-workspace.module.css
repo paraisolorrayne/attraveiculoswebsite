@@ -59,8 +59,21 @@
 .emptyColumn { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 22px; padding: 22px 12px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; font-size: 11px; color: var(--foreground-secondary); }
 .footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--foreground-secondary); font-size: 10px; }
 .notice { flex-shrink: 0; border-radius: 8px; padding: 10px 12px; font-size: 12px; }
-.drawerBackdrop { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: flex-end; background: #0006; backdrop-filter: blur(3px); }
-.drawer { display: flex; flex-direction: column; width: min(540px, 100%); height: 100dvh; background: var(--background-card); border-left: 1px solid var(--border); box-shadow: -16px 0 60px #0002; }
+/* Janela central do detalhe do card.
+   Era gaveta lateral de 540px FIXOS: num monitor de 1920 ela continuava
+   estreita, os campos se espremiam em duas colunas e sobrava um vazio no pé.
+   Centralizada e larga, os mesmos campos cabem em três colunas e a altura
+   acompanha o conteúdo até o teto — sem espaço morto e sem esconder o quadro
+   atrás de uma faixa. */
+.janelaFundo { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: #0007; backdrop-filter: blur(3px); }
+.janela { display: flex; flex-direction: column; width: min(920px, 100%); max-height: min(880px, 88dvh); background: var(--background-card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px #00000059; overflow: hidden; }
+
+/* No celular vira tela cheia: 920px centralizados com respiro em volta não
+   existem em 390px de largura, e a moldura só roubaria área útil. */
+@media (max-width: 640px) {
+	.janelaFundo { padding: 0; align-items: stretch; }
+	.janela { width: 100%; max-height: 100dvh; border: 0; border-radius: 0; }
+}
 
 @media (min-width: 1180px) {
 	.workspace { height: calc(100dvh - 65px); min-height: 620px; }
