@@ -10,6 +10,7 @@
  * `state`, as imagens) virou parâmetro.
  */
 import { enquadrar } from './enquadramento'
+import { acharChao, limparJuntas } from './juntas'
 import { LARGURA, type Assets, type ImagensDoOperador, type OpcoesFoto } from './tipos'
 
 /** Vermelho oficial Attra — R154 G28 B28. */
@@ -506,6 +507,132 @@ export function suavizarDivisa(ctx: CanvasRenderingContext2D, y: number, largura
 	ctx.drawImage(oc.canvas, 0, 0, largura, H, 0, y, largura, H)
 }
 
+/** A foto tratada e, quando foi possível medir, onde começa o chão em cada coluna dela. */
+interface FotoTratada {
+	tela: HTMLCanvasElement | HTMLImageElement
+	/** Primeira linha de chão por coluna, nas coordenadas de `tela`. `null` = não medido. */
+	chao: Int32Array | null
+}
+
+const semJuntasCache = new WeakMap<HTMLImageElement, FotoTratada>()
+
+/**
+ * A foto com as juntas do calçamento apagadas (ver juntas.ts).
+ *
+ * Uma vez por imagem: a limpeza custa centenas de ms e `render` roda a cada
+ * movimento de slider. Trabalha em no máximo 1280px de largura — acima da
+ * peça, para o zoom não denunciar a redução, sem pagar pela foto de 4000px. Se
+ * o canvas recusar a leitura (foto de outra origem), devolve a foto como veio.
+ */
+export function fotoSemJuntas(img: HTMLImageElement): FotoTratada {
+	const pronto = semJuntasCache.get(img)
+	if (pronto) return pronto
+	let saida: FotoTratada = { tela: img, chao: null }
+	try {
+		const esc = Math.min(1, 1280 / img.width)
+		const c = document.createElement('canvas')
+		c.width = Math.round(img.width * esc)
+		c.height = Math.round(img.height * esc)
+		const x = c.getContext('2d', { willReadFrequently: true })!
+		x.imageSmoothingQuality = 'high'
+		x.drawImage(img, 0, 0, c.width, c.height)
+		const d = x.getImageData(0, 0, c.width, c.height)
+		const trocados = limparJuntas(d.data, c.width, c.height)
+		if (trocados > 0) x.putImageData(d, 0, 0)
+		saida = { tela: trocados > 0 ? c : img, chao: acharChao(d.data, c.width, c.height) }
+	} catch {
+		saida = { tela: img, chao: null }
+	}
+	semJuntasCache.set(img, saida)
+	return saida
+}
+
+/**
+ * Funde o fim da foto no chão de baixo numa rampa LONGA — mas só onde é chão.
+ *
+ * A dissolvência de 16px de `suavizarDivisa` é curta de propósito: as
+ * tentativas de fundir mais alcançavam as rodas. Só que 16px não escondem a
+ * divisa — o tom casa, e ainda assim a TEXTURA muda de uma linha para a outra
+ * (chão de foto é macio, o da fachada tem grão fino), e o olho acha a reta.
+ *
+ * O que mudou é que agora se sabe, coluna a coluna, onde o chão da foto começa
+ * (`chao`, de juntas.ts). Então a rampa pode ter 170px: em cada coluna ela
+ * nasce abaixo do pneu/sombra e nunca sobe além disso. Onde o carro chega perto
+ * da base (picape), a rampa daquela coluna encurta sozinha.
+ *
+ * O que entra por cima é o fundo QUE ESTARIA ALI — as mesmas linhas da
+ * fachada, redesenhadas por `pintarFundo` e com a mesma correção de tom que
+ * `casarPisoAbaixoDaDivisa` aplicou abaixo da divisa. Copiar a tira de baixo
+ * para cima não serve: o chão da fachada clareia conforme desce, e a cópia
+ * deslocada deixava um degrau de tom exatamente na divisa.
+ */
+export function fundirChaoNaDivisa(
+	ctx: CanvasRenderingContext2D,
+	base: number,
+	largura: number,
+	geo: GeometriaDaFoto,
+	deCima: [number, number, number],
+	deBaixo: [number, number, number],
+	/** Desenha o fundo nas coordenadas da peça; o contexto já vem transladado. */
+	pintarFundo: (c: CanvasRenderingContext2D) => void,
+): boolean {
+	const chao = geo.chao
+	if (!chao) return false
+	const F = Math.min(170, base)
+	if (F < 40) return false
+	const FOLGA = 14 // entre o fim da sombra e o começo da rampa
+
+	if (!fusaoCache) fusaoCache = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!
+	const oc = fusaoCache
+	if (oc.canvas.width !== largura || oc.canvas.height !== F) {
+		oc.canvas.width = largura
+		oc.canvas.height = F
+	}
+	oc.globalCompositeOperation = 'source-over'
+	oc.clearRect(0, 0, largura, F)
+	oc.save()
+	oc.translate(0, -(base - F))
+	pintarFundo(oc)
+	oc.restore()
+	casarPisoAbaixoDaDivisa(oc, 0, largura, F, deCima, deBaixo)
+
+	const tira = oc.getImageData(0, 0, largura, F)
+	const px = tira.data
+	for (let x = 0; x < largura; x++) {
+		const u = Math.floor(((x - geo.dx) / geo.dw) * geo.larguraTela)
+		let inicio = F // coluna fora da foto: nada a fundir
+		if (u >= 0 && u < chao.length) {
+			const chaoNoCanvas = geo.dy + (chao[u] / geo.alturaTela) * geo.dh + FOLGA
+			inicio = Math.max(0, chaoNoCanvas - (base - F))
+		}
+		const vao = F - inicio
+		for (let y = 0; y < F; y++) {
+			let a = 0
+			if (vao >= 24 && y >= inicio) {
+				const t = (y - inicio) / vao
+				a = t * t * (3 - 2 * t)
+			}
+			px[(y * largura + x) * 4 + 3] = Math.round(a * 255)
+		}
+	}
+	oc.putImageData(tira, 0, 0)
+	ctx.drawImage(oc.canvas, 0, 0, largura, F, 0, base - F, largura, F)
+	return true
+}
+
+let fusaoCache: CanvasRenderingContext2D | null = null
+
+/** Onde a foto caiu no canvas — o bastante para levar uma coluna do canvas à coluna da foto. */
+export interface GeometriaDaFoto {
+	dx: number
+	dy: number
+	dw: number
+	dh: number
+	larguraTela: number
+	alturaTela: number
+	chao: Int32Array | null
+}
+
 export function drawPhotoBanda(
 	ctx: CanvasRenderingContext2D,
 	altura: number,
@@ -515,7 +642,7 @@ export function drawPhotoBanda(
 	rw: number,
 	rh: number,
 	opt?: OpcoesFoto,
-): { topo: number; base: number } {
+): { topo: number; base: number; geo: GeometriaDaFoto } {
 	const o = opt ?? NEUTRO
 	const scale = Math.max(rw / img.width, rh / img.height) * o.zoom
 	const dw = img.width * scale
@@ -529,7 +656,8 @@ export function drawPhotoBanda(
 	oc.height = alturaOff
 	const o2 = oc.getContext('2d')!
 	o2.imageSmoothingQuality = 'high'
-	o2.drawImage(img, dx - rx, dy - ry, dw, dh)
+	const tratada = fotoSemJuntas(img)
+	o2.drawImage(tratada.tela, dx - rx, dy - ry, dw, dh)
 	o2.globalCompositeOperation = 'destination-out'
 	// Fusão SÓ no topo, onde vive céu/fachada da foto — nunca o carro.
 	const topoFoto = Math.max(0, dy - ry)
@@ -548,7 +676,16 @@ export function drawPhotoBanda(
 	// topo: clampado na janela (o chamador usa para decidir o logo de reserva —
 	// com dy negativo ele desenhava um ATTRA duplicado sobre o letreiro).
 	// base: onde a foto termina — é o que ancora o bloco de texto.
-	return { topo: Math.max(ry, dy), base: dy + dh }
+	const geo: GeometriaDaFoto = {
+		dx,
+		dy,
+		dw,
+		dh,
+		larguraTela: tratada.tela.width,
+		alturaTela: tratada.tela.height,
+		chao: tratada.chao,
+	}
+	return { topo: Math.max(ry, dy), base: dy + dh, geo }
 }
 
 /**

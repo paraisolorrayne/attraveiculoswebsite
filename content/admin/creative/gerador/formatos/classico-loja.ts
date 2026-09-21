@@ -13,6 +13,7 @@ import {
 	drawPhoto,
 	drawPhotoBanda,
 	suavizarDivisa,
+	fundirChaoNaDivisa,
 	casarPisoAbaixoDaDivisa,
 	placeholder,
 	spacedText,
@@ -27,27 +28,31 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 	const PHOTO1_H = 1000
 
 	const fachada = assets.fachadaLoja
-	if (fachada.complete && fachada.naturalWidth) {
-		// Puxada para CIMA: medido na imagem, as letras do "ATTRA" começam na
-		// linha 157 — o deslocamento de -117 as coloca em y=40, no topo da peça.
-		// Com o letreiro lá em cima, o bloco de título vive ABAIXO dele e a marca
-		// do veículo nunca mais disputa espaço com o nome da loja.
-		const DESLOC_Y = -117
-		// Sempre na escala do Stories, mesmo no Feed: o DESLOC_Y foi medido nessa
-		// escala e é o que põe o letreiro em y=40. O Feed só recorta a parte de
-		// baixo do fundo.
-		const esc = Math.max(W / fachada.naturalWidth, ALTURA_STORIES / fachada.naturalHeight)
-		ctx.drawImage(
-			fachada,
-			(W - fachada.naturalWidth * esc) / 2,
-			DESLOC_Y,
-			fachada.naturalWidth * esc,
-			fachada.naturalHeight * esc,
-		)
-	} else {
-		ctx.fillStyle = '#101013'
-		ctx.fillRect(0, 0, W, H)
+	// Em função porque a fusão da divisa precisa repintar este mesmo fundo.
+	const pintarFundo = (c: CanvasRenderingContext2D): void => {
+		if (fachada.complete && fachada.naturalWidth) {
+			// Puxada para CIMA: medido na imagem, as letras do "ATTRA" começam na
+			// linha 157 — o deslocamento de -117 as coloca em y=40, no topo da peça.
+			// Com o letreiro lá em cima, o bloco de título vive ABAIXO dele e a marca
+			// do veículo nunca mais disputa espaço com o nome da loja.
+			const DESLOC_Y = -117
+			// Sempre na escala do Stories, mesmo no Feed: o DESLOC_Y foi medido nessa
+			// escala e é o que põe o letreiro em y=40. O Feed só recorta a parte de
+			// baixo do fundo.
+			const esc = Math.max(W / fachada.naturalWidth, ALTURA_STORIES / fachada.naturalHeight)
+			c.drawImage(
+				fachada,
+				(W - fachada.naturalWidth * esc) / 2,
+				DESLOC_Y,
+				fachada.naturalWidth * esc,
+				fachada.naturalHeight * esc,
+			)
+		} else {
+			c.fillStyle = '#101013'
+			c.fillRect(0, 0, W, H)
+		}
 	}
+	pintarFundo(ctx)
 
 	// A foto entra INTEIRA na banda, sempre.
 	//
@@ -122,7 +127,8 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 			const deBaixo = corMediaDaCaixa(am, 0, base + 8, W, 60)
 			if (deCima && deBaixo) {
 				casarPisoAbaixoDaDivisa(ctx, base, W, bordaBaixaDoCorte - base, deCima, deBaixo)
-				suavizarDivisa(ctx, base, W)
+				// Rampa longa onde o chão da foto foi medido; sem medição, a curta.
+				if (!fundirChaoNaDivisa(ctx, base, W, r.geo, deCima, deBaixo, pintarFundo)) suavizarDivisa(ctx, base, W)
 			}
 		}
 	} else {
