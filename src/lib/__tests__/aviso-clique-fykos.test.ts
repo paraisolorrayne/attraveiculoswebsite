@@ -7,12 +7,12 @@ const COM_ORIGEM: RespostaAtribuicao = {
 	ligacao: 'correlacao_clique_whatsapp',
 	first_touch: {
 		source: 'google', medium: 'cpc', campaign: '[VA] Search | Estoque Premium',
-		content: null, term: null, gclid: 'Cj0KCQjw', fbclid: null,
+		content: null, term: null, gclid: 'Cj0KCQjw', wbraid: null, gbraid: null, fbclid: null,
 		landing: '/', ts: '2026-09-19T13:41:02.000Z',
 	},
 	last_touch: {
 		source: 'linktr.ee', medium: null, campaign: null,
-		content: null, term: null, gclid: null, fbclid: null,
+		content: null, term: null, gclid: null, wbraid: null, gbraid: null, fbclid: null,
 		landing: '/comprar', ts: '2026-09-19T16:41:02.000Z',
 	},
 }

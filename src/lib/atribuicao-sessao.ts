@@ -45,6 +45,9 @@ export interface Toque {
 	content: string | null
 	term: string | null
 	gclid: string | null
+	/** iOS com ATT manda um destes no lugar do `gclid` — nunca os dois. */
+	wbraid: string | null
+	gbraid: string | null
 	fbclid: string | null
 	landing: string | null
 	ts: string | null
@@ -69,6 +72,8 @@ export interface LinhaDeSessao {
 	utm_content: string | null
 	utm_term: string | null
 	gclid: string | null
+	wbraid: string | null
+	gbraid: string | null
 	fbclid: string | null
 	/** Primeira página da visita, de `visitor_page_views`. */
 	landing: string | null
@@ -92,6 +97,8 @@ export function temSinalDeOrigem(linha: LinhaDeSessao): boolean {
 		vazio(linha.utm_medium) ||
 		vazio(linha.utm_campaign) ||
 		vazio(linha.gclid) ||
+		vazio(linha.wbraid) ||
+		vazio(linha.gbraid) ||
 		vazio(linha.fbclid) ||
 		vazio(linha.referrer_domain)
 	)
@@ -117,6 +124,8 @@ export function montarToque(linha: LinhaDeSessao): Toque {
 		content: vazio(linha.utm_content),
 		term: vazio(linha.utm_term),
 		gclid: vazio(linha.gclid),
+		wbraid: vazio(linha.wbraid),
+		gbraid: vazio(linha.gbraid),
 		fbclid: vazio(linha.fbclid),
 		landing: vazio(linha.landing),
 		ts: ts ? new Date(ts).toISOString() : null,

@@ -93,6 +93,9 @@ export interface VisitorContext {
     gclid?: string
     fbclid?: string
     ttclid?: string
+    /** iOS com ATT: chegam no lugar do gclid. */
+    wbraid?: string
+    gbraid?: string
     referrer?: string
     landingPage?: string
   }

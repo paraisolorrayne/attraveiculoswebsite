@@ -26,7 +26,7 @@ O site avisa **no momento do clique**, antes de a conversa chegar. É um `POST` 
   "session_id": "s4",
   "pagina": "/veiculo/mercedes-g-63-2021-988095",
   "veiculo_id": "988095",
-  "first_touch": { "gclid": "g1", "campaign": null, "landing": "/", "ts": "..." },
+  "first_touch": { "gclid": "g1", "wbraid": null, "gbraid": null, "campaign": null, "landing": "/", "ts": "..." },
   "last_touch":  { "source": "linktr.ee", "landing": "/comprar", "ts": "..." }
 }
 ```
@@ -88,6 +88,7 @@ Tratar uma correlação por tempo como se fosse um marcador explícito é o tipo
 - **`campaign` vai como está cadastrado**, com `[EB]` / `[VA]`. Não normalizamos.
 - **Sem origem → `null`, nunca `"direct"`.** `"direct"` é uma afirmação, e errada. Ausente é recuperável; errado não.
 - **`source` pelo referrer vai com o domínio cru** (`google.com`, não `google`). Com `utm_source=google` é Ads etiquetado; pelo referrer é clique orgânico — encurtar juntaria os dois.
+- **`gclid`, `wbraid` e `gbraid`** são o MESMO clique pago do Google. No iOS com rastreamento limitado (ATT) o Google manda `wbraid` ou `gbraid` **no lugar** do `gclid` — nunca os três juntos. Quem só olhar `gclid` continua perdendo esse tráfego.
 - **`first_touch`** é a primeira visita **com sinal de origem** daquele visitante, não a primeira visita. **`last_touch`** é a visita que gerou o lead. Podem ser a mesma; nesse caso os dois vêm preenchidos e iguais.
 
 Não foi preciso cookie novo de 90 dias: o `fingerprint_id` já atravessa sessões e cada sessão guarda a própria origem, então o first-touch é uma consulta e não um dado novo a coletar.
@@ -111,7 +112,7 @@ Os dois `404` são separados de propósito: apontam para lados diferentes do pro
 **Attra/site:**
 - definir `FYKOS_AVISO_CLIQUE_URL` (e opcionalmente `FYKOS_AVISO_CLIQUE_TOKEN`) na VPS — sem a URL, o aviso simplesmente não sai;
 - definir `SITE_ATRIBUICAO_API_KEY` na VPS (sem ela: 503);
-- `wbraid` / `gbraid` ainda **não** são capturados. Tráfego de Google Ads no iOS chega sem `gclid` e com um desses — esses leads continuam sem clique pago identificado.
+- ~~`wbraid` / `gbraid`~~ — **capturados desde 27/09/2026.** Precisa rodar a migration `20260927_visitor_sessions_wbraid_gbraid.sql` na VPS.
 
 **Fykos:** receber o aviso de clique numa tabela lateral e casá-lo com a conversa por tempo. Os endpoints de consulta ficam para backfill e para o card.
 

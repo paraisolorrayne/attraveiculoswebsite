@@ -35,6 +35,9 @@ export interface FykosTraffic {
   gclid?: string
   fbclid?: string
   ttclid?: string
+  /** iOS com ATT: substituem o gclid e valem como clique pago do Google. */
+  wbraid?: string
+  gbraid?: string
   referrer?: string
   landingPage?: string
 }
@@ -86,6 +89,8 @@ export function buildFykosAttribution(
     gclid:        traffic?.gclid,
     fbclid:       traffic?.fbclid,
     ttclid:       traffic?.ttclid,
+    wbraid:       traffic?.wbraid,
+    gbraid:       traffic?.gbraid,
     referrer:     traffic?.referrer,
     landing_page: traffic?.landingPage,
   }
@@ -110,6 +115,8 @@ export function formatAttributionLine(attr: Record<string, string> | null): stri
   if (!attr.lead_source && attr.utm_source) parts.push(`Fonte: ${attr.utm_source}`)
   if (attr.utm_medium) parts.push(`Mídia: ${attr.utm_medium}`)
   if (attr.gclid) parts.push(`gclid: ${attr.gclid}`)
+  if (attr.wbraid) parts.push(`wbraid: ${attr.wbraid}`)
+  if (attr.gbraid) parts.push(`gbraid: ${attr.gbraid}`)
   return parts.length ? parts.join(' · ') : null
 }
 

@@ -236,13 +236,25 @@ export interface ClickIds {
   gclid: string | null   // Google Click ID
   fbclid: string | null  // Facebook/Meta Click ID
   ttclid: string | null  // TikTok Click ID
+  /**
+   * Os substitutos do gclid no iOS com rastreamento limitado (ATT): o Google
+   * manda UM destes NO LUGAR dele — `gbraid` no caminho web→app, `wbraid` no
+   * app→web. Sem capturá-los, esse tráfego pago chega sem identificador nenhum
+   * e é lido como orgânico.
+   */
+  wbraid: string | null
+  gbraid: string | null
 }
 
 const CLICK_ID_COOKIE_DAYS = 90
 
+const VAZIO = (): ClickIds => ({
+  gclid: null, fbclid: null, ttclid: null, wbraid: null, gbraid: null,
+})
+
 // Collect and persist click IDs from URL (stored in cookies for 90 days)
 export function collectClickIds(): ClickIds {
-  if (typeof window === 'undefined') return { gclid: null, fbclid: null, ttclid: null }
+  if (typeof window === 'undefined') return VAZIO()
 
   const params = new URLSearchParams(window.location.search)
 
@@ -250,9 +262,11 @@ export function collectClickIds(): ClickIds {
     { param: 'gclid', cookie: 'attra_gclid', key: 'gclid' },
     { param: 'fbclid', cookie: 'attra_fbclid', key: 'fbclid' },
     { param: 'ttclid', cookie: 'attra_ttclid', key: 'ttclid' },
+    { param: 'wbraid', cookie: 'attra_wbraid', key: 'wbraid' },
+    { param: 'gbraid', cookie: 'attra_gbraid', key: 'gbraid' },
   ]
 
-  const result: ClickIds = { gclid: null, fbclid: null, ttclid: null }
+  const result: ClickIds = VAZIO()
 
   for (const { param, cookie, key } of clickIdParams) {
     // Prefer fresh value from URL, fallback to stored cookie
@@ -324,7 +338,7 @@ const MARCADORES_DE_ENTRADA: readonly string[] = [
   ...CAMPAIGN_ID_ALIASES,
   ...ADSET_ID_ALIASES,
   ...AD_ID_ALIASES,
-  'gclid', 'fbclid', 'ttclid',
+  'gclid', 'fbclid', 'ttclid', 'wbraid', 'gbraid',
 ]
 
 /**

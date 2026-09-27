@@ -17,6 +17,8 @@ const VAZIA: LinhaDeSessao = {
 	utm_content: null,
 	utm_term: null,
 	gclid: null,
+	wbraid: null,
+	gbraid: null,
 	fbclid: null,
 	landing: '/veiculos/porsche-macan-2023',
 }

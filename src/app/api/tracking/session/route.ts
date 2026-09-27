@@ -195,6 +195,10 @@ export async function POST(request: NextRequest) {
       ads_device: utm_params?.device || null,
       ads_network: utm_params?.network || null,
       gclid: click_ids?.gclid || null,
+      // iOS com ATT manda um destes NO LUGAR do gclid; sem gravá-los o clique
+      // pago do Google chega indistinguível de orgânico.
+      wbraid: click_ids?.wbraid || null,
+      gbraid: click_ids?.gbraid || null,
       fbclid: click_ids?.fbclid || null,
       ttclid: click_ids?.ttclid || null,
       ip_address: ip,

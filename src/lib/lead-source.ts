@@ -19,6 +19,9 @@ export interface AttributionInput {
   gclid?: string | null
   fbclid?: string | null
   ttclid?: string | null
+  /** iOS com ATT: chegam no lugar do gclid, e significam o mesmo — Google Ads. */
+  wbraid?: string | null
+  gbraid?: string | null
   referrer?: string | null
 }
 
@@ -49,7 +52,7 @@ export function classifyLeadSource(input: AttributionInput): FonteLead {
   const host = hostFromReferrer(input.referrer)
 
   // 1) Click IDs — sinal mais forte de pago
-  if (input.gclid) return 'google_ads'
+  if (input.gclid || input.wbraid || input.gbraid) return 'google_ads'
   if (input.fbclid) return 'meta_ads'
   if (input.ttclid) return 'tiktok_ads'
 

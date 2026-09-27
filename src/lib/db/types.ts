@@ -67,6 +67,9 @@ export interface VisitorSessionsTable {
   gclid: string | null
   fbclid: string | null
   ttclid: string | null
+  /** Substitutos do gclid no iOS com ATT (20260927). Um OU outro, nunca ambos. */
+  wbraid: string | null
+  gbraid: string | null
   utm_id: string | null
   adset_id: string | null
   ad_id: string | null

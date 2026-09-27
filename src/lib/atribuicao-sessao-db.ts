@@ -55,6 +55,8 @@ const CAMPOS = [
 	'visitor_sessions.utm_content',
 	'visitor_sessions.utm_term',
 	'visitor_sessions.gclid',
+	'visitor_sessions.wbraid',
+	'visitor_sessions.gbraid',
 	'visitor_sessions.fbclid',
 ] as const
 
@@ -100,6 +102,8 @@ async function primeiraVisitaComSinal(fingerprintId: string): Promise<LinhaDeSes
 				eb('visitor_sessions.utm_medium', '<>', ''),
 				eb('visitor_sessions.utm_campaign', '<>', ''),
 				eb('visitor_sessions.gclid', '<>', ''),
+				eb('visitor_sessions.wbraid', '<>', ''),
+				eb('visitor_sessions.gbraid', '<>', ''),
 				eb('visitor_sessions.fbclid', '<>', ''),
 				eb('visitor_sessions.referrer_domain', '<>', ''),
 			]),

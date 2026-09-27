@@ -33,6 +33,9 @@ export interface SessaoAtribuicao {
   gclid?: string | null
   fbclid?: string | null
   ttclid?: string | null
+  /** iOS com ATT: vêm no lugar do gclid e valem como clique pago do Google. */
+  wbraid?: string | null
+  gbraid?: string | null
   referrer_domain?: string | null
 }
 
@@ -256,7 +259,7 @@ export function normalizarFonte(sessao: SessaoAtribuicao): string {
   if (plataforma) return plataforma.canonica
 
   if (fonte) return fonte
-  if (temValor(sessao.gclid)) return 'google'
+  if (temValor(sessao.gclid) || temValor(sessao.wbraid) || temValor(sessao.gbraid)) return 'google'
   if (temValor(sessao.fbclid)) return 'meta'
   if (temValor(sessao.ttclid)) return 'tiktok'
   if (host && !ehDominioProprio(host)) return host
@@ -314,7 +317,10 @@ export function classificarCanal(sessao: SessaoAtribuicao): CanalTrafego {
   const medium = limpar(sessao.utm_medium)
   const host = extrairHost(sessao.referrer_domain)
 
-  const temGclid = temValor(sessao.gclid)
+  // wbraid/gbraid contam como gclid: são o MESMO clique pago do Google, só com
+  // o identificador que o iOS com ATT permite. Tratá-los à parte faria esse
+  // tráfego cair em "orgânico" na classificação de canal.
+  const temGclid = temValor(sessao.gclid) || temValor(sessao.wbraid) || temValor(sessao.gbraid)
   const temFbclid = temValor(sessao.fbclid)
   const temTtclid = temValor(sessao.ttclid)
   const temClickId = temGclid || temFbclid || temTtclid

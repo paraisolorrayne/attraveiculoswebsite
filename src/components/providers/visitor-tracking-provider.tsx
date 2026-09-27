@@ -641,6 +641,8 @@ export function VisitorTrackingProvider({ children }: Props) {
         gclid: clickIds?.gclid || undefined,
         fbclid: clickIds?.fbclid || undefined,
         ttclid: clickIds?.ttclid || undefined,
+        wbraid: clickIds?.wbraid || undefined,
+        gbraid: clickIds?.gbraid || undefined,
         referrer: referrerRef.current || undefined,
         landingPage: landingPageRef.current || undefined,
       },
