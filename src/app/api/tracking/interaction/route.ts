@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
+import { atribuicaoPorSessaoDbId } from '@/lib/atribuicao-sessao-db'
+import { enviarAvisoDeClique, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // É aqui que o whatsapp_click é gravado — a ponte de atribuição do WhatsApp
@@ -79,17 +81,48 @@ export async function POST(request: NextRequest) {
     // utm/campanha/termo) e quando. A conversa é correlacionada depois, quando
     // o CRM a entrega pelo webhook.
     if (type === 'whatsapp_click') {
-      await db
+      const veiculoId = typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null
+      const clique = await db
         .insertInto('whatsapp_clicks')
         .values({
           session_db_id,
           page_path: page_path ?? null,
-          vehicle_id: typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null,
+          vehicle_id: veiculoId,
         })
-        .execute()
+        .returning(['id', 'clicked_at'])
+        .executeTakeFirst()
         // Falha aqui não pode derrubar a marcação da sessão, que é o sinal
         // principal de conversão: a correlação é enriquecimento.
-        .catch((e: unknown) => console.warn('[Tracking] clique de WhatsApp não gravado:', e))
+        .catch((e: unknown) => {
+          console.warn('[Tracking] clique de WhatsApp não gravado:', e)
+          return undefined
+        })
+
+      // AVISO AO CRM, no mesmo instante do clique.
+      //
+      // Sem isto a origem só chega ao CRM se o lead virar card — e primeiro
+      // contato e descarte nunca viram card, que é justamente a maior parte do
+      // que o relatório de campanha deles conta. Avisando aqui, a nota chega
+      // ANTES da conversa e vale para todo lead.
+      //
+      // Best-effort e depois do insert: o registro do clique é o que sustenta a
+      // correlação local, e continua valendo sozinho se o CRM estiver fora do ar.
+      if (clique) {
+        try {
+          const atribuicao = await atribuicaoPorSessaoDbId(session_db_id)
+          await enviarAvisoDeClique(
+            montarAvisoDeClique(
+              String(clique.id),
+              clique.clicked_at as unknown as Date,
+              atribuicao,
+              page_path ?? null,
+              veiculoId,
+            ),
+          )
+        } catch (e) {
+          console.warn('[Tracking] aviso de clique não enviado:', e)
+        }
+      }
     }
 
     // Marca o flag na sessão, se houver

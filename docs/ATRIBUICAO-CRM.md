@@ -13,9 +13,37 @@ No lugar dele o site passou a gravar o clique (`whatsapp_clicks`: sessão + hor�
 
 O que faltava era o caminho de volta: essa correlação ficava só no banco do site. É isso que os endpoints abaixo resolvem — sem devolver identificador interno para dentro da conversa do cliente.
 
-## Endpoints
+## 1. Aviso de clique — o caminho principal
 
-Ambos pedem o cabeçalho `X-Api-Key`. Sem a chave configurada no servidor, respondem **503** e não atendem (falha fechado, de propósito).
+O site avisa **no momento do clique**, antes de a conversa chegar. É um `POST` para a URL que vocês informarem (`FYKOS_AVISO_CLIQUE_URL` do nosso lado), com `Authorization: Bearer <token>` se vocês quiserem.
+
+```json
+{
+  "tipo": "aviso_clique_site",
+  "versao": 1,
+  "clique_id": "f84ac3a8-1481-4ddb-ad22-63b7587e9be4",
+  "clique_em": "2026-09-27T22:17:32.084Z",
+  "session_id": "s4",
+  "pagina": "/veiculo/mercedes-g-63-2021-988095",
+  "veiculo_id": "988095",
+  "first_touch": { "gclid": "g1", "campaign": null, "landing": "/", "ts": "..." },
+  "last_touch":  { "source": "linktr.ee", "landing": "/comprar", "ts": "..." }
+}
+```
+
+### Três regras, por favor
+
+1. **Isto não é um lead.** O `tipo` está aí para isso. Se o aviso criar usuário ou card, o mesmo lead entra duas vezes — uma por aqui e outra pela entrada real do WhatsApp. Guardem numa tabela lateral; quem cria o lead continua sendo o WhatsApp.
+2. **A ligação é por tempo.** Quando a conversa chegar, casem com o aviso mais recente dentro de uma janela (usamos 10 min do nosso lado). Mais de um candidato → não escolher, como já fazemos aqui: atribuir a campanha errada contamina um lead real, e ausente é recuperável.
+3. **`clique_id` é estável.** Reentrega do mesmo aviso não deve virar duas notas.
+
+Só sai aviso quando há origem: visita sem nenhum sinal não gera nota, para não gastar uma correspondência possível com "não sei de onde veio".
+
+O envio é best-effort e não segura nada: se o receptor estiver fora do ar, o clique continua gravado aqui e os endpoints abaixo continuam respondendo. Verificado derrubando o receptor.
+
+## 2. Endpoints de consulta — o complemento
+
+Servem para backfill e para o lead que virou card. Ambos pedem o cabeçalho `X-Api-Key`. Sem a chave configurada no servidor, respondem **503** e não atendem (falha fechado, de propósito).
 
 ### `GET /api/sessions/card/{card_id}` ← **use este**
 
@@ -81,11 +109,12 @@ Os dois `404` são separados de propósito: apontam para lados diferentes do pro
 ## O que falta dos dois lados
 
 **Attra/site:**
+- definir `FYKOS_AVISO_CLIQUE_URL` (e opcionalmente `FYKOS_AVISO_CLIQUE_TOKEN`) na VPS — sem a URL, o aviso simplesmente não sai;
 - definir `SITE_ATRIBUICAO_API_KEY` na VPS (sem ela: 503);
 - `wbraid` / `gbraid` ainda **não** são capturados. Tráfego de Google Ads no iOS chega sem `gclid` e com um desses — esses leads continuam sem clique pago identificado.
 
-**Fykos:** chamar o endpoint quando o card entra (ou num backfill), guardando `ligacao` junto com a origem.
+**Fykos:** receber o aviso de clique numa tabela lateral e casá-lo com a conversa por tempo. Os endpoints de consulta ficam para backfill e para o card.
 
 ## Critério de aceite
 
-A conferência de vocês (`com_sessao / leads_site > 90%`) mede o campo `usuario.site_session_id`. Com este caminho ele passa a ser preenchido pela resposta do endpoint, não pelo parser da mensagem — vale conferir se a consulta continua fazendo sentido desse jeito.
+A conferência de vocês (`com_sessao / leads_site > 90%`) mede `usuario.site_session_id` sobre TODOS os leads com origem `site`, incluindo primeiro contato e descarte — que nunca viram card. É por isso que o aviso de clique é o caminho principal e o endpoint por card é só complemento: só o aviso cobre esse conjunto inteiro.

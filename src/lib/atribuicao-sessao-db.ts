@@ -123,6 +123,36 @@ async function montar(token: string, ligacao: OrigemDaLigacao): Promise<Resposta
 	return montarAtribuicao(token, ligacao, achada.linha, first)
 }
 
+/**
+ * Pelo id interno da sessão (`visitor_sessions.id`).
+ *
+ * É o que o registro do clique tem em mãos: `/api/tracking/interaction` recebe
+ * `session_db_id`, não o token. Serve o aviso de clique, que precisa da
+ * atribuição no mesmo instante em que o clique acontece.
+ */
+export async function atribuicaoPorSessaoDbId(
+	sessionDbId: string,
+): Promise<RespostaAtribuicao | null> {
+	const r = await db
+		.selectFrom('visitor_sessions')
+		.select([...CAMPOS, 'visitor_sessions.fingerprint_id'])
+		.select(LANDING.as('landing'))
+		.where('visitor_sessions.id', '=', sessionDbId)
+		.executeTakeFirst()
+
+	if (!r) return null
+	const { fingerprint_id, ...linha } = r
+	const doLead = linha as LinhaDeSessao
+	const primeira = await primeiraVisitaComSinal(fingerprint_id)
+
+	return montarAtribuicao(
+		doLead.session_id,
+		'correlacao_clique_whatsapp',
+		doLead,
+		primeira ?? (temSinalDeOrigem(doLead) ? doLead : null),
+	)
+}
+
 /** Pelo token da sessão — leads com `[ref: ...]` ou de formulário. */
 export async function atribuicaoPorSessao(token: string): Promise<RespostaAtribuicao | null> {
 	return montar(token, 'marcador')
