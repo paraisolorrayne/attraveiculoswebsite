@@ -14,6 +14,7 @@ import { Loader2, X, MessageCircle, Car, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { useVehicleContext } from '@/contexts/vehicle-context'
+import { trackVehicle, valorEmReais } from '@/lib/meta-pixel'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
 const schema = z.object({
@@ -168,6 +169,19 @@ export function StickyContactForm() {
         amount: 0,
         currency: 'BRL',
       })
+
+      // `Lead` do Meta Pixel — mesma regra de posição do medirOpenAI acima:
+      // depois do `!resposta.ok`, senão contaria um lead que não chegou a
+      // ninguém.
+      //
+      // Só sai com veículo no contexto, que é o caso do formulário aberto na
+      // ficha. Em página sem veículo o `trackVehicle` descarta sozinho: `Lead`
+      // sem `content_ids` não casa com o catálogo, que é o defeito que esta
+      // mudança conserta.
+      //
+      // Nome, e-mail e telefone NÃO vão nos parâmetros — a Meta proíbe dado
+      // pessoal aqui, e o lead em si já segue para o CRM pela rota /api/contact.
+      trackVehicle('Lead', [vehicle?.vehicleId], valorEmReais(vehicle?.vehiclePrice))
 
 
       // Notify the tracking provider that user converted

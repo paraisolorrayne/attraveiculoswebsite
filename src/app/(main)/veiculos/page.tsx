@@ -24,6 +24,7 @@ import { veiculosFAQs } from '@/lib/faq-data'
 import { Search, Globe, Shield, Check, ArrowRight, CalendarCheck } from 'lucide-react'
 import Link from 'next/link'
 import { VehicleUnavailableToast } from '@/components/vehicles/vehicle-unavailable-toast'
+import { MetaSearchTracker } from '@/components/analytics/meta-pixel'
 import { availabilityFromStatus } from '@/lib/vehicle-schema'
 
 // Brand similarity groups for vehicle suggestions
@@ -531,6 +532,15 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
                 </div>
               ) : (
                 <Suspense fallback={<VehicleListSkeleton />}>
+                  {/* `Search` do Meta Pixel com os ids do resultado. Só quando
+                      a pessoa buscou ou filtrou: abrir a listagem e olhar o
+                      estoque não é pesquisa. */}
+                  {hasClientSideFilters && (
+                    <MetaSearchTracker
+                      ids={vehicles.slice(0, 10).map((vehicle) => vehicle.id)}
+                      termo={params.q}
+                    />
+                  )}
                   <div className="space-y-4">
                     {vehicles.map((vehicle) => (
                       <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="horizontal" />
