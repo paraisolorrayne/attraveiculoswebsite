@@ -25,15 +25,41 @@ npm ci
 
 echo "==> [3/7] build (site fica fora do ar só nesta etapa)"
 pm2 stop attra
-rm -rf .next
+
+# A versão que está no ar é GUARDADA, não apagada.
+#
+# Apagar antes de construir foi o que derrubou o site em 27/09: o build falhou,
+# e como não havia mais `.next` não existia nada para servir — o pm2 ficou em
+# `errored` e a única saída era consertar o build com o site fora. Guardando,
+# uma falha volta ao ar em segundos.
+rm -rf .next.anterior
+[ -d .next ] && mv .next .next.anterior
 # Blindagem contra ENOIDENTIFIER: força a DATABASE_URL LOCAL do .env.production,
 # ignorando qualquer DATABASE_URL do Supabase que tenha vazado no ambiente. Se
 # não houver linha local, mantém o que o `source` já setou (fallback).
 _dburl_local="$(grep -E '^DATABASE_URL=.*(localhost|127\.0\.0\.1)' .env.production | tail -1 | cut -d= -f2-)"
 [ -n "$_dburl_local" ] && export DATABASE_URL="$_dburl_local"
 echo "    host do banco no build: $(printf '%s' "${DATABASE_URL:-VAZIA}" | sed -E 's#^[a-z]+://[^@]*@##; s#/.*##')"
-npm run build
-test -f .next/standalone/server.js || { echo "ERRO: server.js não gerado — build falhou"; exit 1; }
+# IPv4 no build. O `next/font/google` busca o CSS da fonte em tempo de build, e
+# pelo IPv6 deste servidor a resposta do Google vem num formato que o loader não
+# consegue ler — quebra com `Cannot read properties of null (reading '1')` em
+# @next/font/dist/google/loader.js, que parece erro de código e é de rota.
+# Medido em 27/09: pelo IPv6 o build falha sempre, com IPv4 passa sempre.
+export NODE_OPTIONS="--dns-result-order=ipv4first${NODE_OPTIONS:+ $NODE_OPTIONS}"
+
+if ! npm run build || [ ! -f .next/standalone/server.js ]; then
+  echo "ERRO: build falhou — restaurando a versão anterior e subindo o site"
+  rm -rf .next
+  if [ -d .next.anterior ]; then
+    mv .next.anterior .next
+    pm2 start attra 2>/dev/null || pm2 restart attra
+    echo "    site de volta no ar com a versão anterior. Corrija o build e rode de novo."
+  else
+    echo "    NÃO havia versão anterior guardada — o site segue fora até o build passar."
+  fi
+  exit 1
+fi
+rm -rf .next.anterior
 
 echo "==> [4/7] restart"
 # `--update-env` copia o ambiente DO SHELL, não lê .env.production. Sem o
