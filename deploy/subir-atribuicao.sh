@@ -30,7 +30,27 @@ ok()    { printf '    \033[32m✓\033[0m %s\n' "$1"; }
 
 # ── 1. Acesso ────────────────────────────────────────────────────────────────
 azul "1/6  Conferindo acesso à VPS ($HOST)"
-if ! ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP" 2>/dev/null; then
+# A saída de erro do ssh é MOSTRADA, não engolida: "não consegui conectar" sem o
+# motivo manda a pessoa procurar rede quando o problema é chave, e vice-versa.
+if ! ERRO_SSH=$(ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP" 2>&1); then
+  [ -n "$ERRO_SSH" ] && printf '    \033[33m%s\033[0m\n' "$ERRO_SSH"
+
+  # Chave recusada com o bloco do host sem IdentityFile: o ssh só ofereceu as
+  # chaves de nome padrão, e a da VPS não é uma delas. Todos os outros hosts
+  # desta config declaram a sua; este é o único que não declara.
+  if grep -qi "permission denied\|publickey" <<<"$ERRO_SSH" \
+     && ! awk -v h="$HOST" '$1=="Host" && $2==h{d=1;next} $1=="Host"{d=0} d' ~/.ssh/config 2>/dev/null | grep -qi identityfile; then
+    erro "a chave foi recusada, e o bloco '$HOST' do seu ~/.ssh/config não diz qual chave usar.
+      Os outros hosts do arquivo declaram a sua. Descubra qual é a da VPS:
+
+          for k in ~/.ssh/*.pub; do
+            ssh -o BatchMode=yes -o IdentitiesOnly=yes -i \"\${k%.pub}\" $HOST true 2>/dev/null \\
+              && echo \"FUNCIONA: \${k%.pub}\" && break
+          done
+
+      E acrescente no bloco '$HOST':   IdentityFile ~/.ssh/<a-que-funcionou>"
+  fi
+
   # A causa mais comum não é rede: é o script ter rodado com OUTRO usuário. O
   # alias e a chave moram em ~/.ssh do dono da máquina, então rodando como root
   # (o que acontece ao chamar pelo `!` do Claude Code) o alias simplesmente não
