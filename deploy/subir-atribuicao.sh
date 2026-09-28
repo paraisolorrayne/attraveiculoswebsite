@@ -17,6 +17,21 @@
 set -euo pipefail
 
 HOST="${ATTRA_VPS:-attra-vps}"
+
+# A chave, quando o bloco do host não declara a dele no ~/.ssh/config.
+#
+#     ATTRA_SSH_KEY=~/.ssh/id_gitlab_bookie bash deploy/subir-atribuicao.sh
+#
+# Existe para o script rodar sem exigir que você edite a config do SSH — isso é
+# ajuste da sua máquina, e não é papel de um script de deploy fazer por você.
+# O conserto definitivo é acrescentar `IdentityFile` no bloco do host.
+CHAVE="${ATTRA_SSH_KEY:-}"
+SSH=(ssh -o ConnectTimeout=15)
+if [ -n "$CHAVE" ]; then
+  CHAVE="${CHAVE/#\~/$HOME}"
+  [ -f "$CHAVE" ] || { printf 'ERRO: chave não encontrada: %s\n' "$CHAVE" >&2; exit 1; }
+  SSH+=(-i "$CHAVE" -o IdentitiesOnly=yes)
+fi
 APP=/var/www/attra
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATION="$RAIZ/supabase/migrations/20260927_visitor_sessions_wbraid_gbraid.sql"
@@ -32,7 +47,7 @@ ok()    { printf '    \033[32m✓\033[0m %s\n' "$1"; }
 azul "1/6  Conferindo acesso à VPS ($HOST)"
 # A saída de erro do ssh é MOSTRADA, não engolida: "não consegui conectar" sem o
 # motivo manda a pessoa procurar rede quando o problema é chave, e vice-versa.
-if ! ERRO_SSH=$(ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP" 2>&1); then
+if ! ERRO_SSH=$("${SSH[@]}" -o BatchMode=yes "$HOST" "test -d $APP" 2>&1); then
   [ -n "$ERRO_SSH" ] && printf '    \033[33m%s\033[0m\n' "$ERRO_SSH"
 
   # Chave recusada com o bloco do host sem IdentityFile: o ssh só ofereceu as
@@ -48,7 +63,8 @@ if ! ERRO_SSH=$(ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP"
               && echo \"FUNCIONA: \${k%.pub}\" && break
           done
 
-      E acrescente no bloco '$HOST':   IdentityFile ~/.ssh/<a-que-funcionou>"
+      Conserto definitivo — no bloco '$HOST':   IdentityFile ~/.ssh/<a-que-funcionou>
+      Ou, sem mexer na config, rode:            ATTRA_SSH_KEY=~/.ssh/<a-que-funcionou> bash $0"
   fi
 
   # A causa mais comum não é rede: é o script ter rodado com OUTRO usuário. O
@@ -90,13 +106,21 @@ read -rs TOKEN_FYKOS
 echo
 [ -n "$TOKEN_FYKOS" ] || erro "token vazio"
 
-# A nossa chave, dos endpoints que a Fykos consulta. Gerada aqui para eu poder
-# imprimi-la no fim — é você quem passa para eles.
-CHAVE_SITE="$(openssl rand -hex 32)"
+# A nossa chave, dos endpoints que a Fykos consulta.
+#
+# Se já existir na VPS, é REAPROVEITADA: gerar outra invalidaria silenciosamente
+# a que a Fykos já tem configurada, e o sintoma apareceria só quando eles
+# tentassem consultar — 401 sem explicação, dias depois.
+CHAVE_SITE="$("${SSH[@]}" "$HOST" "grep -m1 '^SITE_ATRIBUICAO_API_KEY=' $APP/.env.production 2>/dev/null | cut -d= -f2-" || true)"
+if [ -n "$CHAVE_SITE" ]; then
+  ok "reaproveitando a SITE_ATRIBUICAO_API_KEY que já estava na VPS"
+else
+  CHAVE_SITE="$(openssl rand -hex 32)"
+fi
 
 # Gravação idempotente: apaga a linha antiga antes de acrescentar, senão rodar
 # duas vezes deixa a variável duplicada no arquivo.
-ssh "$HOST" "bash -s" <<REMOTO
+"${SSH[@]}" "$HOST" "bash -s" <<REMOTO
 set -euo pipefail
 cd $APP
 cp .env.production ".env.production.bak-\$(date +%Y%m%d-%H%M%S)"
@@ -115,7 +139,7 @@ azul "4/6  Migration (wbraid/gbraid)"
 # Mandada por stdin: assim não depende de o arquivo já ter chegado na VPS.
 # `-v ON_ERROR_STOP=1` para o script parar aqui em vez de seguir para o deploy
 # com o banco pela metade.
-ssh "$HOST" "cd $APP && set -a && . ./.env.production && set +a && \
+"${SSH[@]}" "$HOST" "cd $APP && set -a && . ./.env.production && set +a && \
   _db=\"\$(grep -E '^DATABASE_URL=.*(localhost|127\.0\.0\.1)' .env.production | tail -1 | cut -d= -f2-)\" && \
   [ -n \"\$_db\" ] && export DATABASE_URL=\"\$_db\"; \
   psql \"\$DATABASE_URL\" -v ON_ERROR_STOP=1 -q -f -" < "$MIGRATION"
@@ -123,10 +147,10 @@ ok "colunas wbraid/gbraid no lugar"
 
 # ── 5. Deploy ────────────────────────────────────────────────────────────────
 azul "5/6  Deploy (o site sai do ar só durante o build)"
-if ! ssh "$HOST" "cd $APP && bash deploy/deploy-vps.sh"; then
+if ! "${SSH[@]}" "$HOST" "cd $APP && bash deploy/deploy-vps.sh"; then
   printf '\033[1;31m\n  O DEPLOY FALHOU. Tentando subir a versão anterior...\033[0m\n'
-  ssh "$HOST" "pm2 start attra >/dev/null 2>&1 || pm2 restart attra >/dev/null 2>&1" || true
-  ssh "$HOST" "curl -s -o /dev/null -w '  site: %{http_code}\n' --max-time 20 http://localhost:3000/" || true
+  "${SSH[@]}" "$HOST" "pm2 start attra >/dev/null 2>&1 || pm2 restart attra >/dev/null 2>&1" || true
+  "${SSH[@]}" "$HOST" "curl -s -o /dev/null -w '  site: %{http_code}\n' --max-time 20 http://localhost:3000/" || true
   erro "deploy interrompido — a saída acima diz onde parou"
 fi
 ok "deploy concluído"
@@ -136,7 +160,7 @@ azul "6/6  Conferindo o que subiu"
 
 # O endpoint tem de existir e RECUSAR sem chave. 401 é a resposta certa;
 # 503 significa que a variável não chegou no processo, e 404 que a rota não subiu.
-CODIGO=$(ssh "$HOST" "curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://localhost:3000/api/sessions/abcdef123456")
+CODIGO=$("${SSH[@]}" "$HOST" "curl -s -o /dev/null -w '%{http_code}' --max-time 20 http://localhost:3000/api/sessions/abcdef123456")
 case "$CODIGO" in
   401) ok "endpoint de atribuição no ar e exigindo chave (401)" ;;
   503) erro "o endpoint subiu mas SITE_ATRIBUICAO_API_KEY não chegou no processo — rode 'pm2 restart attra --update-env' na VPS" ;;
@@ -151,7 +175,7 @@ esac
 # falha daria alarme falso depois de um deploy que deu certo, se o `pm2 env`
 # não existir nesta versão — e alarme falso no fim de um deploy é pior que
 # silêncio, porque ensina a ignorar o script.
-if AMBIENTE=$(ssh "$HOST" "pm2 env attra 2>/dev/null") && [ -n "$AMBIENTE" ]; then
+if AMBIENTE=$("${SSH[@]}" "$HOST" "pm2 env attra 2>/dev/null") && [ -n "$AMBIENTE" ]; then
   if grep -q FYKOS_AVISO_CLIQUE_URL <<<"$AMBIENTE"; then
     ok "aviso de clique configurado no processo"
   else
@@ -162,7 +186,7 @@ else
   printf '      O deploy restarta com --update-env, então deve estar certo.\n'
 fi
 
-ssh "$HOST" "curl -s -o /dev/null -w '    site: %{http_code}\n' --max-time 20 http://localhost:3000/"
+"${SSH[@]}" "$HOST" "curl -s -o /dev/null -w '    site: %{http_code}\n' --max-time 20 http://localhost:3000/"
 
 cat <<FIM
 
