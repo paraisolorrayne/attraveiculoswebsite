@@ -30,8 +30,25 @@ ok()    { printf '    \033[32m✓\033[0m %s\n' "$1"; }
 
 # ── 1. Acesso ────────────────────────────────────────────────────────────────
 azul "1/6  Conferindo acesso à VPS ($HOST)"
-ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP" \
-  || erro "não consegui entrar em $HOST. Se o alias for outro: ATTRA_VPS=meu-alias bash $0"
+if ! ssh -o ConnectTimeout=15 -o BatchMode=yes "$HOST" "test -d $APP" 2>/dev/null; then
+  # A causa mais comum não é rede: é o script ter rodado com OUTRO usuário. O
+  # alias e a chave moram em ~/.ssh do dono da máquina, então rodando como root
+  # (o que acontece ao chamar pelo `!` do Claude Code) o alias simplesmente não
+  # existe e o ssh tenta resolver "attra-vps" como se fosse um domínio.
+  if [ "$(id -u)" -eq 0 ]; then
+    erro "este script está rodando como root, e o root não tem a sua config de SSH.
+      O alias '$HOST' e a chave moram no ~/.ssh da SUA conta.
+
+      Abra o Terminal do Mac e rode lá:
+
+          cd $RAIZ && bash deploy/subir-atribuicao.sh
+
+      (chamado pelo Claude Code, ele roda como root e o alias não existe)"
+  fi
+  erro "não consegui entrar em '$HOST'.
+      Veja os aliases disponíveis com:  grep '^Host' ~/.ssh/config
+      E rode com o certo:               ATTRA_VPS=o-alias bash $0"
+fi
 ok "conectado"
 
 # ── 2. O código está no GitHub? ──────────────────────────────────────────────
