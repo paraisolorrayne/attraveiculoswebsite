@@ -37,6 +37,20 @@ const URL_AVISO = process.env.FYKOS_AVISO_CLIQUE_URL?.trim() || null
  */
 const TIMEOUT_MS = 2000
 
+/**
+ * Uma reentrega, e só em falha DELES.
+ *
+ * O receptor pede reentrega no 500 e garante idempotência pelo `clique_id`, e a
+ * mesma lógica vale para erro de rede: nos dois casos o aviso pode não ter
+ * chegado. Já 4xx é defeito nosso no formato — repetir só gastaria uma segunda
+ * recusa idêntica.
+ *
+ * Uma tentativa extra, não um laço: o objetivo é atravessar o reinício de um
+ * processo do outro lado, não sustentar a fila enquanto o CRM está fora. Se
+ * estiver fora mesmo, os endpoints de consulta cobrem o backfill.
+ */
+const ESPERA_ANTES_DE_REPETIR_MS = 400
+
 export interface AvisoDeClique {
 	/** Discrimina de um lead. O receptor não deve criar usuário nem card com isto. */
 	tipo: 'aviso_clique_site'
@@ -92,26 +106,44 @@ export function montarAvisoDeClique(
 export async function enviarAvisoDeClique(aviso: AvisoDeClique | null): Promise<boolean> {
 	if (!aviso || !URL_AVISO) return false
 
-	try {
-		const resposta = await fetch(URL_AVISO, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				...(process.env.FYKOS_AVISO_CLIQUE_TOKEN
-					? { Authorization: `Bearer ${process.env.FYKOS_AVISO_CLIQUE_TOKEN}` }
-					: {}),
-			},
-			body: JSON.stringify(aviso),
-			signal: AbortSignal.timeout(TIMEOUT_MS),
-		})
-		if (!resposta.ok && process.env.NODE_ENV !== 'production') {
-			console.warn(`[AvisoClique] CRM respondeu ${resposta.status}`)
+	for (let tentativa = 0; tentativa < 2; tentativa++) {
+		if (tentativa > 0) await new Promise(r => setTimeout(r, ESPERA_ANTES_DE_REPETIR_MS))
+
+		let status: number | null = null
+		try {
+			const resposta = await fetch(URL_AVISO, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(process.env.FYKOS_AVISO_CLIQUE_TOKEN
+						? { Authorization: `Bearer ${process.env.FYKOS_AVISO_CLIQUE_TOKEN}` }
+						: {}),
+				},
+				body: JSON.stringify(aviso),
+				signal: AbortSignal.timeout(TIMEOUT_MS),
+			})
+			// `ok` cobre o `{"novo":false}` do receptor, que é a idempotência dele
+			// funcionando e não um erro: mesmo `clique_id` reentregue não duplica.
+			if (resposta.ok) return true
+			status = resposta.status
+			// 4xx é formato nosso: repetir dá a mesma recusa.
+			if (status < 500) {
+				avisarNoDesenvolvimento(`CRM recusou com ${status}`)
+				return false
+			}
+		} catch (erro) {
+			// Rede/timeout: o aviso pode não ter chegado, então vale repetir.
+			avisarNoDesenvolvimento(erro instanceof Error ? erro.message : String(erro))
 		}
-		return resposta.ok
-	} catch (erro) {
-		if (process.env.NODE_ENV !== 'production') {
-			console.warn('[AvisoClique] falhou:', erro instanceof Error ? erro.message : erro)
+
+		if (tentativa === 1) {
+			avisarNoDesenvolvimento(`desistiu após 2 tentativas${status ? ` (último: ${status})` : ''}`)
 		}
-		return false
 	}
+
+	return false
+}
+
+function avisarNoDesenvolvimento(mensagem: string): void {
+	if (process.env.NODE_ENV !== 'production') console.warn('[AvisoClique]', mensagem)
 }

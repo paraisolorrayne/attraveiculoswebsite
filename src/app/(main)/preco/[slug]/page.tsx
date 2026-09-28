@@ -158,7 +158,7 @@ export default async function PrecoPage({ params }: PageProps) {
 								<ArrowRight className="w-4 h-4" />
 							</Link>
 							<a
-								href={getWhatsAppUrl(`Olá! Gostaria de consultar disponibilidade e preço do ${data.brand} ${data.model}. [ref: /preco/${data.slug}]`)}
+								href={getWhatsAppUrl(`Olá! Gostaria de consultar disponibilidade e preço do ${data.brand} ${data.model}.`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

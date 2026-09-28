@@ -64,7 +64,7 @@ export default async function PerfilPage({ params }: PageProps) {
 							{data.contexto}
 						</p>
 						<a
-							href={getWhatsAppUrl(`Olá! Estou buscando um ${data.title.toLowerCase()}. Podem me ajudar? [ref: /comprar/perfil/${data.slug}]`)}
+							href={getWhatsAppUrl(`Olá! Estou buscando um ${data.title.toLowerCase()}. Podem me ajudar?`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
@@ -177,7 +177,7 @@ export default async function PerfilPage({ params }: PageProps) {
 						<p className="text-foreground-secondary mb-6">{data.ctaText}</p>
 						<div className="flex flex-wrap justify-center gap-4">
 							<a
-								href={getWhatsAppUrl(`Olá! Preciso de ajuda para escolher um ${data.title.toLowerCase()}. [ref: /comprar/perfil/${data.slug}]`)}
+								href={getWhatsAppUrl(`Olá! Preciso de ajuda para escolher um ${data.title.toLowerCase()}.`)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"

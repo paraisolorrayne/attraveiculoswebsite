@@ -31,9 +31,9 @@ export const metadata: Metadata = {
 }
 
 const heroWhatsAppMessage =
-	'Olá, Attra. Tenho interesse no serviço de importação de veículos de luxo. [ref: /importacao-de-veiculos-de-luxo]'
+	'Olá, Attra. Tenho interesse no serviço de importação de veículos de luxo.'
 const ctaWhatsAppMessage =
-	'Olá, Attra. Gostaria de receber um orçamento para importação de veículo. [ref: /importacao-de-veiculos-de-luxo]'
+	'Olá, Attra. Gostaria de receber um orçamento para importação de veículo.'
 
 export default function ImportacaoPage() {
 	const breadcrumbItems = [{ label: 'Importação' }]
