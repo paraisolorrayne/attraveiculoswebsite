@@ -38,7 +38,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!ok) return null
 
         // Atualiza last_login (fire-and-forget)
-        db.updateTable('admin_users').set({ last_login_at: new Date() })
+        // O login também é um acesso: sem isto a tela mostraria o login mais
+        // novo que o último acesso até a primeira página carregar.
+        db.updateTable('admin_users').set({ last_login_at: new Date(), ultimo_acesso_em: new Date() })
           .where('id', '=', user.id).execute()
           .catch((e) => console.error('[auth] last_login update failed:', e))
 

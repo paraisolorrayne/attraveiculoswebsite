@@ -9,6 +9,7 @@
 
 import { auth, signIn, signOut as authSignOut } from '@/auth'
 import { db } from '@/lib/db'
+import { deveRegistrarAcesso, registrarAcesso } from '@/lib/auth/ultimo-acesso'
 import { canAccessRoute as canAccessRouteForRole, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
 
 export type { AdminRole }
@@ -22,6 +23,7 @@ export interface AdminUser {
   name: string | null
   is_active: boolean
   last_login_at: string | null
+  ultimo_acesso_em: string | null
   created_at: string
   updated_at: string
 }
@@ -68,7 +70,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     const now = new Date().toISOString()
     return {
       id: 'dev-admin-bypass', email: 'dev@localhost', role: 'admin', secoes: {},
-      name: 'Dev Admin', is_active: true, last_login_at: now, created_at: now, updated_at: now,
+      name: 'Dev Admin', is_active: true, last_login_at: now, ultimo_acesso_em: now, created_at: now, updated_at: now,
     }
   }
 
@@ -80,6 +82,8 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     .where('id', '=', id).where('is_active', '=', true).executeTakeFirst()
   if (!row) return null
 
+  if (deveRegistrarAcesso(row.ultimo_acesso_em)) registrarAcesso(row.id)
+
   return {
     id: row.id,
     email: row.email,
@@ -88,6 +92,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     name: row.name,
     is_active: row.is_active,
     last_login_at: iso(row.last_login_at),
+    ultimo_acesso_em: iso(row.ultimo_acesso_em),
     created_at: iso(row.created_at)!,
     updated_at: iso(row.updated_at)!,
   }

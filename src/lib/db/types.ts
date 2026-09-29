@@ -574,6 +574,8 @@ export interface AdminUsersTable {
   name: string | null
   is_active: Generated<boolean>
   last_login_at: Timestamp | null
+  /** Última visita autenticada ao admin (ver src/lib/auth/ultimo-acesso.ts). */
+  ultimo_acesso_em: Timestamp | null
   password_hash: string | null // bcrypt (Auth.js Credentials) — Fase 5
   // Exceções de acesso por usuário: { '<prefixo>': true|false }. Ver
   // canAccessRoute em src/lib/auth/roles.ts.

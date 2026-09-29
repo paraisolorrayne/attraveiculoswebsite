@@ -12,6 +12,7 @@ interface AdminUserRow {
   role: AdminRole
   is_active: boolean
   last_login_at: string | null
+  ultimo_acesso_em: string | null
   created_at: string
   secoes_extras?: SecoesExtras | null
 }
@@ -25,6 +26,8 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: '2-digit',
     hour: '2-digit', minute: '2-digit',
+    // Fuso da loja, como o resto do painel: sem isto a data mudava com o fuso do navegador.
+    timeZone: 'America/Sao_Paulo',
   })
 }
 
@@ -192,7 +195,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
               <tr className="border-b border-border text-left text-xs text-foreground-secondary uppercase">
                 <th className="px-4 py-3">Usuário</th>
                 <th className="px-4 py-3">Papel</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Último login</th>
+                <th className="px-4 py-3 hidden sm:table-cell">Último acesso</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -212,7 +215,9 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
                     {!u.is_active && <span className="ml-2 text-xs text-red-500">inativo</span>}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-foreground-secondary">
-                    {formatDate(u.last_login_at)}
+                    {/* Acesso = última visita ao painel; login = última vez que digitou a senha. */}
+                    <div className="text-foreground">{formatDate(u.ultimo_acesso_em)}</div>
+                    <div className="text-xs">login: {formatDate(u.last_login_at)}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
