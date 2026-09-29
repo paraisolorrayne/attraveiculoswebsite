@@ -42,6 +42,7 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		;({ GET: jornadas } = await import('@/app/api/admin/visitors/jornadas/route'))
 
 		await db.deleteFrom('visitor_fingerprints').execute()
+		await db.deleteFrom('whatsapp_clicks').execute()
 
 		const fp = async (visitor: string, device: string) =>
 			(
@@ -77,7 +78,11 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 			ads_device?: string | null
 			match_type?: string | null
 		}
-		const semear = async (s: Sessao, paginas: Array<{ path: string; slug?: string; brand?: string; model?: string }>) => {
+		const semear = async (
+			s: Sessao,
+			paginas: Array<{ path: string; slug?: string; brand?: string; model?: string }>,
+			clique?: { aposSegundos: number; card?: string },
+		) => {
 			const row = await db
 				.insertInto('visitor_sessions')
 				.values({
@@ -119,6 +124,20 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 					})
 					.execute()
 			}
+			if (clique) {
+				// Gravado em dobro de propósito: o score usa o PRIMEIRO clique, então a
+				// duplicação do botão flutuante (corrigida em 29/09) não pode mudar nada.
+				for (const extra of [0, 1]) {
+					await db
+						.insertInto('whatsapp_clicks')
+						.values({
+							session_db_id: row.id,
+							clicked_at: new Date(s.started_at.getTime() + (clique.aposSegundos + extra) * 1000),
+							card_id: clique.card ?? null,
+						})
+						.execute()
+				}
+			}
 		}
 
 		// v1: primeira visita por anúncio da Meta há 10 dias; converteu hoje vindo direto.
@@ -126,12 +145,21 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 			{ fingerprint_id: f1, session_id: 's1', started_at: dia(10), utm_source: 'facebook', utm_medium: 'cpc', utm_campaign: 'Porsche 911', utm_content: 'video-1', fbclid: 'fb' },
 			[{ path: '/veiculo/porsche-911-2025-1', slug: 'porsche-911-2025-1', brand: 'Porsche', model: '911' }],
 		)
-		await semear({ fingerprint_id: f1, session_id: 's2', started_at: dia(0), contacted_whatsapp: true, city: 'Uberlândia' }, [{ path: '/' }])
+		await semear({ fingerprint_id: f1, session_id: 's2', started_at: dia(0), contacted_whatsapp: true, city: 'Uberlândia' }, [{ path: '/' }], {
+			aposSegundos: 200,
+			card: 'card-1',
+		})
 		// v2: Google Ads com gclid e sem UTM (auditoria), e depois pela bio do Instagram.
 		await semear({ fingerprint_id: f2, session_id: 's3', started_at: dia(3), gclid: 'g1', ads_device: 'm', match_type: 'e' }, [{ path: '/' }])
 		await semear({ fingerprint_id: f2, session_id: 's4', started_at: dia(1), referrer_domain: 'linktr.ee', submitted_form: true }, [{ path: '/comprar' }])
 		// Campanha por ID, grafia diferente da mesma campanha da Meta.
-		await semear({ fingerprint_id: f2, session_id: 's5', started_at: dia(2), utm_source: 'Facebook', utm_medium: 'cpc', utm_campaign: 'porsche 911', utm_term: 'esportivo' }, [{ path: '/veiculos' }])
+		// O clique de s5 existe só em whatsapp_clicks (contacted_whatsapp continua false), para
+		// o teste de leads da campanha seguir vazio e o score ter o que medir.
+		await semear(
+			{ fingerprint_id: f2, session_id: 's5', started_at: dia(2), utm_source: 'Facebook', utm_medium: 'cpc', utm_campaign: 'porsche 911', utm_term: 'esportivo' },
+			[{ path: '/veiculos' }],
+			{ aposSegundos: 45 },
+		)
 	})
 
 	it('origens: fonte × meio, referenciadores (Linktree), auditoria e tendência', async () => {
@@ -155,6 +183,14 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 
 		expect(j.tendencia.pontos.length).toBeGreaterThanOrEqual(11)
 		expect(j.tendencia.pontos.reduce((s: number, p: { sessoes: number }) => s + p.sessoes, 0)).toBe(5)
+
+		// Campanhas com score: as duas grafias da Meta numa linha, com a chave que a página da campanha usa.
+		const porsche = j.campanhas.find((c: { chave: string }) => c.chave === 'porsche 911')
+		expect(porsche).toMatchObject({ sessoes: 2, sessoes_mensuraveis: 2, mediana_segundos: 45, viraram_card: 0 })
+		expect(porsche.score).toBeCloseTo(0.75 / 2) // 45 s → peso 0,75, em 2 sessões
+		const sem = j.campanhas.find((c: { chave: string }) => c.chave === '(sem campanha)')
+		expect(sem).toMatchObject({ sessoes: 3, whatsapp: 1, mediana_segundos: 200, viraram_card: 1 })
+		expect(sem.score).toBeCloseTo(1.25 / 3) // 200 s → peso 1,25, em 3 sessões
 	})
 
 	it('entradas: primeira página de cada sessão × canal', async () => {
@@ -182,6 +218,8 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		expect(j.veiculos[0]).toMatchObject({ slug: 'porsche-911-2025-1', marca: 'Porsche', sessoes: 1 })
 		expect(j.leads).toEqual([]) // nenhuma das duas sessões da campanha converteu
 		expect(j.por_dia.length).toBe(2)
+		expect(j.score.valor).toBeCloseTo(0.75 / 2)
+		expect(j.score.faixas.map((f: { sessoes: number }) => f.sessoes)).toEqual([0, 0, 1, 0, 0])
 
 		const semChave = await campanha(req('/api/admin/visitors/campanha?dias=30'))
 		expect(semChave.status).toBe(400)

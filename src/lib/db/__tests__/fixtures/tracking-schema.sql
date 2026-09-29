@@ -107,3 +107,14 @@ CREATE TABLE vehicle_section_content (
   classified_at TIMESTAMPTZ DEFAULT NOW(), copy_generated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- supabase/migrations/20260805_whatsapp_clicks.sql
+CREATE TABLE IF NOT EXISTS whatsapp_clicks (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_db_id uuid NOT NULL,
+  clicked_at    timestamptz NOT NULL DEFAULT now(),
+  page_path     text,
+  vehicle_id    text,
+  consumido_em  timestamptz,
+  card_id       text
+);

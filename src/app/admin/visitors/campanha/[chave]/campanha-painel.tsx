@@ -55,6 +55,12 @@ interface Dados {
 		contacted_whatsapp: boolean
 		submitted_form: boolean
 	}[]
+	score: {
+		valor: number | null
+		sessoes_mensuraveis: number
+		desde: string
+		faixas: { rotulo: string; peso: number; sessoes: number }[]
+	}
 }
 
 const TITULO_DIMENSAO: Record<string, string> = {
@@ -128,12 +134,13 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 
 			{dados && r && sessoes > 0 && (
 				<>
-					<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+					<div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
 						<Kpi rotulo="Sessões" valor={fmtNum(r.sessoes)} />
 						<Kpi rotulo="Visitantes" valor={fmtNum(r.visitantes)} />
 						<Kpi rotulo="Viram veículo" valor={`${fmtNum(r.sessoes_com_veiculo)} · ${fmtPct(taxa(r.sessoes_com_veiculo, r.sessoes), 0)}`} />
 						<Kpi rotulo="Cliques no WhatsApp" valor={fmtNum(r.whatsapp)} />
 						<Kpi rotulo="Taxa de conversão" valor={fmtPct(taxa(r.whatsapp, r.sessoes))} destaque />
+						<Kpi rotulo="Score (tempo até o clique)" valor={dados.score.valor === null ? '—' : fmtPct(dados.score.valor)} destaque />
 						<Kpi rotulo="Formulários" valor={fmtNum(r.formularios)} />
 					</div>
 
@@ -153,6 +160,8 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 					</div>
 
 					<PorDia pontos={dados.por_dia} />
+
+					<TempoAteClique score={dados.score} />
 
 					<div className="grid gap-6 xl:grid-cols-2">
 						<TabelaDimensao
@@ -218,6 +227,38 @@ function Kpi({ rotulo, valor, destaque }: { rotulo: string; valor: string; desta
 			<div className="text-[11px] uppercase tracking-wide text-foreground-secondary">{rotulo}</div>
 			<div className={`mt-1 text-xl font-semibold tabular-nums ${destaque ? 'text-primary' : 'text-foreground'}`}>{valor}</div>
 		</div>
+	)
+}
+
+function TempoAteClique({ score }: { score: Dados['score'] }) {
+	const clicaram = score.faixas.reduce((t, f) => t + f.sessoes, 0)
+	const maior = Math.max(1, ...score.faixas.map(f => f.sessoes))
+	const desde = new Date(score.desde).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
+	return (
+		<Secao
+			titulo="Tempo até o clique no WhatsApp"
+			dica={`Quanto tempo cada sessão passou no site antes do primeiro clique no WhatsApp. É daqui que sai o Score: cada faixa tem um peso (ao lado do rótulo), e o Score é a soma dos pesos dividida pelas ${fmtNum(score.sessoes_mensuraveis)} sessões da campanha desde ${desde}, quando o horário do clique passou a ser gravado. Muito clique na primeira faixa costuma ser toque sem intenção.`}
+		>
+			{clicaram === 0 ? (
+				<Vazio>Nenhum clique com horário registrado no período.</Vazio>
+			) : (
+				<ul className="space-y-2 p-4">
+					{score.faixas.map(f => (
+						<li key={f.rotulo} className="grid grid-cols-[9rem_1fr_5rem] items-center gap-3 text-sm">
+							<span className="text-foreground-secondary">
+								{f.rotulo} <span className="text-[10px]">× {String(f.peso).replace('.', ',')}</span>
+							</span>
+							<div className="h-2 rounded-full bg-background-soft overflow-hidden">
+								<div className="h-full rounded-full bg-primary/70" style={{ width: `${(f.sessoes / maior) * 100}%` }} />
+							</div>
+							<span className="text-right tabular-nums">
+								{fmtNum(f.sessoes)} <span className="text-xs text-foreground-secondary">{fmtPct(taxa(f.sessoes, clicaram), 0)}</span>
+							</span>
+						</li>
+					))}
+				</ul>
+			)}
+		</Secao>
 	)
 }
 

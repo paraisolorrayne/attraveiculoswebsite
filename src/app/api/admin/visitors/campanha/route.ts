@@ -12,6 +12,14 @@ import {
 } from '@/lib/traffic-channel'
 import { rotuloDevice, rotuloMatchType, rotuloNetwork } from '@/lib/parametros-anuncio'
 import { campanhaSql, entradaPorSessao, periodoDaUrl, saneado } from '@/lib/visitors/sql-atribuicao'
+import {
+	CLIQUES_REGISTRADOS_DESDE,
+	FAIXAS_TEMPO_CLIQUE,
+	faixaSql,
+	pesoSql,
+	primeiroCliquePorSessao,
+	segundosAteClique,
+} from '@/lib/visitors/score-clique'
 
 /**
  * GET /api/admin/visitors/campanha?chave=<campanha em minúsculas>&dias=
@@ -75,7 +83,9 @@ export async function GET(request: NextRequest) {
 			limit ${LIMITE}
 		`.execute(db)
 
-		const [grupos, resumo, porDia, conteudos, termos, gruposAnuncio, entradas, veiculos, cidades, contexto, leads] =
+		const mensuravel = sql`s.started_at >= ${CLIQUES_REGISTRADOS_DESDE}`
+
+		const [grupos, resumo, porDia, conteudos, termos, gruposAnuncio, entradas, veiculos, cidades, contexto, leads, tempoClique] =
 			await Promise.all([
 				sql<Grupo>`
 					select
@@ -209,6 +219,20 @@ export async function GET(request: NextRequest) {
 					order by s.started_at desc
 					limit ${LIMITE_LEADS}
 				`.execute(db),
+
+				// Score (conversão ponderada pelo tempo até o 1º clique) e a distribuição
+				// dos cliques por faixa de tempo — ver score-clique.ts.
+				sql<{ faixa: number | null; sessoes: number; soma_pesos: number }>`
+					with pc as (${primeiroCliquePorSessao})
+					select
+						case when pc.clicado_em is null then null else ${faixaSql(segundosAteClique)} end as faixa,
+						count(*)::int as sessoes,
+						coalesce(sum(${pesoSql(segundosAteClique)}) filter (where pc.clicado_em is not null), 0)::float as soma_pesos
+					from visitor_sessions s
+					left join pc on pc.session_db_id = s.id
+					where ${onde} and ${mensuravel}
+					group by 1
+				`.execute(db),
 			])
 
 		// Canais, fontes e grafias da campanha — dobrados dos grupos crus, como na Visão geral.
@@ -233,6 +257,19 @@ export async function GET(request: NextRequest) {
 		const ordenar = <K,>(m: Map<K, number>) => [...m.entries()].sort((a, b) => b[1] - a[1])
 
 		const r = resumo.rows[0]
+
+		const sessoesMensuraveis = tempoClique.rows.reduce((t, l) => t + l.sessoes, 0)
+		const somaPesos = tempoClique.rows.reduce((t, l) => t + l.soma_pesos, 0)
+		const score = {
+			valor: sessoesMensuraveis > 0 ? somaPesos / sessoesMensuraveis : null,
+			sessoes_mensuraveis: sessoesMensuraveis,
+			desde: CLIQUES_REGISTRADOS_DESDE.toISOString(),
+			faixas: FAIXAS_TEMPO_CLIQUE.map((f, i) => ({
+				rotulo: f.rotulo,
+				peso: f.peso,
+				sessoes: tempoClique.rows.find(l => l.faixa === i)?.sessoes ?? 0,
+			})),
+		}
 		const traduz = { device: rotuloDevice, match_type: rotuloMatchType, network: rotuloNetwork } as const
 
 		return NextResponse.json({
@@ -261,6 +298,7 @@ export async function GET(request: NextRequest) {
 				valor: traduz[c.dimensao as keyof typeof traduz](c.valor),
 			})),
 			leads: leads.rows,
+			score,
 		})
 	} catch (error) {
 		console.error('[Visitors Campanha API] Error:', error)

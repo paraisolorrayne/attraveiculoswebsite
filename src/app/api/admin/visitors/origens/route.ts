@@ -11,6 +11,14 @@ import {
 	type GrupoDia,
 	type GrupoOrigem,
 } from '@/lib/visitors/origens'
+import {
+	CLIQUES_REGISTRADOS_DESDE,
+	linhaCampanhaScore,
+	pesoSql,
+	primeiroCliquePorSessao,
+	segundosAteClique,
+	type GrupoCampanhaScore,
+} from '@/lib/visitors/score-clique'
 
 /**
  * GET /api/admin/visitors/origens?dias=
@@ -55,7 +63,10 @@ export async function GET(request: NextRequest) {
 			${saneado(sql`s.referrer_domain`)} as referrer_domain
 		`
 
-		const [grupos, porDia] = await Promise.all([
+		// Sessão que entra no score: desde que o horário do clique é gravado.
+		const mensuravel = sql`s.started_at >= ${CLIQUES_REGISTRADOS_DESDE}`
+
+		const [grupos, porDia, campanhas] = await Promise.all([
 			sql<GrupoOrigem>`
 				with veic as (${veic})
 				select
@@ -84,6 +95,26 @@ export async function GET(request: NextRequest) {
 				where s.started_at >= ${desdeTendencia}
 				group by 1, 2, 3, 4, 5, 6, 7, 8
 			`.execute(db),
+
+			// Campanhas com conversão ponderada pelo tempo até o clique (ver score-clique.ts).
+			// Chave = lower(campanhaSql), a MESMA que a página /campanha/[chave] filtra.
+			sql<GrupoCampanhaScore>`
+				with pc as (${primeiroCliquePorSessao})
+				select
+					lower(${campanhaSql}) as chave,
+					mode() within group (order by ${campanhaSql}) as rotulo,
+					count(*)::int as sessoes,
+					(count(*) filter (where s.contacted_whatsapp))::int as whatsapp,
+					(count(*) filter (where ${mensuravel}))::int as sessoes_mensuraveis,
+					coalesce(sum(${pesoSql(segundosAteClique)}) filter (where ${mensuravel} and pc.clicado_em is not null), 0)::float as soma_pesos,
+					(percentile_cont(0.5) within group (order by ${segundosAteClique}) filter (where pc.clicado_em is not null))::float as mediana_segundos,
+					(count(*) filter (where pc.virou_card))::int as viraram_card
+				from visitor_sessions s
+				left join pc on pc.session_db_id = s.id
+				where ${noPeriodo}
+				group by 1
+				order by 3 desc
+			`.execute(db),
 		])
 
 		const totalSessoes = grupos.rows.reduce((s, g) => s + g.sessoes, 0)
@@ -95,6 +126,9 @@ export async function GET(request: NextRequest) {
 			referenciadores: agruparReferenciadores(grupos.rows),
 			auditoria: auditarMarcacao(grupos.rows),
 			tendencia: { dias: diasTendencia, pontos: tendenciaPorCanal(porDia.rows) },
+			campanhas: campanhas.rows.map(linhaCampanhaScore),
+			// Antes desta data o score não tem como ser medido (ver CLIQUES_REGISTRADOS_DESDE).
+			score_desde: CLIQUES_REGISTRADOS_DESDE.toISOString(),
 		})
 	} catch (error) {
 		console.error('[Visitors Origens API] Error:', error)
