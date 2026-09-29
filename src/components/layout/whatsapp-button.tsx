@@ -69,7 +69,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   const pathname = usePathname()
   const { vehicle } = useVehicleContext()
   const { trackWhatsAppClick } = useAnalytics()
-  const { getVisitorContext, trackInteraction, sessionId } = useVisitorTracking()
+  const { getVisitorContext, sessionId } = useVisitorTracking()
   const [isOpen, setIsOpen] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -195,13 +195,11 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
     // — inclusive os 7 da ficha de veículo, que este handler não alcança.
     // Medir também aqui contaria este botão duas vezes.
 
-    // Marcação interna (visitor_page_views.whatsapp_clicked)
-    trackInteraction('whatsapp_click', {
-      page_path: currentPage,
-      vehicle_id: vehicleId,
-      vehicle_brand: vehicleBrand,
-      vehicle_model: vehicleModel,
-    })
+    // A marcação interna (whatsapp_clicks, aviso ao CRM) NÃO é feita aqui: o
+    // ouvinte global do visitor-tracking-provider já registra todo clique em
+    // wa.me. Chamar trackInteraction aqui também gravava cada clique DUAS vezes
+    // (117 "cliques" em 24h eram ~58 em 29/09). O veículo chega a ele pelo
+    // `data-vehicle-id` do anchor.
 
     // O navegador segue com a navegação nativa do <a target="_blank">
   }
@@ -218,6 +216,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
         href={whatsAppUrl}
         target="_blank"
         rel="noopener noreferrer"
+        data-vehicle-id={vehicleId || undefined}
         onClick={handleAnchorClick}
         onMouseEnter={() => {
           setIsOpen(true)
