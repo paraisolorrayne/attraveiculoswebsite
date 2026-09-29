@@ -34,7 +34,9 @@ function createPool(): Pool {
   // ENOIDENTIFIER — se aparecer um host *.supabase.* aqui, a env está errada.
   try {
     const u = new URL(connectionString)
-    console.log(`[db] pool -> ${u.hostname}:${u.port || '5432'} (user=${u.username}, db=${u.pathname.slice(1)})`)
+    // `?host=` sobrepõe o host da URL no driver pg (o deploy usa `?host=::1`).
+    const host = u.searchParams.get('host') ?? u.hostname
+    console.log(`[db] pool -> ${host}:${u.port || '5432'} (user=${u.username}, db=${u.pathname.slice(1)})`)
     if (u.hostname.includes('supabase') || u.hostname.includes('pooler')) {
       console.error(`[db] ALERTA: DATABASE_URL aponta pra ${u.hostname} (Supabase), não pro Postgres local — corrija o .env.production!`)
     }

@@ -34,25 +34,47 @@ pm2 stop attra
 # uma falha volta ao ar em segundos.
 rm -rf .next.anterior
 [ -d .next ] && mv .next .next.anterior
-# Blindagem contra ENOIDENTIFIER: força a DATABASE_URL LOCAL do .env.production,
-# ignorando qualquer DATABASE_URL do Supabase que tenha vazado no ambiente. Se
-# não houver linha local, mantém o que o `source` já setou (fallback).
-_dburl_local="$(grep -E '^DATABASE_URL=.*(localhost|127\.0\.0\.1)' .env.production | tail -1 | cut -d= -f2-)"
-[ -n "$_dburl_local" ] && export DATABASE_URL="$_dburl_local"
-echo "    host do banco no build: $(printf '%s' "${DATABASE_URL:-VAZIA}" | sed -E 's#^[a-z]+://[^@]*@##; s#/.*##')"
+# Blindagem contra ENOIDENTIFIER. Nesta VPS a porta 5432 tem DOIS donos:
+#
+#     [::1]:5432      → o Postgres do site
+#     127.0.0.1:5432  → o supavisor (pooler) do Supabase que roda em Docker
+#
+# `localhost` vira um ou outro conforme a ordem de DNS do Node, e quando cai no
+# IPv4 toda query volta `no tenant identifier provided`. Foi a causa do
+# ENOIDENTIFIER de julho e do admin fora em 28/09 (quando o ipv4first abaixo
+# vazou para o processo). O `?host=::1` fixa o Postgres do site independente
+# da ordem de DNS — `[::1]` direto na URL o driver `pg` não aceita.
+banco_local() {
+  local url
+  url="$(grep -E '^DATABASE_URL=.*(localhost|127\.0\.0\.1|::1)' .env.production | tail -1 | cut -d= -f2-)"
+  [ -n "$url" ] || return 0
+  case "$url" in
+    *host=*) : ;;
+    *\?*) url="$url&host=::1" ;;
+    *)    url="$url?host=::1" ;;
+  esac
+  export DATABASE_URL="$url"
+}
+banco_local
+echo "    banco no build: $(printf '%s' "${DATABASE_URL:-VAZIA}" | sed -E 's#^[a-z]+://[^@]*@##')"
 # IPv4 no build. O `next/font/google` busca o CSS da fonte em tempo de build, e
 # pelo IPv6 deste servidor a resposta do Google vem num formato que o loader não
 # consegue ler — quebra com `Cannot read properties of null (reading '1')` em
 # @next/font/dist/google/loader.js, que parece erro de código e é de rota.
 # Medido em 27/09: pelo IPv6 o build falha sempre, com IPv4 passa sempre.
-export NODE_OPTIONS="--dns-result-order=ipv4first${NODE_OPTIONS:+ $NODE_OPTIONS}"
-
-if ! npm run build || [ ! -f .next/standalone/server.js ]; then
+#
+# SÓ no comando do build, nunca exportado: exportado, o `--update-env` do
+# restart levava o ipv4first para o site no ar.
+if ! NODE_OPTIONS="--dns-result-order=ipv4first${NODE_OPTIONS:+ $NODE_OPTIONS}" npm run build \
+   || [ ! -f .next/standalone/server.js ]; then
   echo "ERRO: build falhou — restaurando a versão anterior e subindo o site"
   rm -rf .next
   if [ -d .next.anterior ]; then
     mv .next.anterior .next
-    pm2 start attra 2>/dev/null || pm2 restart attra
+    # --update-env: leva a DATABASE_URL blindada e tira o ipv4first que o pm2 guardou.
+    export NODE_OPTIONS="${NODE_OPTIONS:-}"
+    NODE_OPTIONS="${NODE_OPTIONS//--dns-result-order=ipv4first/}"
+    pm2 restart attra --update-env
     echo "    site de volta no ar com a versão anterior. Corrija o build e rode de novo."
   else
     echo "    NÃO havia versão anterior guardada — o site segue fora até o build passar."
@@ -73,6 +95,12 @@ if [ -f .env.production ]; then
   . ./.env.production
   set +a
 fi
+# O source acima devolve o `localhost` cru; reaplica a blindagem para o site no ar.
+banco_local
+# Exportado mesmo vazio: o pm2 guardou o ipv4first no deploy de 28/09, e só
+# sobrescrever a variável tira ele do processo.
+export NODE_OPTIONS="${NODE_OPTIONS:-}"
+NODE_OPTIONS="${NODE_OPTIONS//--dns-result-order=ipv4first/}"
 pm2 restart attra --update-env
 pm2 save
 
