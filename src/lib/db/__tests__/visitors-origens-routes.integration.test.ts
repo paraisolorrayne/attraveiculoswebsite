@@ -17,6 +17,7 @@
  */
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { sql } from 'kysely'
 
 vi.mock('@/lib/auth/guard-api', () => ({ adminComAcessoA: async () => ({ id: 'a', role: 'admin' }) }))
 
@@ -31,6 +32,7 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 	let campanha: typeof import('@/app/api/admin/visitors/campanha/route').GET
 	let sessoes: typeof import('@/app/api/admin/visitors/sessoes/route').GET
 	let jornadas: typeof import('@/app/api/admin/visitors/jornadas/route').GET
+	let campanhas: typeof import('@/app/api/admin/visitors/campanhas/route').GET
 
 	beforeAll(async () => {
 		process.env.DATABASE_URL = TEST_DB
@@ -40,6 +42,7 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		;({ GET: campanha } = await import('@/app/api/admin/visitors/campanha/route'))
 		;({ GET: sessoes } = await import('@/app/api/admin/visitors/sessoes/route'))
 		;({ GET: jornadas } = await import('@/app/api/admin/visitors/jornadas/route'))
+		;({ GET: campanhas } = await import('@/app/api/admin/visitors/campanhas/route'))
 
 		await db.deleteFrom('visitor_fingerprints').execute()
 		await db.deleteFrom('whatsapp_clicks').execute()
@@ -132,7 +135,8 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 						.insertInto('whatsapp_clicks')
 						.values({
 							session_db_id: row.id,
-							clicked_at: new Date(s.started_at.getTime() + (clique.aposSegundos + extra) * 1000),
+							// Fragmento sql: a coluna é Generated<Timestamp> e o Kysely não aceita o valor tipado aqui.
+							clicked_at: sql`${new Date(s.started_at.getTime() + (clique.aposSegundos + extra) * 1000)}`,
 							card_id: clique.card ?? null,
 						})
 						.execute()
@@ -191,6 +195,16 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		const sem = j.campanhas.find((c: { chave: string }) => c.chave === '(sem campanha)')
 		expect(sem).toMatchObject({ sessoes: 3, whatsapp: 1, mediana_segundos: 200, viraram_card: 1 })
 		expect(sem.score).toBeCloseTo(1.25 / 3) // 200 s → peso 1,25, em 3 sessões
+	})
+
+	it('campanhas: a aba Estatísticas do Marketing recebe as mesmas linhas da aba Origens', async () => {
+		const r = await campanhas(req('/api/admin/visitors/campanhas?dias=30'))
+		expect(r.status).toBe(200)
+		const j = await r.json()
+		const o = await (await origens(req('/api/admin/visitors/origens?dias=30'))).json()
+		expect(j.campanhas).toEqual(o.campanhas)
+		expect(j.score_desde).toBe(o.score_desde)
+		expect(j.campanhas.find((c: { chave: string }) => c.chave === 'porsche 911').score).toBeCloseTo(0.75 / 2)
 	})
 
 	it('entradas: primeira página de cada sessão × canal', async () => {

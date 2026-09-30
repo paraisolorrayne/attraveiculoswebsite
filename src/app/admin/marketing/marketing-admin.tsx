@@ -12,6 +12,7 @@ import {
   Download,
   Megaphone,
   Image as ImageIcon,
+  BarChart3,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,7 @@ import { TaskModal } from './components/task-modal'
 import { CampaignsBoard } from './components/campaigns-board'
 import { CampaignModal } from './components/campaign-modal'
 import { CreativesBoard } from './components/creatives-board'
+import { EstatisticasCampanhas } from '../visitors/campanhas-score'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
 import { canAccessRoute } from '@/lib/auth/roles'
 import type { MarketingTask, MarketingStrategy, TaskStatus, CampaignWithVehicles, CampaignStatus } from '@/types/database'
@@ -29,7 +31,7 @@ interface MarketingAdminProps {
   admin: AdminUser
 }
 
-type ViewMode = 'campanhas' | 'criativos' | 'kanban' | 'dashboard'
+type ViewMode = 'campanhas' | 'criativos' | 'kanban' | 'dashboard' | 'estatisticas'
 
 export interface TaskWithDetails extends MarketingTask {
   strategy?: { id: string; name: string; category: string } | null
@@ -45,6 +47,9 @@ export interface AdminUserBasic {
 
 export function MarketingAdmin({ admin }: MarketingAdminProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('campanhas')
+  // Estatísticas por campanha são dados do painel de visitantes: a aba só existe
+  // para quem já vê Visitantes (a rota também barra, com a mesma regra).
+  const podeVerEstatisticas = canAccessRoute(admin.role, '/admin/visitors', admin.secoes)
   const [tasks, setTasks] = useState<TaskWithDetails[]>([])
   const [strategies, setStrategies] = useState<MarketingStrategy[]>([])
   const [users, setUsers] = useState<AdminUserBasic[]>([])
@@ -286,6 +291,20 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               <LayoutDashboard className="w-4 h-4" />
               Dashboard
             </button>
+            {podeVerEstatisticas && (
+              <button
+                onClick={() => setViewMode('estatisticas')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                  viewMode === 'estatisticas'
+                    ? "bg-primary text-white"
+                    : "text-foreground-secondary hover:text-foreground hover:bg-background-soft"
+                )}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Estatísticas
+              </button>
+            )}
           </div>
 
           {/* Actions */}
@@ -338,6 +357,8 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
             onStatusChange={handleStatusChange}
             isAdmin={isAdmin}
           />
+        ) : viewMode === 'estatisticas' && podeVerEstatisticas ? (
+          <EstatisticasCampanhas />
         ) : (
           <MetricsDashboard isAdmin={isAdmin} />
         )}
