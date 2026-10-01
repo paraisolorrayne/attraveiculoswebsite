@@ -161,6 +161,9 @@ export function VisitorTrackingProvider({ children }: Props) {
       fetch('/api/tracking/interaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Mesmo motivo do envio direto: quando a fila drena, a pessoa pode já
+        // estar no WhatsApp.
+        keepalive: true,
         body: JSON.stringify({
           fingerprint_db_id: fingerprintDbIdRef.current,
           session_db_id: sessionDbIdRef.current,
@@ -671,6 +674,11 @@ export function VisitorTrackingProvider({ children }: Props) {
       fetch('/api/tracking/interaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // keepalive: o clique no WhatsApp tira a pessoa da página na hora, e no
+        // celular o navegador cancelava este envio ao trocar de app — o clique
+        // sumia (nginx registrava 499) e o lead chegava sem origem. Com keepalive
+        // o envio sobrevive à saída da página.
+        keepalive: true,
         body: JSON.stringify({
           fingerprint_db_id: fingerprintDbIdRef.current,
           session_db_id: sessionDbIdRef.current,

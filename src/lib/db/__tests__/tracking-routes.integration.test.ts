@@ -139,6 +139,32 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     expect((ev.event_data as Record<string, unknown>).vehicle_brand).toBe('Porsche')
   })
 
+  it('interaction whatsapp_click: segundo clique da mesma sessão em menos de 3 s não grava de novo', async () => {
+    await db.deleteFrom('whatsapp_clicks').execute()
+    const a = await newSession()
+    const b = await newSession()
+    const clicar = (s: { fingerprint_db_id: string; session_db_id: string }) =>
+      interactionPOST(req('/api/tracking/interaction', {
+        fingerprint_db_id: s.fingerprint_db_id, session_db_id: s.session_db_id, type: 'whatsapp_click', page_path: '/',
+      }))
+    const contar = async (sessao: string) =>
+      Number((await sql<{ n: string }>`select count(*) as n from whatsapp_clicks where session_db_id = ${sessao}::uuid`.execute(db)).rows[0].n)
+
+    // Toque duplo: dois envios quase juntos da mesma sessão → uma linha só.
+    expect((await clicar(a)).status).toBe(200)
+    expect((await clicar(a)).status).toBe(200)
+    expect(await contar(a.session_db_id)).toBe(1)
+
+    // Outra sessão no mesmo instante não é afetada.
+    await clicar(b)
+    expect(await contar(b.session_db_id)).toBe(1)
+
+    // Passados os 3 s, um novo clique da mesma sessão volta a contar.
+    await sql`update whatsapp_clicks set clicked_at = clicked_at - interval '5 seconds' where session_db_id = ${a.session_db_id}`.execute(db)
+    await clicar(a)
+    expect(await contar(a.session_db_id)).toBe(2)
+  })
+
   it('page-time: atualiza tempo/scroll e heartbeat (ended_at no exit)', async () => {
     const { fingerprint_db_id, session_db_id } = await newSession()
     await pageviewPOST(req('/api/tracking/pageview', {

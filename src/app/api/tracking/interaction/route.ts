@@ -82,15 +82,23 @@ export async function POST(request: NextRequest) {
     // o CRM a entrega pelo webhook.
     if (type === 'whatsapp_click') {
       const veiculoId = typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null
-      const clique = await db
-        .insertInto('whatsapp_clicks')
-        .values({
-          session_db_id,
-          page_path: page_path ?? null,
-          vehicle_id: veiculoId,
-        })
-        .returning(['id', 'clicked_at'])
-        .executeTakeFirst()
+      // Só grava se a mesma sessão não clicou nos últimos 3 s. Toque duplo (ou
+      // qualquer envio repetido do mesmo clique) virava duas linhas — que
+      // inflavam o painel, mandavam dois avisos à Fykos e deixavam a correlação
+      // repartir UM clique entre DOIS leads (aconteceu em 08/09 e 24/09). Sem
+      // linha nova, não há aviso: o `if (clique)` abaixo cobre isso.
+      const clique = await sql<{ id: string; clicked_at: Date }>`
+        insert into whatsapp_clicks (session_db_id, page_path, vehicle_id)
+        select ${session_db_id}::uuid, ${page_path ?? null}, ${veiculoId}
+        where not exists (
+          select 1 from whatsapp_clicks
+          where session_db_id = ${session_db_id}::uuid
+            and clicked_at > now() - interval '3 seconds'
+        )
+        returning id, clicked_at
+      `
+        .execute(db)
+        .then(r => r.rows[0])
         // Falha aqui não pode derrubar a marcação da sessão, que é o sinal
         // principal de conversão: a correlação é enriquecimento.
         .catch((e: unknown) => {
