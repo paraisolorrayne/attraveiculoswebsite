@@ -26,6 +26,7 @@ export type ResultadoLigacao =
   | { tipo: 'ligado'; sessionId: string; cliqueId: string }
   | { tipo: 'nao_elegivel'; motivo: string }
   | { tipo: 'sem_candidato' }
+  | { tipo: 'sem_veiculo' }
   | { tipo: 'ambigua'; candidatos: number }
   | { tipo: 'clique_tomado' }
 
@@ -78,25 +79,58 @@ export async function ligarCliqueAoCard(
   const quando = instanteDoContato(card)
   const desde = new Date(quando.getTime() - JANELA_CORRELACAO_MS)
 
-  const candidatos = await trx
-    .selectFrom('whatsapp_clicks')
-    .select(['id', 'session_db_id', 'clicked_at'])
-    .where('consumido_em', 'is', null)
-    // Fragmento SQL parametrizado, como o resto do projeto faz com data: a
-    // coluna é `Generated<Timestamp>` e o operando tipado do Kysely não aceita
-    // nem Date nem string nessa posição.
-    .where(sql<boolean>`clicked_at >= ${desde}`)
-    // Folga igual à da função pura, para relógios dessincronizados entre o
-    // nosso servidor e o do CRM.
-    .where(sql<boolean>`clicked_at <= ${new Date(quando.getTime() + 30_000)}`)
-    .execute()
+  // Candidatos com o CARRO de cada clique: o slug sai da própria página
+  // (/veiculo/<slug>) ou, nos cards de listagem, da ficha daquele veículo que
+  // alguém já abriu (o slug termina no id do anúncio). Marca e modelo vêm do
+  // page view mais recente dessa ficha.
+  const candidatos = await sql<{
+    id: string
+    session_db_id: string
+    clicked_at: Date
+    marca: string | null
+    modelo: string | null
+    slug: string | null
+  }>`
+    select w.id, w.session_db_id, w.clicked_at, v.vehicle_brand as marca, v.vehicle_model as modelo,
+           coalesce(v.vehicle_slug, nullif(substring(w.page_path from '^/veiculo/([^/?#]+)'), '')) as slug
+    from whatsapp_clicks w
+    left join lateral (
+      select pv.vehicle_brand, pv.vehicle_model, pv.vehicle_slug
+      from visitor_page_views pv
+      where pv.vehicle_slug is not null
+        and (
+          (w.vehicle_id is not null and pv.vehicle_slug like '%-' || w.vehicle_id)
+          or pv.page_path = w.page_path
+        )
+      order by pv.viewed_at desc
+      limit 1
+    ) v on true
+    where w.consumido_em is null
+      and w.clicked_at >= ${desde}
+      -- Folga igual à da função pura, para relógios dessincronizados entre o
+      -- nosso servidor e o do CRM.
+      and w.clicked_at <= ${new Date(quando.getTime() + 30_000)}
+  `.execute(trx)
 
+  // Payload cru do CRM: `veiculo_interesse` no contrato v2, `veiculo` no v1.
+  const veiculoBruto = card.veiculo_interesse ?? card.veiculo
+  const veiculoDoCard = typeof veiculoBruto === 'string' ? veiculoBruto : null
   const decisao: ResultadoCorrelacao = correlacionarClique(
-    candidatos.map(c => ({ id: String(c.id), session_db_id: c.session_db_id, clicked_at: c.clicked_at as unknown as Date })),
+    candidatos.rows.map(c => {
+      const temVeiculo = c.marca || c.modelo || c.slug
+      return {
+        id: String(c.id),
+        session_db_id: c.session_db_id,
+        clicked_at: c.clicked_at,
+        veiculo: temVeiculo ? { marca: c.marca, modelo: c.modelo, slug: c.slug } : null,
+      }
+    }),
     quando,
+    veiculoDoCard,
   )
 
   if (decisao.tipo === 'sem_candidato') return { tipo: 'sem_candidato' }
+  if (decisao.tipo === 'sem_veiculo') return { tipo: 'sem_veiculo' }
   if (decisao.tipo === 'ambigua') return { tipo: 'ambigua', candidatos: decisao.candidatos }
 
   // Reivindica o clique ANTES de gravar no card, e só se ninguém o tomou.
@@ -122,7 +156,10 @@ export async function ligarCliqueAoCard(
         // Marca COMO a referência chegou. Uma correlação por tempo é menos
         // certa que um id devolvido pelo CRM, e o relatório precisa saber a
         // diferença em vez de tratar as duas como o mesmo fato.
-        site_session_origem: 'correlacao_clique_whatsapp',
+        // `_veiculo`: ligado por clique no MESMO carro (regra de 02/10/2026).
+        // O valor antigo, `correlacao_clique_whatsapp`, era só por horário e foi
+        // descartado na migration 20261002 — não confundir os dois.
+        site_session_origem: 'correlacao_clique_veiculo',
       }) as unknown as Database['crm_cards']['dados'],
     })
     .where('id', '=', cardId)

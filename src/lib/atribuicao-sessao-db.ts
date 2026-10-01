@@ -196,8 +196,16 @@ export async function atribuicaoPorCard(cardId: string): Promise<ResultadoPorCar
 	if (!token) return { tipo: 'sem_correlacao' }
 
 	const origem = dados.site_session_origem
+	// `correlacao_clique_veiculo` (regra de 02/10/2026: clique no MESMO carro)
+	// sai para o CRM como `correlacao_clique_whatsapp`, o valor que o contrato
+	// deles já conhece. Os vínculos antigos, só por horário, foram descartados na
+	// migration 20261002: perderam o `site_session_id` e nem chegam aqui.
 	const ligacao: OrigemDaLigacao =
-		origem === 'correlacao_clique_whatsapp' || origem === 'formulario' ? origem : 'marcador'
+		origem === 'correlacao_clique_veiculo' || origem === 'correlacao_clique_whatsapp'
+			? 'correlacao_clique_whatsapp'
+			: origem === 'formulario'
+				? 'formulario'
+				: 'marcador'
 
 	const atribuicao = await montar(token, ligacao)
 	return atribuicao ? { tipo: 'ok', atribuicao } : { tipo: 'sem_correlacao' }
