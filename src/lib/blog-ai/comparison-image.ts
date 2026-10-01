@@ -36,15 +36,59 @@ async function fetchImage(url: string): Promise<Buffer> {
   }
 }
 
-/** Monta o JPEG 1200×630 com os dois carros lado a lado. */
+/** Fração dos pixels de uma região (a partir do canto inferior direito) que são vermelho de faixa. */
+async function fracaoVermelhaNoCanto(foto: Buffer, fracLargura: number, fracAltura: number): Promise<number> {
+  const { width = 0, height = 0 } = await sharp(foto).metadata()
+  const w = Math.max(1, Math.round(width * fracLargura))
+  const h = Math.max(1, Math.round(height * fracAltura))
+  const { data, info } = await sharp(foto)
+    .extract({ left: width - w, top: height - h, width: w, height: h })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  let vermelhos = 0
+  for (let i = 0; i < data.length; i += info.channels) {
+    const r = data[i], g = data[i + 1], b = data[i + 2]
+    if (r > 130 && r > g * 2.2 && r > b * 2.2) vermelhos++
+  }
+  return vermelhos / (info.width * info.height)
+}
+
+/**
+ * A foto tem a faixa vermelha de anúncio ("PPF FULL", "EDIÇÃO ESPECIAL…") no
+ * canto inferior direito? Ela vem gravada na própria foto do estoque, colada
+ * na borda direita, logo abaixo do carro.
+ *
+ * Duas condições porque só a cor confundiria com carro vermelho: a faixa ENCOSTA
+ * na borda, o carro não (as fotos da loja têm margem). Calibrado em 30/09/2026
+ * com 12 fotos reais: com faixa, ~12% do canto e ~15% da borda; sem, no máximo
+ * 0,8% e 0% (a McLaren laranja-avermelhada incluída).
+ */
+export async function temFaixaNoCanto(foto: Buffer): Promise<boolean> {
+  const [canto, borda] = await Promise.all([
+    fracaoVermelhaNoCanto(foto, 0.45, 0.3),
+    fracaoVermelhaNoCanto(foto, 0.02, 0.3),
+  ])
+  return canto >= 0.05 && borda >= 0.08
+}
+
+/**
+ * Monta o JPEG 1200×630 com os dois carros lado a lado.
+ *
+ * Todas as fotos da loja são feitas com a frente do carro para a ESQUERDA. Por
+ * isso a foto da esquerda é espelhada: os dois carros ficam de frente um para
+ * o outro, olhando para o selo VS. Exceção: foto com faixa de anúncio, que
+ * espelhada mostraria o texto ao contrário — essa fica como está.
+ */
 export async function composeComparisonImage(photoUrlA: string, photoUrlB: string): Promise<Buffer> {
   const [rawA, rawB] = await Promise.all([fetchImage(photoUrlA), fetchImage(photoUrlB)])
+  const espelharA = !(await temFaixaNoCanto(rawA))
 
   // 'contain' (não 'cover'): mostra o carro INTEIRO, sem cortar nas laterais/divisa.
   // O que sobra vira faixa na cor do fundo do card (#101014), parecendo intencional.
   const bg = { r: 16, g: 16, b: 20, alpha: 1 }
   const [left, right] = await Promise.all([
-    sharp(rawA).resize(HALF, H, { fit: 'contain', background: bg }).toBuffer(),
+    sharp(rawA).flop(espelharA).resize(HALF, H, { fit: 'contain', background: bg }).toBuffer(),
     sharp(rawB).resize(HALF, H, { fit: 'contain', background: bg }).toBuffer(),
   ])
 

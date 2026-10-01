@@ -69,21 +69,6 @@ export default async function BlogPage() {
 				</Container>
 			</section>
 
-			{/* Conteúdo âncora — Guias Attra (eixo "Comprar bem") */}
-			{anchorPosts.length > 0 && (
-				<section className="py-12 border-b border-border">
-					<Container>
-						<h2 className="text-2xl lg:text-3xl font-bold text-foreground">Guias Attra: como comprar bem</h2>
-						<p className="mt-2 text-foreground-secondary max-w-2xl">
-							Procedência, curadoria e decisão patrimonial — o critério da Attra antes de qualquer compra.
-						</p>
-						<div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-							{anchorPosts.map(post => <BlogCardStatic key={post.id} post={post} />)}
-						</div>
-					</Container>
-				</section>
-			)}
-
 			{/* Posts em destaque (limitado) */}
 			<section className="py-12">
 				<Container>
@@ -102,6 +87,23 @@ export default async function BlogPage() {
 					</div>
 				</Container>
 			</section>
+
+			{/* Conteúdo âncora — Guias Attra (eixo "Comprar bem"). Fica DEPOIS dos
+			    artigos: quem chega ao blog vê primeiro o que é novo; os guias são
+			    referência permanente e não mudam de uma visita para outra. */}
+			{anchorPosts.length > 0 && (
+				<section className="py-12 border-t border-border">
+					<Container>
+						<h2 className="text-2xl lg:text-3xl font-bold text-foreground">Guias Attra: como comprar bem</h2>
+						<p className="mt-2 text-foreground-secondary max-w-2xl">
+							Procedência, curadoria e decisão patrimonial — o critério da Attra antes de qualquer compra.
+						</p>
+						<div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							{anchorPosts.map(post => <BlogCardStatic key={post.id} post={post} />)}
+						</div>
+					</Container>
+				</section>
+			)}
 
 			{/* Vídeos do YouTube */}
 			<section className="py-12 lg:py-16 bg-background-soft border-y border-border">
