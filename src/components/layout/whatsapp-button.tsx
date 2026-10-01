@@ -57,6 +57,8 @@ function isMobileViewport(): boolean {
 }
 
 // Detecta se há campo de input em foco — evita interromper o usuário
+const ATRASO_BOTAO_MS = 2500
+
 function isTypingInForm(): boolean {
   if (typeof document === 'undefined') return false
   const el = document.activeElement as HTMLElement | null
@@ -74,6 +76,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   const [hasInteracted, setHasInteracted] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null)
+  const [pronto, setPronto] = useState(false)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const buttonRef = useRef<HTMLAnchorElement | null>(null)
 
@@ -85,6 +88,18 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   const currentPage = sourcePage && sourcePage !== 'global' ? sourcePage : pathname
 
   const context = getContextMessage(currentPage, vehicleBrand, vehicleModel)
+
+  // O botão só aparece (e só aceita toque) depois de ATRASO_BOTAO_MS da chegada.
+  //
+  // Medido em 02/10/2026: ~23% dos cliques no WhatsApp vinham em menos de 3 s
+  // da chegada, quase todos neste botão, na página inicial, no celular — o
+  // toque seguinte ao do anúncio caía onde o botão aparece. Como o componente
+  // fica no layout, o atraso vale só para a página de entrada, não a cada
+  // navegação interna.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPronto(true), ATRASO_BOTAO_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const fetchGeoLocation = async () => {
@@ -219,14 +234,20 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
         data-vehicle-id={vehicleId || undefined}
         onClick={handleAnchorClick}
         onMouseEnter={() => {
+          if (!pronto) return
           setIsOpen(true)
           setHasInteracted(true)
         }}
+        aria-hidden={!pronto}
+        tabIndex={pronto ? undefined : -1}
         style={{
           bottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
         }}
         className={cn(
           'fixed right-4 sm:right-6 z-50 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg transition-all duration-300 hover:scale-110',
+          // Invisível e sem receber toque até `pronto` — o toque não "atravessa"
+          // para o WhatsApp; cai no que estiver por baixo, como se o botão não existisse.
+          pronto ? 'opacity-100' : 'opacity-0 pointer-events-none',
           // Pulse-glow limitado a ~4 ciclos (8s) pra não drenar bateria
           !hasInteracted && 'animate-pulse-glow [animation-iteration-count:4]',
         )}
