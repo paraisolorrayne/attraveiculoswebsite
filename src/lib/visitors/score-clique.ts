@@ -21,8 +21,17 @@ export interface FaixaTempoClique {
 	rotulo: string
 }
 
+/**
+ * Clique nos primeiros segundos não é decisão, é toque acidental. Medido em
+ * 02/10/2026: ~23% dos cliques vinham em menos de 3 s da chegada, quase todos
+ * no botão flutuante da página inicial, no celular — o toque seguinte ao do
+ * anúncio cai onde o botão aparece. Valem zero e saem da conversão.
+ */
+export const LIMITE_ACIDENTAL_S = 3
+
 export const FAIXAS_TEMPO_CLIQUE: readonly FaixaTempoClique[] = [
-	{ ate: 10, peso: 0.25, rotulo: 'menos de 10 s' },
+	{ ate: LIMITE_ACIDENTAL_S, peso: 0, rotulo: 'menos de 3 s (acidental)' },
+	{ ate: 10, peso: 0.25, rotulo: '3–10 s' },
 	{ ate: 30, peso: 0.5, rotulo: '10–30 s' },
 	{ ate: 60, peso: 0.75, rotulo: '30–60 s' },
 	{ ate: 180, peso: 1, rotulo: '1–3 min' },
@@ -64,14 +73,23 @@ export function faixaSql(segundos: RawBuilder<unknown>) {
 }
 
 /**
- * Primeiro clique de cada sessão, como subconsulta (alias sugerido: `pc`).
- * O PRIMEIRO, e não cada linha: além de ser o que mede "quanto tempo até
- * decidir chamar", deixa o score imune a cliques gravados em dobro (bug do
- * botão flutuante corrigido em 29/09).
+ * Primeiro clique DE VERDADE de cada sessão, como subconsulta (alias: `pc`).
+ *
+ * - `clicado_em`: o primeiro clique depois dos 3 s acidentais. É o que mede
+ *   "quanto tempo até decidir chamar" — e quem tocou sem querer e depois chamou
+ *   de propósito conta pelo clique de propósito.
+ * - `so_acidental`: TODOS os cliques da sessão caíram nos primeiros 3 s.
+ * Usar o primeiro clique (e não cada linha) também deixa o score imune a
+ * cliques gravados em dobro.
  */
 export const primeiroCliquePorSessao = sql`
-	select w.session_db_id, min(w.clicked_at) as clicado_em, bool_or(w.card_id is not null) as virou_card
+	select
+		w.session_db_id,
+		min(w.clicked_at) filter (where w.clicked_at >= ws.started_at + ${`${LIMITE_ACIDENTAL_S} seconds`}::interval) as clicado_em,
+		bool_and(w.clicked_at < ws.started_at + ${`${LIMITE_ACIDENTAL_S} seconds`}::interval) as so_acidental,
+		bool_or(w.card_id is not null) as virou_card
 	from whatsapp_clicks w
+	join visitor_sessions ws on ws.id = w.session_db_id
 	group by w.session_db_id
 `
 
@@ -89,6 +107,8 @@ export interface GrupoCampanhaScore {
 	soma_pesos: number
 	mediana_segundos: number | null
 	viraram_card: number
+	/** Sessões cujos cliques foram TODOS nos primeiros 3 s — saem da conversão. */
+	acidentais: number
 }
 
 export interface LinhaCampanhaScore extends GrupoCampanhaScore {
@@ -103,7 +123,7 @@ export function linhaCampanhaScore(g: GrupoCampanhaScore): LinhaCampanhaScore {
 		...g,
 		chave,
 		rotulo: g.rotulo || SEM_CAMPANHA,
-		conversao: g.sessoes > 0 ? g.whatsapp / g.sessoes : 0,
+		conversao: g.sessoes > 0 ? Math.max(0, g.whatsapp - g.acidentais) / g.sessoes : 0,
 		score: g.sessoes_mensuraveis > 0 ? g.soma_pesos / g.sessoes_mensuraveis : null,
 		mediana_segundos: g.mediana_segundos == null ? null : Math.round(g.mediana_segundos),
 	}

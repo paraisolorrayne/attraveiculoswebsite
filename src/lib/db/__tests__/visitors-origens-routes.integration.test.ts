@@ -233,7 +233,9 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		expect(j.leads).toEqual([]) // nenhuma das duas sessões da campanha converteu
 		expect(j.por_dia.length).toBe(2)
 		expect(j.score.valor).toBeCloseTo(0.75 / 2)
-		expect(j.score.faixas.map((f: { sessoes: number }) => f.sessoes)).toEqual([0, 0, 1, 0, 0])
+		// Faixas: acidental, 3–10 s, 10–30 s, 30–60 s, 1–3 min, >3 min — o clique de 45 s cai na 4ª.
+		expect(j.score.faixas.map((f: { sessoes: number }) => f.sessoes)).toEqual([0, 0, 0, 1, 0, 0])
+		expect(j.resumo.acidentais).toBe(0)
 
 		const semChave = await campanha(req('/api/admin/visitors/campanha?dias=30'))
 		expect(semChave.status).toBe(400)

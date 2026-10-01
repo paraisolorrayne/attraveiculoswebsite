@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
 					sessoes: number
 					visitantes: number
 					whatsapp: number
+					acidentais: number
 					formularios: number
 					sessoes_com_veiculo: number
 					primeira: string | null
@@ -114,11 +115,13 @@ export async function GET(request: NextRequest) {
 					sessoes_com_duracao: number
 					duracao_total: number
 				}>`
-					with veic as (${veic})
+					with veic as (${veic}), pc as (${primeiroCliquePorSessao})
 					select
 						count(*)::int as sessoes,
 						count(distinct s.fingerprint_id)::int as visitantes,
 						(count(*) filter (where s.contacted_whatsapp))::int as whatsapp,
+						-- Sessões em que TODOS os cliques no WhatsApp foram nos primeiros 3 s.
+						(count(*) filter (where pc.so_acidental))::int as acidentais,
 						(count(*) filter (where s.submitted_form))::int as formularios,
 						(count(*) filter (where coalesce(v.veiculos, 0) > 0 or coalesce(s.vehicles_viewed, 0) > 0))::int as sessoes_com_veiculo,
 						min(s.started_at)::text as primeira,
@@ -127,6 +130,7 @@ export async function GET(request: NextRequest) {
 						coalesce(sum(s.duration_seconds), 0)::int as duracao_total
 					from visitor_sessions s
 					left join veic v on v.session_id = s.id
+					left join pc on pc.session_db_id = s.id
 					where ${onde}
 				`.execute(db),
 
@@ -225,7 +229,8 @@ export async function GET(request: NextRequest) {
 				sql<{ faixa: number | null; sessoes: number; soma_pesos: number }>`
 					with pc as (${primeiroCliquePorSessao})
 					select
-						case when pc.clicado_em is null then null else ${faixaSql(segundosAteClique)} end as faixa,
+						-- Faixa 0 = só cliques acidentais (todos nos primeiros 3 s).
+						case when pc.so_acidental then 0 when pc.clicado_em is null then null else ${faixaSql(segundosAteClique)} end as faixa,
 						count(*)::int as sessoes,
 						coalesce(sum(${pesoSql(segundosAteClique)}) filter (where pc.clicado_em is not null), 0)::float as soma_pesos
 					from visitor_sessions s

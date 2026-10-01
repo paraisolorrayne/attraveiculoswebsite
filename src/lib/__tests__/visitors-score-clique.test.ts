@@ -9,7 +9,7 @@ import {
 
 describe('pesoDoClique', () => {
 	it('pesa pelo tempo entre a chegada e o primeiro clique', () => {
-		expect(pesoDoClique(0)).toBe(0.25)
+		expect(pesoDoClique(3)).toBe(0.25)
 		expect(pesoDoClique(9.9)).toBe(0.25)
 		expect(pesoDoClique(10)).toBe(0.5)
 		expect(pesoDoClique(29)).toBe(0.5)
@@ -20,15 +20,18 @@ describe('pesoDoClique', () => {
 		expect(pesoDoClique(3600)).toBe(1.25)
 	})
 
-	it('trata tempo negativo (relógio adiantado) como clique imediato', () => {
-		expect(pesoDoClique(-5)).toBe(0.25)
+	it('clique nos primeiros 3 s é acidental e não vale nada', () => {
+		expect(pesoDoClique(0)).toBe(0)
+		expect(pesoDoClique(2.9)).toBe(0)
+		expect(pesoDoClique(-5)).toBe(0) // relógio adiantado conta como imediato
 	})
 })
 
 describe('faixaDoClique', () => {
 	it('devolve o índice da faixa, alinhado com FAIXAS_TEMPO_CLIQUE', () => {
-		expect(faixaDoClique(5)).toBe(0)
-		expect(faixaDoClique(45)).toBe(2)
+		expect(faixaDoClique(1)).toBe(0)
+		expect(faixaDoClique(5)).toBe(1)
+		expect(faixaDoClique(45)).toBe(3)
 		expect(faixaDoClique(999)).toBe(FAIXAS_TEMPO_CLIQUE.length - 1)
 	})
 })
@@ -43,11 +46,17 @@ function grupo(p: Partial<GrupoCampanhaScore>): GrupoCampanhaScore {
 		soma_pesos: 2.5,
 		mediana_segundos: 12,
 		viraram_card: 1,
+		acidentais: 0,
 		...p,
 	}
 }
 
 describe('linhaCampanhaScore', () => {
+	it('conversão desconta as sessões de clique acidental', () => {
+		const l = linhaCampanhaScore(grupo({ sessoes: 100, whatsapp: 10, acidentais: 4 }))
+		expect(l.conversao).toBeCloseTo(0.06)
+	})
+
 	it('calcula conversão bruta e conversão ponderada (score)', () => {
 		const l = linhaCampanhaScore(grupo({}))
 		expect(l.conversao).toBeCloseTo(0.1)

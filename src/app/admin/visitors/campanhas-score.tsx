@@ -25,8 +25,9 @@ function scoreMedio(linhas: LinhaCampanhaScore[]): number {
 export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCampanhaScore[]; scoreDesde: string }) {
 	const total = linhas.reduce((s, l) => s + l.sessoes, 0)
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
+	// Mesma régua da coluna: sem as sessões de clique acidental.
 	const mediaConversao = taxa(
-		linhas.reduce((s, l) => s + l.whatsapp, 0),
+		linhas.reduce((s, l) => s + Math.max(0, l.whatsapp - l.acidentais), 0),
 		total,
 	)
 	const mediaScore = scoreMedio(linhas)
@@ -65,10 +66,27 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 			chave: 'whatsapp',
 			titulo: 'Clicaram no WhatsApp',
 			filtro: 'numero',
-			valor: l => l.whatsapp,
+			valor: l => Math.max(0, l.whatsapp - l.acidentais),
 			alinhar: 'dir',
 			classe: 'tabular-nums',
-			render: l => fmtNum(l.whatsapp),
+			render: l => fmtNum(Math.max(0, l.whatsapp - l.acidentais)),
+		},
+		{
+			chave: 'acidentais',
+			titulo: 'Acidentais (< 3 s)',
+			filtro: 'numero',
+			valor: l => l.acidentais,
+			alinhar: 'dir',
+			classe: 'tabular-nums text-foreground-secondary',
+			render: l =>
+				l.acidentais > 0 ? (
+					<>
+						{fmtNum(l.acidentais)}
+						<span className="ml-1 text-xs">{fmtPct(taxa(l.acidentais, l.whatsapp), 0)}</span>
+					</>
+				) : (
+					'—'
+				),
 		},
 		{
 			chave: 'conversao',
@@ -121,7 +139,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 	return (
 		<Secao
 			titulo="Campanhas — conversão e qualidade do clique"
-			dica={`Conversão é a parte das sessões que clicou no WhatsApp. O Score é a mesma conversão, mas cada clique vale pelo tempo que a pessoa passou no site antes de chamar: ${pesos}. Quem clica nos primeiros segundos costuma não ter pesquisado; quem navega antes chega decidido. Compare a campanha pelo Score, não só pela conversão. O horário do clique só é gravado desde ${desde}: sessões anteriores não entram no Score. 'Viraram card' são os cliques cuja conversa foi ligada a um card do CRM.`}
+			dica={`Conversão é a parte das sessões que clicou no WhatsApp, SEM os cliques acidentais: sessão em que todos os cliques foram nos primeiros 3 segundos depois da chegada (quase sempre o toque seguinte ao do anúncio caindo no botão flutuante) fica na coluna Acidentais e não conta como conversão. O Score é a mesma conversão, mas cada clique vale pelo tempo que a pessoa passou no site antes de chamar: ${pesos}. Quem clica nos primeiros segundos costuma não ter pesquisado; quem navega antes chega decidido. Compare a campanha pelo Score, não só pela conversão. O horário do clique só é gravado desde ${desde}: sessões anteriores não entram no Score. 'Viraram card' são os cliques cuja conversa foi ligada a um card do CRM.`}
 			acessorio={
 				<span className="text-xs text-foreground-secondary text-right">
 					Conversão média: <strong className="text-foreground">{fmtPct(mediaConversao)}</strong>

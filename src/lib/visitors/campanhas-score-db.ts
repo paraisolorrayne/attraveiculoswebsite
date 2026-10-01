@@ -32,7 +32,8 @@ export async function carregarCampanhasComScore(noPeriodo: RawBuilder<unknown>):
 			(count(*) filter (where ${mensuravel}))::int as sessoes_mensuraveis,
 			coalesce(sum(${pesoSql(segundosAteClique)}) filter (where ${mensuravel} and pc.clicado_em is not null), 0)::float as soma_pesos,
 			(percentile_cont(0.5) within group (order by ${segundosAteClique}) filter (where pc.clicado_em is not null))::float as mediana_segundos,
-			(count(*) filter (where pc.virou_card))::int as viraram_card
+			(count(*) filter (where pc.virou_card))::int as viraram_card,
+			(count(*) filter (where pc.so_acidental))::int as acidentais
 		from visitor_sessions s
 		left join pc on pc.session_db_id = s.id
 		where ${noPeriodo}

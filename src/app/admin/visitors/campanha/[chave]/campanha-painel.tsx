@@ -25,6 +25,7 @@ interface Dados {
 		sessoes: number
 		visitantes: number
 		whatsapp: number
+		acidentais: number
 		formularios: number
 		sessoes_com_veiculo: number
 		primeira: string | null
@@ -138,8 +139,12 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 						<Kpi rotulo="Sessões" valor={fmtNum(r.sessoes)} />
 						<Kpi rotulo="Visitantes" valor={fmtNum(r.visitantes)} />
 						<Kpi rotulo="Viram veículo" valor={`${fmtNum(r.sessoes_com_veiculo)} · ${fmtPct(taxa(r.sessoes_com_veiculo, r.sessoes), 0)}`} />
-						<Kpi rotulo="Cliques no WhatsApp" valor={fmtNum(r.whatsapp)} />
-						<Kpi rotulo="Taxa de conversão" valor={fmtPct(taxa(r.whatsapp, r.sessoes))} destaque />
+						{/* Sem as sessões de clique acidental (todos os cliques nos primeiros 3 s). */}
+						<Kpi
+							rotulo="Cliques no WhatsApp"
+							valor={`${fmtNum(Math.max(0, r.whatsapp - r.acidentais))}${r.acidentais > 0 ? ` · +${fmtNum(r.acidentais)} acidentais` : ''}`}
+						/>
+						<Kpi rotulo="Taxa de conversão" valor={fmtPct(taxa(Math.max(0, r.whatsapp - r.acidentais), r.sessoes))} destaque />
 						<Kpi rotulo="Score (tempo até o clique)" valor={dados.score.valor === null ? '—' : fmtPct(dados.score.valor)} destaque />
 						<Kpi rotulo="Formulários" valor={fmtNum(r.formularios)} />
 					</div>
