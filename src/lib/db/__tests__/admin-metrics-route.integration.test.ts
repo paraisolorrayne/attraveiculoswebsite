@@ -22,8 +22,10 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { sql } from 'kysely'
+import { prepararBancoAgencias } from './fixtures/agencias'
 
-vi.mock('@/lib/admin-auth', () => ({ getCurrentAdmin: async () => ({ id: 'a', role: 'admin' }) }))
+// O guard real puxa o next-auth, que o Vitest não resolve: simula um admin.
+vi.mock('@/lib/auth/guard-api', () => ({ adminComAcessoA: async () => ({ id: 'a', role: 'admin' }) }))
 
 const TEST_DB = process.env.TEST_DATABASE_URL
 
@@ -95,6 +97,45 @@ describe.skipIf(!TEST_DB)('metrics route — SQL real', () => {
     // "Veículos diferentes por sessão": 2 paths distintos, e vehicles_viewed=4 não vira 4.
     expect(j.resumo.veiculos_distintos).toBe(2)
     expect(j.resumo.sessoes_com_veiculo).toBe(1)
+  })
+
+  it('com escopo de agência, a Visão geral só conta as campanhas cadastradas dela', async () => {
+    const { consultarMetrics } = await import('@/lib/visitors/consultas/metrics')
+    await prepararBancoAgencias(db)
+    await sql`delete from agencia_campanhas`.execute(db)
+    const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+    const escopo = { tipo: 'agencia' as const, agenciaId: ag }
+    const vazio = (await consultarMetrics('http://x/?dias=30', escopo)) as { resumo: { sessoes: number } }
+    expect(vazio.resumo.sessoes).toBe(0)
+    // "black friday" (as duas grafias, Google): 2 sessões.
+    await db.insertInto('agencia_campanhas').values({ agencia_id: ag, plataforma: 'google', nome: 'Black Friday' }).execute()
+    const dela = (await consultarMetrics('http://x/?dias=30', escopo)) as { resumo: { sessoes: number } }
+    expect(dela.resumo.sessoes).toBe(2)
+    await sql`delete from agencia_campanhas`.execute(db)
+  })
+
+  it('comportamento, veículos e termos rodam com escopo e a agência sem campanha não vê nada', async () => {
+    const { consultarComportamento } = await import('@/lib/visitors/consultas/comportamento')
+    const { consultarVeiculos } = await import('@/lib/visitors/consultas/veiculos')
+    const { consultarTermos } = await import('@/lib/visitors/consultas/termos')
+    const { ESCOPO_TUDO } = await import('@/lib/visitors/escopo')
+    await prepararBancoAgencias(db)
+    await sql`delete from agencia_campanhas`.execute(db)
+    const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+    const escopo = { tipo: 'agencia' as const, agenciaId: ag }
+    const url = 'http://x/?dias=30'
+
+    // Para a Attra, os page views da fixture aparecem.
+    const vTudo = JSON.stringify(await consultarVeiculos(url, ESCOPO_TUDO))
+    expect(vTudo).toContain('porsche')
+    // Para a agência sem campanha, nada de veículo nem de comportamento.
+    expect(JSON.stringify(await consultarVeiculos(url, escopo))).not.toContain('porsche')
+    const comp = (await consultarComportamento(url, escopo)) as { resumo?: { visualizacoes?: number } }
+    expect(JSON.stringify(comp)).not.toContain('/veiculo/')
+    await consultarComportamento(url, ESCOPO_TUDO)
+    // Termos: o SQL roda nos dois escopos.
+    await consultarTermos(url, ESCOPO_TUDO)
+    await consultarTermos(url, escopo)
   })
 
   it('a coluna velha vehicles_viewed nunca soma mais que 1 por sessão', async () => {
