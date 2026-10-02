@@ -1,6 +1,7 @@
 'use client'
 
 import { useSyncExternalStore, type ReactNode } from 'react'
+import { useLarguraTotal } from './largura-total'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CanalTrafego } from '@/lib/traffic-channel'
@@ -46,8 +47,9 @@ export function ConteudoVolume({ valor, maximo, total }: { valor: number; maximo
 
 /** O mesmo, já dentro do `<td>` — para as tabelas escritas à mão. */
 export function CelulaVolume({ valor, maximo, total }: { valor: number; maximo: number; total: number }) {
+	const larguraTotal = useLarguraTotal()
 	return (
-		<td className={`${TD} min-w-[140px]`}>
+		<td className={larguraTotal ? TD.replace('whitespace-nowrap', 'whitespace-normal') : `${TD} min-w-[140px]`}>
 			<ConteudoVolume valor={valor} maximo={maximo} total={total} />
 		</td>
 	)

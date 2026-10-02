@@ -21,6 +21,7 @@ import {
 	useValoresCrus,
 } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
+import { useLarguraTotal } from '../largura-total'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -315,7 +316,12 @@ function Tendencia({ tendencia }: { tendencia: { dias: number; pontos: PontoTend
 	const margemBaixo = 28
 	const alturaUtil = H - margemBaixo - 8
 	const larguraBarra = pontos.length > 0 ? W / pontos.length : 0
-	const passoRotulo = Math.max(1, Math.ceil(pontos.length / 12))
+	// Na área da agência o gráfico encolhe com a tela (sem largura mínima): menos
+	// rótulos, e maiores, para continuarem legíveis no celular.
+	const larguraTotal = useLarguraTotal()
+	const passoRotulo = Math.max(1, Math.ceil(pontos.length / (larguraTotal ? 6 : 12)))
+	const fonteEixo = larguraTotal ? 24 : 11
+	const fonteValor = larguraTotal ? 20 : 10
 
 	return (
 		<Secao
@@ -326,8 +332,8 @@ function Tendencia({ tendencia }: { tendencia: { dias: number; pontos: PontoTend
 				<Vazio>Sem sessões no período.</Vazio>
 			) : (
 				<div className="p-4 space-y-3">
-					<div className="overflow-x-auto">
-						<svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[640px] h-[220px]" role="img" aria-label="Sessões por dia por canal">
+					<div className={larguraTotal ? '' : 'overflow-x-auto'}>
+						<svg viewBox={`0 0 ${W} ${H}`} className={larguraTotal ? 'w-full h-[220px]' : 'w-full min-w-[640px] h-[220px]'} role="img" aria-label="Sessões por dia por canal">
 							{pontos.map((p, i) => {
 								let y = H - margemBaixo
 								const x = i * larguraBarra
@@ -343,12 +349,12 @@ function Tendencia({ tendencia }: { tendencia: { dias: number; pontos: PontoTend
 											return <rect key={c} x={x + 1} y={y} width={largura} height={h} fill={CANAL_HEX[c]} />
 										})}
 										{p.whatsapp > 0 && (
-											<text x={x + larguraBarra / 2} y={y - 4} textAnchor="middle" fontSize="10" className="fill-foreground">
+											<text x={x + larguraBarra / 2} y={y - 4} textAnchor="middle" fontSize={fonteValor} className="fill-foreground">
 												{p.whatsapp}
 											</text>
 										)}
 										{i % passoRotulo === 0 && (
-											<text x={x + larguraBarra / 2} y={H - 8} textAnchor="middle" fontSize="11" className="fill-foreground-secondary">
+											<text x={x + larguraBarra / 2} y={H - 8} textAnchor="middle" fontSize={fonteEixo} className="fill-foreground-secondary">
 												{diaCurto(p.dia)}
 											</text>
 										)}

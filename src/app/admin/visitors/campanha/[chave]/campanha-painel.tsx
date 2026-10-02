@@ -8,6 +8,7 @@ import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-metrics'
 import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
 import { TabelaOrdenavel } from '../../visitors-tabela'
+import { useLarguraTotal } from '../../largura-total'
 
 interface Dimensao {
 	valor: string
@@ -273,14 +274,18 @@ function PorDia({ pontos }: { pontos: { dia: string; sessoes: number; whatsapp: 
 	const H = 160
 	const base = H - 24
 	const largura = pontos.length ? W / pontos.length : 0
-	const passo = Math.max(1, Math.ceil(pontos.length / 12))
+	// Sem largura mínima na área da agência: menos rótulos, e maiores.
+	const larguraTotal = useLarguraTotal()
+	const passo = Math.max(1, Math.ceil(pontos.length / (larguraTotal ? 6 : 12)))
+	const fonteEixo = larguraTotal ? 24 : 11
+	const fonteValor = larguraTotal ? 20 : 10
 	return (
 		<Secao titulo="Sessões por dia" dica="Cada barra é um dia (fuso de Brasília); o número em cima é a contagem de cliques no WhatsApp naquele dia.">
 			{pontos.length === 0 ? (
 				<Vazio>Sem sessões.</Vazio>
 			) : (
-				<div className="overflow-x-auto p-4">
-					<svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[640px] h-[160px]" role="img" aria-label="Sessões por dia">
+				<div className={larguraTotal ? 'p-4' : 'overflow-x-auto p-4'}>
+					<svg viewBox={`0 0 ${W} ${H}`} className={larguraTotal ? 'w-full h-[160px]' : 'w-full min-w-[640px] h-[160px]'} role="img" aria-label="Sessões por dia">
 						{pontos.map((p, i) => {
 							const h = (p.sessoes / maximo) * (base - 16)
 							const x = i * largura
@@ -289,12 +294,12 @@ function PorDia({ pontos }: { pontos: { dia: string; sessoes: number; whatsapp: 
 									<title>{`${diaCurto(p.dia)}: ${p.sessoes} sessões, ${p.whatsapp} WhatsApp`}</title>
 									<rect x={x + 1} y={base - h} width={Math.max(1, largura - 2)} height={h} className="fill-primary/70" />
 									{p.whatsapp > 0 && (
-										<text x={x + largura / 2} y={base - h - 4} textAnchor="middle" fontSize="10" className="fill-foreground">
+										<text x={x + largura / 2} y={base - h - 4} textAnchor="middle" fontSize={fonteValor} className="fill-foreground">
 											{p.whatsapp}
 										</text>
 									)}
 									{i % passo === 0 && (
-										<text x={x + largura / 2} y={H - 6} textAnchor="middle" fontSize="11" className="fill-foreground-secondary">
+										<text x={x + largura / 2} y={H - 6} textAnchor="middle" fontSize={fonteEixo} className="fill-foreground-secondary">
 											{diaCurto(p.dia)}
 										</text>
 									)}

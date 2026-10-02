@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Filter, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Filter, X } from 'lucide-react'
 import {
 	filtrarLinhas,
 	opcoesDaColuna,
@@ -12,6 +12,7 @@ import {
 	type ValorDaCelula,
 } from '@/lib/visitors/tabela'
 import { TD, TH, Vazio } from './visitors-ui'
+import { classeDaPrioridade, prioridadeDaColuna, semLarguraMinima, useLarguraTotal, type Prioridade } from './largura-total'
 
 /**
  * Tabela de leitura com ordenação e filtro POR COLUNA, usada por todas as
@@ -44,6 +45,11 @@ export interface ColunaTabela<T> {
 	classe?: string
 	/** Rótulo curto para o campo de filtro, quando o título é longo. */
 	rotuloFiltro?: string
+	/**
+	 * Só no modo largura total (área da agência): 1 = sempre visível,
+	 * 2 = a partir do tablet, 3 = só em tela grande. Sem ela, vale a posição.
+	 */
+	prioridade?: Prioridade
 }
 
 interface Props<T> {
@@ -95,6 +101,8 @@ export function TabelaOrdenavel<T>({
 	const [ordenacaoLocal, setOrdenacaoLocal] = useState<Ordenacao | null>(ordemInicial)
 	const [filtrosLocais, setFiltrosLocais] = useState<Record<string, Filtro>>({})
 	const [abertos, setAbertos] = useState(false)
+	const largura = useLarguraTotal()
+	const [expandidas, setExpandidas] = useState<Set<string>>(new Set())
 
 	const ordenacao = controlado ? controlado.ordenacao : ordenacaoLocal
 	const filtros = controlado ? controlado.filtros : filtrosLocais
@@ -193,6 +201,25 @@ export function TabelaOrdenavel<T>({
 
 			{linhas.length === 0 ? (
 				<Vazio>{vazio}</Vazio>
+			) : largura ? (
+				<TabelaLarguraTotal
+					colunas={colunas}
+					visiveis={visiveis}
+					chaveLinha={chaveLinha}
+					aoClicarLinha={aoClicarLinha}
+					ordenacao={ordenacao}
+					ordenarPor={ordenarPor}
+					expandidas={expandidas}
+					alternar={chave =>
+						setExpandidas(atual => {
+							const nova = new Set(atual)
+							if (nova.has(chave)) nova.delete(chave)
+							else nova.add(chave)
+							return nova
+						})
+					}
+					limparFiltros={limparFiltros}
+				/>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="w-full">
@@ -346,4 +373,160 @@ function CampoFiltro<T>({
 			aria-label={`Filtrar por ${rotulo}`}
 		/>
 	)
+}
+
+/**
+ * A mesma tabela no modo largura total: nunca rola para o lado.
+ * - A partir de `md`: `table-fixed`, colunas de prioridade 3 só em `xl`, e um
+ *   "▸" por linha que abre essas colunas logo abaixo (entre `md` e `xl`).
+ * - Abaixo de `md`: um cartão por linha, com todas as colunas em rótulo/valor.
+ * Os filtros por coluna seguem pela barra de controles de cima.
+ */
+function TabelaLarguraTotal<T>({
+	colunas,
+	visiveis,
+	chaveLinha,
+	aoClicarLinha,
+	ordenacao,
+	ordenarPor,
+	expandidas,
+	alternar,
+	limparFiltros,
+}: {
+	colunas: ColunaTabela<T>[]
+	visiveis: T[]
+	chaveLinha: (linha: T) => string
+	aoClicarLinha?: (linha: T) => void
+	ordenacao: Ordenacao | null
+	ordenarPor: (chave: string) => void
+	expandidas: Set<string>
+	alternar: (chave: string) => void
+	limparFiltros: () => void
+}) {
+	const prioridades = colunas.map((c, i) => prioridadeDaColuna(i, c.prioridade))
+	const escondidas = colunas.filter((_, i) => prioridades[i] === 3)
+	const TH_LT = TH.replace('whitespace-nowrap', 'whitespace-normal')
+	const TD_LT = TD.replace('whitespace-nowrap', 'whitespace-normal break-words')
+
+	if (visiveis.length === 0) {
+		return (
+			<p className="px-4 py-8 text-center text-sm text-foreground-secondary">
+				Nenhuma linha com esses filtros.{' '}
+				<button type="button" onClick={limparFiltros} className="text-primary hover:underline">
+					limpar
+				</button>
+			</p>
+		)
+	}
+
+	return (
+		<>
+			<table className="hidden md:table w-full table-fixed">
+				<thead className="bg-background-soft">
+					<tr>
+						{escondidas.length > 0 && <th className="w-8 xl:hidden" aria-label="Mais colunas" />}
+						{colunas.map((c, i) => {
+							const ordenavel = !!c.valor
+							const ativa = ordenacao?.chave === c.chave
+							return (
+								<th
+									key={c.chave}
+									className={`${TH_LT} ${classeDaPrioridade(prioridades[i])} ${c.alinhar === 'dir' ? 'text-right' : 'text-left'} ${ordenavel ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
+									aria-sort={ativa ? (ordenacao!.direcao === 'asc' ? 'ascending' : 'descending') : undefined}
+									onClick={ordenavel ? () => ordenarPor(c.chave) : undefined}
+								>
+									<span className={`inline-flex items-center gap-1 ${c.alinhar === 'dir' ? 'flex-row-reverse' : ''}`}>
+										{c.titulo}
+										{ativa &&
+											(ordenacao!.direcao === 'asc' ? (
+												<ArrowUp className="w-3 h-3 text-primary shrink-0" />
+											) : (
+												<ArrowDown className="w-3 h-3 text-primary shrink-0" />
+											))}
+									</span>
+								</th>
+							)
+						})}
+					</tr>
+				</thead>
+				<tbody className="divide-y divide-border">
+					{visiveis.map(linha => {
+						const chave = chaveLinha(linha)
+						const aberta = expandidas.has(chave)
+						return (
+							<FragmentoLinha key={chave}>
+								<tr
+									className={`hover:bg-background-soft/60 ${aoClicarLinha ? 'cursor-pointer' : ''}`}
+									onClick={aoClicarLinha ? () => aoClicarLinha(linha) : undefined}
+								>
+									{escondidas.length > 0 && (
+										<td className="w-8 xl:hidden align-top pt-2.5">
+											<button
+												type="button"
+												aria-expanded={aberta}
+												aria-label={aberta ? 'Esconder números' : 'Ver todos os números'}
+												onClick={e => {
+													e.stopPropagation()
+													alternar(chave)
+												}}
+												className="p-1 text-foreground-secondary hover:text-foreground"
+											>
+												<ChevronRight className={`w-3.5 h-3.5 transition-transform ${aberta ? 'rotate-90' : ''}`} />
+											</button>
+										</td>
+									)}
+									{colunas.map((c, i) => (
+										<td
+											key={c.chave}
+											className={`${TD_LT} ${classeDaPrioridade(prioridades[i])} ${c.alinhar === 'dir' ? 'text-right' : ''} ${semLarguraMinima(c.classe)}`}
+										>
+											{c.render(linha)}
+										</td>
+									))}
+								</tr>
+								{aberta && escondidas.length > 0 && (
+									<tr className="xl:hidden bg-background-soft/40">
+										<td colSpan={colunas.length + 1} className="px-4 py-2">
+											<dl className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+												{escondidas.map(c => (
+													<div key={c.chave} className="min-w-0">
+														<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
+														<dd className="text-sm text-foreground break-words">{c.render(linha)}</dd>
+													</div>
+												))}
+											</dl>
+										</td>
+									</tr>
+								)}
+							</FragmentoLinha>
+						)
+					})}
+				</tbody>
+			</table>
+
+			<ul className="md:hidden divide-y divide-border">
+				{visiveis.map(linha => (
+					<li
+						key={chaveLinha(linha)}
+						className={`px-4 py-3 ${aoClicarLinha ? 'cursor-pointer active:bg-background-soft/60' : ''}`}
+						onClick={aoClicarLinha ? () => aoClicarLinha(linha) : undefined}
+					>
+						<div className="min-w-0 break-words text-sm font-medium text-foreground">{colunas[0]?.render(linha)}</div>
+						<dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+							{colunas.slice(1).map(c => (
+								<div key={c.chave} className="min-w-0">
+									<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
+									<dd className="text-sm text-foreground break-words">{c.render(linha)}</dd>
+								</div>
+							))}
+						</dl>
+					</li>
+				))}
+			</ul>
+		</>
+	)
+}
+
+function FragmentoLinha({ children }: { children: ReactNode }) {
+	return <>{children}</>
 }

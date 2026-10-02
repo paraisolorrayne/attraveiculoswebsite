@@ -11,6 +11,7 @@ import { Secao } from '../visitors-tabelas'
 import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../visitors-metrics'
 import { Badge, BarraControles, CANAL_HEX, CRU, Erro, TD, TH, Vazio, useValoresCrus } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
+import { useLarguraTotal } from '../largura-total'
 
 interface Resposta {
 	periodo: { dias: number }
@@ -449,6 +450,7 @@ export function SessoesPainel() {
 }
 
 function PrimeiraUltima({ dias }: { dias: number }) {
+	const larguraTotal = useLarguraTotal()
 	const [dados, setDados] = useState<Jornadas | null>(null)
 	const [erro, setErro] = useState<string | null>(null)
 
@@ -492,8 +494,8 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 						<Vazio>Nenhuma jornada com mais de uma sessão no período.</Vazio>
 					) : (
 						<>
-							<div className="overflow-x-auto">
-								<table className="w-auto text-sm">
+							<div className={larguraTotal ? '' : 'overflow-x-auto'}>
+								<table className={larguraTotal ? 'w-full table-fixed text-xs [&_th]:whitespace-normal [&_td]:whitespace-normal [&_th]:break-words' : 'w-auto text-sm'}>
 									<thead>
 										<tr>
 											<th className={`${TH} text-left`}>Primeira visita ↓ / converteu em →</th>
