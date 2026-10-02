@@ -1,7 +1,7 @@
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { classificarCanal, corCanal, normalizarFonte, rotuloCampanha, rotuloCanal, rotuloFonte } from '@/lib/traffic-channel'
-import { naAgencia, type Escopo } from '@/lib/visitors/escopo'
+import { escopoDaAgencia, naAgencia, type Escopo } from '@/lib/visitors/escopo'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
@@ -106,11 +106,13 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
   const sessionDbId = session.id // UUID primary key
 
   // Agência só abre sessão das campanhas DELA — um link copiado de outra
-  // origem responde como se a sessão não existisse.
+  // origem responde como se a sessão não existisse. "Dela" é a agência inteira,
+  // não o recorte da tela: o filtro de plataforma/campanha não esconde o que é dela.
   const ehAgencia = escopo.tipo === 'agencia'
+  const daAgenciaInteira = escopoDaAgencia(escopo)
   if (ehAgencia) {
     const dela = await sql<{ ok: boolean }>`
-      select true as ok from visitor_sessions s where s.id = ${sessionDbId} and ${naAgencia(escopo)}
+      select true as ok from visitor_sessions s where s.id = ${sessionDbId} and ${naAgencia(daAgenciaInteira)}
     `.execute(db)
     if (dela.rows.length === 0) return { erro: 404 as const, mensagem: 'Session not found' }
   }
@@ -164,7 +166,7 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
         (
           await sql<{ session_id: string }>`
             select s.session_id from visitor_sessions s
-            where s.fingerprint_id = ${session.fingerprint_id} and ${naAgencia(escopo)}
+            where s.fingerprint_id = ${session.fingerprint_id} and ${naAgencia(daAgenciaInteira)}
           `.execute(db)
         ).rows.map(r => r.session_id),
       )

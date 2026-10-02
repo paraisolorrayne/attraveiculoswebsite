@@ -77,6 +77,13 @@ describe.skipIf(!TEST_DB)('detalhe da sessão com escopo de agência', () => {
 		expect(await consultarSessaoDetalhe('http://x/?session_id=eb-sessao-1', mh)).toMatchObject({ erro: 404 })
 	})
 
+	it('o filtro de plataforma não transforma a visita da própria agência em "de fora"', async () => {
+		// mh-sessao-1 é Google; com a área filtrada em Meta, continua sendo da agência.
+		const r = (await consultarSessaoDetalhe('http://x/?session_id=mh-sessao-1', { ...mh, plataforma: 'meta' })) as Detalhe
+		expect(r).not.toHaveProperty('erro')
+		expect(r.data.outras_sessoes.find(o => o.session_id === 'mh-sessao-1')).toMatchObject({ origem_de_fora: false })
+	})
+
 	it('Attra (tudo): continua vendo IP e as campanhas de todas as origens', async () => {
 		const r = (await consultarSessaoDetalhe('http://x/?session_id=mh-sessao-1', ESCOPO_TUDO)) as Detalhe
 		expect(r.data.session_summary.ip_address).toBe('203.0.113.7')

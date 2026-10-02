@@ -10,6 +10,7 @@ import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, nomeDoSlug } from '../../visitors-metrics'
 import { Badge, CRU, Erro, Vazio } from '../../visitors-ui'
 import { useVisitantesApi } from '../../visitantes-api'
+import { descreverOutraVisita } from './outra-visita'
 
 interface Pagina {
 	page_path: string
@@ -34,12 +35,14 @@ interface OutraSessao {
 	canal: CanalTrafego
 	rotulo_canal: string
 	cor_canal: string
-	rotulo_fonte: string
-	campanha: string
+	/** null quando a visita veio de fora das campanhas da agência (origem_de_fora). */
+	rotulo_fonte: string | null
+	campanha: string | null
 	page_views_count: number
 	contacted_whatsapp: boolean
 	submitted_form: boolean
 	atual: boolean
+	origem_de_fora?: boolean
 }
 
 interface Dados {
@@ -275,27 +278,26 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 							<Vazio>Esta é a única visita registrada desta pessoa.</Vazio>
 						) : (
 							<ul className="divide-y divide-border">
-								{dados.outras_sessoes.map((o, i) => (
+								{dados.outras_sessoes.map((o, i) => {
+									const { origem, abreDetalhe } = descreverOutraVisita(o)
+									return (
 									<li
 										key={o.session_id}
 										className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm ${o.atual ? 'bg-background-soft' : ''}`}
 									>
 										<span className="w-6 shrink-0 text-xs tabular-nums text-foreground-secondary">{i + 1}º</span>
-										{o.atual ? (
-											<span className="tabular-nums font-medium">{dataHora(o.started_at)}</span>
-										) : (
+										{abreDetalhe ? (
 											<Link
 												href={link(`/sessoes/${encodeURIComponent(o.session_id)}`)}
 												className="tabular-nums hover:underline"
 											>
 												{dataHora(o.started_at)}
 											</Link>
+										) : (
+											<span className={`tabular-nums ${o.atual ? 'font-medium' : ''}`}>{dataHora(o.started_at)}</span>
 										)}
 										<Badge cor={o.cor_canal}>{o.rotulo_canal}</Badge>
-										<span className="text-xs text-foreground-secondary">
-											{o.rotulo_fonte}
-											{o.campanha !== '(sem campanha)' && ` · ${o.campanha}`}
-										</span>
+										<span className="text-xs text-foreground-secondary">{origem}</span>
 										<span className="text-xs tabular-nums text-foreground-secondary">
 											{o.page_views_count} pág. · {fmtDuracao(o.duration_seconds)}
 										</span>
@@ -304,7 +306,8 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 										{o.submitted_form && <Badge cor="bg-blue-500/10 text-blue-500">Formulário</Badge>}
 										{o.atual && <span className="text-xs text-primary">esta visita</span>}
 									</li>
-								))}
+									)
+								})}
 							</ul>
 						)}
 					</Secao>
