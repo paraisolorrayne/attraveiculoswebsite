@@ -8,7 +8,7 @@ import { Secao } from '../visitors-tabelas'
 import { fmtNum, fmtPct, nomeDoSlug, taxa } from '../visitors-metrics'
 import { Badge, BarraControles, CANAL_HEX, ConteudoVolume, Erro, Vazio } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
-import { useVisitantesApi } from '../visitantes-api'
+import { useDias, useVisitantesApi } from '../visitantes-api'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -28,7 +28,7 @@ function nomeDaPagina(p: { page_path: string; page_type: string | null; vehicle_
 export function EntradasPainel() {
 	const { api } = useVisitantesApi()
 	const [dados, setDados] = useState<Dados | null>(null)
-	const [dias, setDias] = useState(30)
+	const [dias, setDias] = useDias()
 	const [carregando, setCarregando] = useState(true)
 	const [erro, setErro] = useState<string | null>(null)
 

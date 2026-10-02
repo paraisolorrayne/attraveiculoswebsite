@@ -9,7 +9,7 @@ import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-met
 import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
 import { TabelaOrdenavel } from '../../visitors-tabela'
 import { useLarguraTotal } from '../../largura-total'
-import { useVisitantesApi } from '../../visitantes-api'
+import { useDias, useVisitantesApi } from '../../visitantes-api'
 
 interface Dimensao {
 	valor: string
@@ -82,7 +82,7 @@ function dataHora(iso: string | null): string {
 export function CampanhaPainel({ chave }: { chave: string }) {
 	const { api } = useVisitantesApi()
 	const [dados, setDados] = useState<Dados | null>(null)
-	const [dias, setDias] = useState(30)
+	const [dias, setDias] = useDias()
 	const [carregando, setCarregando] = useState(true)
 	const [erro, setErro] = useState<string | null>(null)
 	const [crus, setCrus] = useValoresCrus()

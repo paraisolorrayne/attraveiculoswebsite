@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Secao } from '../visitors-tabelas'
 import { TabelaOrdenavel } from '../visitors-tabela'
 import { corTaxa, fmtDuracao, fmtNum, fmtPct, larguraRelativa, nomeDoSlug, taxa } from '../visitors-metrics'
-import { useVisitantesApi } from '../visitantes-api'
+import { useDias, useVisitantesApi } from '../visitantes-api'
 
 interface LinhaVeiculo {
   vehicle_slug: string
@@ -61,7 +61,7 @@ function reais(valor: number | null): string {
 export function VeiculosPainel() {
   const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
-  const [dias, setDias] = useState(30)
+  const [dias, setDias] = useDias()
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 

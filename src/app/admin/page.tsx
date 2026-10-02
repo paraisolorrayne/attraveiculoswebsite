@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
-import { sectionsForRole } from '@/lib/admin-sections'
+import { secaoDaAgencia, sectionsForRole } from '@/lib/admin-sections'
 import { carregarResumo } from '@/lib/admin-resumo'
-import { ROLE_LABELS, isAdminRole, type AdminRole } from '@/lib/auth/roles'
+import { ROLE_LABELS, canAccessRoute, isAdminRole, type AdminRole } from '@/lib/auth/roles'
+import { db } from '@/lib/db'
 import { AdminHome } from './admin-home'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,11 @@ export default async function AdminHomePage() {
 	if (admin.role === 'agencia') redirect(admin.agencia ? `/admin/agencia/${admin.agencia.slug}` : '/admin/login')
 
 	const role = (isAdminRole(admin.role) ? admin.role : 'gerente') as AdminRole
-	const sections = sectionsForRole(role, admin.secoes)
+	// Um card por agência para quem pode ver a área delas (time da Attra).
+	const agencias = canAccessRoute(role, '/admin/agencia', admin.secoes)
+		? await db.selectFrom('agencias').select(['slug', 'nome']).orderBy('nome').execute()
+		: []
+	const sections = [...sectionsForRole(role, admin.secoes), ...agencias.map(secaoDaAgencia)]
 
 	// O resumo só é carregado se o papel enxerga alguma seção — um perfil sem
 	// acesso não deve disparar nove contagens para ver uma tela vazia.

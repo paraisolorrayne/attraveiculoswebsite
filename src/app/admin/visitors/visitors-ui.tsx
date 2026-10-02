@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from 'react'
 import { useLarguraTotal } from './largura-total'
+import { useVisitantesApi } from './visitantes-api'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CanalTrafego } from '@/lib/traffic-channel'
@@ -172,9 +173,11 @@ export function BarraControles({
 	onCrus?: (v: boolean) => void
 	extra?: ReactNode
 }) {
+	const periodoCompartilhado = !!useVisitantesApi().periodo
 	return (
 		<div className="flex flex-wrap items-center gap-3">
-			<SeletorPeriodo dias={dias} onChange={onDias} />
+			{/* Na área da agência o período fica no topo e vale para todas as abas. */}
+			{!periodoCompartilhado && <SeletorPeriodo dias={dias} onChange={onDias} />}
 			<BotaoAtualizar carregando={carregando} onClick={onAtualizar} />
 			{onCrus && crus !== undefined && <InterruptorCrus crus={crus} onChange={onCrus} />}
 			{extra}

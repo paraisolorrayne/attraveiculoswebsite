@@ -11,7 +11,7 @@ import { TabelaOrdenavel } from './visitors-tabela'
 import { SecaoReceitaPorCanal } from './visitors-receita'
 import { SecaoAnunciosDaRede, SecaoTermosDeConversao } from './visitors-termos'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
-import { useVisitantesApi } from './visitantes-api'
+import { useDias, useVisitantesApi } from './visitantes-api'
 
 // Painel de visitantes — SOMENTE LEITURA.
 //
@@ -40,7 +40,7 @@ export function VisitorsDashboard(props: Props) {
 
 	const [metricas, setMetricas] = useState<MetricasVisitantes | null>(null)
 	const [visitantes, setVisitantes] = useState<VisitorProfileWithDetails[]>([])
-	const [dias, setDias] = useState<number>(30)
+	const [dias, setDias] = useDias()
 	const [filtroPerfil, setFiltroPerfil] = useState<FiltroPerfil>('all')
 	const [carregando, setCarregando] = useState(true)
 	const [erro, setErro] = useState<string | null>(null)

@@ -11,7 +11,7 @@ import {
   larguraRelativa,
   taxa,
 } from '../visitors-metrics'
-import { useVisitantesApi } from '../visitantes-api'
+import { useDias, useVisitantesApi } from '../visitantes-api'
 
 interface LinhaTipo {
   page_type: string
@@ -69,7 +69,7 @@ const NOME_DO_TIPO: Record<string, string> = {
 export function ComportamentoPainel() {
   const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
-  const [dias, setDias] = useState(30)
+  const [dias, setDias] = useDias()
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 

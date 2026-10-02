@@ -8,7 +8,7 @@ import { Secao } from './visitors-tabelas'
 import { corTaxa, fmtDuracao, fmtNum, fmtPct, taxa, VOLUME_MINIMO } from './visitors-metrics'
 import { BarraControles, ConteudoVolume, Erro } from './visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from './visitors-tabela'
-import { useVisitantesApi } from './visitantes-api'
+import { useDias, useVisitantesApi } from './visitantes-api'
 
 // Tabela de campanhas com conversão e score (tempo até o clique no WhatsApp).
 // Mora aqui, e não dentro de uma aba, porque aparece em dois lugares: na aba
@@ -169,7 +169,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 export function EstatisticasCampanhas() {
 	const { api, link } = useVisitantesApi()
 	const [dados, setDados] = useState<{ campanhas: LinhaCampanhaScore[]; score_desde: string } | null>(null)
-	const [dias, setDias] = useState(30)
+	const [dias, setDias] = useDias()
 	const [carregando, setCarregando] = useState(true)
 	const [erro, setErro] = useState<string | null>(null)
 

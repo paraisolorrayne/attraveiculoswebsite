@@ -48,3 +48,14 @@ export const ADMIN_SECTIONS: AdminSection[] = [
 export function sectionsForRole(role: AdminRole, secoes?: SecoesExtras | null): AdminSection[] {
   return ADMIN_SECTIONS.filter((s) => canAccessRoute(role, s.href, secoes))
 }
+
+/** Card da área de uma agência ("Marketing Media House") na tela inicial do time da Attra. */
+export function secaoDaAgencia(agencia: { slug: string; nome: string }): AdminSection {
+  return {
+    label: `Marketing ${agencia.nome}`,
+    href: `/admin/agencia/${agencia.slug}`,
+    description: 'Campanhas e visitantes da agência',
+    grupo: 'aquisicao',
+    Icon: Megaphone,
+  }
+}

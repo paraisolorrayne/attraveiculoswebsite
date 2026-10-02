@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 
 type Params = Record<string, string | number | undefined>
 
@@ -17,6 +17,11 @@ export interface VisitantesApi {
 	api: (aba: string, params?: Params) => string
 	link: (caminho: string) => string
 	modo: 'attra' | 'agencia'
+	/**
+	 * Período compartilhado entre as abas. Na área da agência o período fica no
+	 * topo (e na URL) e vale para todas; no painel da Attra cada aba tem o seu.
+	 */
+	periodo?: { dias: number; setDias: (d: number) => void }
 }
 
 export function comParams(base: string, params?: Params): string {
@@ -41,4 +46,11 @@ export const useVisitantesApi = () => useContext(Ctx)
 
 export function VisitantesApiProvider({ valor, children }: { valor: VisitantesApi; children: ReactNode }) {
 	return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
+}
+
+/** O período da aba: o compartilhado do contexto, quando existe; senão, um local. */
+export function useDias(inicial = 30): [number, (d: number) => void] {
+	const { periodo } = useContext(Ctx)
+	const [local, setLocal] = useState(inicial)
+	return periodo ? [periodo.dias, periodo.setDias] : [local, setLocal]
 }
