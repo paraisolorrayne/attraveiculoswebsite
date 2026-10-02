@@ -1,5 +1,9 @@
 # Área da agência ("Marketing Media House")
 
+> **Revisada em 02/10:** o escopo passou a ser por marcador, sem cadastro de
+> campanha. Ver `2026-10-02-area-agencia-escopo-por-marcador-design.md`, que
+> prevalece onde as duas divergem.
+
 **Data:** 2026-10-02 · Depende de: auditoria de cliques/atribuição de 02/10
 (commits 11e8bab, 5bf6dff, f959d5b, 393f847) e da tabela de campanhas com
 score (714a725, 5b090ec).
