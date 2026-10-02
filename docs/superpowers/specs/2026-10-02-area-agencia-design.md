@@ -21,8 +21,11 @@ sem expor vendedor nem cliente.
    clique no site. A tela nasce pronta para os campos da Fykos.
 2. **Portal ≠ campanha no portal.** `origem = portal` inclui iCarros, OLX,
    Mobiauto etc. e não é atribuível à agência. A campanha da Media House
-   **dentro** da WebMotors é outro mundo, e faz um **A/B: braço "site" × braço
-   "WhatsApp direto"**.
+   **dentro** da WebMotors é outro mundo, e vamos verificar a possibilidade de a
+   WebMotors enviar os dados dessas campanhas para nós (fonte a definir; até
+   lá, a campanha é cadastrada e casa com as visitas que trouxerem a UTM dela).
+   As campanhas da **Meta** fazem um **A/B: braço "site" × braço "WhatsApp
+   direto"**, e os dados precisam considerar os dois braços.
 3. **Acesso:** contas próprias da agência, com papel novo `agencia`; desenho
    **genérico para várias agências** (a EB entra depois só com cadastro). Time
    da Attra (admin, owner, operador) vê a área de qualquer agência.
@@ -111,6 +114,8 @@ Um card é da agência por **um** destes caminhos, nesta ordem de precedência
    `campanha_nome`, `anuncio_id`, `referral.source_id`) → campanha cadastrada.
 3. **Mensagem do anúncio:** `primeira_mensagem.texto` começa com o
    `mensagem_prefixo` de uma campanha (normalizado: sem acento, caixa, espaços).
+   No braço "WhatsApp direto" da Meta, o caminho 2 (`referral`/`ctwa_clid`) já
+   identifica o anúncio quando a Fykos repassar; a mensagem é o reforço.
 4. **Clique no site** já ligado ao card hoje (`dados.site_session_id` com
    origem `correlacao_clique_veiculo`, `formulario` ou `marcador`) → sessão →
    campanha.
@@ -176,7 +181,7 @@ URL, valendo para todas as abas.
 
 **Resumo:** faixa de 6 números (Sessões · Clicaram no WhatsApp com
 "+N acidentais" · Leads no CRM · Com vendedor · Vendidos · Descartados) →
-funil por plataforma + quadro A/B WebMotors (lado a lado em `xl`, empilhados
+funil por plataforma + quadro A/B Meta, site × WhatsApp direto (lado a lado em `xl`, empilhados
 abaixo) → **confronto por campanha** (sessões, conversão, score, cliques sem
 acidentais, leads, com vendedor, vendidos, descartados, clique→lead,
 lead→venda) → leads mais recentes.
@@ -204,6 +209,10 @@ pessoa vindas de fora das campanhas da agência aparecem só como "outra origem:
   unicidade por índice.
 - Rotas `/api/admin/visitors/*` continuam fechadas para o papel `agencia`.
 - IP da sessão nunca sai nas rotas da agência (nem no detalhe da sessão).
+- **Usuários iniciais da Media House:** `mediahouse@webmotors.com.br` e
+  `nayume.sousa@webmotors.com.br`, papel `agencia`. Em produção são criados
+  pela tela de Usuários (senha definida lá); no ambiente local, o seed cria os
+  dois com senha de teste.
 
 ## Testes
 
@@ -222,7 +231,7 @@ pessoa vindas de fora das campanhas da agência aparecem só como "outra origem:
 - Banco `attra_local` no Postgres local com o **esquema** de produção
   (`pg_dump --schema-only`, sem dados).
 - **Dados sintéticos** por `scripts/seed-local-agencia.ts`: Media House e EB,
-  campanhas nas três plataformas (incluindo o A/B da WebMotors), ~30 dias de
+  campanhas nas três plataformas (incluindo o A/B da Meta), ~30 dias de
   sessões com UTMs reais de formato, cliques com a distribuição de tempo
   medida (incluindo acidentais), cards de CRM com textos de veículo nos padrões
   reais. **Nada copiado de produção** (sessões têm IP; cards têm nome e
@@ -239,7 +248,7 @@ pessoa vindas de fora das campanhas da agência aparecem só como "outra origem:
 2. **Área da agência:** estrutura em largura total, Campanhas (cadastro,
    conferência, detectadas), Resumo e Visitantes filtrados.
 3. **Mini CRM:** caminho 4 (clique no site), normalizador, confronto, A/B
-   WebMotors.
+   da Meta.
 4. **Campos da Fykos:** caminhos 1–3, horário da primeira mensagem, veículo
    estruturado.
 
