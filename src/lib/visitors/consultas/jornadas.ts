@@ -1,8 +1,8 @@
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { periodoDaUrl } from '@/lib/visitors/sql-atribuicao'
-import { montarJornadas, type ToqueCru } from '@/lib/visitors/sessoes'
-import type { Escopo } from '@/lib/visitors/escopo'
+import { anonimizarToque, montarJornadas, type ToqueCru } from '@/lib/visitors/sessoes'
+import { escopoDaAgencia, naAgencia, type Escopo } from '@/lib/visitors/escopo'
 
 /**
  * GET /api/admin/visitors/jornadas?dias=
@@ -23,7 +23,6 @@ const COLUNAS = sql`
 `
 
 export async function consultarJornadas(endereco: string, escopo: Escopo) {
-
 	const { dias, desde, noPeriodo } = periodoDaUrl(endereco, escopo)
 
 	const convertidos = sql`
@@ -57,6 +56,25 @@ export async function consultarJornadas(endereco: string, escopo: Escopo) {
 	for (const c of contagens.rows) porVisitante[c.fingerprint_id] = c.n
 
 	const r = montarJornadas(convertidas.rows, primeiras.rows, porVisitante)
+
+	// A 1ª visita da pessoa vem de TODA a história dela — inclusive de outra
+	// agência ou do orgânico da loja. Para a agência, a que não é dela fica só
+	// com o canal. "Dela" = qualquer campanha da agência, sem os filtros da URL.
+	if (escopo.tipo === 'agencia' && r.jornadas.length > 0) {
+		const ids = r.jornadas.map(j => j.primeira.session_id).filter((id): id is string => !!id)
+		const dela = new Set(
+			(
+				await sql<{ session_id: string }>`
+					select s.session_id from visitor_sessions s
+					where s.session_id = any(${ids}::text[]) and ${naAgencia(escopoDaAgencia(escopo))}
+				`.execute(db)
+			).rows.map(x => x.session_id),
+		)
+		r.jornadas = r.jornadas.map(j => ({
+			...j,
+			primeira: j.primeira.session_id && dela.has(j.primeira.session_id) ? { ...j.primeira, origem_de_fora: false } : anonimizarToque(j.primeira),
+		}))
+	}
 
 	return {
 		periodo: { dias, desde: desde ? desde.toISOString() : null },

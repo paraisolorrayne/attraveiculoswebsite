@@ -229,14 +229,26 @@ export interface ToqueCru {
 }
 
 export interface Toque {
-	session_id: string
+	/** null quando a visita é de fora das campanhas da agência (ver anonimizarToque). */
+	session_id: string | null
 	started_at: string
 	canal: CanalTrafego
 	rotulo_canal: string
 	cor_canal: string
-	fonte: string
-	rotulo_fonte: string
-	campanha: string
+	fonte: string | null
+	rotulo_fonte: string | null
+	campanha: string | null
+	/** Área da agência: a visita não veio de uma campanha dela — só o canal aparece. */
+	origem_de_fora?: boolean
+}
+
+/**
+ * Visita de fora das campanhas da agência, vista pela agência: fica só o canal
+ * ("Social pago", "Busca orgânica"). Campanha, fonte e id da sessão seriam dado
+ * de outra agência ou da própria loja.
+ */
+export function anonimizarToque(t: Toque): Toque {
+	return { ...t, session_id: null, fonte: null, rotulo_fonte: null, campanha: null, origem_de_fora: true }
 }
 
 export interface Jornada {

@@ -545,7 +545,7 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 										classe: 'tabular-nums',
 										render: j => (
 											<Link
-												href={link(`/sessoes/${encodeURIComponent(j.conversao.session_id)}`)}
+												href={link(`/sessoes/${encodeURIComponent(j.conversao.session_id ?? '')}`)}
 												className="hover:underline"
 											>
 												{dataHora(j.conversao.started_at)}
@@ -561,8 +561,15 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 											<>
 												<Badge cor={j.primeira.cor_canal}>{j.primeira.rotulo_canal}</Badge>
 												<span className="ml-2 text-xs text-foreground-secondary">
-													{j.primeira.rotulo_fonte}
-													{j.primeira.campanha !== '(sem campanha)' && ` · ${j.primeira.campanha}`}
+													{/* Área da agência: 1ª visita de fora das campanhas dela mostra só o canal. */}
+													{j.primeira.origem_de_fora ? (
+														'outra origem'
+													) : (
+														<>
+															{j.primeira.rotulo_fonte}
+															{j.primeira.campanha && j.primeira.campanha !== '(sem campanha)' && ` · ${j.primeira.campanha}`}
+														</>
+													)}
 												</span>
 											</>
 										),

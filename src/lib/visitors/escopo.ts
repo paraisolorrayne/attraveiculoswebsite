@@ -17,6 +17,15 @@ export type Escopo =
 export const ESCOPO_TUDO: Escopo = { tipo: 'tudo' }
 
 /**
+ * A agência inteira, sem os filtros de plataforma/campanha da URL. É o escopo
+ * que decide se uma visita é DELA (para mostrar ou esconder): o filtro só
+ * estreita a listagem, nunca transforma visita própria em "de fora".
+ */
+export function escopoDaAgencia(escopo: Escopo): Escopo {
+	return escopo.tipo === 'agencia' ? { tipo: 'agencia', agenciaId: escopo.agenciaId } : escopo
+}
+
+/**
  * Plataforma da sessão pelos sinais que ela já traz. Sem sinal → null, e aí a
  * sessão casa só por ID ou nome. Existe para que um `utm_id` igual em duas
  * plataformas (IDs de Google e Meta são números soltos) não some a visita de
