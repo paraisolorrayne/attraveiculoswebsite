@@ -13,6 +13,9 @@ export default async function AdminHomePage() {
 	const admin = await getCurrentAdmin()
 	if (!admin) redirect('/admin/login')
 
+	// Agência não tem hub: a área dela é a única coisa que ela vê.
+	if (admin.role === 'agencia') redirect(admin.agencia ? `/admin/agencia/${admin.agencia.slug}` : '/admin/login')
+
 	const role = (isAdminRole(admin.role) ? admin.role : 'gerente') as AdminRole
 	const sections = sectionsForRole(role, admin.secoes)
 

@@ -98,4 +98,19 @@ describe('sectionsForRole — o menu reflete as exceções', () => {
 		const hrefs = sectionsForRole('owner', { '/admin/usuarios': true }).map(s => s.href)
 		expect(hrefs).not.toContain('/admin/usuarios')
 	})
+
+	it('agência só acessa a própria área, e nenhuma exceção abre outra seção', () => {
+		expect(canAccessRoute('agencia', '/admin/agencia/media-house')).toBe(true)
+		expect(canAccessRoute('agencia', '/admin/visitors')).toBe(false)
+		expect(canAccessRoute('agencia', '/admin/crm')).toBe(false)
+		expect(canAccessRoute('agencia', '/admin/visitors', { '/admin/visitors': true })).toBe(false)
+	})
+
+	it('área de agência: time da Attra entra, marketing e gerente não', () => {
+		expect(canAccessRoute('operador', '/admin/agencia/media-house')).toBe(true)
+		expect(canAccessRoute('owner', '/admin/agencia/media-house')).toBe(true)
+		expect(canAccessRoute('admin', '/admin/agencia/media-house')).toBe(true)
+		expect(canAccessRoute('marketing', '/admin/agencia/media-house')).toBe(false)
+		expect(canAccessRoute('gerente', '/admin/agencia/media-house')).toBe(false)
+	})
 })

@@ -7,12 +7,13 @@
  *   operador  — operação do dia a dia                        (Pedro Spini)
  *   marketing — marketing / conteúdo                         (Eduardo)
  *   gerente   — acesso limitado (visão restrita)             (a definir)
+ *   agencia   — só a área da própria agência (spec 2026-10-02) (Media House)
  *
  * A matriz abaixo é o DEFAULT proposto — ajustável a qualquer momento.
  * `admin` sempre passa; os demais liberam por prefixo de rota.
  */
 
-export const ADMIN_ROLES = ['admin', 'owner', 'operador', 'marketing', 'gerente'] as const
+export const ADMIN_ROLES = ['admin', 'owner', 'operador', 'marketing', 'gerente', 'agencia'] as const
 export type AdminRole = (typeof ADMIN_ROLES)[number]
 
 export function isAdminRole(role: string): role is AdminRole {
@@ -26,6 +27,7 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
   operador: 'Operador',
   marketing: 'Marketing',
   gerente: 'Gerente',
+  agencia: 'Agência',
 }
 
 // Prefixos de rota liberados por papel (admin ignora isto — tem tudo).
@@ -42,6 +44,7 @@ const ROUTE_ACCESS: Record<Exclude<AdminRole, 'admin'>, string[]> = {
     '/admin/news',
     '/admin/crm',
     '/admin/visitors',
+    '/admin/agencia',
   ],
   // Marketing: marketing, conteúdo e disparos.
   marketing: [
@@ -58,6 +61,9 @@ const ROUTE_ACCESS: Record<Exclude<AdminRole, 'admin'>, string[]> = {
     '/admin/blog',
     '/admin/marketing',
   ],
+  // Agência: SÓ a área dela. Qual agência, quem decide é o guard
+  // (guard-agencia.ts), pelo vínculo do usuário — nunca o slug da URL.
+  agencia: ['/admin/agencia'],
 }
 
 const ALWAYS_ALLOWED = ['/admin/login', '/admin/reset-password']
@@ -105,6 +111,9 @@ export function canAccessRoute(
   if (ALWAYS_ALLOWED.some((p) => pathname === p)) return true
   if (role === 'admin') return true
   if (ehAreaSoAdmin(pathname)) return false
+  // Agência é fechada de propósito: exceção de seção não abre nada além da
+  // área dela — o vínculo com a agência é a única permissão que ela tem.
+  if (role === 'agencia') return pathname.startsWith('/admin/agencia')
 
   if (secoes) {
     // Prefixo mais específico ganha: uma exceção em /admin/blog/x deve pesar

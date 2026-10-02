@@ -24,6 +24,8 @@ export interface AdminUser {
   is_active: boolean
   last_login_at: string | null
   ultimo_acesso_em: string | null
+  /** Só para o papel `agencia`: a agência à qual o usuário pertence. */
+  agencia: { id: string; slug: string; nome: string } | null
   created_at: string
   updated_at: string
 }
@@ -70,7 +72,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     const now = new Date().toISOString()
     return {
       id: 'dev-admin-bypass', email: 'dev@localhost', role: 'admin', secoes: {},
-      name: 'Dev Admin', is_active: true, last_login_at: now, ultimo_acesso_em: now, created_at: now, updated_at: now,
+      name: 'Dev Admin', is_active: true, last_login_at: now, ultimo_acesso_em: now, agencia: null, created_at: now, updated_at: now,
     }
   }
 
@@ -84,6 +86,10 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
 
   if (deveRegistrarAcesso(row.ultimo_acesso_em)) registrarAcesso(row.id)
 
+  const agencia = row.agencia_id
+    ? ((await db.selectFrom('agencias').select(['id', 'slug', 'nome']).where('id', '=', row.agencia_id).executeTakeFirst()) ?? null)
+    : null
+
   return {
     id: row.id,
     email: row.email,
@@ -93,6 +99,7 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     is_active: row.is_active,
     last_login_at: iso(row.last_login_at),
     ultimo_acesso_em: iso(row.ultimo_acesso_em),
+    agencia,
     created_at: iso(row.created_at)!,
     updated_at: iso(row.updated_at)!,
   }

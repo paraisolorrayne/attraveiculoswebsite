@@ -15,6 +15,7 @@ interface AdminUserRow {
   ultimo_acesso_em: string | null
   created_at: string
   secoes_extras?: SecoesExtras | null
+  agencia_id?: string | null
 }
 
 // Rótulos vêm da fonte única de papéis; a lista antiga só conhecia dois dos
@@ -42,6 +43,9 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<AdminRole>('marketing')
+  // Só para o papel "Agência": a qual agência o usuário pertence.
+  const [agenciaId, setAgenciaId] = useState('')
+  const [agencias, setAgencias] = useState<{ id: string; nome: string }[]>([])
   const [editandoPermissoes, setEditandoPermissoes] = useState<AdminUserRow | null>(null)
   const [password, setPassword] = useState('')
 
@@ -50,7 +54,10 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
     try {
       const r = await fetch('/api/admin/users')
       const d = await r.json()
-      if (r.ok) setUsers(d.users || [])
+      if (r.ok) {
+        setUsers(d.users || [])
+        setAgencias(d.agencias || [])
+      }
       else setFeedback({ ok: false, msg: d.error || 'Falha ao carregar usuários' })
     } catch {
       setFeedback({ ok: false, msg: 'Falha ao carregar usuários' })
@@ -87,10 +94,10 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
     const ok = await callApi('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name, role, password }),
+      body: JSON.stringify({ email, name, role, password, ...(role === 'agencia' ? { agencia_id: agenciaId } : {}) }),
     }, `Usuário ${email} criado`)
     if (ok) {
-      setEmail(''); setName(''); setPassword(''); setRole('marketing'); setShowForm(false)
+      setEmail(''); setName(''); setPassword(''); setRole('marketing'); setAgenciaId(''); setShowForm(false)
     }
   }
 
@@ -169,6 +176,19 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
                 ))}
               </select>
             </div>
+            {role === 'agencia' && (
+              <div>
+                <label className="block text-xs font-medium text-foreground-secondary mb-1">Agência</label>
+                <select required value={agenciaId} onChange={e => setAgenciaId(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground">
+                  <option value="">Escolha…</option>
+                  {agencias.map(a => (
+                    <option key={a.id} value={a.id}>{a.nome}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-foreground-secondary">Este usuário só verá a área desta agência.</p>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-foreground-secondary mb-1">Senha inicial (mín. 8)</label>
               <input type="text" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
@@ -211,6 +231,9 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
                       ${u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-500'}`}>
                       {u.role === 'admin' ? <Shield className="w-3 h-3" /> : <User className="w-3 h-3" />}
                       {roleLabels[u.role]}
+                      {u.role === 'agencia' && u.agencia_id && (
+                        <> · {agencias.find(a => a.id === u.agencia_id)?.nome ?? 'agência'}</>
+                      )}
                     </span>
                     {!u.is_active && <span className="ml-2 text-xs text-red-500">inativo</span>}
                   </td>
@@ -226,7 +249,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
                         className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background transition-colors disabled:opacity-50">
                         <KeyRound className="w-4 h-4" />
                       </button>
-                      {u.id !== currentAdminId && u.role !== 'admin' && (
+                      {u.id !== currentAdminId && u.role !== 'admin' && u.role !== 'agencia' && (
                         <button onClick={() => setEditandoPermissoes(u)} disabled={busy}
                           title="Editar acesso às seções"
                           className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-background transition-colors disabled:opacity-50">

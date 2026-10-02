@@ -18,6 +18,7 @@ const roleLabels: Record<AdminRole, string> = {
   operador: 'Operador',
   marketing: 'Marketing',
   gerente: 'Gerente',
+  agencia: 'Agência',
 }
 
 const HIGH_ROLES: AdminRole[] = ['admin', 'owner']

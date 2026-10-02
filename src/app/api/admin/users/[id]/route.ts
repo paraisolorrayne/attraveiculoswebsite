@@ -6,6 +6,7 @@ import { guardSupervisedAction } from '@/lib/admin-supervision'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 import { isAdminRole, AREAS_SO_ADMIN } from '@/lib/auth/roles'
+import { agenciaDoUsuario } from '@/lib/auth/usuario-agencia'
 
 // Migrado do Supabase GoTrue → Auth.js/Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 export const dynamic = 'force-dynamic'
@@ -59,6 +60,17 @@ export async function PATCH(
   if (typeof body.name === 'string' && body.name.trim()) updates.name = body.name.trim()
   if (isAdminRole(body.role)) updates.role = body.role
   if (typeof body.is_active === 'boolean') updates.is_active = body.is_active
+
+  // Vínculo com agência: vale para o papel FINAL (o novo, ou o atual se só a
+  // agência mudou). Trocar de papel para fora de "Agência" apaga o vínculo.
+  if (body.role !== undefined || body.agencia_id !== undefined) {
+    const atual = await db.selectFrom('admin_users').select('role').where('id', '=', id).executeTakeFirst()
+    const papelFinal = isAdminRole(body.role) ? body.role : atual && isAdminRole(atual.role) ? atual.role : 'gerente'
+    const existentes = (await db.selectFrom('agencias').select('id').execute()).map(a => a.id)
+    const vinculo = agenciaDoUsuario(papelFinal, body.agencia_id, existentes)
+    if (!vinculo.ok) return NextResponse.json({ error: vinculo.erro }, { status: 400 })
+    updates.agencia_id = vinculo.agencia_id
+  }
 
   // Exceções de acesso por seção. Duas travas:
   //  - ninguém edita as próprias permissões (nem o admin), senão a tela vira

@@ -5,6 +5,7 @@ import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { guardSupervisedAction } from '@/lib/admin-supervision'
 import { db } from '@/lib/db'
 import { isAdminRole } from '@/lib/auth/roles'
+import { agenciaDoUsuario } from '@/lib/auth/usuario-agencia'
 
 // Migrado do Supabase GoTrue → Auth.js/Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // Não há mais auth.users: a senha (bcrypt) vive em admin_users.password_hash.
@@ -18,11 +19,15 @@ export async function GET() {
   }
 
   try {
-    const data = await db.selectFrom('admin_users')
-      .select(['id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'ultimo_acesso_em', 'created_at', 'secoes_extras'])
-      .orderBy('created_at', 'asc')
-      .execute()
-    return NextResponse.json({ users: data })
+    const [data, agencias] = await Promise.all([
+      db.selectFrom('admin_users')
+        .select(['id', 'email', 'name', 'role', 'is_active', 'last_login_at', 'ultimo_acesso_em', 'created_at', 'secoes_extras', 'agencia_id'])
+        .orderBy('created_at', 'asc')
+        .execute(),
+      // Para o seletor do papel "Agência" no formulário.
+      db.selectFrom('agencias').select(['id', 'nome']).orderBy('nome').execute(),
+    ])
+    return NextResponse.json({ users: data, agencias })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'query failed' }, { status: 500 })
   }
@@ -54,12 +59,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
   }
 
+  const existentes = (await db.selectFrom('agencias').select('id').execute()).map(a => a.id)
+  const vinculo = agenciaDoUsuario(role, body.agencia_id, existentes)
+  if (!vinculo.ok) {
+    return NextResponse.json({ error: vinculo.erro }, { status: 400 })
+  }
+
   const id = randomUUID()
   const password_hash = await bcrypt.hash(password, 10)
 
   try {
     await db.insertInto('admin_users')
-      .values({ id, email, name, role, is_active: true, password_hash })
+      .values({ id, email, name, role, is_active: true, password_hash, agencia_id: vinculo.agencia_id })
       .execute()
   } catch (insertError) {
     const msg = insertError instanceof Error ? insertError.message : String(insertError)
