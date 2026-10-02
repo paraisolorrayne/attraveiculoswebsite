@@ -6,7 +6,7 @@
 import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { periodoDaUrl, saneado } from '@/lib/visitors/sql-atribuicao'
-import { casaCampanhaSql, plataformaDaSessaoSql } from '@/lib/visitors/escopo'
+import { ESCOPO_TUDO, casaCampanhaSql, plataformaDaSessaoSql } from '@/lib/visitors/escopo'
 import { situacaoDaCampanha, validarCampanha, type CampanhaEntrada } from './campanhas'
 
 const HOJE_SP = sql<string>`to_char((now() at time zone 'America/Sao_Paulo')::date, 'YYYY-MM-DD')`
@@ -44,9 +44,9 @@ function ehViolacaoDeUnicidade(e: unknown): boolean {
 }
 
 export async function listarCampanhas(agenciaId: string, endereco: string) {
-	// Só o período (sem escopo): a contagem é por campanha, com a mesma regra
-	// de casamento que decide o que a agência vê (casaCampanhaSql).
-	const { noPeriodo } = periodoDaUrl(endereco)
+	// Só o período (escopo "tudo"): a contagem já é por campanha, com a mesma
+	// regra de casamento que decide o que a agência vê (casaCampanhaSql).
+	const { noPeriodo } = periodoDaUrl(endereco, ESCOPO_TUDO)
 	const [linhas, hoje] = await Promise.all([
 		sql<{
 			id: string

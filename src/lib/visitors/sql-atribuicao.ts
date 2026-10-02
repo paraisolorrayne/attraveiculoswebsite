@@ -10,7 +10,7 @@
  */
 import { sql, type RawBuilder } from 'kysely'
 import { saneado } from './saneado'
-import { ESCOPO_TUDO, naAgencia, type Escopo } from './escopo'
+import { naAgencia, type Escopo } from './escopo'
 
 // `saneado` mora em ./saneado: `escopo.ts` usa ele no topo do módulo e este
 // arquivo importa `escopo.ts` — com `saneado` aqui, a ordem de carga dos dois
@@ -42,7 +42,10 @@ export interface Periodo {
 }
 
 /** Lê `?dias=` da URL com os mesmos limites em todas as rotas. */
-export function periodoDaUrl(url: string, escopo: Escopo = ESCOPO_TUDO): Periodo {
+export function periodoDaUrl(url: string, escopo: Escopo): Periodo {
+	// Sem padrão de propósito: uma consulta nova que esquecesse o escopo
+	// mostraria tudo para a agência. Quem quer tudo pede ESCOPO_TUDO.
+	if (!escopo) throw new Error('periodoDaUrl: informe o escopo (ESCOPO_TUDO para o time da Attra)')
 	const diasBruto = Number(new URL(url).searchParams.get('dias'))
 	const dias =
 		Number.isFinite(diasBruto) && diasBruto >= 0 && diasBruto <= DIAS_MAX
