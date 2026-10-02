@@ -8,6 +8,7 @@ import { Secao } from './visitors-tabelas'
 import { corTaxa, fmtDuracao, fmtNum, fmtPct, taxa, VOLUME_MINIMO } from './visitors-metrics'
 import { BarraControles, ConteudoVolume, Erro } from './visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from './visitors-tabela'
+import { useVisitantesApi } from './visitantes-api'
 
 // Tabela de campanhas com conversão e score (tempo até o clique no WhatsApp).
 // Mora aqui, e não dentro de uma aba, porque aparece em dois lugares: na aba
@@ -23,6 +24,7 @@ function scoreMedio(linhas: LinhaCampanhaScore[]): number {
 }
 
 export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCampanhaScore[]; scoreDesde: string }) {
+	const { link } = useVisitantesApi()
 	const total = linhas.reduce((s, l) => s + l.sessoes, 0)
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
 	// Mesma régua da coluna: sem as sessões de clique acidental.
@@ -46,7 +48,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 					<span className="text-foreground-secondary">{l.rotulo}</span>
 				) : (
 					<Link
-						href={`/admin/visitors/campanha/${encodeURIComponent(l.chave)}`}
+						href={link(`/campanha/${encodeURIComponent(l.chave)}`)}
 						className="block truncate font-medium hover:underline"
 						title={l.rotulo}
 					>
@@ -165,6 +167,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
  * exige a mesma permissão do painel de visitantes.
  */
 export function EstatisticasCampanhas() {
+	const { api, link } = useVisitantesApi()
 	const [dados, setDados] = useState<{ campanhas: LinhaCampanhaScore[]; score_desde: string } | null>(null)
 	const [dias, setDias] = useState(30)
 	const [carregando, setCarregando] = useState(true)
@@ -174,7 +177,7 @@ export function EstatisticasCampanhas() {
 		setCarregando(true)
 		setErro(null)
 		try {
-			const r = await fetch(`/api/admin/visitors/campanhas?dias=${dias}`)
+			const r = await fetch(api('campanhas', { dias }))
 			if (!r.ok) throw new Error(`HTTP ${r.status}`)
 			setDados(await r.json())
 		} catch (e) {
@@ -183,7 +186,7 @@ export function EstatisticasCampanhas() {
 		} finally {
 			setCarregando(false)
 		}
-	}, [dias])
+	}, [dias, api])
 
 	useEffect(() => {
 		carregar()
@@ -197,7 +200,7 @@ export function EstatisticasCampanhas() {
 				carregando={carregando}
 				onAtualizar={carregar}
 				extra={
-					<Link href="/admin/visitors/origens" className="text-sm text-primary hover:underline">
+					<Link href={link('/origens')} className="text-sm text-primary hover:underline">
 						Ver todas as origens →
 					</Link>
 				}

@@ -11,6 +11,7 @@ import {
   larguraRelativa,
   taxa,
 } from '../visitors-metrics'
+import { useVisitantesApi } from '../visitantes-api'
 
 interface LinhaTipo {
   page_type: string
@@ -66,6 +67,7 @@ const NOME_DO_TIPO: Record<string, string> = {
 }
 
 export function ComportamentoPainel() {
+  const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
   const [dias, setDias] = useState(30)
   const [carregando, setCarregando] = useState(true)
@@ -75,7 +77,7 @@ export function ComportamentoPainel() {
     setCarregando(true)
     setErro(null)
     try {
-      const r = await fetch(`/api/admin/visitors/comportamento?dias=${dias}`)
+      const r = await fetch(api('comportamento', { dias }))
       if (!r.ok) throw new Error('Falha ao carregar')
       setDados(await r.json())
     } catch {
@@ -83,7 +85,7 @@ export function ComportamentoPainel() {
     } finally {
       setCarregando(false)
     }
-  }, [dias])
+  }, [dias, api])
 
   useEffect(() => {
     void carregar()

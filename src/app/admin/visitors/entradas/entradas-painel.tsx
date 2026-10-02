@@ -8,6 +8,7 @@ import { Secao } from '../visitors-tabelas'
 import { fmtNum, fmtPct, nomeDoSlug, taxa } from '../visitors-metrics'
 import { Badge, BarraControles, CANAL_HEX, ConteudoVolume, Erro, Vazio } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
+import { useVisitantesApi } from '../visitantes-api'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -25,6 +26,7 @@ function nomeDaPagina(p: { page_path: string; page_type: string | null; vehicle_
 }
 
 export function EntradasPainel() {
+	const { api } = useVisitantesApi()
 	const [dados, setDados] = useState<Dados | null>(null)
 	const [dias, setDias] = useState(30)
 	const [carregando, setCarregando] = useState(true)
@@ -34,7 +36,7 @@ export function EntradasPainel() {
 		setCarregando(true)
 		setErro(null)
 		try {
-			const r = await fetch(`/api/admin/visitors/entradas?dias=${dias}`)
+			const r = await fetch(api('entradas', { dias }))
 			if (!r.ok) throw new Error(`HTTP ${r.status}`)
 			setDados(await r.json())
 		} catch (e) {
@@ -43,7 +45,7 @@ export function EntradasPainel() {
 		} finally {
 			setCarregando(false)
 		}
-	}, [dias])
+	}, [dias, api])
 
 	useEffect(() => {
 		carregar()
@@ -87,13 +89,14 @@ export function EntradasPainel() {
 	)
 }
 
-function linkSessoes(params: Record<string, string | number | undefined>): string {
+function linkSessoes(link: (caminho: string) => string, params: Record<string, string | number | undefined>): string {
 	const q = new URLSearchParams()
 	for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') q.set(k, String(v))
-	return `/admin/visitors/sessoes?${q.toString()}`
+	return link(`/sessoes?${q.toString()}`)
 }
 
 function PorCanal({ canais, dias }: { canais: LinhaCanalEntrada[]; dias: number }) {
+	const { link } = useVisitantesApi()
 	return (
 		<Secao
 			titulo="Onde cada canal cai"
@@ -115,7 +118,7 @@ function PorCanal({ canais, dias }: { canais: LinhaCanalEntrada[]; dias: number 
 								{c.paginas.map(p => (
 									<li key={p.page_path} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
 										<Link
-											href={linkSessoes({ dias, canal: c.canal, entrada: p.page_path })}
+											href={linkSessoes(link, { dias, canal: c.canal, entrada: p.page_path })}
 											className="min-w-0 truncate hover:underline"
 											title={p.page_path}
 										>
@@ -137,6 +140,7 @@ function PorCanal({ canais, dias }: { canais: LinhaCanalEntrada[]; dias: number 
 }
 
 function PorPagina({ paginas, total, dias }: { paginas: LinhaPaginaEntrada[]; total: number; dias: number }) {
+	const { link } = useVisitantesApi()
 	const maior = Math.max(0, ...paginas.map(p => p.sessoes))
 	const colunas: ColunaTabela<LinhaPaginaEntrada>[] = [
 		{
@@ -147,7 +151,7 @@ function PorPagina({ paginas, total, dias }: { paginas: LinhaPaginaEntrada[]; to
 			classe: 'max-w-[320px]',
 			render: p => (
 				<>
-					<Link href={linkSessoes({ dias, entrada: p.page_path })} className="block truncate hover:underline" title={p.page_path}>
+					<Link href={linkSessoes(link, { dias, entrada: p.page_path })} className="block truncate hover:underline" title={p.page_path}>
 						{nomeDaPagina(p)}
 					</Link>
 					{p.vehicle_slug && <div className="truncate font-mono text-[11px] text-foreground-secondary">{p.page_path}</div>}

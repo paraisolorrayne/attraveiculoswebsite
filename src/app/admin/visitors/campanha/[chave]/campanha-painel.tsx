@@ -9,6 +9,7 @@ import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-met
 import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
 import { TabelaOrdenavel } from '../../visitors-tabela'
 import { useLarguraTotal } from '../../largura-total'
+import { useVisitantesApi } from '../../visitantes-api'
 
 interface Dimensao {
 	valor: string
@@ -79,6 +80,7 @@ function dataHora(iso: string | null): string {
 }
 
 export function CampanhaPainel({ chave }: { chave: string }) {
+	const { api } = useVisitantesApi()
 	const [dados, setDados] = useState<Dados | null>(null)
 	const [dias, setDias] = useState(30)
 	const [carregando, setCarregando] = useState(true)
@@ -89,7 +91,7 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 		setCarregando(true)
 		setErro(null)
 		try {
-			const r = await fetch(`/api/admin/visitors/campanha?chave=${encodeURIComponent(chave)}&dias=${dias}`)
+			const r = await fetch(api('campanha', { chave, dias }))
 			if (!r.ok) throw new Error(`HTTP ${r.status}`)
 			setDados(await r.json())
 		} catch (e) {
@@ -98,7 +100,7 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 		} finally {
 			setCarregando(false)
 		}
-	}, [chave, dias])
+	}, [chave, dias, api])
 
 	useEffect(() => {
 		carregar()
@@ -429,6 +431,7 @@ function Contexto({ linhas, total, crus }: { linhas: Dados['contexto']; total: n
 }
 
 function Leads({ leads, crus }: { leads: Dados['leads']; crus: boolean }) {
+	const { link } = useVisitantesApi()
 	return (
 		<Secao
 			titulo={`Leads — ${leads.length} sessões que clicaram no WhatsApp ou enviaram formulário`}
@@ -442,7 +445,7 @@ function Leads({ leads, crus }: { leads: Dados['leads']; crus: boolean }) {
 						valor: l => l.started_at,
 						classe: 'tabular-nums',
 						render: l => (
-							<Link href={`/admin/visitors/sessoes/${encodeURIComponent(l.session_id)}`} className="hover:underline">
+							<Link href={link(`/sessoes/${encodeURIComponent(l.session_id)}`)} className="hover:underline">
 								{dataHora(l.started_at)}
 							</Link>
 						),

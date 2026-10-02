@@ -11,6 +11,7 @@ import { TabelaOrdenavel } from './visitors-tabela'
 import { SecaoReceitaPorCanal } from './visitors-receita'
 import { SecaoAnunciosDaRede, SecaoTermosDeConversao } from './visitors-termos'
 import { fmtDuracao, fmtNum, fmtPct, taxa, type MetricasVisitantes } from './visitors-metrics'
+import { useVisitantesApi } from './visitantes-api'
 
 // Painel de visitantes — SOMENTE LEITURA.
 //
@@ -32,6 +33,7 @@ const ROTULO_PERFIL: Record<FiltroPerfil, string> = {
 }
 
 export function VisitorsDashboard(props: Props) {
+	const { api, modo } = useVisitantesApi()
 	// `adminId` continua no contrato porque o page.tsx o envia, mas o painel é somente leitura:
 	// não há autoria a registrar nem dado a filtrar por admin.
 	void props.adminId
@@ -47,7 +49,7 @@ export function VisitorsDashboard(props: Props) {
 		setCarregando(true)
 		setErro(null)
 		try {
-			const resposta = await fetch(`/api/admin/visitors/metrics?dias=${dias}`)
+			const resposta = await fetch(api('metrics', { dias }))
 			if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
 			setMetricas(await resposta.json())
 		} catch (e) {
@@ -56,16 +58,19 @@ export function VisitorsDashboard(props: Props) {
 		} finally {
 			setCarregando(false)
 		}
-	}, [dias])
+	}, [dias, api])
 
 	const carregarVisitantes = useCallback(async () => {
+		// Perfis identificados têm nome, e-mail e telefone: a agência não os vê, e
+		// a busca nem é feita (a rota, de todo modo, recusa quem não é da Attra).
+		if (modo === 'agencia') return
 		try {
 			const resposta = await fetch(`/api/admin/visitors?status=${filtroPerfil}`)
 			if (resposta.ok) setVisitantes(await resposta.json())
 		} catch (e) {
 			console.error('[Visitors] Falha ao carregar visitantes:', e)
 		}
-	}, [filtroPerfil])
+	}, [filtroPerfil, modo])
 
 	useEffect(() => {
 		carregarMetricas()
@@ -124,8 +129,9 @@ export function VisitorsDashboard(props: Props) {
 	]
 
 	return (
-		<div className="max-w-full px-4 sm:px-6 py-8">
-			<div className="max-w-7xl mx-auto space-y-6">
+		// Na área da agência a moldura (margem e largura máxima) é do shell, que ocupa a tela inteira.
+		<div className={modo === 'agencia' ? '' : 'max-w-full px-4 sm:px-6 py-8'}>
+			<div className={modo === 'agencia' ? 'space-y-6' : 'max-w-7xl mx-auto space-y-6'}>
 				{/* Cabeçalho + período */}
 				<div className="flex items-start justify-between gap-3 flex-wrap">
 					<div>
@@ -220,7 +226,8 @@ export function VisitorsDashboard(props: Props) {
 
 						{/* Ciclo fechado: o que o tráfego acima virou de venda no CRM. Busca a própria
 						    rota (o período é o mesmo seletor), por isso fica fora do fetch de métricas. */}
-						<SecaoReceitaPorCanal dias={dias} />
+						{/* Receita em R$ fica com a loja: a agência vê quantos leads viraram venda, não o valor. */}
+						{modo === 'attra' && <SecaoReceitaPorCanal dias={dias} />}
 
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							<MidiaPaga linhas={metricas.midia_paga ?? []} marcacao={metricas.marcacao_paga ?? []} />
@@ -241,6 +248,7 @@ export function VisitorsDashboard(props: Props) {
 				<SecaoAnunciosDaRede dias={dias} />
 
 				{/* Visitantes identificados — lista de perfis, independente do período acima */}
+				{modo === 'attra' && (
 				<Secao
 					titulo="Visitantes identificados"
 					dica="Pessoas que deixaram e-mail ou telefone no site em algum momento, com os dados de empresa que conseguimos completar. Atenção: esta lista mostra sempre a base inteira — o seletor de período no topo não se aplica a ela."
@@ -354,6 +362,7 @@ export function VisitorsDashboard(props: Props) {
 						vazio="Nenhum visitante encontrado."
 					/>
 				</Secao>
+				)}
 
 				<p className="text-center text-xs text-foreground-secondary">
 					O canal de cada visita é deduzido na hora da leitura, a partir da origem já gravada quando

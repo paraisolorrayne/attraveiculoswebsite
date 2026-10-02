@@ -22,6 +22,7 @@ import {
 	type LinhaCidade,
 	type LinhaVeiculo,
 } from './visitors-metrics'
+import { useVisitantesApi } from './visitantes-api'
 
 // Tabelas de leitura do painel de visitantes. Nenhuma delas escreve nada: o /admin/visitors
 // é espelho de tráfego, não ferramenta de operação.
@@ -236,6 +237,7 @@ export function TabelaCampanhas({
 	sessoesSemCampanha: number
 	mediaConversao: number
 }) {
+	const { link } = useVisitantesApi()
 	const maiorTaxa = Math.max(0, ...campanhas.map(c => taxa(c.whatsapp, c.sessoes)))
 
 	return (
@@ -268,7 +270,7 @@ export function TabelaCampanhas({
 							<>
 								{/* Link para a página da campanha (criativos, termos, entradas, leads). */}
 								<Link
-									href={`/admin/visitors/campanha/${encodeURIComponent(chaveCampanha(c.campanha))}`}
+									href={link(`/campanha/${encodeURIComponent(chaveCampanha(c.campanha))}`)}
 									className="block truncate font-medium hover:underline"
 									title={c.campanha}
 								>

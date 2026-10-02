@@ -22,6 +22,7 @@ import {
 } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
 import { useLarguraTotal } from '../largura-total'
+import { useVisitantesApi } from '../visitantes-api'
 
 interface Dados {
 	periodo: { dias: number; desde: string | null }
@@ -35,6 +36,7 @@ interface Dados {
 }
 
 export function OrigensPainel() {
+	const { api } = useVisitantesApi()
 	const [dados, setDados] = useState<Dados | null>(null)
 	const [dias, setDias] = useState(30)
 	const [carregando, setCarregando] = useState(true)
@@ -45,7 +47,7 @@ export function OrigensPainel() {
 		setCarregando(true)
 		setErro(null)
 		try {
-			const r = await fetch(`/api/admin/visitors/origens?dias=${dias}`)
+			const r = await fetch(api('origens', { dias }))
 			if (!r.ok) throw new Error(`HTTP ${r.status}`)
 			setDados(await r.json())
 		} catch (e) {
@@ -54,7 +56,7 @@ export function OrigensPainel() {
 		} finally {
 			setCarregando(false)
 		}
-	}, [dias])
+	}, [dias, api])
 
 	useEffect(() => {
 		carregar()
@@ -95,10 +97,10 @@ export function OrigensPainel() {
 	)
 }
 
-function linkSessoes(params: Record<string, string | number | undefined>): string {
+function linkSessoes(link: (caminho: string) => string, params: Record<string, string | number | undefined>): string {
 	const q = new URLSearchParams()
 	for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') q.set(k, String(v))
-	return `/admin/visitors/sessoes?${q.toString()}`
+	return link(`/sessoes?${q.toString()}`)
 }
 
 function TabelaFonteMeio({
@@ -112,6 +114,7 @@ function TabelaFonteMeio({
 	crus: boolean
 	dias: number
 }) {
+	const { link } = useVisitantesApi()
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
 	const media = taxa(
 		linhas.reduce((s, l) => s + l.whatsapp, 0),
@@ -125,7 +128,7 @@ function TabelaFonteMeio({
 			valor: l => `${l.rotulo_fonte} ${l.grafias.join(' ')}`,
 			render: l => (
 				<>
-					<Link href={linkSessoes({ dias, fonte: l.fonte, meio: l.meio })} className="hover:underline" onClick={e => e.stopPropagation()}>
+					<Link href={linkSessoes(link, { dias, fonte: l.fonte, meio: l.meio })} className="hover:underline" onClick={e => e.stopPropagation()}>
 						<span className="font-medium">{l.rotulo_fonte}</span>
 					</Link>
 					{crus && l.grafias.length > 0 && (
@@ -225,6 +228,7 @@ function TabelaFonteMeio({
 }
 
 function TabelaReferenciadores({ linhas, total, dias }: { linhas: LinhaReferenciador[]; total: number; dias: number }) {
+	const { link } = useVisitantesApi()
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
 	const colunas: ColunaTabela<LinhaReferenciador>[] = [
 		{
@@ -233,7 +237,7 @@ function TabelaReferenciadores({ linhas, total, dias }: { linhas: LinhaReferenci
 			filtro: 'texto',
 			valor: l => l.dominio,
 			render: l => (
-				<Link href={linkSessoes({ dias, referrer: l.dominio })} className="font-mono text-xs hover:underline">
+				<Link href={linkSessoes(link, { dias, referrer: l.dominio })} className="font-mono text-xs hover:underline">
 					{l.dominio}
 				</Link>
 			),
@@ -378,6 +382,7 @@ function Tendencia({ tendencia }: { tendencia: { dias: number; pontos: PontoTend
 }
 
 function Auditoria({ problemas, total, dias }: { problemas: Problema[]; total: number; dias: number }) {
+	const { link } = useVisitantesApi()
 	return (
 		<Secao
 			titulo="Auditoria de marcação — o que está errado na UTM"
@@ -409,7 +414,7 @@ function Auditoria({ problemas, total, dias }: { problemas: Problema[]; total: n
 									))}
 								</div>
 							)}
-							<Link href={linkSessoes({ dias, problema: p.tipo })} className="mt-2 inline-block text-xs text-primary hover:underline">
+							<Link href={linkSessoes(link, { dias, problema: p.tipo })} className="mt-2 inline-block text-xs text-primary hover:underline">
 								Ver essas sessões →
 							</Link>
 						</li>

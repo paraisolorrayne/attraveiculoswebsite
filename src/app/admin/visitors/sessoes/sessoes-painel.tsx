@@ -12,6 +12,7 @@ import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../visitors-metric
 import { Badge, BarraControles, CANAL_HEX, CRU, Erro, TD, TH, Vazio, useValoresCrus } from '../visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from '../visitors-tabela'
 import { useLarguraTotal } from '../largura-total'
+import { useVisitantesApi } from '../visitantes-api'
 
 interface Resposta {
 	periodo: { dias: number }
@@ -97,6 +98,7 @@ function crusDe(s: SessaoDescrita): string {
 }
 
 export function SessoesPainel() {
+	const { api, link } = useVisitantesApi()
 	const params = useSearchParams()
 	const router = useRouter()
 	const pathname = usePathname()
@@ -131,7 +133,7 @@ export function SessoesPainel() {
 		try {
 			const q = new URLSearchParams(params.toString())
 			q.set('dias', String(dias))
-			const r = await fetch(`/api/admin/visitors/sessoes?${q.toString()}`)
+			const r = await fetch(api('sessoes', Object.fromEntries(q)))
 			if (!r.ok) throw new Error(`HTTP ${r.status}`)
 			setDados(await r.json())
 		} catch (e) {
@@ -140,7 +142,7 @@ export function SessoesPainel() {
 		} finally {
 			setCarregando(false)
 		}
-	}, [params, dias])
+	}, [params, dias, api])
 
 	useEffect(() => {
 		carregar()
@@ -245,7 +247,7 @@ export function SessoesPainel() {
 				render: s =>
 					s.chave_campanha ? (
 						<Link
-							href={`/admin/visitors/campanha/${encodeURIComponent(s.chave_campanha)}`}
+							href={link(`/campanha/${encodeURIComponent(s.chave_campanha)}`)}
 							className="block truncate hover:underline"
 							title={s.campanha}
 							onClick={e => e.stopPropagation()}
@@ -320,7 +322,7 @@ export function SessoesPainel() {
 				),
 			},
 		],
-		[crus],
+		[crus, link],
 	)
 
 	return (
@@ -400,7 +402,7 @@ export function SessoesPainel() {
 						linhas={dados.sessoes}
 						chaveLinha={s => s.session_id}
 						vazio="Nenhuma sessão com esses filtros."
-						aoClicarLinha={s => router.push(`/admin/visitors/sessoes/${encodeURIComponent(s.session_id)}`)}
+						aoClicarLinha={s => router.push(link(`/sessoes/${encodeURIComponent(s.session_id)}`))}
 						controlado={{
 							ordenacao: dados.ordenacao,
 							aoOrdenar: o => definir({ ordenar: o?.chave, direcao: o?.direcao }),
@@ -450,13 +452,14 @@ export function SessoesPainel() {
 }
 
 function PrimeiraUltima({ dias }: { dias: number }) {
+	const { api, link } = useVisitantesApi()
 	const larguraTotal = useLarguraTotal()
 	const [dados, setDados] = useState<Jornadas | null>(null)
 	const [erro, setErro] = useState<string | null>(null)
 
 	useEffect(() => {
 		let ativo = true
-		fetch(`/api/admin/visitors/jornadas?dias=${dias}`)
+		fetch(api('jornadas', { dias }))
 			.then(async r => {
 				if (!r.ok) throw new Error(`HTTP ${r.status}`)
 				const j = await r.json()
@@ -469,7 +472,7 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 		return () => {
 			ativo = false
 		}
-	}, [dias])
+	}, [dias, api])
 
 	const canaisLinha = dados ? CANAIS_ORDEM.filter(c => dados.matriz.some(m => m.primeira === c)) : []
 	const canaisColuna = dados ? CANAIS_ORDEM.filter(c => dados.matriz.some(m => m.conversao === c)) : []
@@ -542,7 +545,7 @@ function PrimeiraUltima({ dias }: { dias: number }) {
 										classe: 'tabular-nums',
 										render: j => (
 											<Link
-												href={`/admin/visitors/sessoes/${encodeURIComponent(j.conversao.session_id)}`}
+												href={link(`/sessoes/${encodeURIComponent(j.conversao.session_id)}`)}
 												className="hover:underline"
 											>
 												{dataHora(j.conversao.started_at)}

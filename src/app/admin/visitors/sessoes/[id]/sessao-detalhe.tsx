@@ -9,6 +9,7 @@ import { papeisDaPlataforma, plataformaDaMarcacao } from '@/lib/visitors/marcaca
 import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, nomeDoSlug } from '../../visitors-metrics'
 import { Badge, CRU, Erro, Vazio } from '../../visitors-ui'
+import { useVisitantesApi } from '../../visitantes-api'
 
 interface Pagina {
 	page_path: string
@@ -88,13 +89,14 @@ function hora(iso: string): string {
 }
 
 export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
+	const { api, link } = useVisitantesApi()
 	const router = useRouter()
 	const [dados, setDados] = useState<Dados | null>(null)
 	const [erro, setErro] = useState<string | null>(null)
 
 	useEffect(() => {
 		let ativo = true
-		fetch(`/api/admin/visitors/session-explore?session_id=${encodeURIComponent(sessionId)}`)
+		fetch(api('sessao', { session_id: sessionId }))
 			.then(async r => {
 				if (r.status === 404) throw new Error('nao-encontrada')
 				if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -108,7 +110,7 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 		return () => {
 			ativo = false
 		}
-	}, [sessionId])
+	}, [sessionId, api])
 
 	const s = dados?.session_summary
 	// utm_content/utm_term significam coisas diferentes por plataforma: na Meta
@@ -283,7 +285,7 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 											<span className="tabular-nums font-medium">{dataHora(o.started_at)}</span>
 										) : (
 											<Link
-												href={`/admin/visitors/sessoes/${encodeURIComponent(o.session_id)}`}
+												href={link(`/sessoes/${encodeURIComponent(o.session_id)}`)}
 												className="tabular-nums hover:underline"
 											>
 												{dataHora(o.started_at)}

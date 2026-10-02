@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { Secao } from './visitors-tabelas'
 import { TabelaOrdenavel } from './visitors-tabela'
 import { corTaxa, fmtNum, fmtPct, larguraRelativa } from './visitors-metrics'
+import { useVisitantesApi } from './visitantes-api'
 
 type Padrao =
   | 'estabelecimento' | 'comprar_marca' | 'marca_venda'
@@ -59,6 +60,7 @@ const ROTULO: Record<Padrao, string> = {
 
 
 export function SecaoTermosDeConversao({ dias }: { dias: number }) {
+  const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(false)
@@ -67,7 +69,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
     setCarregando(true)
     setErro(false)
     try {
-      const r = await fetch(`/api/admin/visitors/termos?dias=${dias}`)
+      const r = await fetch(api('termos', { dias }))
       if (!r.ok) throw new Error(String(r.status))
       setDados(await r.json())
     } catch {
@@ -75,7 +77,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
     } finally {
       setCarregando(false)
     }
-  }, [dias])
+  }, [dias, api])
 
   useEffect(() => { void carregar() }, [carregar])
 
@@ -235,11 +237,12 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
  * média só faz o volume da rede social esconder o que os termos comprovam.
  */
 export function SecaoAnunciosDaRede({ dias }: { dias: number }) {
+  const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
 
   useEffect(() => {
     let ativo = true
-    fetch(`/api/admin/visitors/termos?dias=${dias}`)
+    fetch(api('termos', { dias }))
       .then(r => (r.ok ? r.json() : null))
       .then(j => {
         if (ativo && j) setDados(j)
@@ -248,7 +251,7 @@ export function SecaoAnunciosDaRede({ dias }: { dias: number }) {
     return () => {
       ativo = false
     }
-  }, [dias])
+  }, [dias, api])
 
   if (!dados || dados.anuncios.length === 0) return null
 

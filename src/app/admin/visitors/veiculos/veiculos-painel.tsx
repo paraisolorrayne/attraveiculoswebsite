@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Secao } from '../visitors-tabelas'
 import { TabelaOrdenavel } from '../visitors-tabela'
 import { corTaxa, fmtDuracao, fmtNum, fmtPct, larguraRelativa, nomeDoSlug, taxa } from '../visitors-metrics'
+import { useVisitantesApi } from '../visitantes-api'
 
 interface LinhaVeiculo {
   vehicle_slug: string
@@ -58,6 +59,7 @@ function reais(valor: number | null): string {
 }
 
 export function VeiculosPainel() {
+  const { api } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
   const [dias, setDias] = useState(30)
   const [carregando, setCarregando] = useState(true)
@@ -67,7 +69,7 @@ export function VeiculosPainel() {
     setCarregando(true)
     setErro(null)
     try {
-      const r = await fetch(`/api/admin/visitors/veiculos?dias=${dias}`)
+      const r = await fetch(api('veiculos', { dias }))
       if (!r.ok) throw new Error()
       setDados(await r.json())
     } catch {
@@ -75,7 +77,7 @@ export function VeiculosPainel() {
     } finally {
       setCarregando(false)
     }
-  }, [dias])
+  }, [dias, api])
 
   useEffect(() => {
     void carregar()
