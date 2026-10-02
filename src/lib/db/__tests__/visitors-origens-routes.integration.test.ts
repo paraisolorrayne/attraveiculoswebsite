@@ -208,22 +208,22 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		expect(j.campanhas.find((c: { chave: string }) => c.chave === 'porsche 911').score).toBeCloseTo(0.75 / 2)
 	})
 
-	it('consultas com escopo de agência só veem as campanhas cadastradas dela', async () => {
+	it('consultas com escopo de agência só veem as visitas com o marcador dela', async () => {
 		const { consultarOrigens } = await import('@/lib/visitors/consultas/origens')
 		const { consultarEntradas } = await import('@/lib/visitors/consultas/entradas')
 		const { consultarCampanhas } = await import('@/lib/visitors/consultas/campanhas')
 		const { consultarCampanha } = await import('@/lib/visitors/consultas/campanha')
 		await prepararBancoAgencias(db)
-		await sql`delete from agencia_campanhas`.execute(db)
-		const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+		await sql`delete from agencias where slug = 'teste-escopo'`.execute(db)
+		const ag = (await db.insertInto('agencias').values({ nome: 'Teste', slug: 'teste-escopo' }).returning('id').executeTakeFirstOrThrow()).id
 		const escopo = { tipo: 'agencia' as const, agenciaId: ag }
 
-		// Sem campanha cadastrada, a agência não vê nada.
+		// Sem marcador, a agência não vê nada.
 		expect((await consultarOrigens('http://x/?dias=30', escopo)).total_sessoes).toBe(0)
 		expect((await consultarEntradas('http://x/?dias=30', escopo)).total_sessoes).toBe(0)
 
-		// Com a campanha da Meta "Porsche 911" (as duas grafias da fixture), vê as 2 sessões dela.
-		await db.insertInto('agencia_campanhas').values({ agencia_id: ag, plataforma: 'meta', nome: 'Porsche 911' }).execute()
+		// Com o prefixo "porsche 911" (as duas grafias da fixture), vê as 2 sessões dela.
+		await sql`update agencias set prefixos = '{porsche 911}' where id = ${ag}::uuid`.execute(db)
 		expect((await consultarOrigens('http://x/?dias=30', escopo)).total_sessoes).toBe(2)
 		expect((await consultarEntradas('http://x/?dias=30', escopo)).total_sessoes).toBe(2)
 		const c = await consultarCampanhas('http://x/?dias=30', escopo)
@@ -234,7 +234,7 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		// O tráfego sem campanha (direto, gclid, Linktree) não aparece para ela.
 		const fora = await consultarCampanha('http://x/?chave=inexistente&dias=30', escopo)
 		expect('erro' in fora ? fora : fora.resumo?.sessoes).toBe(0)
-		await sql`delete from agencia_campanhas`.execute(db)
+		await sql`delete from agencias where id = ${ag}::uuid`.execute(db)
 	})
 
 	it('entradas: primeira página de cada sessão × canal', async () => {

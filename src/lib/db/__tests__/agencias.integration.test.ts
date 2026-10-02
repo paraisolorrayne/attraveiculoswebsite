@@ -14,18 +14,22 @@ import { prepararBancoAgencias } from './fixtures/agencias'
 
 const TEST_DB = process.env.TEST_DATABASE_URL
 
-describe.skipIf(!TEST_DB)('migration 20261002_agencias', () => {
+const MIGRATIONS = ['20261002_agencias.sql', '20261003_agencias_marcadores.sql']
+const ler = (arquivo: string) => readFileSync(resolve(__dirname, '../../../../supabase/migrations', arquivo), 'utf8')
+
+describe.skipIf(!TEST_DB)('migrations de agências (20261002 + 20261003)', () => {
 	let db: typeof import('../index').db
+
+	const aplicarAsDuas = async () => {
+		for (const m of MIGRATIONS) await sql.raw(ler(m)).execute(db)
+	}
 
 	beforeAll(async () => {
 		process.env.DATABASE_URL = TEST_DB
 		;({ db } = await import('../index'))
 		await prepararBancoAgencias(db)
-		// Idempotente: rodar de novo não pode quebrar nem duplicar a Media House.
-		const m = readFileSync(resolve(__dirname, '../../../../supabase/migrations/20261002_agencias.sql'), 'utf8')
-		await sql.raw(m).execute(db)
-		await sql`delete from agencia_campanhas`.execute(db)
-		await sql`insert into agencias (nome, slug) values ('EB', 'eb') on conflict (slug) do nothing`.execute(db)
+		// Idempotentes: rodar de novo não pode quebrar nem duplicar a Media House.
+		await aplicarAsDuas()
 	})
 
 	const idDe = async (slug: string) =>
@@ -36,21 +40,25 @@ describe.skipIf(!TEST_DB)('migration 20261002_agencias', () => {
 		expect(Number(r.rows[0].n)).toBe(1)
 	})
 
-	it('trava: o mesmo ID na mesma plataforma não vai para duas agências, nem com espaço', async () => {
-		const mh = await idDe('media-house')
-		const eb = await idDe('eb')
-		await db.insertInto('agencia_campanhas').values({ agencia_id: mh, plataforma: 'google', nome: 'va-pmax', id_externo: '24295047322' }).execute()
-		await expect(
-			db.insertInto('agencia_campanhas').values({ agencia_id: eb, plataforma: 'google', nome: 'outra', id_externo: ' 24295047322 ' }).execute(),
-		).rejects.toThrow(/unico|unique/i)
+	it('a Media House nasce com os marcadores da spec', async () => {
+		const mh = await db.selectFrom('agencias').select(['prefixos', 'utm_medium_marca', 'ids_campanha']).where('slug', '=', 'media-house').executeTakeFirstOrThrow()
+		expect(mh.prefixos).toEqual(expect.arrayContaining(['va-', '[va]', '%5bva%5d']))
+		expect(mh.utm_medium_marca).toEqual(expect.arrayContaining(['mediahouse']))
+		expect(mh.ids_campanha).toEqual(expect.arrayContaining(['24295047322', '24283864992']))
 	})
 
-	it('trava: o mesmo nome na mesma plataforma, ignorando caixa; em outra plataforma pode', async () => {
-		const eb = await idDe('eb')
-		await expect(
-			db.insertInto('agencia_campanhas').values({ agencia_id: eb, plataforma: 'google', nome: 'VA-PMAX' }).execute(),
-		).rejects.toThrow(/unico|unique/i)
-		await db.insertInto('agencia_campanhas').values({ agencia_id: eb, plataforma: 'meta', nome: 'va-pmax' }).execute()
+	it('reaplicar não desfaz marcador incluído depois', async () => {
+		await sql`update agencias set prefixos = prefixos || '{teste-}'::text[] where slug = 'media-house'`.execute(db)
+		await aplicarAsDuas()
+		const mh = await db.selectFrom('agencias').select('prefixos').where('slug', '=', 'media-house').executeTakeFirstOrThrow()
+		expect(mh.prefixos).toContain('teste-')
+		await sql`update agencias set prefixos = array_remove(prefixos, 'teste-') where slug = 'media-house'`.execute(db)
+	})
+
+	it('o cadastro de campanhas não existe mais', async () => {
+		const r = await sql<{ t: string | null }>`select to_regclass('agencia_campanhas')::text as t`.execute(db)
+		expect(r.rows[0].t).toBeNull()
+		expect(await idDe('media-house')).toBeTruthy()
 	})
 
 	it('usuário pode ser ligado a uma agência', async () => {
@@ -61,16 +69,13 @@ describe.skipIf(!TEST_DB)('migration 20261002_agencias', () => {
 		expect(u.agencia_id).toBe(mh)
 		await sql`delete from admin_users where email = 'teste-agencia@x'`.execute(db)
 	})
-	it('na VPS (papel attra existe), as tabelas novas ficam com o usuário do app', async () => {
+	it('na VPS (papel attra existe), a tabela de agências fica com o usuário do app', async () => {
 		// Em produção a migration roda como postgres e o app conecta como attra.
 		await sql`do $$ begin if not exists (select 1 from pg_roles where rolname = 'attra') then create role attra nologin; end if; end $$`.execute(db)
-		await sql.raw(readFileSync(resolve(__dirname, '../../../../supabase/migrations/20261002_agencias.sql'), 'utf8')).execute(db)
+		await aplicarAsDuas()
 		const r = await sql<{ tablename: string; tableowner: string }>`
 			select tablename, tableowner from pg_tables where tablename in ('agencias', 'agencia_campanhas') order by 1
 		`.execute(db)
-		expect(r.rows).toEqual([
-			{ tablename: 'agencia_campanhas', tableowner: 'attra' },
-			{ tablename: 'agencias', tableowner: 'attra' },
-		])
+		expect(r.rows).toEqual([{ tablename: 'agencias', tableowner: 'attra' }])
 	})
 })

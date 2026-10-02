@@ -91,25 +91,12 @@ async function main() {
 	console.log('==> limpando dados de visita e de agência do banco local')
 	await db.deleteFrom('whatsapp_clicks').execute()
 	await db.deleteFrom('visitor_fingerprints').execute()
-	await db.deleteFrom('agencia_campanhas').execute()
 
-	console.log('==> agências e campanhas')
+	console.log('==> agências (os marcadores da Media House vêm da migration 20261003)')
 	await sql`insert into agencias (nome, slug, prefixos) values ('EB', 'eb', '{[eb]}') on conflict (slug) do nothing`.execute(db)
-	const idAg = async (slug: string) => (await db.selectFrom('agencias').select('id').where('slug', '=', slug).executeTakeFirstOrThrow()).id
-	const mh = await idAg('media-house')
-	const eb = await idAg('eb')
-	await db
-		.insertInto('agencia_campanhas')
-		.values([
-			{ agencia_id: mh, plataforma: 'google', nome: 'va-pmax-nucleo-set26', id_externo: '24295047322', inicio: '2026-09-01' },
-			{ agencia_id: mh, plataforma: 'google', nome: 'va-search-marca-set26', id_externo: '24283864992', inicio: '2026-09-01' },
-			{ agencia_id: mh, plataforma: 'meta', nome: '[VA][MediaHouse][Leads][Site]', id_externo: '120241000000000001', inicio: '2026-09-10' },
-			{ agencia_id: mh, plataforma: 'meta', nome: '[VA][MediaHouse][Leads][Whatsapp]', id_externo: '120241000000000002', destino: 'whatsapp', mensagem_prefixo: 'Vi no Instagram o', inicio: '2026-09-10' },
-			{ agencia_id: eb, plataforma: 'meta', nome: '[EB] [SITE] Visitas ao site', id_externo: '120240538111140043', inicio: '2026-08-01' },
-		])
-		.execute()
-	// Fica SEM cadastro de propósito: aparece em "detectadas sem cadastro".
-	const WEBMOTORS_NAO_CADASTRADA = 'va-webmotors-set26'
+	const mh = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+	// Campanha da Media House no GAM da WebMotors, com o marcador va- no nome.
+	const WEBMOTORS_GAM = 'va-webmotors-gam-set26'
 
 	console.log('==> usuários de teste')
 	const hash = await bcrypt.hash(SENHA_TESTE, 10)
@@ -175,7 +162,7 @@ async function main() {
 				utm_term: escolher(['Feed', 'Stories', 'Reels']),
 			})
 		} else if (origem === 'mh-webmotors') {
-			Object.assign(s, { utm_source: 'webmotors', utm_medium: 'cpc', utm_campaign: WEBMOTORS_NAO_CADASTRADA, referrer_domain: 'www.webmotors.com.br' })
+			Object.assign(s, { utm_source: 'webmotors', utm_medium: 'cpc', utm_campaign: WEBMOTORS_GAM, referrer_domain: 'www.webmotors.com.br' })
 		} else if (origem === 'eb-meta') {
 			Object.assign(s, {
 				utm_source: 'facebook', utm_medium: 'paid_social', utm_id: '120240538111140043',

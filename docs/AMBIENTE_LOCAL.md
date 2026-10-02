@@ -32,15 +32,16 @@ topo de `scripts/local/seed-agencia.ts`:
 
 ## O que o seed cria
 
-- Agências Media House e EB, com campanhas no Google (PMax e Search), na Meta
-  (site e WhatsApp direto) e uma da EB.
+- Agências Media House e EB. Não há cadastro de campanha: a Media House vê as
+  visitas com o marcador dela (`va-`/`[VA]` no `utm_campaign` ou `utm_content`,
+  `utm_medium=mediahouse` ou um `utm_id` da lista — migration 20261003); a EB,
+  as com `[EB]`. Visitas no Google (PMax e Search), na Meta e no GAM da WebMotors.
 - 2.500 sessões em 30 dias: 45% orgânico, o resto distribuído entre as
   campanhas; metade da PMax chega só com `utm_id`, sem nome (o caso real desde
   29/09).
 - Cliques no WhatsApp em ~9% das sessões, com o tempo até o clique na
   distribuição medida em produção (inclusive os toques acidentais < 3 s).
-- Uma campanha `va-webmotors-set26` com visitas mas **sem cadastro**, para
-  aparecer em "campanhas detectadas".
+- Uma campanha `va-webmotors-gam-set26` (GAM da WebMotors, com o marcador `va-`).
 
 Os dados são os mesmos a cada execução (semente fixa).
 

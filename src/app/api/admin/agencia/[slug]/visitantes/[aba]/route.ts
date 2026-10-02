@@ -14,11 +14,12 @@ import { consultarVeiculos } from '@/lib/visitors/consultas/veiculos'
 import { consultarTermos } from '@/lib/visitors/consultas/termos'
 import { consultarCampanha } from '@/lib/visitors/consultas/campanha'
 import { consultarCampanhas } from '@/lib/visitors/consultas/campanhas'
+import { consultarCampanhasOpcoes } from '@/lib/visitors/consultas/campanhas-opcoes'
 
 /**
  * Visitantes da agência. A agência vem do LOGIN (via acessoAgencia): para
  * usuário `agencia`, um slug que não é o dele é 403. Os filtros de
- * plataforma/campanha só estreitam dentro das campanhas dela.
+ * plataforma/campanha só estreitam dentro das visitas com o marcador dela.
  *
  * Fora daqui de propósito: perfis identificados (nome/e-mail/telefone) e
  * receita em R$ — não há aba para eles.
@@ -36,6 +37,7 @@ const ABAS: Record<string, (url: string, escopo: Escopo) => Promise<unknown>> = 
 	termos: consultarTermos,
 	campanha: consultarCampanha,
 	campanhas: consultarCampanhas,
+	'campanhas-opcoes': consultarCampanhasOpcoes,
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string; aba: string }> }) {

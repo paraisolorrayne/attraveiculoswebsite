@@ -30,16 +30,10 @@ describe.skipIf(!TEST_DB)('API de visitantes da agência', () => {
 		;({ db } = await import('../index'))
 		;({ GET } = await import('@/app/api/admin/agencia/[slug]/visitantes/[aba]/route'))
 		await prepararBancoAgencias(db)
-		await sql`delete from agencia_campanhas`.execute(db)
 		await db.deleteFrom('visitor_fingerprints').execute()
-		await sql`insert into agencias (nome, slug) values ('EB', 'eb') on conflict (slug) do nothing`.execute(db)
+		await sql`insert into agencias (nome, slug, prefixos) values ('EB', 'eb', '{[eb]}') on conflict (slug) do nothing`.execute(db)
 		const id = async (slug: string) => (await db.selectFrom('agencias').select('id').where('slug', '=', slug).executeTakeFirstOrThrow()).id
 		mh = await id('media-house')
-		await db.insertInto('agencia_campanhas').values([
-			{ agencia_id: mh, plataforma: 'google', nome: 'va-pmax', id_externo: '111' },
-			{ agencia_id: mh, plataforma: 'meta', nome: '[VA][Site]', id_externo: null },
-			{ agencia_id: await id('eb'), plataforma: 'meta', nome: '[EB] Site', id_externo: '222' },
-		]).execute()
 		acesso = { ok: true, admin: {}, agencia: { id: mh, slug: 'media-house', nome: 'Media House' } }
 
 		const fp = (await db.insertInto('visitor_fingerprints').values({ visitor_id: 'v-api', confidence_score: 0.9 }).returning('id').executeTakeFirstOrThrow()).id
@@ -58,13 +52,13 @@ describe.skipIf(!TEST_DB)('API de visitantes da agência', () => {
 				await sql`insert into whatsapp_clicks (session_db_id, clicked_at, page_path) values (${s.id}::uuid, ${new Date(inicio.getTime() + clicouEm * 1000)}, '/')`.execute(db)
 			}
 		}
-		await sessao('mhgoogle', { utm_source: 'google', utm_medium: 'cpc', utm_id: '111', gclid: 'g' }, 1) // acidental
+		await sessao('mhgoogle', { utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'va-pmax', gclid: 'g' }, 1) // acidental
 		await sessao('mhmeta', { utm_source: 'facebook', utm_campaign: '[VA][Site]', fbclid: 'f' }, 90)
 		await sessao('ebmeta', { utm_source: 'facebook', utm_campaign: '[EB] Site', utm_id: '222', fbclid: 'f' }, 40)
 		await sessao('organico', { referrer_domain: 'www.google.com' }, 20)
 	})
 
-	const ABAS = ['resumo', 'metrics', 'origens', 'entradas', 'sessoes', 'jornadas', 'comportamento', 'veiculos', 'termos', 'campanhas']
+	const ABAS = ['resumo', 'metrics', 'origens', 'entradas', 'sessoes', 'jornadas', 'comportamento', 'veiculos', 'termos', 'campanhas', 'campanhas-opcoes']
 
 	it.each(ABAS)('aba %s: nada da EB nem do orgânico', async aba => {
 		const r = await chamar(aba)
@@ -88,6 +82,24 @@ describe.skipIf(!TEST_DB)('API de visitantes da agência', () => {
 		expect(j.total.sessoes).toBe(1)
 		const ignorado = await (await chamar('resumo', 'dias=30&plataforma=tiktok')).json()
 		expect(ignorado.total.sessoes).toBe(2)
+	})
+
+	it('campanhas-opcoes: as campanhas da agência no período, pela plataforma, sem a EB', async () => {
+		const j = await (await chamar('campanhas-opcoes', 'dias=30')).json()
+		expect(j.campanhas).toEqual([
+			{ nome: '[VA][Site]', plataforma: 'meta', sessoes: 1 },
+			{ nome: 'va-pmax', plataforma: 'google', sessoes: 1 },
+		])
+		// A própria campanha escolhida não some da lista de opções.
+		const comFiltro = await (await chamar('campanhas-opcoes', 'dias=30&campanha=va-pmax')).json()
+		expect(comFiltro.campanhas).toHaveLength(2)
+		const soMeta = await (await chamar('campanhas-opcoes', 'dias=30&plataforma=meta')).json()
+		expect(soMeta.campanhas.map((c: { nome: string }) => c.nome)).toEqual(['[VA][Site]'])
+	})
+
+	it('filtro de campanha pelo nome estreita o resumo', async () => {
+		const j = await (await chamar('resumo', 'dias=30&campanha=VA-PMAX')).json()
+		expect(j.total.sessoes).toBe(1)
 	})
 
 	it('detalhe de sessão: da agência abre, de fora é 404', async () => {

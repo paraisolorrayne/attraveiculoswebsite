@@ -32,13 +32,10 @@ describe.skipIf(!TEST_DB)('detalhe da sessão com escopo de agência', () => {
 		;({ consultarSessoes } = await import('@/lib/visitors/consultas/sessoes'))
 		;({ ESCOPO_TUDO } = await import('@/lib/visitors/escopo'))
 		await prepararBancoAgencias(db)
-		await sql`delete from agencia_campanhas`.execute(db)
 		await db.deleteFrom('visitor_fingerprints').execute()
-		await sql`insert into agencias (nome, slug) values ('EB', 'eb') on conflict (slug) do nothing`.execute(db)
+		await sql`insert into agencias (nome, slug, prefixos) values ('EB', 'eb', '{[eb]}') on conflict (slug) do nothing`.execute(db)
 		const id = async (slug: string) => (await db.selectFrom('agencias').select('id').where('slug', '=', slug).executeTakeFirstOrThrow()).id
 		mh = { tipo: 'agencia', agenciaId: await id('media-house') }
-		await db.insertInto('agencia_campanhas').values({ agencia_id: mh.agenciaId, plataforma: 'google', nome: 'va-pmax', id_externo: '111' }).execute()
-		await db.insertInto('agencia_campanhas').values({ agencia_id: await id('eb'), plataforma: 'meta', nome: '[EB] Site', id_externo: '222' }).execute()
 
 		const fp = (await db.insertInto('visitor_fingerprints').values({ visitor_id: 'v-det', confidence_score: 0.9 }).returning('id').executeTakeFirstOrThrow()).id
 		const sessao = (session_id: string, horas: number, extra: Record<string, unknown>) =>

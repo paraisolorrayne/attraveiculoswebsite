@@ -36,7 +36,7 @@ createdb "$BANCO"
 psql -X -q -d "$BANCO" -v ON_ERROR_STOP=1 -f "$ESQUEMA" > /dev/null
 
 echo "==> migrations novas (idempotentes)"
-for m in 20260929_admin_users_ultimo_acesso 20261002_descarta_correlacao_por_horario 20261002_agencias; do
+for m in 20260929_admin_users_ultimo_acesso 20261002_descarta_correlacao_por_horario 20261002_agencias 20261003_agencias_marcadores; do
   psql -X -q -d "$BANCO" -v ON_ERROR_STOP=1 -f "$RAIZ/supabase/migrations/$m.sql" > /dev/null
   echo "    ok: $m"
 done

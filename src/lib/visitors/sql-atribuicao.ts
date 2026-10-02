@@ -9,30 +9,17 @@
  * aqui ela vira uma definição só.
  */
 import { sql, type RawBuilder } from 'kysely'
-import { saneado } from './saneado'
+import { campanhaSql, saneado } from './saneado'
 import { naAgencia, type Escopo } from './escopo'
 
-// `saneado` mora em ./saneado: `escopo.ts` usa ele no topo do módulo e este
-// arquivo importa `escopo.ts` — com `saneado` aqui, a ordem de carga dos dois
-// decidiria se ele já existe ("saneado is not defined").
-export { saneado }
+// `saneado` e `campanhaSql` moram em ./saneado: `escopo.ts` usa os dois no topo
+// do módulo e este arquivo importa `escopo.ts` — aqui, a ordem de carga dos
+// dois decidiria se eles já existem ("saneado is not defined").
+export { saneado, campanhaSql }
 
 /** Período padrão do painel. `dias = 0` significa "toda a história". */
 export const DIAS_PADRAO = 30
 export const DIAS_MAX = 730
-
-/**
- * Nome da campanha, com queda para o ID. O Google não tem código automático
- * para o nome — só utm_id={campaignid} —, então uma campanha bem marcada pelo
- * ID cairia em "(não marcada)" se exigíssemos o nome. Aqui ela vira
- * "campanha #123456", que separa uma da outra. Mesma regra de `rotuloCampanha`
- * na lib de canal. `s` é o alias de visitor_sessions.
- */
-export const campanhaSql = sql<string>`coalesce(
-	${saneado(sql`s.utm_campaign`)},
-	case when nullif(btrim(s.utm_id), '') is not null then 'campanha #' || btrim(s.utm_id) end,
-	''
-)`
 
 export interface Periodo {
 	dias: number

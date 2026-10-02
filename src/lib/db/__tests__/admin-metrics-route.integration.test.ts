@@ -99,36 +99,36 @@ describe.skipIf(!TEST_DB)('metrics route — SQL real', () => {
     expect(j.resumo.sessoes_com_veiculo).toBe(1)
   })
 
-  it('com escopo de agência, a Visão geral só conta as campanhas cadastradas dela', async () => {
+  it('com escopo de agência, a Visão geral só conta as visitas com o marcador dela', async () => {
     const { consultarMetrics } = await import('@/lib/visitors/consultas/metrics')
     await prepararBancoAgencias(db)
-    await sql`delete from agencia_campanhas`.execute(db)
-    const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+    await sql`delete from agencias where slug = 'teste-escopo'`.execute(db)
+    const ag = (await db.insertInto('agencias').values({ nome: 'Teste', slug: 'teste-escopo' }).returning('id').executeTakeFirstOrThrow()).id
     const escopo = { tipo: 'agencia' as const, agenciaId: ag }
     const vazio = (await consultarMetrics('http://x/?dias=30', escopo)) as { resumo: { sessoes: number } }
     expect(vazio.resumo.sessoes).toBe(0)
     // "black friday" (as duas grafias, Google): 2 sessões.
-    await db.insertInto('agencia_campanhas').values({ agencia_id: ag, plataforma: 'google', nome: 'Black Friday' }).execute()
+    await sql`update agencias set prefixos = '{black friday}' where id = ${ag}::uuid`.execute(db)
     const dela = (await consultarMetrics('http://x/?dias=30', escopo)) as { resumo: { sessoes: number } }
     expect(dela.resumo.sessoes).toBe(2)
-    await sql`delete from agencia_campanhas`.execute(db)
+    await sql`delete from agencias where id = ${ag}::uuid`.execute(db)
   })
 
-  it('comportamento, veículos e termos rodam com escopo e a agência sem campanha não vê nada', async () => {
+  it('comportamento, veículos e termos rodam com escopo e a agência sem marcador não vê nada', async () => {
     const { consultarComportamento } = await import('@/lib/visitors/consultas/comportamento')
     const { consultarVeiculos } = await import('@/lib/visitors/consultas/veiculos')
     const { consultarTermos } = await import('@/lib/visitors/consultas/termos')
     const { ESCOPO_TUDO } = await import('@/lib/visitors/escopo')
     await prepararBancoAgencias(db)
-    await sql`delete from agencia_campanhas`.execute(db)
-    const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+    await sql`delete from agencias where slug = 'teste-escopo'`.execute(db)
+    const ag = (await db.insertInto('agencias').values({ nome: 'Teste', slug: 'teste-escopo' }).returning('id').executeTakeFirstOrThrow()).id
     const escopo = { tipo: 'agencia' as const, agenciaId: ag }
     const url = 'http://x/?dias=30'
 
     // Para a Attra, os page views da fixture aparecem.
     const vTudo = JSON.stringify(await consultarVeiculos(url, ESCOPO_TUDO))
     expect(vTudo).toContain('porsche')
-    // Para a agência sem campanha, nada de veículo nem de comportamento.
+    // Para a agência sem marcador, nada de veículo nem de comportamento.
     expect(JSON.stringify(await consultarVeiculos(url, escopo))).not.toContain('porsche')
     const comp = (await consultarComportamento(url, escopo)) as { resumo?: { visualizacoes?: number } }
     expect(JSON.stringify(comp)).not.toContain('/veiculo/')
@@ -136,6 +136,7 @@ describe.skipIf(!TEST_DB)('metrics route — SQL real', () => {
     // Termos: o SQL roda nos dois escopos.
     await consultarTermos(url, ESCOPO_TUDO)
     await consultarTermos(url, escopo)
+    await sql`delete from agencias where id = ${ag}::uuid`.execute(db)
   })
 
   it('a coluna velha vehicles_viewed nunca soma mais que 1 por sessão', async () => {

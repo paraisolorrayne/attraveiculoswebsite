@@ -26,3 +26,16 @@ export function saneado(coluna: RawBuilder<unknown>) {
 		''
 	)`
 }
+
+/**
+ * Nome da campanha, com queda para o ID. O Google não tem código automático
+ * para o nome — só utm_id={campaignid} —, então uma campanha bem marcada pelo
+ * ID cairia em "(não marcada)" se exigíssemos o nome. Aqui ela vira
+ * "campanha #123456", que separa uma da outra. Mesma regra de `rotuloCampanha`
+ * na lib de canal. `s` é o alias de visitor_sessions.
+ */
+export const campanhaSql = sql<string>`coalesce(
+	${saneado(sql`s.utm_campaign`)},
+	case when nullif(btrim(s.utm_id), '') is not null then 'campanha #' || btrim(s.utm_id) end,
+	''
+)`

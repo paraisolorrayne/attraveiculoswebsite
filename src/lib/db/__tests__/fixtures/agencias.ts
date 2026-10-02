@@ -29,6 +29,8 @@ export async function prepararBancoAgencias(db: Kysely<Database>): Promise<void>
 		created_at timestamptz not null default now(),
 		updated_at timestamptz not null default now()
 	)`.execute(db)
-	const migration = readFileSync(resolve(__dirname, '../../../../../supabase/migrations/20261002_agencias.sql'), 'utf8')
-	await sql.raw(migration).execute(db)
+	for (const arquivo of ['20261002_agencias.sql', '20261003_agencias_marcadores.sql']) {
+		const migration = readFileSync(resolve(__dirname, '../../../../../supabase/migrations', arquivo), 'utf8')
+		await sql.raw(migration).execute(db)
+	}
 }

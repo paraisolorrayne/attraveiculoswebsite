@@ -36,7 +36,7 @@ export function AgenciaShell({
 	const params = useSearchParams()
 	const dias = Number(params.get('dias')) || 30
 	const plataforma = params.get('plataforma') ?? ''
-	const campanhas = params.get('campanhas') ?? ''
+	const campanha = params.get('campanha') ?? ''
 
 	const definir = useCallback(
 		(mudanca: Record<string, string | number | undefined>) => {
@@ -51,23 +51,22 @@ export function AgenciaShell({
 		[params, pathname, router],
 	)
 
-	const filtros = useMemo(() => ({ dias: dias === 30 ? undefined : String(dias), plataforma, campanhas }), [dias, plataforma, campanhas])
+	const filtros = useMemo(() => ({ dias: dias === 30 ? undefined : String(dias), plataforma, campanha }), [dias, plataforma, campanha])
 
 	const api = useMemo<VisitantesApi>(
 		() => ({
-			api: (aba, p) => comParams(`/api/admin/agencia/${agencia.slug}/visitantes/${aba}`, { ...p, plataforma, campanhas }),
+			api: (aba, p) => comParams(`/api/admin/agencia/${agencia.slug}/visitantes/${aba}`, { ...p, plataforma, campanha }),
 			link: caminho => comFiltros(linkDaAgencia(agencia.slug, caminho), filtros),
 			modo: 'agencia',
 			periodo: { dias, setDias: d => definir({ dias: d }) },
 		}),
-		[agencia.slug, plataforma, campanhas, filtros, dias, definir],
+		[agencia.slug, plataforma, campanha, filtros, dias, definir],
 	)
 
 	const base = `/admin/agencia/${agencia.slug}`
 	const abas = [
 		{ href: base, rotulo: 'Resumo', ativa: pathname === base },
 		{ href: `${base}/visitantes/visao-geral`, rotulo: 'Visitantes', ativa: pathname.startsWith(`${base}/visitantes`) || pathname.startsWith(`${base}/sessoes`) || pathname.startsWith(`${base}/campanha/`) },
-		{ href: `${base}/campanhas`, rotulo: 'Campanhas', ativa: pathname.startsWith(`${base}/campanhas`) },
 	]
 
 	return (
@@ -100,7 +99,7 @@ export function AgenciaShell({
 							<button
 								key={p.valor}
 								type="button"
-								onClick={() => definir({ plataforma: p.valor, campanhas: undefined })}
+								onClick={() => definir({ plataforma: p.valor, campanha: undefined })}
 								className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
 									plataforma === p.valor ? 'border-primary text-primary' : 'border-border text-foreground-secondary hover:text-foreground'
 								}`}
@@ -109,7 +108,7 @@ export function AgenciaShell({
 							</button>
 						))}
 					</div>
-					<FiltroCampanha slug={agencia.slug} plataforma={plataforma} valor={campanhas} onChange={c => definir({ campanhas: c })} />
+					<FiltroCampanha slug={agencia.slug} dias={dias} plataforma={plataforma} valor={campanha} onChange={c => definir({ campanha: c })} />
 				</div>
 				<nav className="flex gap-1" aria-label="Seções da agência">
 					{abas.map(a => (
@@ -134,26 +133,36 @@ export function AgenciaShell({
 	)
 }
 
-/** Uma campanha (ou todas) entre as cadastradas da agência, na plataforma escolhida. */
+/**
+ * Uma campanha (ou todas) entre as que trouxeram visitas da agência no período,
+ * na plataforma escolhida — o mesmo rótulo das tabelas ("campanha #<id>" quando
+ * o nome vem vazio). A escolhida continua na lista mesmo se sumir do período.
+ */
 function FiltroCampanha({
 	slug,
+	dias,
 	plataforma,
 	valor,
 	onChange,
 }: {
 	slug: string
+	dias: number
 	plataforma: string
 	valor: string
 	onChange: (v: string) => void
 }) {
-	const [lista, setLista] = useState<{ id: string; nome: string; plataforma: string }[]>([])
+	const [lista, setLista] = useState<{ nome: string; sessoes: number }[]>([])
 	useEffect(() => {
-		fetch(`/api/admin/agencia/${slug}/campanhas`)
+		let vivo = true
+		fetch(comParams(`/api/admin/agencia/${slug}/visitantes/campanhas-opcoes`, { dias, plataforma }))
 			.then(r => (r.ok ? r.json() : { campanhas: [] }))
-			.then(j => setLista(j.campanhas ?? []))
-			.catch(() => setLista([]))
-	}, [slug])
-	const opcoes = lista.filter(c => !plataforma || c.plataforma === plataforma)
+			.then(j => vivo && setLista(j.campanhas ?? []))
+			.catch(() => vivo && setLista([]))
+		return () => {
+			vivo = false
+		}
+	}, [slug, dias, plataforma])
+	const opcoes = valor && !lista.some(c => c.nome === valor) ? [{ nome: valor, sessoes: 0 }, ...lista] : lista
 	if (opcoes.length === 0) return null
 	return (
 		<select
@@ -164,8 +173,8 @@ function FiltroCampanha({
 		>
 			<option value="">Todas as campanhas</option>
 			{opcoes.map(c => (
-				<option key={c.id} value={c.id}>
-					{c.nome}
+				<option key={c.nome} value={c.nome}>
+					{c.sessoes > 0 ? `${c.nome} · ${c.sessoes.toLocaleString('pt-BR')}` : c.nome}
 				</option>
 			))}
 		</select>

@@ -597,27 +597,15 @@ export interface AgenciasTable {
   id: Generated<string>
   nome: string
   slug: string
-  /** Só sugerem campanhas não cadastradas ("detectadas"); não decidem a quem a visita pertence. */
+  /**
+   * Marcadores que decidem a quem a visita pertence (migration 20261003): o
+   * utm_campaign ou utm_content começa com um prefixo, ou utm_medium / utm_id
+   * está na lista. Mantidos pela Attra.
+   */
   prefixos: Generated<string[]>
   utm_medium_marca: Generated<string[]>
+  ids_campanha: Generated<string[]>
   criado_em: Generated<Timestamp>
-}
-
-/** Campanhas cadastradas pela agência. Índices únicos impedem a mesma campanha em duas agências. */
-export interface AgenciaCampanhasTable {
-  id: Generated<string>
-  agencia_id: string
-  plataforma: PlataformaCampanha
-  nome: string
-  id_externo: string | null
-  destino: Generated<'site' | 'whatsapp'>
-  mensagem_prefixo: string | null
-  inicio: Generated<string>
-  fim: string | null
-  criado_por: string | null
-  criado_em: Generated<Timestamp>
-  atualizado_por: string | null
-  atualizado_em: Generated<Timestamp>
 }
 
 export interface Database {
@@ -657,7 +645,6 @@ export interface Database {
   indexnow_submissions: IndexnowSubmissionsTable
   admin_users: AdminUsersTable
   agencias: AgenciasTable
-  agencia_campanhas: AgenciaCampanhasTable
 }
 
 /**
@@ -683,7 +670,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
-  'agencias', 'agencia_campanhas',
+  'agencias',
 ] as const satisfies readonly (keyof Database)[]
 
 /**
