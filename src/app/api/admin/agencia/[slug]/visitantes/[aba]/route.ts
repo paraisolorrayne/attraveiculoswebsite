@@ -15,6 +15,7 @@ import { consultarTermos } from '@/lib/visitors/consultas/termos'
 import { consultarCampanha } from '@/lib/visitors/consultas/campanha'
 import { consultarCampanhas } from '@/lib/visitors/consultas/campanhas'
 import { consultarCampanhasOpcoes } from '@/lib/visitors/consultas/campanhas-opcoes'
+import { consultarLeadsAgencia } from '@/lib/visitors/consultas/leads-agencia'
 
 /**
  * Visitantes da agência. A agência vem do LOGIN (via acessoAgencia): para
@@ -22,7 +23,8 @@ import { consultarCampanhasOpcoes } from '@/lib/visitors/consultas/campanhas-opc
  * plataforma/campanha só estreitam dentro das visitas com o marcador dela.
  *
  * Fora daqui de propósito: perfis identificados (nome/e-mail/telefone) e
- * receita em R$ — não há aba para eles.
+ * receita em R$ — não há aba para eles. Os leads (`leads`) saem sem nome,
+ * telefone, vendedor nem valor.
  */
 const ABAS: Record<string, (url: string, escopo: Escopo) => Promise<unknown>> = {
 	resumo: consultarResumoAgencia,
@@ -38,6 +40,7 @@ const ABAS: Record<string, (url: string, escopo: Escopo) => Promise<unknown>> = 
 	campanha: consultarCampanha,
 	campanhas: consultarCampanhas,
 	'campanhas-opcoes': consultarCampanhasOpcoes,
+	leads: consultarLeadsAgencia,
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string; aba: string }> }) {

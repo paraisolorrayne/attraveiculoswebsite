@@ -66,6 +66,7 @@ export function AgenciaShell({
 	const base = `/admin/agencia/${agencia.slug}`
 	const abas = [
 		{ href: base, rotulo: 'Resumo', ativa: pathname === base },
+		{ href: `${base}/leads`, rotulo: 'Leads', ativa: pathname.startsWith(`${base}/leads`) },
 		{ href: `${base}/visitantes/visao-geral`, rotulo: 'Visitantes', ativa: pathname.startsWith(`${base}/visitantes`) || pathname.startsWith(`${base}/sessoes`) || pathname.startsWith(`${base}/campanha/`) },
 	]
 

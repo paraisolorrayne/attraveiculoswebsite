@@ -58,7 +58,7 @@ describe.skipIf(!TEST_DB)('API de visitantes da agência', () => {
 		await sessao('organico', { referrer_domain: 'www.google.com' }, 20)
 	})
 
-	const ABAS = ['resumo', 'metrics', 'origens', 'entradas', 'sessoes', 'jornadas', 'comportamento', 'veiculos', 'termos', 'campanhas', 'campanhas-opcoes']
+	const ABAS = ['resumo', 'metrics', 'origens', 'entradas', 'sessoes', 'jornadas', 'comportamento', 'veiculos', 'termos', 'campanhas', 'campanhas-opcoes', 'leads']
 
 	it.each(ABAS)('aba %s: nada da EB nem do orgânico', async aba => {
 		const r = await chamar(aba)

@@ -91,6 +91,7 @@ async function main() {
 	console.log('==> limpando dados de visita e de agência do banco local')
 	await db.deleteFrom('whatsapp_clicks').execute()
 	await db.deleteFrom('visitor_fingerprints').execute()
+	await sql`delete from crm_cards where id like 'local-card-%'`.execute(db)
 
 	console.log('==> agências (os marcadores da Media House vêm da migration 20261003)')
 	await sql`insert into agencias (nome, slug, prefixos) values ('EB', 'eb', '{[eb]}') on conflict (slug) do nothing`.execute(db)
@@ -111,6 +112,35 @@ async function main() {
 			values (gen_random_uuid(), ${u.email}, ${u.name}, ${u.role}::admin_role, true, ${hash}, ${u.agencia_id}::uuid)
 			on conflict (email) do update set role = excluded.role, password_hash = excluded.password_hash,
 			  agencia_id = excluded.agencia_id, is_active = true
+		`.execute(db)
+	}
+
+	// Cards sintéticos: nome, vendedor e valor são inventados e servem para provar
+	// que a área da agência NÃO os mostra.
+	let nCards = 0
+	const ETAPAS = [
+		['novo', 0.2], ['em_atendimento', 0.25], ['em_negociacao', 0.15], ['encerrado_ganho', 0.12], ['encerrado_perdido', 0.28],
+	] as const
+	const criarCard = async (sessionId: string, clicouEm: Date, v: (typeof VEICULOS)[number]) => {
+		nCards++
+		let a = 0
+		const t = r()
+		const etapa = ETAPAS.find(e => (a += e[1]) >= t)?.[0] ?? 'novo'
+		const criado = new Date(clicouEm.getTime() + 120_000)
+		const comDetalhe = r() < 0.5
+		await sql`
+			insert into crm_cards (id, etapa, nome, veiculo, valor, origem, vendedor, dados, criado_em, atualizado_em, encerrado_em)
+			values (
+				${'local-card-' + nCards}, ${etapa}, ${'Cliente Sintético ' + nCards},
+				${`${v.marca} ${v.modelo} (R$ ${v.preco.toLocaleString('pt-BR')}) - interesse via WhatsApp`},
+				${etapa === 'encerrado_ganho' ? v.preco : null}, 'whatsapp', 'Vendedor Sintético',
+				${JSON.stringify({
+					site_session_id: sessionId,
+					site_session_origem: 'correlacao_clique_veiculo',
+					...(comDetalhe ? { veiculo_interesse_detalhe: { tipo: 'comprar', marca: v.marca, modelo: v.modelo, versao: null, ano: 2024 } } : {}),
+				})}::jsonb,
+				${criado}, ${criado}, ${etapa.startsWith('encerrado') ? criado : null}
+			)
 		`.execute(db)
 	}
 
@@ -228,14 +258,38 @@ async function main() {
 
 		if (clique) {
 			cliques++
+			const clicouEm = new Date(inicio.getTime() + clique.segundos * 1000)
 			await sql`
 				insert into whatsapp_clicks (session_db_id, clicked_at, page_path, vehicle_id)
-				values (${sessao.id}::uuid, ${new Date(inicio.getTime() + clique.segundos * 1000)}, ${clique.path}, ${clique.veiculo?.id ?? null})
+				values (${sessao.id}::uuid, ${clicouEm}, ${clique.path}, ${clique.veiculo?.id ?? null})
 			`.execute(db)
+			// ~60% dos cliques de verdade viram card no CRM, ligado à sessão do clique.
+			if (clique.segundos >= 3 && r() < 0.6) {
+				await criarCard(String(s.session_id), clicouEm, clique.veiculo ?? escolher(VEICULOS))
+			}
+		}
+
+		// Quem veio por campanha da Media House e VOLTOU depois por outro caminho
+		// (direto) e aí chamou: o lead conta para a agência por visita anterior.
+		if (origem.startsWith('mh-') && r() < 0.08) {
+			const volta = new Date(Math.min(agora - 3_600_000, inicio.getTime() + (1 + r() * 4) * 86_400_000))
+			const sid = `${volta.getTime()}-local${i.toString(36)}-volta`
+			const s2 = await db
+				.insertInto('visitor_sessions')
+				.values({
+					fingerprint_id: fp.id, session_id: sid, started_at: volta, last_activity_at: volta,
+					city: cidade, region: estado, country_code: 'BR', page_views_count: 1, duration_seconds: 120,
+					contacted_whatsapp: true,
+				} as never)
+				.returning('id')
+				.executeTakeFirstOrThrow()
+			const clicouEm = new Date(volta.getTime() + 60_000)
+			await sql`insert into whatsapp_clicks (session_db_id, clicked_at, page_path) values (${s2.id}::uuid, ${clicouEm}, '/')`.execute(db)
+			await criarCard(sid, clicouEm, escolher(VEICULOS))
 		}
 	}
 
-	console.log(`ok: ${TOTAL_SESSOES} sessões, ${cliques} com clique no WhatsApp.`)
+	console.log(`ok: ${TOTAL_SESSOES} sessões, ${cliques} com clique no WhatsApp, ${nCards} cards no CRM.`)
 	console.log(`    Logins (senha ${SENHA_TESTE}): ${usuarios.map(u => u.email).join(', ')}`)
 	await db.destroy()
 }

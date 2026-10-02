@@ -7,6 +7,8 @@ import { Secao } from '@/app/admin/visitors/visitors-tabelas'
 import { Erro, Vazio } from '@/app/admin/visitors/visitors-ui'
 import { fmtNum, fmtPct, taxa } from '@/app/admin/visitors/visitors-metrics'
 import type { LinhaCampanhaScore } from '@/lib/visitors/score-clique'
+import type { ContagemLeads } from '@/lib/visitors/consultas/leads-agencia'
+import { NumerosLeads } from './leads/leads-agencia'
 
 interface Numeros {
 	sessoes: number
@@ -17,12 +19,13 @@ interface Numeros {
 interface Dados {
 	resumo: { total: Numeros; porPlataforma: Array<Numeros & { plataforma: string }> }
 	campanhas: { campanhas: LinhaCampanhaScore[]; score_desde: string }
+	leads: { total: ContagemLeads }
 }
 
 const ROTULO_PLATAFORMA: Record<string, string> = { google: 'Google', meta: 'Meta', webmotors: 'WebMotors', outra: 'Outra' }
 
 /**
- * Resumo da área da agência: os números do período, o funil por plataforma
+ * Resumo da área da agência: os números do período (visitas e leads), o funil por plataforma
  * (sessões → cliques no WhatsApp, com os toques acidentais à parte) e a tabela
  * de campanhas com conversão e score. Os filtros vêm do topo da área.
  */
@@ -35,9 +38,9 @@ export function ResumoAgencia() {
 	const carregar = useCallback(async () => {
 		setErro(null)
 		try {
-			const [r, c] = await Promise.all([fetch(api('resumo', { dias })), fetch(api('campanhas', { dias }))])
-			if (!r.ok || !c.ok) throw new Error(`HTTP ${r.status}/${c.status}`)
-			setDados({ resumo: await r.json(), campanhas: await c.json() })
+			const [r, c, l] = await Promise.all([fetch(api('resumo', { dias })), fetch(api('campanhas', { dias })), fetch(api('leads', { dias }))])
+			if (!r.ok || !c.ok || !l.ok) throw new Error(`HTTP ${r.status}/${c.status}/${l.status}`)
+			setDados({ resumo: await r.json(), campanhas: await c.json(), leads: await l.json() })
 		} catch (e) {
 			console.error('[Resumo agência] falha ao carregar:', e)
 			setErro('Não foi possível carregar o resumo.')
@@ -65,6 +68,8 @@ export function ResumoAgencia() {
 				/>
 				<Numero rotulo="Conversão" valor={fmtPct(taxa(total.whatsapp, total.sessoes))} destaque />
 			</div>
+
+			<NumerosLeads total={dados.leads.total} />
 
 			<Secao
 				titulo="Funil por plataforma"
