@@ -11,6 +11,7 @@ import type { ContagemLeads, LeadDaAgencia, StatusLead } from '@/lib/visitors/co
 type LinhaCampanha = ContagemLeads & { campanha: string; plataforma: string | null }
 
 interface Dados {
+	ligacao_ativa: boolean
 	total: ContagemLeads
 	porCampanha: LinhaCampanha[]
 	lista: LeadDaAgencia[]
@@ -88,6 +89,8 @@ export function LeadsAgencia() {
 	if (erro) return <Erro>{erro}</Erro>
 	if (!dados) return <p className="py-10 text-center text-sm text-foreground-secondary">Carregando…</p>
 
+	if (!dados.ligacao_ativa) return <AvisoImplantacao />
+
 	return (
 		<div className="space-y-6">
 			<NumerosLeads total={dados.total} />
@@ -100,6 +103,27 @@ export function LeadsAgencia() {
 			<Secao titulo={`Leads do período — ${fmtNum(dados.total.entraram)}`} dica="Os mais recentes primeiro. O veículo aparece como o CRM registrou, sem preço nem anotações.">
 				<TabelaOrdenavel colunas={colunasLista} linhas={dados.lista} chaveLinha={l => `${l.entrada}-${l.campanha}-${l.veiculo}`} vazio="Nenhum lead das suas campanhas no período." />
 			</Secao>
+		</div>
+	)
+}
+
+/**
+ * Enquanto nenhum lead do período chega ligado a uma visita do site, zeros
+ * diriam "a campanha não gerou lead" — o que não se sabe. O aviso diz o que
+ * está acontecendo e aponta o melhor indicador disponível.
+ */
+export function AvisoImplantacao({ compacto }: { compacto?: boolean }) {
+	return (
+		<div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+			<div className="text-sm font-medium text-foreground">Ligação dos leads às campanhas em implantação</div>
+			<p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
+				Os leads do CRM ainda não chegam ligados às visitas do site neste período, então ainda não dá para dizer quantos
+				vieram das suas campanhas.{' '}
+				{compacto
+					? 'Por enquanto, o melhor indicador são os cliques no WhatsApp, logo acima.'
+					: 'Por enquanto, o melhor indicador são os cliques no WhatsApp, no Resumo.'}{' '}
+				Os números de leads aparecem aqui assim que a ligação começar a chegar.
+			</p>
 		</div>
 	)
 }

@@ -141,6 +141,13 @@ export async function consultarLeadsAgencia(endereco: string, escopo: Escopo) {
 
 	return {
 		periodo: { dias, desde: desde ? desde.toISOString() : null },
+		/**
+		 * Algum card do período (de qualquer origem) está ligado a uma visita do
+		 * site? Se não, zero leads não quer dizer "a campanha não gerou lead", e
+		 * a tela mostra o aviso de implantação em vez dos zeros. Só sim/não: o
+		 * total de leads da loja não é da conta da agência.
+		 */
+		ligacao_ativa: ligados.length > 0,
 		total,
 		porCampanha: [...porCampanha.values()].sort((a, b) => b.entraram - a.entraram || a.campanha.localeCompare(b.campanha)),
 		lista,

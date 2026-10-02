@@ -120,6 +120,16 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 		expect(pmax.total).toEqual({ entraram: 2, com_vendedor: 1, vendidos: 0, perdidos: 1 })
 	})
 
+	it('diz se algum lead do período está ligado ao site (só sim/não, sem o total da loja)', async () => {
+		const comLigacao = await consultarLeadsAgencia('http://x/?dias=30', mhEscopo())
+		expect(comLigacao.ligacao_ativa).toBe(true)
+		// No último dia não entrou card nenhum: não há ligação para mostrar.
+		const semLigacao = await consultarLeadsAgencia('http://x/?dias=1', mhEscopo())
+		expect(semLigacao.ligacao_ativa).toBe(false)
+		expect(semLigacao.total).toEqual({ entraram: 0, com_vendedor: 0, vendidos: 0, perdidos: 0 })
+		expect(Object.keys(comLigacao).sort()).toEqual(['ligacao_ativa', 'lista', 'periodo', 'porCampanha', 'total'])
+	})
+
 	it('período maior traz o lead de 40 dias atrás', async () => {
 		const r = await consultarLeadsAgencia('http://x/?dias=90', mhEscopo())
 		expect(r.total.entraram).toBe(4)

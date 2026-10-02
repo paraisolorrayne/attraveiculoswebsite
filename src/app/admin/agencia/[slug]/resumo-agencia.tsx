@@ -8,7 +8,7 @@ import { Erro, Vazio } from '@/app/admin/visitors/visitors-ui'
 import { fmtNum, fmtPct, taxa } from '@/app/admin/visitors/visitors-metrics'
 import type { LinhaCampanhaScore } from '@/lib/visitors/score-clique'
 import type { ContagemLeads } from '@/lib/visitors/consultas/leads-agencia'
-import { NumerosLeads } from './leads/leads-agencia'
+import { AvisoImplantacao, NumerosLeads } from './leads/leads-agencia'
 
 interface Numeros {
 	sessoes: number
@@ -19,7 +19,7 @@ interface Numeros {
 interface Dados {
 	resumo: { total: Numeros; porPlataforma: Array<Numeros & { plataforma: string }> }
 	campanhas: { campanhas: LinhaCampanhaScore[]; score_desde: string }
-	leads: { total: ContagemLeads }
+	leads: { total: ContagemLeads; ligacao_ativa: boolean }
 }
 
 const ROTULO_PLATAFORMA: Record<string, string> = { google: 'Google', meta: 'Meta', webmotors: 'WebMotors', outra: 'Outra' }
@@ -69,7 +69,7 @@ export function ResumoAgencia() {
 				<Numero rotulo="Conversão" valor={fmtPct(taxa(total.whatsapp, total.sessoes))} destaque />
 			</div>
 
-			<NumerosLeads total={dados.leads.total} />
+			{dados.leads.ligacao_ativa ? <NumerosLeads total={dados.leads.total} /> : <AvisoImplantacao compacto />}
 
 			<Secao
 				titulo="Funil por plataforma"
