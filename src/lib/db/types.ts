@@ -580,6 +580,8 @@ export interface AdminUsersTable {
   // Exceções de acesso por usuário: { '<prefixo>': true|false }. Ver
   // canAccessRoute em src/lib/auth/roles.ts.
   secoes_extras: Generated<Record<string, boolean>>
+  /** Agência do usuário de papel `agencia` (spec 2026-10-02-area-agencia). */
+  agencia_id: string | null
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -588,6 +590,36 @@ export interface AdminUsersTable {
  * Interface raiz do banco. Chave = nome da tabela no schema `public`.
  * Adicione novas tabelas AQUI conforme cada módulo migra do supabase-js.
  */
+export type PlataformaCampanha = 'google' | 'meta' | 'webmotors'
+
+/** Agências que veem a própria área (Media House, EB…). Ver migration 20261002_agencias. */
+export interface AgenciasTable {
+  id: Generated<string>
+  nome: string
+  slug: string
+  /** Só sugerem campanhas não cadastradas ("detectadas"); não decidem a quem a visita pertence. */
+  prefixos: Generated<string[]>
+  utm_medium_marca: Generated<string[]>
+  criado_em: Generated<Timestamp>
+}
+
+/** Campanhas cadastradas pela agência. Índices únicos impedem a mesma campanha em duas agências. */
+export interface AgenciaCampanhasTable {
+  id: Generated<string>
+  agencia_id: string
+  plataforma: PlataformaCampanha
+  nome: string
+  id_externo: string | null
+  destino: Generated<'site' | 'whatsapp'>
+  mensagem_prefixo: string | null
+  inicio: Generated<string>
+  fim: string | null
+  criado_por: string | null
+  criado_em: Generated<Timestamp>
+  atualizado_por: string | null
+  atualizado_em: Generated<Timestamp>
+}
+
 export interface Database {
   visitor_fingerprints: VisitorFingerprintsTable
   visitor_sessions: VisitorSessionsTable
@@ -624,6 +656,8 @@ export interface Database {
   inventory_snapshots: InventorySnapshotsTable
   indexnow_submissions: IndexnowSubmissionsTable
   admin_users: AdminUsersTable
+  agencias: AgenciasTable
+  agencia_campanhas: AgenciaCampanhasTable
 }
 
 /**
@@ -649,6 +683,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
+  'agencias', 'agencia_campanhas',
 ] as const satisfies readonly (keyof Database)[]
 
 /**
