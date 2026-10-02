@@ -9,31 +9,17 @@
  * aqui ela vira uma definição só.
  */
 import { sql, type RawBuilder } from 'kysely'
-import { VALORES_NULOS_LISTA } from '@/lib/traffic-channel'
+import { saneado } from './saneado'
+import { ESCOPO_TUDO, naAgencia, type Escopo } from './escopo'
+
+// `saneado` mora em ./saneado: `escopo.ts` usa ele no topo do módulo e este
+// arquivo importa `escopo.ts` — com `saneado` aqui, a ordem de carga dos dois
+// decidiria se ele já existe ("saneado is not defined").
+export { saneado }
 
 /** Período padrão do painel. `dias = 0` significa "toda a história". */
 export const DIAS_PADRAO = 30
 export const DIAS_MAX = 730
-
-// Lista de "valores que significam vazio" vinda da lib de canal — ela é a fonte de verdade da
-// classificação, então é ela quem define o que é vazio, aqui também.
-const VAZIOS_SQL = sql.join(VALORES_NULOS_LISTA.map((v) => sql`${v}`))
-
-/**
- * Aplica no SQL o MESMO saneamento que `limpar()` faz na lib: apara, e trata '(not set)',
- * '(none)', 'null', 'undefined', 'direct', '-' como ausência de valor.
- *
- * Sem isso a rota e a lib discordavam: para o SQL `utm_source = '(not set)'` era um valor
- * presente, para a lib era vazio. A mesma sessão saía como "direto" numa tabela e como
- * "assistente de IA" noutra. Saneando aqui existe UMA definição — e de quebra o GROUP BY
- * agrupa toda a sujeira numa linha só em vez de espalhá-la.
- */
-export function saneado(coluna: RawBuilder<unknown>) {
-	return sql<string | null>`nullif(
-		case when lower(btrim(${coluna})) in (${VAZIOS_SQL}) then null else btrim(${coluna}) end,
-		''
-	)`
-}
 
 /**
  * Nome da campanha, com queda para o ID. O Google não tem código automático
@@ -56,14 +42,17 @@ export interface Periodo {
 }
 
 /** Lê `?dias=` da URL com os mesmos limites em todas as rotas. */
-export function periodoDaUrl(url: string): Periodo {
+export function periodoDaUrl(url: string, escopo: Escopo = ESCOPO_TUDO): Periodo {
 	const diasBruto = Number(new URL(url).searchParams.get('dias'))
 	const dias =
 		Number.isFinite(diasBruto) && diasBruto >= 0 && diasBruto <= DIAS_MAX
 			? Math.floor(diasBruto)
 			: DIAS_PADRAO
 	const desde = dias > 0 ? new Date(Date.now() - dias * 24 * 60 * 60 * 1000) : null
-	const noPeriodo = desde ? sql`s.started_at >= ${desde}` : sql`true`
+	const periodo = desde ? sql`s.started_at >= ${desde}` : sql`true`
+	// O escopo vai junto do período: toda consulta que já filtrava o período
+	// fica restrita à agência sem reescrever o SQL dela (spec 2026-10-02).
+	const noPeriodo = sql`(${periodo} and ${naAgencia(escopo)})`
 	return { dias, desde, noPeriodo }
 }
 
