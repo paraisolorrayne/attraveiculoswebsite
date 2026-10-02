@@ -18,6 +18,7 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { sql } from 'kysely'
+import { prepararBancoAgencias } from './fixtures/agencias'
 
 vi.mock('@/lib/auth/guard-api', () => ({ adminComAcessoA: async () => ({ id: 'a', role: 'admin' }) }))
 
@@ -205,6 +206,35 @@ describe.skipIf(!TEST_DB)('rotas de origem do painel — SQL real', () => {
 		expect(j.campanhas).toEqual(o.campanhas)
 		expect(j.score_desde).toBe(o.score_desde)
 		expect(j.campanhas.find((c: { chave: string }) => c.chave === 'porsche 911').score).toBeCloseTo(0.75 / 2)
+	})
+
+	it('consultas com escopo de agência só veem as campanhas cadastradas dela', async () => {
+		const { consultarOrigens } = await import('@/lib/visitors/consultas/origens')
+		const { consultarEntradas } = await import('@/lib/visitors/consultas/entradas')
+		const { consultarCampanhas } = await import('@/lib/visitors/consultas/campanhas')
+		const { consultarCampanha } = await import('@/lib/visitors/consultas/campanha')
+		await prepararBancoAgencias(db)
+		await sql`delete from agencia_campanhas`.execute(db)
+		const ag = (await db.selectFrom('agencias').select('id').where('slug', '=', 'media-house').executeTakeFirstOrThrow()).id
+		const escopo = { tipo: 'agencia' as const, agenciaId: ag }
+
+		// Sem campanha cadastrada, a agência não vê nada.
+		expect((await consultarOrigens('http://x/?dias=30', escopo)).total_sessoes).toBe(0)
+		expect((await consultarEntradas('http://x/?dias=30', escopo)).total_sessoes).toBe(0)
+
+		// Com a campanha da Meta "Porsche 911" (as duas grafias da fixture), vê as 2 sessões dela.
+		await db.insertInto('agencia_campanhas').values({ agencia_id: ag, plataforma: 'meta', nome: 'Porsche 911' }).execute()
+		expect((await consultarOrigens('http://x/?dias=30', escopo)).total_sessoes).toBe(2)
+		expect((await consultarEntradas('http://x/?dias=30', escopo)).total_sessoes).toBe(2)
+		const c = await consultarCampanhas('http://x/?dias=30', escopo)
+		expect(c.campanhas.map((l: { chave: string }) => l.chave)).toEqual(['porsche 911'])
+		const det = await consultarCampanha('http://x/?chave=porsche%20911&dias=30', escopo)
+		expect('erro' in det ? det : det.resumo?.sessoes).toBe(2)
+
+		// O tráfego sem campanha (direto, gclid, Linktree) não aparece para ela.
+		const fora = await consultarCampanha('http://x/?chave=inexistente&dias=30', escopo)
+		expect('erro' in fora ? fora : fora.resumo?.sessoes).toBe(0)
+		await sql`delete from agencia_campanhas`.execute(db)
 	})
 
 	it('entradas: primeira página de cada sessão × canal', async () => {

@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminComAcessoA } from '@/lib/auth/guard-api'
-import { periodoDaUrl } from '@/lib/visitors/sql-atribuicao'
-import { CLIQUES_REGISTRADOS_DESDE } from '@/lib/visitors/score-clique'
-import { carregarCampanhasComScore } from '@/lib/visitors/campanhas-score-db'
+import { ESCOPO_TUDO } from '@/lib/visitors/escopo'
+import { consultarCampanhas } from '@/lib/visitors/consultas/campanhas'
 
-/**
- * GET /api/admin/visitors/campanhas?dias=
- *
- * Só a tabela de campanhas com conversão e score — o que a aba Estatísticas do
- * Marketing mostra, sem carregar o resto da aba Origens. Mesma permissão do
- * painel de visitantes: quem não vê Visitantes não vê isto, mesmo chamando a
- * rota direto.
- */
+// O corpo mora em src/lib/visitors/consultas/campanhas.ts: a mesma consulta serve à área da agência,
+// com o escopo dela (spec 2026-10-02-area-agencia). Aqui é o painel da Attra.
 export async function GET(request: NextRequest) {
 	try {
 		const admin = await adminComAcessoA('/admin/visitors')
 		if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-		const { dias, desde, noPeriodo } = periodoDaUrl(request.url)
-		return NextResponse.json({
-			periodo: { dias, desde: desde ? desde.toISOString() : null },
-			campanhas: await carregarCampanhasComScore(noPeriodo),
-			score_desde: CLIQUES_REGISTRADOS_DESDE.toISOString(),
-		})
+		const r = await consultarCampanhas(request.url, ESCOPO_TUDO)
+		return NextResponse.json(r)
 	} catch (error) {
 		console.error('[Visitors Campanhas API] Error:', error)
 		return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
