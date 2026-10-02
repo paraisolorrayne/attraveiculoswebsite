@@ -65,7 +65,7 @@ export async function consultarComportamento(endereco: string, escopo: Escopo) {
   // mostra.
   const noPeriodo = sql`${desde ? sql`v.viewed_at >= ${desde}` : sql`true`}
     and v.page_path not like all (${PADROES_LIKE_ROTAS_INTERNAS})
-    and ${sessaoNaAgencia(escopo, sql`v.session_id`)}`
+    and ${sessaoNaAgencia(escopo, sql`v.session_id`, desde)}`
 
   const [porTipo, prendem, perdem, rolagem, resumo] = await Promise.all([
     // Engajamento por tipo de página. É o recorte que responde "onde a pessoa

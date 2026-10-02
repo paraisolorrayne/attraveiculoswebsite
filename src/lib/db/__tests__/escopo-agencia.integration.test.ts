@@ -65,8 +65,27 @@ describe.skipIf(!TEST_DB)('escopo de agência — SQL real', () => {
 	})
 
 	it('sessaoNaAgencia filtra por id de sessão (consultas que partem de page views)', async () => {
-		const r = await sql<{ session_id: string }>`select s2.session_id from visitor_sessions s2 where ${esc.sessaoNaAgencia({ tipo: 'agencia', agenciaId: eb }, sql`s2.id`)}`.execute(db)
+		const r = await sql<{ session_id: string }>`select s2.session_id from visitor_sessions s2 where ${esc.sessaoNaAgencia({ tipo: 'agencia', agenciaId: eb }, sql`s2.id`, null)}`.execute(db)
 		expect(r.rows.map(x => x.session_id)).toEqual(['eb'])
+	})
+
+	it('sessaoNaAgencia com período só procura sessões iniciadas a partir da véspera do início', async () => {
+		const fp = (await db.selectFrom('visitor_fingerprints').select('id').where('visitor_id', '=', 'v-esc').executeTakeFirstOrThrow()).id
+		const dezDiasAtras = new Date(Date.now() - 10 * 86_400_000)
+		await db.insertInto('visitor_sessions').values({
+			fingerprint_id: fp, session_id: 'eb-antiga', started_at: dezDiasAtras, last_activity_at: dezDiasAtras,
+			utm_source: 'facebook', utm_id: '120240538111140043', fbclid: 'f',
+		}).execute()
+		try {
+			const daEb = async (desde: Date | null) =>
+				(await sql<{ session_id: string }>`select s2.session_id from visitor_sessions s2 where ${esc.sessaoNaAgencia({ tipo: 'agencia', agenciaId: eb }, sql`s2.id`, desde)} order by 1`.execute(db)).rows.map(x => x.session_id)
+			expect(await daEb(null)).toEqual(['eb', 'eb-antiga'])
+			expect(await daEb(new Date(Date.now() - 7 * 86_400_000))).toEqual(['eb'])
+			// Margem de um dia: a sessão que começou na véspera do período ainda conta.
+			expect(await daEb(new Date(Date.now() - 10.5 * 86_400_000 + 86_400_000))).toEqual(['eb', 'eb-antiga'])
+		} finally {
+			await db.deleteFrom('visitor_sessions').where('session_id', '=', 'eb-antiga').execute()
+		}
 	})
 
 	it('periodoDaUrl leva o escopo no noPeriodo', async () => {

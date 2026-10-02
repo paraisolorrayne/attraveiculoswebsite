@@ -75,7 +75,7 @@ export async function consultarVeiculos(endereco: string, escopo: Escopo) {
   const dias = Number(new URL(endereco).searchParams.get('dias') ?? DIAS_PADRAO)
   const desde = dias > 0 ? new Date(Date.now() - dias * 86_400_000) : null
   // O escopo da agência entra pela sessão de cada page view (e de cada clique abaixo).
-  const noPeriodo = sql`${desde ? sql`v.viewed_at >= ${desde}` : sql`true`} and ${sessaoNaAgencia(escopo, sql`v.session_id`)}`
+  const noPeriodo = sql`${desde ? sql`v.viewed_at >= ${desde}` : sql`true`} and ${sessaoNaAgencia(escopo, sql`v.session_id`, desde)}`
 
   const [porVeiculo, precos, cliques, estoque] = await Promise.all([
     // Um registro por veículo visto, com engajamento junto. É daqui que saem
@@ -141,7 +141,7 @@ export async function consultarVeiculos(endereco: string, escopo: Escopo) {
       from whatsapp_clicks w
       left join visitor_sessions s on s.id = w.session_db_id
       left join visitor_fingerprints f on f.id = s.fingerprint_id
-      where ${desde ? sql`w.clicked_at >= ${desde}` : sql`true`} and ${sessaoNaAgencia(escopo, sql`w.session_db_id`)}
+      where ${desde ? sql`w.clicked_at >= ${desde}` : sql`true`} and ${sessaoNaAgencia(escopo, sql`w.session_db_id`, desde)}
       order by w.clicked_at desc
       limit 50
     `.execute(db),

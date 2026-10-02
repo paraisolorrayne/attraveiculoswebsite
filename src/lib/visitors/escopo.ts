@@ -62,8 +62,14 @@ export function naAgencia(escopo: Escopo): RawBuilder<boolean> {
 	)`
 }
 
-/** Para consultas que partem de page views (`v.session_id`) ou cliques. */
-export function sessaoNaAgencia(escopo: Escopo, colunaSessao: RawBuilder<unknown>): RawBuilder<boolean> {
+/**
+ * Para consultas que partem de page views (`v.session_id`) ou cliques. Com
+ * `desde`, só procura entre as sessões que começaram a partir da véspera: a
+ * page view do período pode ser de uma sessão aberta pouco antes do corte, e
+ * sem o limite a subconsulta varreria a tabela de sessões inteira.
+ */
+export function sessaoNaAgencia(escopo: Escopo, colunaSessao: RawBuilder<unknown>, desde: Date | null): RawBuilder<boolean> {
 	if (escopo.tipo === 'tudo') return sql<boolean>`true`
-	return sql<boolean>`${colunaSessao} in (select s.id from visitor_sessions s where ${naAgencia(escopo)})`
+	const recente = desde ? sql`s.started_at >= ${desde}::timestamptz - interval '1 day'` : sql`true`
+	return sql<boolean>`${colunaSessao} in (select s.id from visitor_sessions s where ${recente} and ${naAgencia(escopo)})`
 }
