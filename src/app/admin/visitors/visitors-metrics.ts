@@ -89,6 +89,15 @@ export function fmtPct(valor: number, casas = 1): string {
 	return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`
 }
 
+/**
+ * Para valores que chegam como FRAÇÃO (0,0529 = 5,29%), como a conversão e o
+ * score da tabela de campanhas. O fmtPct espera percentual; passar a fração
+ * direto mostrava o número 100 vezes menor.
+ */
+export function fmtFracao(fracao: number, casas = 1): string {
+	return fmtPct(fracao * 100, casas)
+}
+
 /** Média com uma casa; usada em "veículos diferentes por sessão". */
 export function fmtMedia(parte: number, total: number): string {
 	if (total <= 0) return '—'

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { CanalTrafego } from '@/lib/traffic-channel'
 import { papeisDaPlataforma, plataformaDominante } from '@/lib/visitors/marcacao-plataforma'
 import { Secao } from '../../visitors-tabelas'
-import { fmtDuracao, fmtNum, fmtPct, nomeDoSlug, taxa } from '../../visitors-metrics'
+import { fmtDuracao, fmtNum, fmtFracao, fmtPct, nomeDoSlug, taxa } from '../../visitors-metrics'
 import { Badge, BarraControles, CRU, ConteudoVolume, Erro, Vazio, diaCurto, useValoresCrus } from '../../visitors-ui'
 import { TabelaOrdenavel } from '../../visitors-tabela'
 import { useLarguraTotal } from '../../largura-total'
@@ -148,7 +148,7 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 							valor={`${fmtNum(Math.max(0, r.whatsapp - r.acidentais))}${r.acidentais > 0 ? ` · +${fmtNum(r.acidentais)} acidentais` : ''}`}
 						/>
 						<Kpi rotulo="Taxa de conversão" valor={fmtPct(taxa(Math.max(0, r.whatsapp - r.acidentais), r.sessoes))} destaque />
-						<Kpi rotulo="Score (tempo até o clique)" valor={dados.score.valor === null ? '—' : fmtPct(dados.score.valor)} destaque />
+						<Kpi rotulo="Score (tempo até o clique)" valor={dados.score.valor === null ? '—' : fmtFracao(dados.score.valor)} destaque />
 						<Kpi rotulo="Formulários" valor={fmtNum(r.formularios)} />
 					</div>
 

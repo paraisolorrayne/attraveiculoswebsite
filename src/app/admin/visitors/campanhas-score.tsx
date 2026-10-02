@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { SEM_CAMPANHA } from '@/lib/traffic-channel'
 import { FAIXAS_TEMPO_CLIQUE, type LinhaCampanhaScore } from '@/lib/visitors/score-clique'
 import { Secao } from './visitors-tabelas'
-import { corTaxa, fmtDuracao, fmtNum, fmtPct, taxa, VOLUME_MINIMO } from './visitors-metrics'
+import { corTaxa, fmtDuracao, fmtFracao, fmtNum, fmtPct, taxa, VOLUME_MINIMO } from './visitors-metrics'
 import { BarraControles, ConteudoVolume, Erro } from './visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from './visitors-tabela'
 import { useDias, useVisitantesApi } from './visitantes-api'
@@ -97,7 +97,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 			valor: l => l.conversao,
 			alinhar: 'dir',
 			classe: 'tabular-nums',
-			render: l => <span className={corTaxa(l.conversao, mediaConversao, l.sessoes)}>{fmtPct(l.conversao)}</span>,
+			render: l => <span className={corTaxa(l.conversao * 100, mediaConversao, l.sessoes)}>{fmtFracao(l.conversao)}</span>,
 		},
 		{
 			chave: 'score',
@@ -110,8 +110,8 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 				l.score === null ? (
 					<span className="text-foreground-secondary">—</span>
 				) : (
-					<span className={`text-base font-semibold ${corTaxa(l.score, mediaScore, l.sessoes_mensuraveis)}`}>
-						{fmtPct(l.score)}
+					<span className={`text-base font-semibold ${corTaxa(l.score * 100, mediaScore, l.sessoes_mensuraveis)}`}>
+						{fmtFracao(l.score)}
 						{l.sessoes_mensuraveis < VOLUME_MINIMO && (
 							<span className="ml-1 text-[10px] font-normal text-foreground-secondary">poucos dados</span>
 						)}
