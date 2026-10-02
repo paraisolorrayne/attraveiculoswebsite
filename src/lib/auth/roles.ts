@@ -133,6 +133,23 @@ export function canAccessRoute(
   return rules.some((r) => !r.startsWith('!') && pathname.startsWith(r))
 }
 
+/**
+ * O que o papel `agencia` pode abrir — páginas E API (o middleware aplica).
+ *
+ * A agência é a primeira credencial de gente de fora da loja, e várias rotas
+ * antigas de /api/admin só checam "está logado" (newsletter com e-mails de
+ * inscritos, edição do blog, sons…). Em vez de depender de cada rota, a
+ * agência é negada em tudo que não for a área dela, entrar e sair. O hub
+ * `/admin` fica liberado só porque redireciona para a área.
+ */
+export function rotaPermitidaParaAgencia(pathname: string): boolean {
+  if (pathname === '/admin') return true
+  if (pathname.startsWith('/admin/agencia/') || pathname === '/admin/agencia') return true
+  if (ALWAYS_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true
+  if (pathname.startsWith('/api/admin/agencia/')) return true
+  return pathname === '/api/admin/login' || pathname === '/api/admin/logout'
+}
+
 /** `admin` ou `owner` — os papéis "altos" (ex.: ver o CRM). */
 export function isPrivileged(role: AdminRole): boolean {
   return role === 'admin' || role === 'owner'

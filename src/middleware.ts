@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authConfig } from '@/auth.config'
-import { AREAS_SO_ADMIN, isAdminRole } from '@/lib/auth/roles'
+import { AREAS_SO_ADMIN, isAdminRole, rotaPermitidaParaAgencia } from '@/lib/auth/roles'
 
 // Auth.js edge-safe (sem providers/DB) só pra ler a sessão (JWT) no middleware.
 // Migrado do Supabase GoTrue → Auth.js (ver docs/MIGRACAO_POSTGRES_PURO.md).
@@ -29,6 +29,16 @@ const { auth } = NextAuth(authConfig)
 const comAutenticacao = auth((req) => {
   const { pathname } = req.nextUrl
 
+  // API do admin: cada rota faz a própria autorização (e responde 401 em JSON,
+  // não redireciona). Aqui entra só a trava do papel `agencia`, que é gente de
+  // fora da loja: várias rotas antigas só checam "está logado".
+  if (pathname.startsWith('/api/admin')) {
+    if (req.auth?.user?.role === 'agencia' && !rotaPermitidaParaAgencia(pathname)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    return
+  }
+
   // Só protege /admin/*; login e reset são livres.
   if (!pathname.startsWith('/admin')) return
   if (pathname === '/admin/login' || pathname.startsWith('/admin/reset-password')) return
@@ -44,6 +54,13 @@ const comAutenticacao = auth((req) => {
   // recebesse poderia editar papéis e se promover. Fica no gate mais externo
   // porque a decisão depende só do papel, que o token sempre traz.
   if (role !== 'admin' && AREAS_SO_ADMIN.some((p) => pathname.startsWith(p))) {
+    return NextResponse.redirect(new URL('/admin', req.url))
+  }
+
+  // Agência só abre a área dela; qualquer outra página do admin volta ao hub,
+  // que a manda para a área. Não depende do layout, que renderiza a página
+  // mesmo quando nega.
+  if (role === 'agencia' && !rotaPermitidaParaAgencia(pathname)) {
     return NextResponse.redirect(new URL('/admin', req.url))
   }
 
@@ -80,5 +97,5 @@ export default function middleware(
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/veiculo/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/veiculo/:path*'],
 }

@@ -116,8 +116,14 @@ async function adminDaLinha(row: Selectable<Database['admin_users']>): Promise<A
   }
 }
 
+/**
+ * Logado E da equipe da loja. Várias rotas antigas usam só isto como
+ * autorização; a agência (gente de fora) nunca passa — segunda camada, caso o
+ * papel mude no banco com a sessão aberta (o middleware julga pelo token).
+ */
 export async function isAuthenticated(): Promise<boolean> {
-  return (await getCurrentAdmin()) !== null
+  const admin = await getCurrentAdmin()
+  return admin !== null && admin.role !== 'agencia'
 }
 
 /** admin tem acesso a tudo; senão, precisa bater o papel exato. */
