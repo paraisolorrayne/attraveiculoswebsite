@@ -61,4 +61,16 @@ describe.skipIf(!TEST_DB)('migration 20261002_agencias', () => {
 		expect(u.agencia_id).toBe(mh)
 		await sql`delete from admin_users where email = 'teste-agencia@x'`.execute(db)
 	})
+	it('na VPS (papel attra existe), as tabelas novas ficam com o usuário do app', async () => {
+		// Em produção a migration roda como postgres e o app conecta como attra.
+		await sql`do $$ begin if not exists (select 1 from pg_roles where rolname = 'attra') then create role attra nologin; end if; end $$`.execute(db)
+		await sql.raw(readFileSync(resolve(__dirname, '../../../../supabase/migrations/20261002_agencias.sql'), 'utf8')).execute(db)
+		const r = await sql<{ tablename: string; tableowner: string }>`
+			select tablename, tableowner from pg_tables where tablename in ('agencias', 'agencia_campanhas') order by 1
+		`.execute(db)
+		expect(r.rows).toEqual([
+			{ tablename: 'agencia_campanhas', tableowner: 'attra' },
+			{ tablename: 'agencias', tableowner: 'attra' },
+		])
+	})
 })

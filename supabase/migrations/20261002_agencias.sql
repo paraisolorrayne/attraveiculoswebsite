@@ -51,3 +51,14 @@ ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS agencia_id uuid REFERENCES agen
 INSERT INTO agencias (nome, slug, prefixos, utm_medium_marca)
 VALUES ('Media House', 'media-house', '{va-,[va],%5bva%5d}', '{mediahouse}')
 ON CONFLICT (slug) DO NOTHING;
+
+-- Na VPS esta migration roda como postgres (sudo -u postgres psql) e o app
+-- conecta como attra, dono do banco. Sem isto as tabelas novas ficariam do
+-- postgres e o admin não conseguiria lê-las. Nos bancos locais não há attra.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'attra') THEN
+    ALTER TABLE agencias OWNER TO attra;
+    ALTER TABLE agencia_campanhas OWNER TO attra;
+  END IF;
+END $$;
