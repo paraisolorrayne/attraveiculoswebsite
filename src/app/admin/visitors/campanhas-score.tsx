@@ -9,6 +9,7 @@ import { corTaxa, fmtDuracao, fmtFracao, fmtNum, fmtPct, taxa, VOLUME_MINIMO } f
 import { BarraControles, ConteudoVolume, Erro } from './visitors-ui'
 import { TabelaOrdenavel, type ColunaTabela } from './visitors-tabela'
 import { useDias, useVisitantesApi } from './visitantes-api'
+import { useLarguraTotal } from './largura-total'
 
 // Tabela de campanhas com conversão e score (tempo até o clique no WhatsApp).
 // Mora aqui, e não dentro de uma aba, porque aparece em dois lugares: na aba
@@ -24,6 +25,8 @@ function scoreMedio(linhas: LinhaCampanhaScore[]): number {
 }
 
 export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCampanhaScore[]; scoreDesde: string }) {
+	// Na área da agência o nome da campanha quebra em vez de cortar: é o que ela procura na tabela.
+	const larguraTotal = useLarguraTotal()
 	const { link } = useVisitantesApi()
 	const total = linhas.reduce((s, l) => s + l.sessoes, 0)
 	const maior = Math.max(0, ...linhas.map(l => l.sessoes))
@@ -49,7 +52,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 				) : (
 					<Link
 						href={link(`/campanha/${encodeURIComponent(l.chave)}`)}
-						className="block truncate font-medium hover:underline"
+						className={larguraTotal ? 'block break-all font-medium hover:underline' : 'block truncate font-medium hover:underline'}
 						title={l.rotulo}
 					>
 						{l.rotulo}

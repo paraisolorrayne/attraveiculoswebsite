@@ -33,7 +33,7 @@ const ROTULO_PERFIL: Record<FiltroPerfil, string> = {
 }
 
 export function VisitorsDashboard(props: Props) {
-	const { api, modo } = useVisitantesApi()
+	const { api, modo, periodo } = useVisitantesApi()
 	// `adminId` continua no contrato porque o page.tsx o envia, mas o painel é somente leitura:
 	// não há autoria a registrar nem dado a filtrar por admin.
 	void props.adminId
@@ -142,6 +142,8 @@ export function VisitorsDashboard(props: Props) {
 						</p>
 					</div>
 					<div className="flex items-center gap-3 flex-wrap justify-end">
+						{/* Na área da agência o período fica no topo e vale para todas as abas. */}
+						{!periodo && (
 						<span className="flex items-center gap-1.5">
 							<select
 								value={dias}
@@ -158,6 +160,7 @@ export function VisitorsDashboard(props: Props) {
 								dias; Quinzena = 15; Mês = 30; Tudo = toda a base.
 							</InfoDica>
 						</span>
+						)}
 						<button
 							onClick={carregarMetricas}
 							disabled={carregando}

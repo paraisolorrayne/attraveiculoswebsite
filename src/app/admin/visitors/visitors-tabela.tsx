@@ -431,7 +431,8 @@ function TabelaLarguraTotal<T>({
 							return (
 								<th
 									key={c.chave}
-									className={`${TH_LT} ${classeDaPrioridade(prioridades[i])} ${c.alinhar === 'dir' ? 'text-right' : 'text-left'} ${ordenavel ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
+									// A primeira coluna é o nome da linha (campanha, página, fonte): ganha mais espaço.
+									className={`${TH_LT} ${i === 0 ? 'w-1/4' : ''} ${classeDaPrioridade(prioridades[i])} ${c.alinhar === 'dir' ? 'text-right' : 'text-left'} ${ordenavel ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
 									aria-sort={ativa ? (ordenacao!.direcao === 'asc' ? 'ascending' : 'descending') : undefined}
 									onClick={ordenavel ? () => ordenarPor(c.chave) : undefined}
 								>
