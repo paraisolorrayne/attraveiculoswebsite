@@ -8,7 +8,9 @@
  */
 
 import { auth, signIn, signOut as authSignOut } from '@/auth'
+import type { Selectable } from 'kysely'
 import { db } from '@/lib/db'
+import type { Database } from '@/lib/db/types'
 import { deveRegistrarAcesso, registrarAcesso } from '@/lib/auth/ultimo-acesso'
 import { canAccessRoute as canAccessRouteForRole, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
 
@@ -52,9 +54,13 @@ export async function signInWithEmail(email: string, password: string): Promise<
     // Auth.js lança AuthError (ex.: CredentialsSignin) em falha de login
     return { success: false, error: 'Email ou senha inválidos, ou acesso não autorizado' }
   }
-  const user = await getCurrentAdmin()
-  if (!user) return { success: false, error: 'Acesso não autorizado ao painel admin' }
-  return { success: true, user }
+  // O usuário vem do e-mail que o signIn ACABOU de validar, e não da sessão:
+  // em HTTP local o auth() desta mesma requisição ainda não enxerga o cookie
+  // recém-gravado e devolvia null — login aceito, resposta 401, tela travada.
+  const row = await db.selectFrom('admin_users').selectAll()
+    .where('email', '=', email.toLowerCase().trim()).where('is_active', '=', true).executeTakeFirst()
+  if (!row) return { success: false, error: 'Acesso não autorizado ao painel admin' }
+  return { success: true, user: await adminDaLinha(row) }
 }
 
 /** Logout — limpa o cookie de sessão. */
@@ -84,6 +90,11 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     .where('id', '=', id).where('is_active', '=', true).executeTakeFirst()
   if (!row) return null
 
+  return adminDaLinha(row)
+}
+
+/** Monta o AdminUser a partir da linha do banco (e registra o acesso). */
+async function adminDaLinha(row: Selectable<Database['admin_users']>): Promise<AdminUser> {
   if (deveRegistrarAcesso(row.ultimo_acesso_em)) registrarAcesso(row.id)
 
   const agencia = row.agencia_id
