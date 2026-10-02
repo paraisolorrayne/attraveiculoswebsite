@@ -30,7 +30,7 @@ async function mensagemDeConflito(agenciaId: string, c: CampanhaEntrada): Promis
 	const dona = await sql<{ agencia_id: string }>`
 		select agencia_id from agencia_campanhas
 		where plataforma = ${c.plataforma}
-		  and ((${c.id_externo}::text is not null and btrim(id_externo) = ${c.id_externo})
+		  and ((${c.id_externo}::text is not null and lower(btrim(id_externo)) = lower(${c.id_externo}))
 		       or lower(btrim(nome)) = lower(${c.nome}))
 		limit 1
 	`.execute(db)

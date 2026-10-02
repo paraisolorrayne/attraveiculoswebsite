@@ -36,8 +36,12 @@ CREATE TABLE IF NOT EXISTS agencia_campanhas (
   atualizado_em    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS agencia_campanhas_id_externo_unico
-  ON agencia_campanhas (plataforma, btrim(id_externo)) WHERE id_externo IS NOT NULL;
+-- O ID da WebMotors tem letras e chega no utm_id com a caixa que o portal
+-- quiser: 'WM-AbC' e 'wm-abc' são a mesma campanha. (O índice com caixa, de
+-- uma versão anterior desta migration, só existiu em bancos locais.)
+DROP INDEX IF EXISTS agencia_campanhas_id_externo_unico;
+CREATE UNIQUE INDEX IF NOT EXISTS agencia_campanhas_id_externo_unico_ci
+  ON agencia_campanhas (plataforma, lower(btrim(id_externo))) WHERE id_externo IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS agencia_campanhas_nome_unico
   ON agencia_campanhas (plataforma, lower(btrim(nome)));
 CREATE INDEX IF NOT EXISTS agencia_campanhas_agencia_idx ON agencia_campanhas (agencia_id);

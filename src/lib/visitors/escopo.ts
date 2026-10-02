@@ -44,7 +44,7 @@ end)`
 export const casaCampanhaSql = sql<boolean>`(
 	(${plataformaDaSessaoSql} is null or ac.plataforma = ${plataformaDaSessaoSql})
 	and (
-		(ac.id_externo is not null and btrim(s.utm_id) = btrim(ac.id_externo))
+		(ac.id_externo is not null and lower(btrim(s.utm_id)) = lower(btrim(ac.id_externo)))
 		or lower(btrim(${saneado(sql`s.utm_campaign`)})) = lower(btrim(ac.nome))
 	)
 )`

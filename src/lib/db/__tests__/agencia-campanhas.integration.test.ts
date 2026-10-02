@@ -80,6 +80,19 @@ describe.skipIf(!TEST_DB)('cadastro de campanhas da agência', () => {
 		expect(erro).not.toContain('Media House')
 	})
 
+	it('ID da WebMotors não diferencia maiúsculas: a mesma campanha não entra duas vezes', async () => {
+		comoMH()
+		expect((await criar({ plataforma: 'webmotors', nome: 'wm-caixa', id_externo: 'WM-AbC123', inicio: '2026-09-01' })).status).toBe(201)
+		comoEB()
+		const outra = await criar({ plataforma: 'webmotors', nome: 'wm-caixa-eb', id_externo: 'wm-abc123', inicio: '2026-09-01' })
+		expect(outra.status).toBe(409)
+		expect((await outra.json()).error).toBe('Esta campanha já está cadastrada em outra agência. Fale com a Attra.')
+		comoMH()
+		const propria = await criar({ plataforma: 'webmotors', nome: 'wm-caixa-2', id_externo: ' WM-ABC123 ', inicio: '2026-09-01' })
+		expect(propria.status).toBe(409)
+		expect((await propria.json()).error).toBe('Você já cadastrou esta campanha.')
+	})
+
 	it('validação devolve 400 com a mensagem', async () => {
 		comoMH()
 		const r = await criar({ plataforma: 'meta', nome: 'x', id_externo: 'abc', inicio: '2026-09-01' })

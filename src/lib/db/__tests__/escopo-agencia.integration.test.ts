@@ -88,6 +88,21 @@ describe.skipIf(!TEST_DB)('escopo de agência — SQL real', () => {
 		}
 	})
 
+	it('ID da WebMotors casa sem diferenciar maiúsculas', async () => {
+		const fp = (await db.selectFrom('visitor_fingerprints').select('id').where('visitor_id', '=', 'v-esc').executeTakeFirstOrThrow()).id
+		const c = await db.insertInto('agencia_campanhas').values({ agencia_id: mh, plataforma: 'webmotors', nome: 'wm-caixa', id_externo: 'WM-AbC123' }).returning('id').executeTakeFirstOrThrow()
+		await db.insertInto('visitor_sessions').values({
+			fingerprint_id: fp, session_id: 'wm-caixa', started_at: new Date(), last_activity_at: new Date(),
+			utm_source: 'webmotors', utm_id: 'wm-abc123',
+		}).execute()
+		try {
+			expect(await doEscopo({ tipo: 'agencia', agenciaId: mh, campanhaIds: [c.id] })).toEqual(['wm-caixa'])
+		} finally {
+			await db.deleteFrom('visitor_sessions').where('session_id', '=', 'wm-caixa').execute()
+			await db.deleteFrom('agencia_campanhas').where('id', '=', c.id).execute()
+		}
+	})
+
 	it('periodoDaUrl leva o escopo no noPeriodo', async () => {
 		const { periodoDaUrl } = await import('@/lib/visitors/sql-atribuicao')
 		const { noPeriodo } = periodoDaUrl('http://x/?dias=30', { tipo: 'agencia', agenciaId: eb })
