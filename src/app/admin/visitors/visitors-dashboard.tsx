@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Car, Loader2, Mail, Phone, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { VisitorProfileWithDetails } from '@/types/database'
-import { PERIODOS } from '../crm/crm-constants'
+import { PERIODOS_VISITANTES } from './periodos'
 import { InfoDica } from '../crm/info-dica'
 import { ContextoClique, ListaCidades, ListaVeiculos, MidiaPaga, Secao, TabelaCampanhas, TabelaCanais } from './visitors-tabelas'
 import { TabelaOrdenavel } from './visitors-tabela'
@@ -151,12 +151,12 @@ export function VisitorsDashboard(props: Props) {
 								aria-label="Período"
 								className="px-3 py-2 bg-background-card border border-border rounded-lg text-sm text-foreground hover:bg-background transition-colors"
 							>
-								{PERIODOS.map(p => (
+								{PERIODOS_VISITANTES.map(p => (
 									<option key={p.dias} value={p.dias}>{p.label}</option>
 								))}
 							</select>
 							<InfoDica>
-								Filtra pela data de início da sessão. &ldquo;Hoje&rdquo; = últimas 24h; Semana = 7
+								Filtra pela data de início da sessão. Últimas 24 h = janela corrida até agora; Semana = 7
 								dias; Quinzena = 15; Mês = 30; Tudo = toda a base.
 							</InfoDica>
 						</span>

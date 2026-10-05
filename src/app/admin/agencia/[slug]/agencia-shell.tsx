@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { LarguraTotalProvider } from '@/app/admin/visitors/largura-total'
 import { VisitantesApiProvider, comParams, type VisitantesApi } from '@/app/admin/visitors/visitantes-api'
 import { SeletorPeriodo } from '@/app/admin/visitors/visitors-ui'
+import { diasDaUrl } from '@/app/admin/visitors/periodos'
 import { comFiltros, linkDaAgencia } from '@/lib/agencias/links'
 
 const PLATAFORMAS = [
@@ -34,7 +35,7 @@ export function AgenciaShell({
 	const router = useRouter()
 	const pathname = usePathname()
 	const params = useSearchParams()
-	const dias = Number(params.get('dias')) || 30
+	const dias = diasDaUrl(params.get('dias'))
 	const plataforma = params.get('plataforma') ?? ''
 	const campanha = params.get('campanha') ?? ''
 

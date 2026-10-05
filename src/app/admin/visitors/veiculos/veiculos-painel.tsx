@@ -59,9 +59,11 @@ function reais(valor: number | null): string {
 }
 
 export function VeiculosPainel() {
-  const { api } = useVisitantesApi()
+  const { api, periodo } = useVisitantesApi()
   const [dados, setDados] = useState<Dados | null>(null)
   const [dias, setDias] = useDias()
+  // Na área da agência o período vem do topo (contexto), e os botões daqui somem.
+  const periodoCompartilhado = Boolean(periodo)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -97,7 +99,8 @@ export function VeiculosPainel() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Na área da agência o período é o do topo, que vale para todas as abas. */}
+      {!periodoCompartilhado && <div className="flex flex-wrap items-center gap-2">
         {PERIODOS.map(p => (
           <button
             key={p.dias}
@@ -109,7 +112,7 @@ export function VeiculosPainel() {
             {p.rotulo}
           </button>
         ))}
-      </div>
+      </div>}
 
       <Secao
         titulo="Faixa procurada x faixa disponível"

@@ -6,7 +6,7 @@ import { useVisitantesApi } from './visitantes-api'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CanalTrafego } from '@/lib/traffic-channel'
-import { PERIODOS } from '../crm/crm-constants'
+import { PERIODOS_VISITANTES } from './periodos'
 import { fmtPct, larguraRelativa, taxa } from './visitors-metrics'
 
 /**
@@ -77,7 +77,7 @@ export function SeletorPeriodo({ dias, onChange }: { dias: number; onChange: (d:
 			className="rounded-lg border border-border bg-background-card px-3 py-2 text-sm text-foreground"
 			aria-label="Período"
 		>
-			{PERIODOS.map(p => (
+			{PERIODOS_VISITANTES.map(p => (
 				<option key={p.dias} value={p.dias}>
 					{p.label}
 				</option>
