@@ -170,13 +170,9 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       isSeoPage(currentPage) && !vehicleBrand
         ? context.message
         : generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
-    // SEM [ref: ...] na mensagem.
-    //
-    // O identificador de sessão viajava aqui dentro, no texto que o CLIENTE
-    // envia para a loja — atribuição funcionando às custas de externalizar um
-    // dado interno numa mensagem que não é nossa. A referência passou para o
-    // registro do clique (`whatsapp_clicks`), e a conversa é correlacionada no
-    // recebimento. A mensagem fica limpa.
+    // O [ref: <session_id>] não entra aqui: o ouvinte global do
+    // visitor-tracking-provider anexa no instante do clique, igual para todos
+    // os botões de WhatsApp do site.
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(baseMessage)}`
   }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message])
 

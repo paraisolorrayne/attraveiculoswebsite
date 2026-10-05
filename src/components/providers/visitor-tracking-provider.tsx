@@ -40,6 +40,7 @@ import {
 import { identifyClarityUser, setClarityTag } from '@/components/analytics/microsoft-clarity'
 import { sendAbandonedLeadWebhook } from '@/lib/webhook'
 import { ehRotaInterna } from '@/lib/rotas-internas'
+import { comRefNoLinkWhatsApp } from '@/lib/whatsapp-ref'
 
 // Geolocation data type
 interface GeolocationData {
@@ -757,9 +758,19 @@ export function VisitorTrackingProvider({ children }: Props) {
       // próximo, para o card poder marcar o container em vez de cada botão.
       const comVeiculo = anchor.closest<HTMLElement>('[data-vehicle-id]')
 
+      // [ref: <session_id>] no fim da mensagem, em TODO link de WhatsApp do
+      // site (decisão de 05/10/2026, a pedido da Fykos — ver whatsapp-ref.ts).
+      // Feito aqui, na captura, porque é o único ponto por onde passam os 37
+      // botões; o navegador abre o href como estiver depois deste ouvinte.
+      let hrefFinal = href
+      if (interactionType === 'whatsapp_click') {
+        hrefFinal = comRefNoLinkWhatsApp(href, sessionIdRef.current)
+        if (hrefFinal !== href) anchor.setAttribute('href', hrefFinal)
+      }
+
       // Rastreia sem bloquear a navegação (track é fire-and-forget)
       trackInteraction(interactionType, {
-        href,
+        href: hrefFinal,
         anchor_text: (anchor.textContent || '').trim().slice(0, 80),
         page_path: typeof window !== 'undefined' ? window.location.pathname : undefined,
         ...(comVeiculo?.dataset.vehicleId ? { vehicle_id: comVeiculo.dataset.vehicleId } : {}),

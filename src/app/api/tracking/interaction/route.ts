@@ -72,14 +72,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unknown interaction type' }, { status: 400 })
     }
 
-    // Registro do clique de WhatsApp — é o que substitui o marcador [ref: ...]
-    // que antes viajava dentro da mensagem do cliente.
-    //
-    // A mensagem do wa.me é o único canal entre o site e a loja, então a origem
-    // ia embutida no texto que o COMPRADOR envia. Tirando o marcador de lá, a
-    // referência passa a viver aqui: quem clicou (a sessão, que carrega
-    // utm/campanha/termo) e quando. A conversa é correlacionada depois, quando
-    // o CRM a entrega pelo webhook.
+    // Registro do clique de WhatsApp: quem clicou (a sessão, que carrega
+    // utm/campanha/termo) e quando. Junto com o [ref: <session_id>] que voltou
+    // à mensagem em 05/10/2026, é o que o CRM usa para ligar a conversa à
+    // origem (o aviso abaixo leva o mesmo session_id).
     if (type === 'whatsapp_click') {
       const veiculoId = typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null
       // Só grava se a mesma sessão não clicou nos últimos 3 s. Toque duplo (ou
