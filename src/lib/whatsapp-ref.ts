@@ -6,14 +6,14 @@
  * `visitor_sessions`. Ver docs/MIGRACAO_POSTGRES_PURO.md (fatia de tracking).
  *
  * HISTÓRICO: o marcador saiu da mensagem em 05/08/2026 (identificador interno
- * no texto que o cliente envia) e VOLTOU em 05/10/2026, por decisão da
- * Lorrayne a pedido da Fykos: sem ele a ligação conversa↔clique era por horário
- * e ligava só 16 de 501 cliques. Agora vai em TODO link de WhatsApp do site,
- * anexado no instante do clique pelo ouvinte global do
- * visitor-tracking-provider (`comRefNoLinkWhatsApp`), e não em cada botão.
+ * no texto que o cliente envia), voltou em 05/10/2026 a pedido da Fykos e saiu
+ * de novo no mesmo dia, ao aparecer na mensagem do cliente. A ligação passou a
+ * ser responsabilidade da Fykos: o aviso de clique (aviso-clique-fykos.ts)
+ * leva o session_id, o horário e o TEXTO exato pré-preenchido, e eles casam
+ * com a 1ª mensagem da conversa. `appendWhatsAppRef` não é usado.
  *
- * `extractWhatsAppRef` lê o marcador de volta nos cards (inclusive os
- * anteriores a 05/08).
+ * `extractWhatsAppRef` lê o marcador de volta nos cards (os anteriores a 05/08
+ * e os do dia 05/10).
  */
 
 /** Casa `[ref: <token>]` — token = caracteres de sessão (letras, dígitos, - _). */
@@ -34,49 +34,4 @@ export function extractWhatsAppRef(text: string | null | undefined): string | nu
   if (!text) return null
   const m = text.match(REF_RE)
   return m ? m[1].trim() : null
-}
-
-const HOST_WHATSAPP = /^(?:api\.)?wa\.me$|^(?:www\.|api\.)?whatsapp\.com$/i
-
-function decodificar(texto: string): string {
-  try {
-    return decodeURIComponent(texto.replace(/\+/g, ' '))
-  } catch {
-    return texto
-  }
-}
-
-/**
- * Link de WhatsApp com `[ref: <sessionId>]` no fim do texto pré-preenchido.
- *
- * Mexe só no parâmetro `text`, e SEM reescrever o resto da URL: o texto
- * original fica com a codificação que veio (`%20`), porque reserializar pelo
- * URLSearchParams trocaria espaço por `+`, que alguns WhatsApp mostram literal.
- * Link sem texto ganha só o marcador. Idempotente; fora do WhatsApp ou sem
- * sessão, devolve o link como veio.
- */
-export function comRefNoLinkWhatsApp(href: string, sessionId?: string | null): string {
-  const id = sessionId?.trim()
-  if (!id) return href
-  let url: URL
-  try {
-    url = new URL(href)
-  } catch {
-    return href
-  }
-  if (!/^https?:$/.test(url.protocol) || !HOST_WHATSAPP.test(url.hostname)) return href
-
-  const marcador = encodeURIComponent(`[ref: ${id}]`)
-  const [semHash, hash] = href.split('#')
-  const [base, query = ''] = semHash.split('?')
-  const partes = query.split('&').filter(Boolean)
-  const i = partes.findIndex(p => p.startsWith('text='))
-  if (i >= 0) {
-    const bruto = partes[i].slice('text='.length)
-    if (REF_RE.test(decodificar(bruto))) return href
-    partes[i] = `text=${bruto}${bruto ? '%20' : ''}${marcador}`
-  } else {
-    partes.push(`text=${marcador}`)
-  }
-  return `${base}?${partes.join('&')}${hash !== undefined ? `#${hash}` : ''}`
 }

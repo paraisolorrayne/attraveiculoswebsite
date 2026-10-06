@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
+import { mensagemDoLinkWhatsApp, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
 import type { RespostaAtribuicao } from '@/lib/atribuicao-sessao'
 
 const COM_ORIGEM: RespostaAtribuicao = {
@@ -51,11 +51,36 @@ describe('montarAvisoDeClique', () => {
 		expect(a?.clique_em).toBe('2026-09-19T16:42:11.000Z')
 	})
 
+	it('leva o texto exato da mensagem pré-preenchida, para a Fykos casar com a 1ª mensagem', () => {
+		const texto = 'Vim do site e gostaria de mais informações sobre os veículos disponíveis, sou de Uberlândia/MG.'
+		const a = montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null, texto)
+		expect(a?.mensagem).toBe(texto)
+		expect(montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null)?.mensagem).toBeNull()
+	})
+
 	it('não avisa quando não há origem nenhuma', () => {
 		// "Chegou alguém, não sei de onde" não ajuda o CRM a decidir nada, e
 		// ainda gasta uma nota que pode casar com a conversa errada.
 		expect(montarAvisoDeClique('c1', new Date(), SEM_ORIGEM, null, null)).toBeNull()
 		expect(montarAvisoDeClique('c1', new Date(), null, null, null)).toBeNull()
+	})
+})
+
+describe('mensagemDoLinkWhatsApp', () => {
+	it('lê o texto do wa.me e do api.whatsapp.com, decodificado', () => {
+		expect(mensagemDoLinkWhatsApp('https://wa.me/553432563200?text=Ol%C3%A1!%20Tenho%20interesse%20no%20Ferrari%20296')).toBe('Olá! Tenho interesse no Ferrari 296')
+		expect(mensagemDoLinkWhatsApp('https://api.whatsapp.com/send?phone=55&text=Oi%20tudo+bem')).toBe('Oi tudo bem')
+	})
+
+	it('sem texto, link inválido ou fora do WhatsApp: null', () => {
+		expect(mensagemDoLinkWhatsApp('https://wa.me/553432563200')).toBeNull()
+		expect(mensagemDoLinkWhatsApp('não é url')).toBeNull()
+		expect(mensagemDoLinkWhatsApp('https://attraveiculos.com.br/?text=Oi')).toBeNull()
+		expect(mensagemDoLinkWhatsApp(undefined)).toBeNull()
+	})
+
+	it('corta texto absurdo', () => {
+		expect(mensagemDoLinkWhatsApp(`https://wa.me/55?text=${'a'.repeat(3000)}`)).toHaveLength(1000)
 	})
 })
 
@@ -130,6 +155,21 @@ describe('enviarAvisoDeClique', () => {
 		const { ok, chamadas } = await comResposta(resp(500))
 		expect(chamadas).toHaveLength(2)
 		expect(ok).toBe(false)
+	})
+
+	it('em produção, a falha aparece no log (sem o conteúdo do aviso)', async () => {
+		vi.stubEnv('NODE_ENV', 'production')
+		const avisos = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		try {
+			const { ok } = await comResposta(resp(401))
+			expect(ok).toBe(false)
+			const linhas = avisos.mock.calls.map(c => c.join(' '))
+			expect(linhas.some(l => l.includes('[AvisoClique]') && l.includes('401'))).toBe(true)
+			expect(linhas.join(' ')).not.toContain('Cj0KCQjw')
+		} finally {
+			avisos.mockRestore()
+			vi.unstubAllEnvs()
+		}
 	})
 
 	it('sem URL configurada, não tenta nada', async () => {

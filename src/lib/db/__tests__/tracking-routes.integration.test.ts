@@ -9,7 +9,7 @@
  *   TEST_DATABASE_URL=postgres://user@127.0.0.1:5432/attra_migracao_dev \
  *     ./node_modules/.bin/vitest run src/lib/db/__tests__/tracking-routes.integration.test.ts
  */
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { sql } from 'kysely'
 
@@ -163,6 +163,32 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     await sql`update whatsapp_clicks set clicked_at = clicked_at - interval '5 seconds' where session_db_id = ${a.session_db_id}`.execute(db)
     await clicar(a)
     expect(await contar(a.session_db_id)).toBe(2)
+  })
+
+  it('interaction whatsapp_click: o aviso à Fykos leva o texto exato da mensagem pré-preenchida', async () => {
+    const s = await newSession()
+    const texto = 'Vim do site e gostaria de mais informações sobre os veículos disponíveis, sou de Uberlândia/MG.'
+    const corpos: Array<Record<string, unknown>> = []
+    process.env.FYKOS_AVISO_CLIQUE_URL = 'https://crm.exemplo/avisos'
+    vi.resetModules()
+    vi.stubGlobal('fetch', (_u: string, init: RequestInit) => {
+      corpos.push(JSON.parse(String(init.body)))
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    })
+    try {
+      // O módulo do aviso lê a URL ao carregar: a rota vem de novo, já com ela.
+      const { POST } = await import('@/app/api/tracking/interaction/route')
+      const r = await POST(req('/api/tracking/interaction', {
+        fingerprint_db_id: s.fingerprint_db_id, session_db_id: s.session_db_id, type: 'whatsapp_click', page_path: '/',
+        metadata: { href: `https://wa.me/553432563200?text=${encodeURIComponent(texto)}` },
+      }))
+      expect(r.status).toBe(200)
+      expect(corpos).toHaveLength(1)
+      expect(corpos[0]).toMatchObject({ tipo: 'aviso_clique_site', mensagem: texto })
+    } finally {
+      delete process.env.FYKOS_AVISO_CLIQUE_URL
+      vi.unstubAllGlobals()
+    }
   })
 
   it('page-time: atualiza tempo/scroll e heartbeat (ended_at no exit)', async () => {

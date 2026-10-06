@@ -63,6 +63,12 @@ export interface AvisoDeClique {
 	veiculo_id: string | null
 	first_touch: RespostaAtribuicao['first_touch']
 	last_touch: RespostaAtribuicao['last_touch']
+	/**
+	 * O texto exato que o site deixou pré-preenchido no WhatsApp (traz o carro e
+	 * a cidade). Sem código na mensagem, é o que deixa o CRM casar este aviso
+	 * com a 1ª mensagem da conversa: texto igual + mesmo minuto. Desde 05/10/2026.
+	 */
+	mensagem: string | null
 }
 
 /**
@@ -79,6 +85,7 @@ export function montarAvisoDeClique(
 	atribuicao: RespostaAtribuicao | null,
 	pagina: string | null,
 	veiculoId: string | null,
+	mensagem: string | null = null,
 ): AvisoDeClique | null {
 	if (!atribuicao) return null
 	if (!atribuicao.first_touch && !atribuicao.last_touch) return null
@@ -93,15 +100,32 @@ export function montarAvisoDeClique(
 		veiculo_id: veiculoId,
 		first_touch: atribuicao.first_touch,
 		last_touch: atribuicao.last_touch,
+		mensagem,
 	}
+}
+
+const HOST_WHATSAPP = /^(?:api\.)?wa\.me$|^(?:www\.|api\.)?whatsapp\.com$/i
+const MAX_MENSAGEM = 1000
+
+/** O texto pré-preenchido de um link de WhatsApp (`?text=`), decodificado; null se não houver. */
+export function mensagemDoLinkWhatsApp(href: unknown): string | null {
+	if (typeof href !== 'string') return null
+	let url: URL
+	try {
+		url = new URL(href)
+	} catch {
+		return null
+	}
+	if (!/^https?:$/.test(url.protocol) || !HOST_WHATSAPP.test(url.hostname)) return null
+	const texto = url.searchParams.get('text')?.trim()
+	return texto ? texto.slice(0, MAX_MENSAGEM) : null
 }
 
 /**
  * Manda o aviso. Nunca lança: erro aqui não pode derrubar o registro do clique.
  *
- * Silencioso em produção e falante fora dela — um aviso que para de sair não
- * dá erro em lugar nenhum, então o log de desenvolvimento é a única chance de
- * alguém perceber antes de o relatório de campanha esvaziar de novo.
+ * Toda falha vai para o log (registrarFalha): um aviso que para de sair não dá
+ * erro em lugar nenhum, e o log é a única chance de alguém perceber.
  */
 export async function enviarAvisoDeClique(aviso: AvisoDeClique | null): Promise<boolean> {
 	if (!aviso || !URL_AVISO) return false
@@ -128,22 +152,27 @@ export async function enviarAvisoDeClique(aviso: AvisoDeClique | null): Promise<
 			status = resposta.status
 			// 4xx é formato nosso: repetir dá a mesma recusa.
 			if (status < 500) {
-				avisarNoDesenvolvimento(`CRM recusou com ${status}`)
+				registrarFalha(`CRM recusou com ${status}`)
 				return false
 			}
 		} catch (erro) {
 			// Rede/timeout: o aviso pode não ter chegado, então vale repetir.
-			avisarNoDesenvolvimento(erro instanceof Error ? erro.message : String(erro))
+			registrarFalha(erro instanceof Error ? erro.message : String(erro))
 		}
 
 		if (tentativa === 1) {
-			avisarNoDesenvolvimento(`desistiu após 2 tentativas${status ? ` (último: ${status})` : ''}`)
+			registrarFalha(`desistiu após 2 tentativas${status ? ` (último: ${status})` : ''}`)
 		}
 	}
 
 	return false
 }
 
-function avisarNoDesenvolvimento(mensagem: string): void {
-	if (process.env.NODE_ENV !== 'production') console.warn('[AvisoClique]', mensagem)
+/**
+ * Falha de envio vai para o log também em produção (desde 05/10/2026): os
+ * avisos caíram de ~150 para 3–13 por dia sem nenhum rastro, porque isto era
+ * silencioso. Só o motivo — nunca o conteúdo do aviso.
+ */
+function registrarFalha(mensagem: string): void {
+	console.warn('[AvisoClique]', mensagem)
 }

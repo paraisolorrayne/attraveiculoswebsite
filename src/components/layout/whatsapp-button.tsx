@@ -170,9 +170,9 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       isSeoPage(currentPage) && !vehicleBrand
         ? context.message
         : generateVehicleMessage(vehicleBrand, vehicleModel, vehicleYear, geoLocation)
-    // O [ref: <session_id>] não entra aqui: o ouvinte global do
-    // visitor-tracking-provider anexa no instante do clique, igual para todos
-    // os botões de WhatsApp do site.
+    // SEM [ref: ...] na mensagem (decisão de 05/08, reconfirmada em 05/10/2026):
+    // o código aparecia no texto do cliente. A ligação conversa↔clique vai pelo
+    // aviso de clique à Fykos, que leva este mesmo texto (aviso-clique-fykos.ts).
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(baseMessage)}`
   }, [currentPage, vehicleBrand, vehicleModel, vehicleYear, geoLocation, context.message])
 

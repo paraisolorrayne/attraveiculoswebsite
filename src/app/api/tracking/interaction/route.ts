@@ -3,7 +3,7 @@ import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 import { atribuicaoPorSessaoDbId } from '@/lib/atribuicao-sessao-db'
-import { enviarAvisoDeClique, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
+import { enviarAvisoDeClique, mensagemDoLinkWhatsApp, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // É aqui que o whatsapp_click é gravado — a ponte de atribuição do WhatsApp
@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Registro do clique de WhatsApp: quem clicou (a sessão, que carrega
-    // utm/campanha/termo) e quando. Junto com o [ref: <session_id>] que voltou
-    // à mensagem em 05/10/2026, é o que o CRM usa para ligar a conversa à
-    // origem (o aviso abaixo leva o mesmo session_id).
+    // utm/campanha/termo) e quando. Sem código na mensagem do cliente, o CRM
+    // liga a conversa à origem pelo aviso abaixo (session_id, horário e o texto
+    // pré-preenchido).
     if (type === 'whatsapp_click') {
       const veiculoId = typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null
       // Só grava se a mesma sessão não clicou nos últimos 3 s. Toque duplo (ou
@@ -121,6 +121,9 @@ export async function POST(request: NextRequest) {
               atribuicao,
               page_path ?? null,
               veiculoId,
+              // O texto que vai pré-preenchido: é por ele (e pelo horário) que o
+              // CRM casa o aviso com a 1ª mensagem, já que não há código nela.
+              mensagemDoLinkWhatsApp(metadata?.href),
             ),
           )
         } catch (e) {
