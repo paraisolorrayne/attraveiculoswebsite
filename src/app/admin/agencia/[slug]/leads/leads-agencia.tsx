@@ -115,10 +115,10 @@ export function LeadsAgencia() {
 export function AvisoImplantacao({ compacto }: { compacto?: boolean }) {
 	return (
 		<div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
-			<div className="text-sm font-medium text-foreground">Ligação dos leads às campanhas em implantação</div>
+			<div className="text-sm font-medium text-foreground">Ainda não há lead com vendedor para relacionar</div>
 			<p className="mt-1 text-xs leading-relaxed text-foreground-secondary">
-				Os leads do CRM ainda não chegam ligados às visitas do site neste período, então ainda não dá para dizer quantos
-				vieram das suas campanhas.{' '}
+				Os cliques de campanha já chegam à integração, mas ainda não há um lead com vendedor no CRM para o painel relacionar.
+				Assim que houver ao menos um, ele será apresentado aqui com a campanha correspondente.{' '}
 				{compacto
 					? 'Por enquanto, o melhor indicador são os cliques no WhatsApp, logo acima.'
 					: 'Por enquanto, o melhor indicador são os cliques no WhatsApp, no Resumo.'}{' '}
