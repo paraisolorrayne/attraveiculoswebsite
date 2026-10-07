@@ -35,7 +35,8 @@ describe('montarAvisoDeClique', () => {
 
 	it('leva a campanha do primeiro toque e o contexto do clique', () => {
 		const a = montarAvisoDeClique('c1', new Date('2026-09-19T16:42:11Z'), COM_ORIGEM, '/veiculo/x-988095', '988095')
-		expect(a?.first_touch?.campaign).toBe('[VA] Search | Estoque Premium')
+		expect(a?.first_touch?.utm_campaign).toBe('[VA] Search | Estoque Premium')
+		expect(a?.first_touch?.utm_content).toBeNull()
 		expect(a?.first_touch?.gclid).toBe('Cj0KCQjw')
 		expect(a?.session_id).toBe('1784810859532-pupqonclbi')
 		expect(a?.veiculo_id).toBe('988095')
@@ -58,10 +59,11 @@ describe('montarAvisoDeClique', () => {
 		expect(montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null)?.mensagem).toBeNull()
 	})
 
-	it('não avisa quando não há origem nenhuma', () => {
-		// "Chegou alguém, não sei de onde" não ajuda o CRM a decidir nada, e
-		// ainda gasta uma nota que pode casar com a conversa errada.
-		expect(montarAvisoDeClique('c1', new Date(), SEM_ORIGEM, null, null)).toBeNull()
+	it('avisa também quando não há origem, com os toques nulos', () => {
+		const aviso = montarAvisoDeClique('c1', new Date(), SEM_ORIGEM, null, null)
+		expect(aviso?.first_touch).toBeNull()
+		expect(aviso?.last_touch).toBeNull()
+		expect(aviso?.session_id).toBe('abc123def')
 		expect(montarAvisoDeClique('c1', new Date(), null, null, null)).toBeNull()
 	})
 })

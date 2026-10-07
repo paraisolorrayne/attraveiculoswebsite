@@ -22,7 +22,7 @@
  * site. A diferença é quem guarda a nota: antes era o site, esperando o card;
  * agora é o CRM, esperando a mensagem.
  */
-import type { RespostaAtribuicao } from './atribuicao-sessao'
+import type { RespostaAtribuicao, Toque } from './atribuicao-sessao'
 
 /**
  * Sem `FYKOS_AVISO_CLIQUE_URL` o aviso não sai — mesmo padrão de
@@ -61,8 +61,8 @@ export interface AvisoDeClique {
 	session_id: string
 	pagina: string | null
 	veiculo_id: string | null
-	first_touch: RespostaAtribuicao['first_touch']
-	last_touch: RespostaAtribuicao['last_touch']
+	first_touch: ToqueDoAviso | null
+	last_touch: ToqueDoAviso | null
 	/**
 	 * O texto exato que o site deixou pré-preenchido no WhatsApp (traz o carro e
 	 * a cidade). Sem código na mensagem, é o que deixa o CRM casar este aviso
@@ -72,11 +72,27 @@ export interface AvisoDeClique {
 }
 
 /**
+ * Contrato do receptor: mantém os nomes UTM originais em vez de renomeá-los
+ * para campos genéricos. Isso evita que a API confunda a campanha etiquetada
+ * com uma classificação posterior do CRM.
+ */
+export interface ToqueDoAviso extends Omit<Toque, 'campaign' | 'content'> {
+	utm_campaign: string | null
+	utm_content: string | null
+}
+
+function toqueDoAviso(toque: Toque | null): ToqueDoAviso | null {
+	if (!toque) return null
+	const { campaign, content, ...restante } = toque
+	return { ...restante, utm_campaign: campaign, utm_content: content }
+}
+
+/**
  * Monta o aviso. Puro, para o teste poder afirmar o formato.
  *
- * Devolve `null` quando não há origem nenhuma: avisar "chegou alguém, não sei
- * de onde" não ajuda o CRM a decidir nada e ainda gasta uma nota que pode ser
- * casada por engano com a conversa errada. Sem sinal, melhor não avisar.
+ * Devolve `null` apenas se a sessão não puder ser resolvida. Todo clique do
+ * site é avisado: sem origem conhecida, os toques vão nulos, mas `session_id`,
+ * horário, página e mensagem ainda permitem ao CRM casar a conversa.
  */
 export function montarAvisoDeClique(
 	cliqueId: string,
@@ -88,7 +104,6 @@ export function montarAvisoDeClique(
 	mensagem: string | null = null,
 ): AvisoDeClique | null {
 	if (!atribuicao) return null
-	if (!atribuicao.first_touch && !atribuicao.last_touch) return null
 
 	return {
 		tipo: 'aviso_clique_site',
@@ -98,8 +113,8 @@ export function montarAvisoDeClique(
 		session_id: atribuicao.session_id,
 		pagina,
 		veiculo_id: veiculoId,
-		first_touch: atribuicao.first_touch,
-		last_touch: atribuicao.last_touch,
+		first_touch: toqueDoAviso(atribuicao.first_touch),
+		last_touch: toqueDoAviso(atribuicao.last_touch),
 		mensagem,
 	}
 }

@@ -26,7 +26,7 @@ O site avisa **no momento do clique**, antes de a conversa chegar. É um `POST` 
   "session_id": "s4",
   "pagina": "/veiculo/mercedes-g-63-2021-988095",
   "veiculo_id": "988095",
-  "first_touch": { "gclid": "g1", "wbraid": null, "gbraid": null, "campaign": null, "landing": "/", "ts": "..." },
+  "first_touch": { "gclid": "g1", "wbraid": null, "gbraid": null, "utm_campaign": null, "utm_content": null, "landing": "/", "ts": "..." },
   "last_touch":  { "source": "linktr.ee", "landing": "/comprar", "ts": "..." }
 }
 ```
@@ -37,7 +37,7 @@ O site avisa **no momento do clique**, antes de a conversa chegar. É um `POST` 
 2. **A ligação é por tempo.** Quando a conversa chegar, casem com o aviso mais recente dentro de uma janela (usamos 10 min do nosso lado). Mais de um candidato → não escolher, como já fazemos aqui: atribuir a campanha errada contamina um lead real, e ausente é recuperável.
 3. **`clique_id` é estável.** Reentrega do mesmo aviso não deve virar duas notas.
 
-Só sai aviso quando há origem: visita sem nenhum sinal não gera nota, para não gastar uma correspondência possível com "não sei de onde veio".
+Todo clique do site gera aviso. Quando não há origem conhecida, `first_touch` e `last_touch` seguem como `null`; `session_id`, horário, página e mensagem continuam disponíveis para o CRM casar a conversa.
 
 O envio é best-effort e não segura nada: se o receptor estiver fora do ar, o clique continua gravado aqui e os endpoints abaixo continuam respondendo. Verificado derrubando o receptor.
 
@@ -61,8 +61,8 @@ Para os leads que já têm o token: os de 23/07 a 05/08 (com `[ref: ...]`) e os 
   "ligacao": "correlacao_clique_whatsapp",
   "first_touch": {
     "source": "google", "medium": "cpc",
-    "campaign": "[VA] Search | Estoque Premium",
-    "content": null, "term": null,
+    "utm_campaign": "[VA] Search | Estoque Premium", "utm_content": null,
+    "term": null,
     "gclid": "Cj0KCQjw", "fbclid": null,
     "landing": "/veiculos/porsche-macan-2023",
     "ts": "2026-09-19T13:41:02.000Z"

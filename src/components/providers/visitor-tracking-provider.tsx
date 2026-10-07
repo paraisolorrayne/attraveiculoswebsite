@@ -736,7 +736,7 @@ export function VisitorTrackingProvider({ children }: Props) {
       if (!href) return
 
       let interactionType: InteractionType | null = null
-      if (/^https?:\/\/(?:api\.)?wa\.me\//i.test(href) || /^https?:\/\/(?:www\.)?whatsapp\.com/i.test(href)) {
+      if (/^https?:\/\/(?:api\.)?wa\.me\//i.test(href) || /^https?:\/\/(?:(?:www|api)\.)?whatsapp\.com/i.test(href)) {
         interactionType = 'whatsapp_click'
       } else if (href.startsWith('tel:')) {
         interactionType = 'phone_click'
