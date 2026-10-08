@@ -108,12 +108,19 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
 
       {/* Featured Image */}
       {post.featured_image && !post.featured_image.includes('default-cover') && !heroImageError && (
-        <section className="relative w-full aspect-[21/9] max-h-[500px] overflow-hidden">
+        <section
+          className={post.featured_image.includes('/comparisons/')
+            ? 'relative mx-auto w-full max-w-[1200px] aspect-[40/21] overflow-hidden bg-[#101014] md:rounded-2xl'
+            : 'relative w-full aspect-[21/9] max-h-[500px] overflow-hidden'}
+        >
           <Image
             src={post.featured_image}
             alt={post.featured_image_alt || post.title}
             fill
-            className="object-cover"
+            // Comparativos já são compostos em 40:21. Mantemos toda a arte,
+            // sem crop e sem ampliar o arquivo de 1200 px numa faixa full-width.
+            className={post.featured_image.includes('/comparisons/') ? 'object-contain' : 'object-cover'}
+            sizes={post.featured_image.includes('/comparisons/') ? '(max-width: 1200px) 100vw, 1200px' : '100vw'}
             priority
             onError={() => setHeroImageError(true)}
           />
@@ -180,4 +187,3 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
     </article>
   )
 }
-

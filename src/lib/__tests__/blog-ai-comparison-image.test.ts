@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import sharp from 'sharp'
-import { temFaixaNoCanto } from '@/lib/blog-ai/comparison-image'
+import { composeComparisonBuffers } from '@/lib/blog-ai/comparison-image'
 
 // Fotos sintéticas no formato das do estoque (4:3), com fundo de pátio cinza.
 const W = 1920
@@ -11,19 +11,22 @@ function svg(conteudo: string) {
 		<rect width="${W}" height="${H}" fill="#8a8d90"/>${conteudo}</svg>`)).jpeg().toBuffer()
 }
 
-describe('temFaixaNoCanto', () => {
-	it('reconhece a faixa vermelha do anúncio, colada na borda direita, embaixo', async () => {
-		// Como a "PPF FULL": faixa de ~37% da largura, encostada na direita, a ~88% da altura.
-		const foto = await svg(`<rect x="${W * 0.63}" y="${H * 0.86}" width="${W * 0.37}" height="${H * 0.06}" fill="#c4151c"/>`)
-		expect(await temFaixaNoCanto(foto)).toBe(true)
-	})
+describe('composeComparisonBuffers', () => {
+	it('preserva a orientação da foto — não espelha placas, logotipos ou textos', async () => {
+		// O lado esquerdo da foto A é vermelho e o direito é azul. Se a capa a
+		// espelhar, essas cores aparecem invertidas no painel esquerdo.
+		const fotoA = await svg(`<rect width="${W / 2}" height="${H}" fill="#e00000"/><rect x="${W / 2}" width="${W / 2}" height="${H}" fill="#004dff"/>`)
+		const fotoB = await svg('')
+		const capa = await composeComparisonBuffers(fotoA, fotoB)
+		const { data } = await sharp(capa).raw().toBuffer({ resolveWithObject: true })
+		const pixel = (x: number, y: number) => {
+			const i = (y * 2400 + x) * 3
+			return { r: data[i], g: data[i + 1], b: data[i + 2] }
+		}
 
-	it('não confunde carro vermelho com faixa — o carro não encosta na borda', async () => {
-		const foto = await svg(`<rect x="${W * 0.1}" y="${H * 0.45}" width="${W * 0.75}" height="${H * 0.45}" rx="120" fill="#c4151c"/>`)
-		expect(await temFaixaNoCanto(foto)).toBe(false)
-	})
-
-	it('foto sem nada vermelho', async () => {
-		expect(await temFaixaNoCanto(await svg(''))).toBe(false)
+		const ladoEsquerdo = pixel(150, 630)
+		const ladoDireito = pixel(1050, 630)
+		expect(ladoEsquerdo.r).toBeGreaterThan(ladoEsquerdo.b)
+		expect(ladoDireito.b).toBeGreaterThan(ladoDireito.r)
 	})
 })

@@ -29,6 +29,7 @@ else if (fs.existsSync(envProd)) dotenv.config({ path: envProd })
 
 import { db } from '../src/lib/db'
 import { composeComparisonFeaturedImage } from '../src/lib/blog-ai/comparison-image'
+import { selecionarFotosFrontais } from '../src/lib/blog-ai/comparison-photo-selector'
 
 const DRY_RUN = process.argv.includes('--dry-run')
 
@@ -54,7 +55,7 @@ async function main() {
   let ok = 0, skip = 0, fail = 0
 
   for (const p of posts) {
-    const imgs = firstImageUrls(p.content ?? '', 2)
+    const imgs = firstImageUrls(p.content ?? '', 10)
     if (imgs.length < 2 || imgs[0] === imgs[1]) {
       console.warn(`[regen] PULADO  "${p.slug}" — não achei 2 fotos distintas no conteúdo`)
       skip++
@@ -66,8 +67,13 @@ async function main() {
 
     if (DRY_RUN) { skip++; continue }
 
+    const fotosA = imgs.filter((_, i) => i % 2 === 0)
+    const fotosB = imgs.filter((_, i) => i % 2 === 1)
+    const [fotoA, fotoB] = await selecionarFotosFrontais(fotosA, fotosB)
+    if (!fotoA || !fotoB) { skip++; continue }
+
     try {
-      const novaUrl = await composeComparisonFeaturedImage(imgs[0], imgs[1], p.slug)
+      const novaUrl = await composeComparisonFeaturedImage(fotoA, fotoB, p.slug)
       if (!novaUrl) {
         console.warn(`         -> FALHOU (geração retornou null)\n`)
         fail++

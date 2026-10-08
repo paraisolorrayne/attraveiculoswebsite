@@ -18,6 +18,7 @@ import type {
 } from '@/types'
 import { GEMINI_TEXT_MODEL } from '@/lib/gemini-config'
 import { composeComparisonFeaturedImage } from './comparison-image'
+import { selecionarFotosFrontais } from './comparison-photo-selector'
 
 const GEMINI_MODEL = GEMINI_TEXT_MODEL
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -614,7 +615,8 @@ ${JSON_SCHEMA_EDUCATIVO}
 
   // Post de dois carros pede imagem destacada com os dois: split A|B com
   // selo VS. Falhou? Cai na primeira foto, como antes.
-  const composedFeatured = await composeComparisonFeaturedImage(imagesA[0], imagesB[0], slug)
+  const [fotoCapaA, fotoCapaB] = await selecionarFotosFrontais(imagesA, imagesB)
+  const composedFeatured = await composeComparisonFeaturedImage(fotoCapaA, fotoCapaB, slug)
 
   return {
     strategy: 'comparison',
