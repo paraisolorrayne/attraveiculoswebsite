@@ -31,6 +31,9 @@ import {
   pickVehicleForReview,
   pickVehiclesForComparison,
   findVehicleByName,
+  exemplaresJaResenhados,
+  jaResenhado,
+  vehicleKey,
 } from '@/lib/blog-ai/vehicle-picker'
 import {
   generateReview,
@@ -262,6 +265,12 @@ export async function runDailyBlogAi(force: ForceOptions = {}): Promise<BlogAiRu
         }
       }
 
+      // Vídeo de carro que já tem review viraria um segundo review do mesmo
+      // exemplar (ver chavesDoExemplar). Cai para review/comparativo.
+      if (vehicle && jaResenhado(vehicle, await exemplaresJaResenhados())) {
+        throw new Error(`IG post about ${vehicle.brand} ${vehicle.model} (${vehicle.id}), which already has a review`)
+      }
+
       const generated = await generateFromInstagram({
         caption: igPost.caption,
         permalink: igPost.permalink,
@@ -303,47 +312,62 @@ export async function runDailyBlogAi(force: ForceOptions = {}): Promise<BlogAiRu
   }
 
   try {
-    if (nextStrategy === 'review') {
-      const vehicle = await pickVehicleForReview()
-      if (!vehicle) {
-        throw new Error('No eligible vehicle (> R$300k) in stock for review')
+    // Sem carro inédito para review, tenta o comparativo no mesmo dia (e
+    // vice-versa). Antes o job falhava e, como `lastStrategy` só conta sucesso,
+    // tentaria a mesma estratégia todo dia.
+    const ordem: Array<'review' | 'comparison'> = force.strategy
+      ? [force.strategy]
+      : nextStrategy === 'review' ? ['review', 'comparison'] : ['comparison', 'review']
+
+    for (const estrategia of ordem) {
+      nextStrategy = estrategia
+      if (estrategia === 'review') {
+        const vehicle = await pickVehicleForReview()
+        if (!vehicle) {
+          console.log('[DailyBlogAI] no car without a review yet — skipping review')
+          continue
+        }
+        const generated = await generateReview(vehicle)
+        const saved = await persistPost(generated)
+        await logRun({
+          strategy: 'review',
+          blogPostId: saved.id,
+          source: { vehicle_id: vehicle.id, vehicle_slug: vehicle.slug },
+          success: true,
+        })
+        return {
+          success: true,
+          strategy: 'review',
+          blogPostId: saved.id,
+          blogPostSlug: saved.slug,
+        }
       }
-      const generated = await generateReview(vehicle)
+
+      const pair = await pickVehiclesForComparison()
+      if (!pair) {
+        console.log('[DailyBlogAI] no comparison pair left that was never published — skipping comparison')
+        continue
+      }
+      const [a, b] = pair
+      const generated = await generateComparison(a, b)
       const saved = await persistPost(generated)
       await logRun({
-        strategy: 'review',
+        strategy: 'comparison',
         blogPostId: saved.id,
-        source: { vehicle_id: vehicle.id, vehicle_slug: vehicle.slug },
+        // As chaves marca|modelo deixam o par reconhecível mesmo se a AutoConf
+        // trocar o id de um dos carros (ver paresJaFeitos).
+        source: { vehicle_a_id: a.id, vehicle_b_id: b.id, vehicle_a_key: vehicleKey(a), vehicle_b_key: vehicleKey(b) },
         success: true,
       })
       return {
         success: true,
-        strategy: 'review',
+        strategy: 'comparison',
         blogPostId: saved.id,
         blogPostSlug: saved.slug,
       }
     }
 
-    // comparison
-    const pair = await pickVehiclesForComparison()
-    if (!pair) {
-      throw new Error('Not enough eligible vehicles to build a comparison')
-    }
-    const [a, b] = pair
-    const generated = await generateComparison(a, b)
-    const saved = await persistPost(generated)
-    await logRun({
-      strategy: 'comparison',
-      blogPostId: saved.id,
-      source: { vehicle_a_id: a.id, vehicle_b_id: b.id },
-      success: true,
-    })
-    return {
-      success: true,
-      strategy: 'comparison',
-      blogPostId: saved.id,
-      blogPostSlug: saved.slug,
-    }
+    throw new Error('Nothing new to write: every eligible car has a review and every comparison pair was published')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[DailyBlogAI] fallback strategy failed:', msg)

@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import type { Vehicle } from '@/types'
 import {
+	chaveDoPar,
+	chavesDoExemplar,
 	chavesUsadasRecentemente,
 	escolherParParaComparativo,
 	escolherVeiculoParaReview,
+	jaResenhado,
+	paresJaFeitos,
 	vehicleKey,
 } from '@/lib/blog-ai/vehicle-picker'
 
@@ -94,5 +98,59 @@ describe('escolherVeiculoParaReview', () => {
 		expect(escolherVeiculoParaReview(ESTOQUE, usados, 7)!.id).toBe('ram')
 		const todos = new Set(ESTOQUE.map(vehicleKey))
 		expect(escolherVeiculoParaReview(ESTOQUE, todos, 7)).not.toBeNull()
+	})
+})
+
+describe('nunca dois reviews do mesmo carro — o bug de outubro/2026', () => {
+	// Em 13/10/2026: 3 reviews do mesmo Corvette Z06 preto, 2 do mesmo 911 Turbo S
+	// rosa (id 993322) e 2 do mesmo RAM 1500 amarelo.
+	const corvette = { ...v('1100', 'Chevrolet', 'Corvette Z06', 1_200_000), year_model: 2023, color: 'Preto' } as Vehicle
+	const ram = { ...v('1056317', 'RAM', '1500', 689_000, 'picape'), year_model: 2023, color: 'Amarelo' } as Vehicle
+
+	it('REPRODUÇÃO: com todo o estoque já usado nos 60 dias, o código antigo repetia um carro já resenhado', () => {
+		const usadosTodos = new Set([corvette, ram].map(vehicleKey))
+		const resenhados = new Set(chavesDoExemplar({ id: '1100', brand: 'Chevrolet', model: 'Corvette Z06', year: 2023, color: 'Preto' }))
+		for (let i = 0; i < 6; i++) {
+			const escolhido = escolherVeiculoParaReview([corvette, ram], usadosTodos, i, resenhados)
+			expect(escolhido?.id).toBe('1056317')
+		}
+	})
+
+	it('sem carro inédito devolve null (o job tenta o comparativo)', () => {
+		const resenhados = new Set([...chavesDoExemplar({ id: '1100' }), ...chavesDoExemplar({ id: '1056317' })])
+		expect(escolherVeiculoParaReview([corvette, ram], new Set(), 0, resenhados)).toBeNull()
+	})
+
+	it('o mesmo carro recadastrado com outro id continua reconhecido (marca|modelo|ano|cor)', () => {
+		const resenhados = new Set(chavesDoExemplar({ id: '999', brand: 'RAM', model: '1500', year: 2023, color: 'Amarelo' }))
+		expect(jaResenhado(ram, resenhados)).toBe(true)
+		const outraCor = { ...ram, id: '2000', color: 'Preto' } as Vehicle
+		expect(jaResenhado(outraCor, resenhados)).toBe(false)
+	})
+})
+
+describe('par de comparativo nunca se repete', () => {
+	it('"McLaren GTS vs Ferrari 296 GTS" é o mesmo par que "Ferrari 296 GTS vs McLaren GTS"', () => {
+		expect(chaveDoPar('mclaren|gts', 'ferrari|296 gts')).toBe(chaveDoPar('ferrari|296 gts', 'mclaren|gts'))
+	})
+
+	it('pares já publicados ficam fora em todas as rodadas, mesmo com todos os carros "usados"', () => {
+		const feitos = paresJaFeitos([{ vehicle_a_id: '296', vehicle_b_id: 'gts' }, { vehicle_a_id: 'sf90', vehicle_b_id: 'gts' }], ESTOQUE)
+		const todos = new Set(ESTOQUE.map(vehicleKey))
+		for (let i = 0; i < 20; i++) {
+			const [a, b] = escolherParParaComparativo(ESTOQUE, todos, i, feitos)!
+			expect(feitos.has(chaveDoPar(vehicleKey(a), vehicleKey(b)))).toBe(false)
+		}
+	})
+
+	it('as chaves gravadas no source valem mesmo se o carro mudou de id', () => {
+		const feitos = paresJaFeitos([{ vehicle_a_id: 'id-antigo', vehicle_a_key: 'ferrari|296 gts', vehicle_b_key: 'mclaren|gts' }], ESTOQUE)
+		expect(feitos.has(chaveDoPar('ferrari|296 gts', 'mclaren|gts'))).toBe(true)
+	})
+
+	it('sem par inédito devolve null', () => {
+		const dois = [ESTOQUE[0], ESTOQUE[1]]
+		const feitos = new Set([chaveDoPar(vehicleKey(dois[0]), vehicleKey(dois[1]))])
+		expect(escolherParParaComparativo(dois, new Set(), 0, feitos)).toBeNull()
 	})
 })
