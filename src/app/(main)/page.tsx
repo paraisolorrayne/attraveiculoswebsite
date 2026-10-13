@@ -15,6 +15,8 @@ import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
 import { getLatestAttraVideo } from '@/lib/youtube-feed'
+import { getBlogPostsPreview } from '@/lib/blog-api'
+import type { ArtigoEmDestaque } from '@/components/home/featured-editorial'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 import { Vehicle } from '@/types'
 
@@ -111,6 +113,21 @@ export default async function Home() {
   // Hero exibe o vídeo mais recente do canal da Attra (RSS, sem API key).
   const latestVideo = await getLatestAttraVideo()
 
+  // Destaque editorial: os três posts mais recentes do blog.
+  let artigos: ArtigoEmDestaque[] = []
+  try {
+    artigos = (await getBlogPostsPreview({ limit: 3 })).map(p => ({
+      slug: p.slug,
+      title: p.title,
+      excerpt: p.excerpt,
+      category: p.car_review ? 'Review' : p.educativo?.category || 'Artigo',
+      readTime: p.reading_time,
+      image: p.featured_image,
+    }))
+  } catch (error) {
+    console.error('Failed to fetch blog posts for the home:', error)
+  }
+
   return (
     <>
       {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
@@ -138,7 +155,7 @@ export default async function Home() {
       <JourneyPreview />
 
       {/* 8. Conteúdo editorial */}
-      <FeaturedEditorial />
+      <FeaturedEditorial artigos={artigos} />
 
       {/* 9. FAQ */}
       <FAQSection faqs={homepageFAQs} />

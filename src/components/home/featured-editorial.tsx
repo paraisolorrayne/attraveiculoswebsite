@@ -16,7 +16,8 @@ const WINE = '#A8302E'
  * vez do ícone padrão de imagem quebrada do navegador.
  */
 function ArticleImage({ src, alt, category }: { src: string; alt: string; category: string }) {
-  const [failed, setFailed] = useState(false)
+  // Sem capa (ou com a capa padrão do blog) já começa no placeholder.
+  const [failed, setFailed] = useState(!src || src.includes('default-cover'))
 
   if (failed) {
     return (
@@ -50,37 +51,23 @@ function ArticleImage({ src, alt, category }: { src: string; alt: string; catego
   )
 }
 
-const featuredArticles = [
-  {
-    id: 1,
-    title: 'Porsche 911 Carrera GTS: A Fusão Perfeita entre Tradição e Performance',
-    excerpt: 'Conheça os detalhes técnicos e a aerodinâmica que fazem do 911 GTS um ícone entre supercarros de performance.',
-    category: 'Performance',
-    readTime: '5 min',
-    image: '/images/blog-featured-1.jpg',
-    slug: 'porsche-911-carrera-gts',
-  },
-  {
-    id: 2,
-    title: 'RS6 Avant: Potência Familiar em Forma de Obra de Arte',
-    excerpt: 'Por que a Audi RS6 Avant conquistou colecionadores exigentes e como a curadoria Attra seleciona os melhores exemplares.',
-    category: 'Curadoria',
-    readTime: '7 min',
-    image: '/images/blog-featured-2.jpg',
-    slug: 'rs6-avant-curadoria',
-  },
-  {
-    id: 3,
-    title: 'Importar vs Nacionais: Qual Supercar Escolher para Sua Coleção?',
-    excerpt: 'Análise completa sobre as vantagens de cada segmento e como o câmbio, conservação e revenda diferem entre modelos.',
-    category: 'Insights',
-    readTime: '6 min',
-    image: '/images/blog-featured-3.jpg',
-    slug: 'importar-vs-nacionais',
-  },
-]
+export interface ArtigoEmDestaque {
+  slug: string
+  title: string
+  excerpt: string
+  category: string
+  readTime: string
+  image: string
+}
 
-export function FeaturedEditorial() {
+/**
+ * Os cards vêm dos posts publicados (a home passa os mais recentes). Até
+ * 14/10/2026 eram três artigos fictícios do template — /blog/porsche-911-carrera-gts,
+ * /blog/rs6-avant-curadoria e /blog/importar-vs-nacionais, que não existem, com
+ * imagens que também não existem: quem clicava caía em "Post não encontrado", e o
+ * Google rastreava os três a partir da home.
+ */
+export function FeaturedEditorial({ artigos }: { artigos: ArtigoEmDestaque[] }) {
   const sectionRef = useRef<HTMLElement>(null)
   const [isVisible, setIsVisible] = useState(true)
 
@@ -101,6 +88,8 @@ export function FeaturedEditorial() {
       clearTimeout(timeout)
     }
   }, [])
+
+  if (artigos.length === 0) return null
 
   return (
     <section
@@ -134,9 +123,9 @@ export function FeaturedEditorial() {
 
         {/* Featured Articles Grid */}
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-          {featuredArticles.map((article, index) => (
+          {artigos.map((article, index) => (
             <Link
-              key={article.id}
+              key={article.slug}
               href={`/blog/${article.slug}`}
               className={`group bg-background-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all
                 opacity-0 ${isVisible ? `animate-fade-in-up stagger-${index + 1}` : ''}`}

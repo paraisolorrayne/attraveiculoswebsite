@@ -1,6 +1,9 @@
 import { Container } from '@/components/ui/container'
 import { Skeleton, BlogGridSkeleton } from '@/components/ui/skeleton'
 
+// Em blog/(lista)/ e não em blog/: um loading.tsx em blog/ também envolveria
+// blog/[slug], e o post inexistente voltaria a responder 200 (ver a página do post).
+
 export default function BlogLoading() {
   return (
     <main className="bg-background min-h-screen">

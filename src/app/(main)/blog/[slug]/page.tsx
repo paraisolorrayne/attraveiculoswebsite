@@ -18,12 +18,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
 	const { slug } = await params
 	const post = await getBlogPost(slug)
-	if (!post) {
-		return {
-			title: 'Post não encontrado | Blog Attra',
-			description: 'O conteúdo que você procura não foi encontrado.',
-		}
-	}
+	if (!post) notFound()
 
 	// O fallback anterior era `https://www.attra.com.br`, domínio que não é o do
 	// site: sem NEXT_PUBLIC_SITE_URL o canonical apontava para fora.
@@ -49,6 +44,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 	}
 }
 
+/**
+ * Esta rota não pode ter um Suspense acima dela — nem loading.tsx próprio, nem o
+ * da listagem (por isso a listagem mora em blog/(lista)/). Com o loading.tsx, a
+ * resposta começava antes de a página decidir se o post existe: post
+ * inexistente saía HTTP 200 com noindex (soft 404, e qualquer slug inventado
+ * virava página) e os metadados iam para o <body>. Mesmo caso da ficha de
+ * veículo (ver veiculo/[slug]/not-found.tsx).
+ */
 export default async function BlogPostPage({ params }: PageProps) {
 	const { slug } = await params
 	const post = await getBlogPost(slug)

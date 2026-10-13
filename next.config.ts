@@ -98,6 +98,16 @@ const nextConfig: NextConfig = {
   // Powered by header removal
   poweredByHeader: false,
 
+  // Metadados (title, description, robots, canonical) sempre no <head>, para
+  // todo user-agent. Por padrão o Next "transmite" os metadados depois do
+  // conteúdo para quem executa JS — e trata o Googlebot assim. Nas rotas com
+  // loading.tsx (o post do blog) isso punha o canonical no <body>, onde o
+  // Google o ignora: em 14/10/2026, os 148 posts estavam assim, e o Search
+  // Console tinha 106 páginas em "Cópia sem página canônica selecionada pelo
+  // usuário". O post também perdeu o loading.tsx (ver blog/[slug]/page.tsx);
+  // isto garante o <head> para qualquer rota que ainda tenha um.
+  htmlLimitedBots: /.*/,
+
   // Chave do IndexNow na raiz (/{chave}.txt), servida por src/app/indexnow/[arquivo].
   // `afterFiles` (o padrão) roda depois de llms.txt, robots.txt e public/, mas
   // antes da rota dinâmica [brand]; a rota devolve 404 se não for a chave da env.
