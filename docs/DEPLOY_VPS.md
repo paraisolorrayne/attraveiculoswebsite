@@ -108,7 +108,7 @@ NEXT_PUBLIC_SITE_URL=https://attraveiculos.com.br
 RESEND_API_KEY=...
 NOTIFICATION_EMAIL=faleconosco@attraveiculos.com.br
 # IndexNow (Bing → Copilot e busca do ChatGPT): 32+ caracteres [a-zA-Z0-9-];
-# gere com `openssl rand -hex 16`. Servida em /indexnow/{chave}.txt; o cron
+# gere com `openssl rand -hex 16`. Servida na raiz, em /{chave}.txt (a pasta do arquivo limita as URLs que a chave autoriza); o cron
 # attra-indexnow-sync envia o que mudou. Sem ela, a rota responde `desligado`.
 INDEXNOW_KEY=...
 ```

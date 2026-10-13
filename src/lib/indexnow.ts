@@ -8,8 +8,10 @@
  *
  * Protocolo (https://www.indexnow.org/documentation): POST JSON em
  * api.indexnow.org com `host`, `key`, `keyLocation` e até 10.000 URLs. A chave
- * é um texto público servido em /indexnow/{chave}.txt — o motor confere que
- * quem avisa controla o host. Um ping por dia por URL basta; o diff abaixo
+ * é um texto público servido na raiz, em /{chave}.txt — o motor confere que
+ * quem avisa controla o host. Tem que ser na raiz: a pasta do arquivo limita as
+ * URLs que a chave autoriza, e em /indexnow/{chave}.txt ela só valia para URLs
+ * sob /indexnow/ (nenhuma ficha nem post). Um ping por dia por URL basta; o diff abaixo
  * garante que só o que mudou é enviado.
  *
  * Este módulo é puro (recebe fetch por injeção) para ser testável; a rota
@@ -61,7 +63,7 @@ export function montarLotes(urls: string[]): string[][] {
 }
 
 export function urlDaChave(base: string, chave: string): string {
-	return `${base.replace(/\/$/, '')}/indexnow/${chave}.txt`
+	return `${base.replace(/\/$/, '')}/${chave}.txt`
 }
 
 export interface ResultadoEnvio {

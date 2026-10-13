@@ -66,13 +66,14 @@ export default function robots(): MetadataRoute.Robots {
           '/',
           ...LLM_ENDPOINT_ALLOWS,
         ],
+        // SEM `/_next/`: ali estão o CSS, o JS e as fotos otimizadas
+        // (/_next/image). Bloqueado, o Googlebot renderizava a página sem estilo
+        // nem imagem — o Google pede para não bloquear recursos de renderização.
         disallow: [
           '/admin/',
           '/admin/*',
           '/api/',
           '/api/*',
-          '/_next/',
-          '/_next/*',
           '/private/',
           '/*.json$',
           // SEM `Disallow: /*?*`.
@@ -104,7 +105,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin/',
           '/api/',
-          '/_next/',
         ],
       },
       // Googlebot-Image for image indexing
@@ -132,7 +132,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin/',
           '/api/',
-          '/_next/',
         ],
       },
       // Assistentes de IA — mesmas regras do `*`, declaradas por nome (ver AI_CRAWLERS).
@@ -145,7 +144,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin/',
           '/api/',
-          '/_next/',
           '/private/',
         ],
       },

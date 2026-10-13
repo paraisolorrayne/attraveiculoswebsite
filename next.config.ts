@@ -97,6 +97,15 @@ const nextConfig: NextConfig = {
   // Powered by header removal
   poweredByHeader: false,
 
+  // Chave do IndexNow na raiz (/{chave}.txt), servida por src/app/indexnow/[arquivo].
+  // `afterFiles` (o padrão) roda depois de llms.txt, robots.txt e public/, mas
+  // antes da rota dinâmica [brand]; a rota devolve 404 se não for a chave da env.
+  async rewrites() {
+    return [
+      { source: '/:arquivo([A-Za-z0-9-]{8,128}\\.txt)', destination: '/indexnow/:arquivo' },
+    ]
+  },
+
   // 301 Redirects for old URLs (SEO - permanent redirects)
   async redirects() {
     return [

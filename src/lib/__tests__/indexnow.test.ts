@@ -81,7 +81,7 @@ describe('montarLotes / enviarIndexNow — o protocolo', () => {
 		expect(body).toEqual({
 			host: 'attraveiculos.com.br',
 			key: 'abc123',
-			keyLocation: 'https://attraveiculos.com.br/indexnow/abc123.txt',
+			keyLocation: 'https://attraveiculos.com.br/abc123.txt',
 			urlList: ['https://attraveiculos.com.br/veiculo/a'],
 		})
 		expect(r).toEqual({ enviados: 1, lotes: 1, falhas: [] })
@@ -94,7 +94,11 @@ describe('montarLotes / enviarIndexNow — o protocolo', () => {
 		expect(r.falhas[0]).toMatch(/403/)
 	})
 
-	it('a chave é publicada em /indexnow/{chave}.txt', () => {
-		expect(urlDaChave('https://attraveiculos.com.br', 'abc')).toBe('https://attraveiculos.com.br/indexnow/abc.txt')
+	// Na raiz, não em /indexnow/: pelo protocolo, a pasta do arquivo da chave
+	// limita as URLs que ela autoriza. Em /indexnow/{chave}.txt ela só valia para
+	// URLs sob /indexnow/ — nenhuma ficha nem post (indexnow.org/documentation).
+	it('a chave é publicada na raiz, em /{chave}.txt', () => {
+		expect(urlDaChave('https://attraveiculos.com.br', 'abc')).toBe('https://attraveiculos.com.br/abc.txt')
+		expect(urlDaChave('https://attraveiculos.com.br/', 'abc')).toBe('https://attraveiculos.com.br/abc.txt')
 	})
 })

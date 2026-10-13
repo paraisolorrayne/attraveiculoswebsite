@@ -15,4 +15,14 @@ CREATE TABLE IF NOT EXISTS public.indexnow_submissions (
 );
 ALTER TABLE public.indexnow_submissions DISABLE ROW LEVEL SECURITY;
 
+-- Na VPS esta migration roda como postgres (sudo -u postgres psql) e o app
+-- conecta como attra. Sem isto a tabela fica do postgres e /api/indexnow/sync
+-- falha ao ler/gravar. Idempotente: rodar de novo só reafirma o dono.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'attra') THEN
+    ALTER TABLE public.indexnow_submissions OWNER TO attra;
+  END IF;
+END $$;
+
 SELECT 'ok: indexnow_submissions pronta' AS resultado;

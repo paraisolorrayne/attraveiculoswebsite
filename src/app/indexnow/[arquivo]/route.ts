@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 
 /**
- * GET /indexnow/{chave}.txt — prova de posse do host para o IndexNow.
+ * GET /{chave}.txt — prova de posse do host para o IndexNow. O endereço público
+ * é a raiz; next.config reescreve /{chave}.txt para cá (a raiz já tem a rota
+ * dinâmica [brand], então a rota mora em /indexnow/).
  *
  * O protocolo exige que a chave enviada no POST exista como arquivo de texto
  * no próprio domínio (ver `keyLocation` em src/lib/indexnow.ts). Servida por
@@ -9,7 +11,8 @@ import { NextResponse } from 'next/server'
  * (INDEXNOW_KEY) — trocar a chave é trocar a env, sem commit.
  *
  * Fica fora de /api/ de propósito: robots.txt bloqueia /api/ e o Bing precisa
- * buscar este arquivo.
+ * buscar este arquivo. Na raiz porque a pasta do arquivo limita as URLs que a
+ * chave autoriza (ver src/lib/indexnow.ts).
  */
 export const dynamic = 'force-dynamic'
 
