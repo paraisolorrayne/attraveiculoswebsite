@@ -42,20 +42,17 @@ function JornadaSchema() {
     name: 'Carros Icônicos que Passaram pela Attra',
     description: 'Acervo histórico de veículos premium e supercarros marcantes comercializados pela Attra Veículos.',
     numberOfItems: ICONIC_CARS.length,
+    // `Thing`, não `Vehicle`: são carros já vendidos, sem oferta, e o Google lê
+    // Vehicle como produto e exige offers/review/aggregateRating — eram 8 dos
+    // 32 erros críticos de Snippets do produto (out/2026).
     itemListElement: ICONIC_CARS.map((car, i) => ({
       '@type': 'ListItem',
       position: i + 1,
       item: {
-        '@type': 'Vehicle',
-        name: `${car.brand} ${car.model}`,
+        '@type': 'Thing',
+        name: `${car.brand} ${car.model} ${car.year}`,
         description: car.editorial,
         image: car.photo,
-        vehicleModelDate: String(car.year),
-        ...(car.engine ? { vehicleEngine: { '@type': 'EngineSpecification', name: car.engine } } : {}),
-        brand: { '@type': 'Brand', name: car.brand },
-        model: car.model,
-        color: car.color,
-        mileageFromOdometer: { '@type': 'QuantitativeValue', value: parseInt(car.mileage.replace(/\./g, '')) || 0, unitCode: 'KMT' },
       },
     })),
   }

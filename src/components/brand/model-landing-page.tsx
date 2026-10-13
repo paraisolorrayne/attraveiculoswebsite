@@ -381,17 +381,17 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 								},
 							})),
 						} : undefined,
+						// `Thing`, não `Vehicle`: o Google lê Vehicle como produto e exige
+						// offers/review/aggregateRating — eram 24 dos 32 erros críticos de
+						// Snippets do produto (out/2026). Os carros à venda, com oferta,
+						// estão no ItemList acima; a ficha técnica segue como texto.
 						about: {
-							'@type': 'Vehicle',
+							'@type': 'Thing',
 							name: model.fullName,
-							brand: { '@type': 'Brand', name: brand.name },
 							...(datasheet && {
-								vehicleEngine: {
-									'@type': 'EngineSpecification',
-									name: datasheet.engine,
-								},
-								driveWheelConfiguration: datasheet.drivetrain,
-								vehicleTransmission: datasheet.transmission,
+								description: [datasheet.engine, datasheet.power, datasheet.transmission, datasheet.drivetrain]
+									.filter(Boolean)
+									.join(', '),
 							}),
 						},
 						// Referencia a entidade canônica do layout raiz.

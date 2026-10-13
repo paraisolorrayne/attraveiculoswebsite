@@ -303,12 +303,11 @@ export default async function ModeloPage({ params }: PageProps) {
 						// O modelo é o assunto da página, não um produto à venda: a página
 						// é estática e o estoque só chega no navegador (EstoqueAoVivo).
 						// Antes era um Product com AggregateOffer "InStock" sem preço, que o
-						// Search Console acusava como erro crítico (out/2026). Mesmo padrão
-						// de model-landing-page: `about` sem oferta; a oferta fica na ficha.
+						// Search Console acusava como erro crítico (out/2026). `Thing`, não
+						// `Vehicle`: Vehicle sem oferta também é erro crítico de produto.
 						about: {
-							'@type': 'Vehicle',
+							'@type': 'Thing',
 							name: `${data.brand} ${data.model}`,
-							brand: { '@type': 'Brand', name: data.brand },
 						},
 						author: { '@type': 'Organization', name: 'Attra Veículos', url: SITE_URL },
 					}),
