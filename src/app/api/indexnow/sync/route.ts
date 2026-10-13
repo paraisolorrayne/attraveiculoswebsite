@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getBlogPosts } from '@/lib/blog-api'
 import { SITE_URL } from '@/lib/constants'
 import { loadListedInventory } from '@/app/api/llm/_inventory'
+import { situacaoDoReview } from '@/lib/blog-disponibilidade'
 import {
 	assinaturaDoPost,
 	assinaturaDoVeiculo,
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
 			})),
 			...posts.map(p => ({
 				url: `${BASE}/blog/${p.slug}`,
-				assinatura: assinaturaDoPost(p),
+				assinatura: assinaturaDoPost({ ...p, vendido: situacaoDoReview(p, vehicles).tipo === 'vendido' }),
 			})),
 		]
 

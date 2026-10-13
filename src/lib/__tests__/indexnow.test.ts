@@ -22,6 +22,12 @@ describe('assinaturas — o que conta como "mudou" para o IndexNow', () => {
 		const p = { slug: 'x', published_date: '2025-11-28', updated_date: undefined }
 		expect(assinaturaDoPost({ ...p, updated_date: '2026-08-01' })).not.toBe(assinaturaDoPost(p))
 	})
+
+	it('review muda quando o carro é vendido; post sem venda mantém a assinatura já gravada', () => {
+		const p = { slug: 'x', published_date: '2025-11-28' }
+		expect(assinaturaDoPost({ ...p, vendido: true })).not.toBe(assinaturaDoPost(p))
+		expect(assinaturaDoPost({ ...p, vendido: false })).toBe('x|2025-11-28|')
+	})
 })
 
 describe('diffParaSubmeter — só o que mudou, mais o que sumiu', () => {

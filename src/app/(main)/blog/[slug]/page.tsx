@@ -4,7 +4,12 @@ import { getBlogPost } from '@/lib/blog-api'
 import { buildBlogPostSchemas } from '@/lib/blog-schema'
 import { EducativoTemplate, CarReviewTemplate } from '@/components/blog'
 import { InstagramEmbedProvider } from '@/components/blog/instagram-embed-provider'
+import { DisponibilidadeReview } from '@/components/blog/disponibilidade-review'
 import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
+import { loadListedInventory } from '@/app/api/llm/_inventory'
+import { corrigirLinksInternos, pedidoDoReview, situacaoDoReview, slugDaFicha } from '@/lib/blog-disponibilidade'
+import { ordenarPorSemelhanca } from '@/lib/veiculos-semelhantes'
+import type { Vehicle } from '@/types'
 
 interface PageProps {
 	params: Promise<{ slug: string }>
@@ -51,10 +56,39 @@ export default async function BlogPostPage({ params }: PageProps) {
 		notFound()
 	}
 
-	// Render template based on post type
-	const template = post.post_type === 'car_review'
-		? <CarReviewTemplate post={post} />
-		: <EducativoTemplate post={post} />
+	// Estoque do momento: diz se o carro do review ainda está à venda e corrige
+	// os links do texto para fichas de carros que já saíram (ver
+	// src/lib/blog-disponibilidade.ts). Sem estoque, o post sai como está.
+	let estoque: Vehicle[] | null = null
+	try {
+		estoque = (await loadListedInventory()).vehicles
+	} catch (error) {
+		console.error('blog: estoque indisponível para a disponibilidade do post', error)
+	}
+
+	const cr = post.car_review
+	const fichaDoReview = slugDaFicha(cr?.availability?.stock_url)
+	const content = corrigirLinksInternos(post.content, estoque, slug =>
+		slug === fichaDoReview ? '#disponibilidade' : '/veiculos',
+	)
+
+	let template
+	if (post.post_type === 'car_review') {
+		const situacao = situacaoDoReview(post, estoque)
+		// Marca, modelo e ano vêm do review, que é mais confiável que o slug da
+		// ficha (há fichas como `sf90-2024-1062018`, sem a marca).
+		const semelhantes = !estoque || !cr || situacao.tipo === 'a_venda' ? []
+			: ordenarPorSemelhanca(estoque, pedidoDoReview(cr.brand, cr.model, cr.year)).slice(0, 4)
+		template = (
+			<CarReviewTemplate
+				post={{ ...post, content }}
+				vendido={situacao.tipo === 'vendido'}
+				disponibilidade={<DisponibilidadeReview situacao={situacao} brand={cr?.brand} model={cr?.model} semelhantes={semelhantes} />}
+			/>
+		)
+	} else {
+		template = <EducativoTemplate post={{ ...post, content }} />
+	}
 
 	const schemas = buildBlogPostSchemas(post)
 

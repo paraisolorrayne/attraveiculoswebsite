@@ -3,6 +3,7 @@ import type { DualBlogPost, BlogPostType, BlogAuthor, EducativoFields, CarReview
 import { importedBlogPosts } from './imported-blog-posts'
 import { processInstagramEmbeds } from './instagram-processor'
 import { db } from '@/lib/db'
+import { postConsolidado } from './blog-consolidacao'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
@@ -61,8 +62,10 @@ export async function getBlogPosts(options: GetBlogPostsOptions = {}): Promise<D
     console.error('DB error in getBlogPosts:', error)
   }
 
-  // Merge with imported WordPress posts
+  // Merge with imported WordPress posts. Duplicados consolidados redirecionam
+  // para o post que ficou e não entram em sitemap, llms.txt nem listagens.
   let posts = [...supabasePosts, ...importedBlogPosts.filter(p => p.is_published)]
+    .filter(p => !postConsolidado(p.slug))
 
   if (type !== 'all') {
     posts = posts.filter(p => p.post_type === type)
@@ -187,7 +190,7 @@ async function fetchAllPreviews(): Promise<BlogPostPreview[]> {
   }
 
   const imported = importedBlogPosts.filter(p => p.is_published).map(toPreview)
-  const posts = [...dbPreviews, ...imported]
+  const posts = [...dbPreviews, ...imported].filter(p => !postConsolidado(p.slug))
   posts.sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
   return posts
 }

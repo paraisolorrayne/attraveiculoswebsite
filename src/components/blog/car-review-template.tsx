@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import {
   Calendar, Clock, User, ArrowRight, Gauge, Zap, RotateCcw, Fuel,
   CheckCircle, ChevronLeft, ChevronRight, MessageCircle, Car,
@@ -23,6 +23,14 @@ import { SEOInternalLinks } from './seo-internal-links'
 
 interface CarReviewTemplateProps {
   post: DualBlogPost
+  /**
+   * Bloco de disponibilidade montado no servidor com o estoque do momento
+   * (DisponibilidadeReview). O `availability` gravado no post é do dia em que
+   * ele foi escrito e não serve para dizer se o carro ainda está à venda.
+   */
+  disponibilidade?: ReactNode
+  /** O carro do review saiu do estoque. */
+  vendido?: boolean
 }
 
 // Valores-placeholder que significam "dado desconhecido". A ficha técnica deve
@@ -491,14 +499,16 @@ function AttraEvaluationSection({
 // ============================================================================
 // CTA SECTION - Chamadas para ação
 // ============================================================================
-function CTASection({ brand, model, isPrimary = false }: {
+function CTASection({ brand, model, isPrimary = false, vendido = false }: {
   brand?: string
   model?: string
   isPrimary?: boolean
+  vendido?: boolean
 }) {
   const whatsappNumber = '5534991530174'
-  const whatsappMessage = encodeURIComponent(
-    `Olá! Vi o ${brand} ${model} no blog da Attra e gostaria de mais informações.`
+  const whatsappMessage = encodeURIComponent(vendido
+    ? `Olá! Li o review do ${brand} ${model} no blog da Attra. Esse já foi vendido — vocês têm algo parecido?`
+    : `Olá! Vi o ${brand} ${model} no blog da Attra e gostaria de mais informações.`
   )
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
 
@@ -510,10 +520,12 @@ function CTASection({ brand, model, isPrimary = false }: {
       <Container size={isPrimary ? "lg" : undefined}>
         {/* Heading */}
         <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-3">
-          Interessado neste veículo?
+          {vendido ? `Procurando um ${brand} ${model}?` : 'Interessado neste veículo?'}
         </h2>
         <p className="text-lg text-foreground-secondary mb-10 max-w-2xl mx-auto">
-          Entre em contato com nossos especialistas para mais informações sobre o {brand} {model} ou explore modelos similares em nosso acervo.
+          {vendido
+            ? `Este exemplar já foi vendido. Nossos especialistas encontram outro ${brand} ${model} para você ou indicam similares do acervo.`
+            : `Entre em contato com nossos especialistas para mais informações sobre o ${brand} ${model} ou explore modelos similares em nosso acervo.`}
         </p>
 
         {/* CTA Buttons - Padronizados */}
@@ -625,7 +637,7 @@ function ArticleFooter({ brand }: { brand?: string }) {
 // ============================================================================
 // MAIN TEMPLATE
 // ============================================================================
-export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
+export function CarReviewTemplate({ post, disponibilidade, vendido = false }: CarReviewTemplateProps) {
   const [heroImageError, setHeroImageError] = useState(false)
   const { car_review } = post
 
@@ -681,6 +693,18 @@ export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
           <p className="text-lg lg:text-xl text-foreground-secondary max-w-3xl leading-relaxed mb-10 pb-10 border-b border-border/50">
             {post.excerpt}
           </p>
+
+          {/* O texto foi escrito com o carro à venda; o aviso vem antes dele. */}
+          {vendido && (
+            <a
+              href="#disponibilidade"
+              className="-mt-4 mb-10 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background-card text-sm text-foreground hover:border-primary/40 transition-colors"
+            >
+              <Clock className="w-4 h-4 text-foreground-secondary" />
+              Este exemplar já foi vendido — veja os similares disponíveis
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          )}
 
           {/* Meta informações - Melhor organização visual */}
           <div className="flex flex-col sm:flex-row gap-8 mb-10 text-sm">
@@ -768,7 +792,7 @@ export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
       {/* ================================================================== */}
       {/* CTA PRIMÁRIO - Após primeira dobra */}
       {/* ================================================================== */}
-      <CTASection brand={car_review?.brand} model={car_review?.model} isPrimary />
+      <CTASection brand={car_review?.brand} model={car_review?.model} isPrimary vendido={vendido} />
 
       {/* ================================================================== */}
       {/* GALERIA DE FOTOS - Com navegação e legendas */}
@@ -801,49 +825,9 @@ export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
             />
 
             {/* ================================================================== */}
-            {/* DISPONIBILIDADE NA ATTRA */}
+            {/* DISPONIBILIDADE NA ATTRA — ao vivo, montada no servidor */}
             {/* ================================================================== */}
-            {car_review?.availability && (
-              <div className="mt-12 p-6 lg:p-8 rounded-2xl border-2 border-primary/30 bg-primary/5">
-                <div className="flex items-start justify-between flex-wrap gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      {car_review.availability.in_stock ? (
-                        <>
-                          <CheckCircle className="w-6 h-6 text-green-500" />
-                          <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                            Disponível na Attra Veículos
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-6 h-6 text-foreground-secondary" />
-                          <span className="text-lg font-semibold text-foreground-secondary">
-                            Sob Consulta
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    {car_review.availability.price && (
-                      <p className="text-3xl font-bold text-foreground">
-                        {car_review.availability.price}
-                      </p>
-                    )}
-                    <p className="mt-2 text-sm text-foreground-secondary">
-                      Veículo disponível na Attra Veículos em Uberlândia-MG
-                    </p>
-                  </div>
-                  {car_review.availability.in_stock && car_review.availability.stock_url && (
-                    <Button asChild size="lg" className="min-h-[52px]">
-                      <Link href={car_review.availability.stock_url}>
-                        Ver Detalhes do Veículo
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            {disponibilidade}
 
             {/* ================================================================== */}
             {/* AVALIAÇÃO ATTRA - Card premium reformulado */}
@@ -869,7 +853,7 @@ export function CarReviewTemplate({ post }: CarReviewTemplateProps) {
       {/* ================================================================== */}
       {/* CTA FINAL */}
       {/* ================================================================== */}
-      <CTASection brand={car_review?.brand} model={car_review?.model} />
+      <CTASection brand={car_review?.brand} model={car_review?.model} vendido={vendido} />
 
       {/* ================================================================== */}
       {/* SEO INTERNAL LINKS — /comprar/ pages */}

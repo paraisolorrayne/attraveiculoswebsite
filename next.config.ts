@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { POSTS_CONSOLIDADOS } from "./src/lib/blog-consolidacao";
 
 // Security headers configuration
 const securityHeaders = [
@@ -109,6 +110,14 @@ const nextConfig: NextConfig = {
   // 301 Redirects for old URLs (SEO - permanent redirects)
   async redirects() {
     return [
+      // Posts duplicados do blog → o que ficou de cada grupo (ver src/lib/blog-consolidacao.ts).
+      // Aqui e não na página: a rota do post tem loading.tsx, e um redirect
+      // durante o streaming sairia com HTTP 200.
+      ...Object.entries(POSTS_CONSOLIDADOS).map(([duplicado, mantido]) => ({
+        source: `/blog/${duplicado}`,
+        destination: `/blog/${mantido}`,
+        permanent: true,
+      })),
       // Old /estoque → /veiculos (premium rebrand)
       {
         source: '/estoque',

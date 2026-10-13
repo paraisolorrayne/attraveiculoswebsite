@@ -1,5 +1,7 @@
 import { chaveDeComparacao } from '@/lib/taxonomia-veiculo'
 import { getBlogPosts } from '@/lib/blog-api'
+import { situacaoDoReview } from '@/lib/blog-disponibilidade'
+import type { Vehicle } from '@/types'
 import {
   SITE_URL, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2, CELLPHONE_DISPLAY,
   EMAIL, OPENING_HOURS, GEO, MAPA_URL,
@@ -30,6 +32,7 @@ export async function GET() {
   // em vez de responder erro.
   let inventoryBlock = ''
   let inventorySummary = ''
+  let estoque: Vehicle[] | null = null
   // Marcas com os modelos QUE ESTÃO no estoque, não só os de vitrine.
   //
   // A lista curada nomeia carro-desejo — R8, Roma —, que é isca legítima de
@@ -67,6 +70,7 @@ ${blocoEditorial}
   try {
     const inventory = await loadListedInventory()
     const vehicles = inventory.vehicles
+    estoque = vehicles
 
     blocoMarcas = SEO_BRANDS
       .map(b => {
@@ -118,7 +122,12 @@ ${blocoEditorial}
       postsBlock += '\n## Reviews de veículos\n\n'
       for (const p of reviews.slice(0, 25)) {
         const desc = p.seo?.meta_description || p.excerpt || ''
-        postsBlock += `- [${p.title}](${BASE}/blog/${p.slug}): ${desc}\n`
+        // A descrição foi escrita com o carro à venda ("disponível na Attra").
+        // Sem o aviso, um assistente repete a disponibilidade de um carro vendido.
+        const vendido = situacaoDoReview(p, estoque).tipo === 'vendido'
+          ? ' (Exemplar já vendido: o review vale como referência do modelo; o que está à venda está no estoque acima.)'
+          : ''
+        postsBlock += `- [${p.title}](${BASE}/blog/${p.slug}): ${desc}${vendido}\n`
       }
     }
     if (educativos.length > 0) {

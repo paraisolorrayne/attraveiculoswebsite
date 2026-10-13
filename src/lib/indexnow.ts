@@ -34,10 +34,15 @@ export function assinaturaDoVeiculo(v: {
 	return [v.slug, v.price ?? '', v.status, v.updated_at ?? ''].join('|')
 }
 
+/**
+ * Post: slug e datas; review cujo carro saiu do estoque ganha `|vendido`, para
+ * a página ser reenviada quando passa a dizer "vendido". Só o vendido acrescenta
+ * algo, então os demais posts mantêm a assinatura que já estava gravada.
+ */
 export function assinaturaDoPost(p: {
-	slug: string; published_date: string; updated_date?: string | null
+	slug: string; published_date: string; updated_date?: string | null; vendido?: boolean
 }): string {
-	return [p.slug, p.published_date, p.updated_date ?? ''].join('|')
+	return [p.slug, p.published_date, p.updated_date ?? '', ...(p.vendido ? ['vendido'] : [])].join('|')
 }
 
 export interface Diff {
