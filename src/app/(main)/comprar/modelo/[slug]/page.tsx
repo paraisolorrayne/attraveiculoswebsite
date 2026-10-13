@@ -300,16 +300,15 @@ export default async function ModeloPage({ params }: PageProps) {
 								{ '@type': 'ListItem', position: 3, name: `${data.brand} ${data.model}`, item: `${SITE_URL}/comprar/modelo/${slug}` },
 							],
 						},
-						mainEntity: {
-							'@type': 'Product',
+						// O modelo é o assunto da página, não um produto à venda: a página
+						// é estática e o estoque só chega no navegador (EstoqueAoVivo).
+						// Antes era um Product com AggregateOffer "InStock" sem preço, que o
+						// Search Console acusava como erro crítico (out/2026). Mesmo padrão
+						// de model-landing-page: `about` sem oferta; a oferta fica na ficha.
+						about: {
+							'@type': 'Vehicle',
 							name: `${data.brand} ${data.model}`,
 							brand: { '@type': 'Brand', name: data.brand },
-							offers: {
-								'@type': 'AggregateOffer',
-								priceCurrency: 'BRL',
-								availability: 'https://schema.org/InStock',
-								seller: { '@type': 'Organization', name: 'Attra Veículos', url: SITE_URL },
-							},
 						},
 						author: { '@type': 'Organization', name: 'Attra Veículos', url: SITE_URL },
 					}),

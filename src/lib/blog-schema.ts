@@ -1,4 +1,4 @@
-import type { DualBlogPost } from '@/types'
+import type { CarReviewFields, DualBlogPost } from '@/types'
 import {
   SITE_URL, ADDRESS, PHONE_NUMBER, PHONE_NUMBER_2, CELLPHONE_NUMBER,
   EMAIL, OPENING_HOURS, PERFIS_OFICIAIS, GEO, MAPA_URL,
@@ -112,28 +112,22 @@ export function buildArticleSchema(post: DualBlogPost) {
     articleSection: post.educativo?.category,
     ...(post.post_type === 'car_review' && post.car_review
       ? {
-          itemReviewed: {
-            '@type': 'Vehicle',
-            name: `${post.car_review.brand} ${post.car_review.model} ${post.car_review.year}`,
-            brand: { '@type': 'Brand', name: post.car_review.brand },
-            model: post.car_review.model,
-            vehicleModelDate: String(post.car_review.year),
-            ...(post.car_review.color ? { color: post.car_review.color } : {}),
-          },
+          itemReviewed: buildReviewedVehicle(post, post.car_review, url),
           reviewBody: post.excerpt,
         }
       : {}),
   }
 }
 
-export function buildVehicleSchema(post: DualBlogPost) {
-  if (post.post_type !== 'car_review' || !post.car_review) return null
-  const { baseUrl } = getContext()
-  const cr = post.car_review
-  const url = `${baseUrl}/blog/${post.slug}`
-
+// O carro avaliado vai dentro do Review, sem `offers`.
+//
+// Antes era um bloco Vehicle solto com uma Offer sem price/priceCurrency, que o
+// Search Console acusava como erro crítico em Listagens do comerciante e
+// Snippets do produto (61 posts, out/2026). O `in_stock` do post é gravado na
+// redação e não acompanha o estoque: metade apontava para carro já vendido. A
+// oferta de verdade, com preço ao vivo, é a da ficha /veiculo/<slug>.
+function buildReviewedVehicle(post: DualBlogPost, cr: CarReviewFields, url: string) {
   return {
-    '@context': 'https://schema.org',
     '@type': 'Vehicle',
     '@id': `${url}#vehicle`,
     name: `${cr.brand} ${cr.model} ${cr.year}${cr.version ? ' ' + cr.version : ''}`,
@@ -153,14 +147,6 @@ export function buildVehicleSchema(post: DualBlogPost) {
       : {}),
     image: post.featured_image ? [post.featured_image] : undefined,
     description: post.excerpt,
-    offers: cr.availability?.in_stock
-      ? {
-          '@type': 'Offer',
-          availability: 'https://schema.org/InStock',
-          ...(cr.availability.stock_url ? { url: cr.availability.stock_url.startsWith('http') ? cr.availability.stock_url : `${baseUrl}${cr.availability.stock_url}` } : {}),
-          seller: { '@id': `${baseUrl}/${ORGANIZATION_ID}` },
-        }
-      : undefined,
   }
 }
 
@@ -251,7 +237,6 @@ export function buildBlogPostSchemas(post: DualBlogPost) {
   const schemas = [
     buildArticleSchema(post),
     buildBreadcrumbSchema(post),
-    buildVehicleSchema(post),
     buildFAQSchema(post),
     buildCollectionPageSchema(post),
   ].filter((s): s is NonNullable<typeof s> => s !== null)
