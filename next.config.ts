@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { POSTS_CONSOLIDADOS } from "./src/lib/blog-consolidacao";
+import { PAGINAS_LEGADAS, POSTS_WP_NA_RAIZ } from "./src/lib/seo/urls-legadas";
 
 // Security headers configuration
 const securityHeaders = [
@@ -126,6 +127,19 @@ const nextConfig: NextConfig = {
       ...Object.entries(POSTS_CONSOLIDADOS).map(([duplicado, mantido]) => ({
         source: `/blog/${duplicado}`,
         destination: `/blog/${mantido}`,
+        permanent: true,
+      })),
+      // Endereços do WordPress antigo com equivalente no site atual (ver
+      // src/lib/seo/urls-legadas.ts). Post consolidado vai direto para o que
+      // ficou, sem passar por dois redirects.
+      ...POSTS_WP_NA_RAIZ.map(slug => ({
+        source: `/${slug}`,
+        destination: `/blog/${POSTS_CONSOLIDADOS[slug] ?? slug}`,
+        permanent: true,
+      })),
+      ...Object.entries(PAGINAS_LEGADAS).map(([source, destination]) => ({
+        source,
+        destination,
         permanent: true,
       })),
       // Old /estoque → /veiculos (premium rebrand)
