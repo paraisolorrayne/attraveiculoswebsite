@@ -18,6 +18,11 @@ interface Dados {
 }
 
 const ROTULO_PLATAFORMA: Record<string, string> = { google: 'Google', meta: 'Meta', webmotors: 'WebMotors' }
+const ROTULO_LIGACAO: Record<LeadDaAgencia['ligacao'], string> = {
+	clique: 'Na visita da campanha',
+	visita_anterior: 'Em visita anterior',
+	anuncio: 'Anúncio da Meta (WhatsApp direto)',
+}
 const STATUS: Record<StatusLead, { rotulo: string; cor: string }> = {
 	com_vendedor: { rotulo: 'Com vendedor', cor: 'bg-amber-500/10 text-amber-500' },
 	vendido: { rotulo: 'Vendido', cor: 'bg-emerald-500/10 text-emerald-500' },
@@ -27,7 +32,8 @@ const STATUS: Record<StatusLead, { rotulo: string; cor: string }> = {
 const COBERTURA =
 	'Contam os leads do CRM ligados a uma visita do site: pelo clique no WhatsApp no mesmo carro ou pelo telefone de quem se identificou no site. ' +
 	'O lead é de vocês quando qualquer visita da pessoa nos 90 dias antes dele veio das suas campanhas. ' +
-	'Ainda não entram os leads de anúncio que abre o WhatsApp direto, sem passar pelo site, nem os que não chegaram a um vendedor — passam a entrar quando o CRM enviar a campanha de cada lead.'
+	'Os leads de anúncio da Meta que abre o WhatsApp direto, sem passar pelo site, entram pela campanha que o CRM informa. ' +
+	'Ainda não entram os que não chegaram a um vendedor.'
 
 function dataHora(iso: string): string {
 	return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
@@ -53,7 +59,7 @@ const colunasLista: ColunaTabela<LeadDaAgencia>[] = [
 	{
 		chave: 'ligacao',
 		titulo: 'Como foi ligado',
-		render: l => (l.ligacao === 'clique' ? 'Na visita da campanha' : 'Em visita anterior'),
+		render: l => ROTULO_LIGACAO[l.ligacao],
 		valor: l => l.ligacao,
 		prioridade: 3,
 	},

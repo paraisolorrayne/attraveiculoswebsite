@@ -78,6 +78,15 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 		const p6 = await pessoa('p6')
 		await sessao(p6, 'sessao6-mh', 5, { utm_source: 'google', utm_campaign: 'va-pmax', gclid: 'g' })
 		await card('teste-lead-6', 'encerrado_perdido', 5, 'sessao6-mh')
+		// 9. Anúncio da Meta da MH que abre o WhatsApp direto (Nilton, 14/10): sem
+		// visita ao site; a campanha vem do CRM em origem_detalhe.
+		await card('teste-lead-9', 'encerrado_perdido', 3, null, {
+			origem_detalhe: { canal: 'meta_whatsapp_direto', campanha_nome: '[VA][MediaHouse][Leads][Whatsapp] Nucleo', campanha_id: '1202' },
+		})
+		// 10. Anúncio da EB pelo mesmo caminho: não aparece para a MH.
+		await card('teste-lead-10', 'novo', 3, null, {
+			origem_detalhe: { canal: 'meta_whatsapp_direto', campanha_nome: '[EB] [WPP] | Loja Rondon', campanha_id: '9' },
+		})
 		// 7. Sem ligação nenhuma com o site: não aparece.
 		await card('teste-lead-7', 'novo', 2, null)
 		// 8. MH, mas o card entrou há 40 dias: fora do período de 30.
@@ -90,13 +99,14 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 
 	it('conta entraram, com vendedor, vendidos e perdidos só dos leads da agência', async () => {
 		const r = await consultarLeadsAgencia('http://x/?dias=30', mhEscopo())
-		expect(r.total).toEqual({ entraram: 3, com_vendedor: 1, vendidos: 1, perdidos: 1 })
+		expect(r.total).toEqual({ entraram: 4, com_vendedor: 1, vendidos: 1, perdidos: 2 })
 	})
 
 	it('por campanha, com a campanha da visita da agência mais próxima do lead', async () => {
 		const r = await consultarLeadsAgencia('http://x/?dias=30', mhEscopo())
 		expect(r.porCampanha).toEqual([
 			{ campanha: 'va-pmax', plataforma: 'google', entraram: 2, com_vendedor: 1, vendidos: 0, perdidos: 1 },
+			{ campanha: '[VA][MediaHouse][Leads][Whatsapp] Nucleo', plataforma: 'meta', entraram: 1, com_vendedor: 0, vendidos: 0, perdidos: 1 },
 			{ campanha: '[VA][Site]', plataforma: 'meta', entraram: 1, com_vendedor: 0, vendidos: 1, perdidos: 0 },
 		])
 	})
@@ -110,12 +120,18 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 		const volta = r.lista.find(l => l.campanha === '[VA][Site]')
 		expect(volta).toMatchObject({ status: 'vendido', veiculo: 'Porsche 911 Carrera S 2023', ligacao: 'visita_anterior', plataforma: 'meta' })
 		expect(r.lista.filter(l => l.ligacao === 'clique')).toHaveLength(2)
+		expect(r.lista.find(l => l.ligacao === 'anuncio')).toMatchObject({
+			campanha: '[VA][MediaHouse][Leads][Whatsapp] Nucleo', plataforma: 'meta', status: 'perdido',
+		})
+		expect(texto).not.toContain('[EB] [WPP]')
 		expect(r.lista.every(l => l.veiculo === 'Ferrari 296 GTB' || l.veiculo === 'Porsche 911 Carrera S 2023')).toBe(true)
 	})
 
 	it('filtros de plataforma e campanha estreitam', async () => {
 		const meta = await consultarLeadsAgencia('http://x/?dias=30', { ...mhEscopo(), plataforma: 'meta' })
-		expect(meta.total.entraram).toBe(1)
+		expect(meta.total.entraram).toBe(2)
+		const google = await consultarLeadsAgencia('http://x/?dias=30', { ...mhEscopo(), plataforma: 'google' })
+		expect(google.lista.some(l => l.ligacao === 'anuncio')).toBe(false)
 		const pmax = await consultarLeadsAgencia('http://x/?dias=30', { ...mhEscopo(), campanhas: ['va-pmax'] })
 		expect(pmax.total).toEqual({ entraram: 2, com_vendedor: 1, vendidos: 0, perdidos: 1 })
 	})
@@ -132,6 +148,6 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 
 	it('período maior traz o lead de 40 dias atrás', async () => {
 		const r = await consultarLeadsAgencia('http://x/?dias=90', mhEscopo())
-		expect(r.total.entraram).toBe(4)
+		expect(r.total.entraram).toBe(5)
 	})
 })
