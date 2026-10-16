@@ -10,7 +10,8 @@
  */
 
 import type { ChangeEvent } from 'react'
-import type { CarroEstoque, EstadoCriativo, OpcoesFoto, PisoTipo } from '@content/admin/creative/gerador'
+import type { BlocoFicha, CarroEstoque, EstadoCriativo, ItemDesempenho, OpcoesFoto, PisoTipo } from '@content/admin/creative/gerador'
+import { RED } from '@content/admin/creative/gerador/desenho'
 import type { Gerador } from './use-gerador'
 
 /* ---------------------------------------------------------------- primitivas */
@@ -56,6 +57,69 @@ export function CampoTexto({
 				{...resto}
 			/>
 			{dica && <span className="mt-1 block text-xs text-foreground-secondary">{dica}</span>}
+		</label>
+	)
+}
+
+export function CampoAreaTexto({
+	rotulo,
+	valor,
+	aoMudar,
+	linhas = 3,
+	placeholder,
+}: {
+	rotulo: string
+	valor: string
+	aoMudar: (v: string) => void
+	linhas?: number
+	placeholder?: string
+}) {
+	return (
+		<label className="block">
+			<span className="mb-1 block text-xs font-medium text-foreground-secondary">{rotulo}</span>
+			<textarea
+				rows={linhas}
+				value={valor}
+				onChange={e => aoMudar(e.target.value)}
+				placeholder={placeholder}
+				className={CLASSE_ENTRADA + ' resize-y'}
+			/>
+		</label>
+	)
+}
+
+/** Cor em #rrggbb: o seletor do navegador e o código, editáveis um pelo outro. */
+export function CampoCor({
+	rotulo,
+	valor,
+	padrao,
+	aoMudar,
+}: {
+	rotulo: string
+	valor: string
+	/** O que a peça usa quando o campo está vazio. */
+	padrao: string
+	aoMudar: (v: string) => void
+}) {
+	const valida = /^#[0-9a-f]{6}$/i.test(valor)
+	return (
+		<label className="block">
+			<span className="mb-1 block text-xs font-medium text-foreground-secondary">{rotulo}</span>
+			<div className="flex items-center gap-2">
+				<input
+					type="color"
+					value={valida ? valor : padrao}
+					onChange={e => aoMudar(e.target.value)}
+					className="h-9 w-12 cursor-pointer rounded-md border border-border bg-background p-1"
+				/>
+				<input
+					type="text"
+					value={valor}
+					onChange={e => aoMudar(e.target.value.trim())}
+					placeholder={padrao}
+					className={CLASSE_ENTRADA + ' font-mono'}
+				/>
+			</div>
 		</label>
 	)
 }
@@ -240,6 +304,99 @@ function CarroDaLista({
 	)
 }
 
+/* ------------------------------------------------------------ Premium */
+
+/** Onde cada bloco da grade cai na peça — o rótulo do campo diz isso. */
+const LUGAR_DO_BLOCO = [
+	'em cima, à esquerda',
+	'em cima, no meio',
+	'em cima, à direita',
+	'embaixo, no meio',
+	'embaixo, à direita',
+]
+
+function CamposPremium({ g, aoEscolherLogoModelo }: { g: Gerador; aoEscolherLogoModelo: (f: File) => void }) {
+	const { estado, campo } = g
+	const desempenho = estado.desempenho ?? []
+	const blocos = estado.blocos ?? []
+	const mudarItem = (i: number, novo: ItemDesempenho) =>
+		campo('desempenho', desempenho.map((x, j) => (j === i ? novo : x)))
+	const mudarBloco = (i: number, novo: BlocoFicha) =>
+		campo('blocos', blocos.map((x, j) => (j === i ? novo : x)))
+
+	return (
+		<>
+			<Secao titulo="Logotipo do modelo">
+				<CampoArquivo rotulo="PNG transparente" aceita="image/png" aoEscolher={aoEscolherLogoModelo} />
+				<Dica>
+					O logotipo do fabricante (o “TEMERARIO” cromado, por exemplo) entra no lugar do nome do
+					modelo. Sem ele, o nome sai escrito em itálico cromado.
+				</Dica>
+				{g.imagens.current.logoModelo && (
+					<button
+						type="button"
+						onClick={() => g.definirLogoModelo(null)}
+						className="rounded-md border border-border px-3 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
+					>
+						Tirar o logotipo e voltar ao nome escrito
+					</button>
+				)}
+			</Secao>
+
+			<Secao titulo="Cor do carro">
+				<CampoTexto
+					rotulo="Nome da cor (vai na faixa, com o ano)"
+					valor={estado.nomeCor ?? ''}
+					aoMudar={v => campo('nomeCor', v)}
+					placeholder="Ex.: VIOLA PASIFAE"
+				/>
+				<CampoCor
+					rotulo="Cor de destaque"
+					valor={estado.corDestaque ?? ''}
+					padrao={RED}
+					aoMudar={v => campo('corDestaque', v)}
+				/>
+				<Dica>
+					A faixa usa a cor como está; os rótulos usam a mesma cor clareada para ler no fundo
+					escuro. Vazio = vermelho da Attra, que é o que serve para carro preto, branco ou cinza.
+				</Dica>
+			</Secao>
+
+			<Secao titulo="Desempenho (até 4)">
+				{desempenho.map((it, i) => (
+					<div key={i} className="grid grid-cols-[1fr_1fr_2fr] gap-2">
+						<CampoTexto rotulo="Número" valor={it.valor} aoMudar={v => mudarItem(i, { ...it, valor: v })} placeholder="920" />
+						<CampoTexto rotulo="Unidade" valor={it.unidade} aoMudar={v => mudarItem(i, { ...it, unidade: v })} placeholder="cv" />
+						<CampoTexto rotulo="Legenda" valor={it.rotulo} aoMudar={v => mudarItem(i, { ...it, rotulo: v })} placeholder="POTÊNCIA" />
+					</div>
+				))}
+				<Dica>Número vazio tira o item da linha; os outros se recentralizam sozinhos.</Dica>
+			</Secao>
+
+			<Secao titulo="Ficha (5 blocos)">
+				{blocos.map((b, i) => (
+					<div key={i} className="grid grid-cols-[1fr_2fr] gap-2">
+						<CampoTexto
+							rotulo={`Rótulo — ${LUGAR_DO_BLOCO[i] ?? ''}`}
+							valor={b.rotulo}
+							aoMudar={v => mudarBloco(i, { ...b, rotulo: v })}
+						/>
+						<CampoAreaTexto
+							rotulo="Texto (até 3 linhas)"
+							valor={b.texto}
+							aoMudar={v => mudarBloco(i, { ...b, texto: v })}
+						/>
+					</div>
+				))}
+				<Dica>
+					Uma informação por linha: a primeira sai em branco e as outras um tom abaixo. A casa de
+					baixo à esquerda fica livre de propósito — é por onde passa a diagonal da foto de baixo.
+				</Dica>
+			</Secao>
+		</>
+	)
+}
+
 /* --------------------------------------------------------------- o painel */
 
 const PISOS: { id: PisoTipo; nome: string; descricao: string }[] = [
@@ -251,10 +408,12 @@ export function PainelCampos({
 	g,
 	aoEscolherFotoDoComputador,
 	aoEscolherFotoDaLista,
+	aoEscolherLogoModelo,
 }: {
 	g: Gerador
 	aoEscolherFotoDoComputador: (slot: 'foto1' | 'foto2' | 'foto3' | 'foto4', f: File) => void
 	aoEscolherFotoDaLista: (indice: number, f: File) => void
+	aoEscolherLogoModelo: (f: File) => void
 }) {
 	const { estado, campo } = g
 	const t = estado.tipo
@@ -283,7 +442,7 @@ export function PainelCampos({
 						/>
 						<CampoTexto rotulo="Quilometragem" valor={estado.km} aoMudar={texto('km')} />
 					</div>
-					{classico && (
+					{(classico || t === 'premium') && (
 						<CampoTexto
 							rotulo="Complemento da linha do KM (opcional)"
 							valor={estado.kmextra}
@@ -305,6 +464,8 @@ export function PainelCampos({
 					</Dica>
 				</Secao>
 			)}
+
+			{t === 'premium' && <CamposPremium g={g} aoEscolherLogoModelo={aoEscolherLogoModelo} />}
 
 			{t === 'ficha' && (
 				<Secao titulo="Ficha do veículo">

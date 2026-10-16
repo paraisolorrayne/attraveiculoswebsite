@@ -67,6 +67,8 @@ export interface Gerador {
 	/** Recarrega uma peça inteira do histórico. */
 	restaurar: (c: CriativoGuardado) => Promise<void>
 	definirLogo: (img: HTMLImageElement | null, dataUrl?: string, arquivo?: Blob) => void
+	/** Logotipo do modelo do Premium. Não fica salvo como a logo: muda a cada carro. */
+	definirLogoModelo: (img: HTMLImageElement | null, arquivo?: Blob) => void
 }
 
 export function useGerador(): Gerador {
@@ -209,7 +211,7 @@ export function useGerador(): Gerador {
 						const img = await carregar(src)
 						const m = /^est([0-3])$/.exec(chave)
 						if (m) novas.estFotos[Number(m[1])] = img
-						else novas[chave as 'foto1' | 'foto2' | 'foto3' | 'foto4' | 'logo'] = img
+						else novas[chave as 'foto1' | 'foto2' | 'foto3' | 'foto4' | 'logo' | 'logoModelo'] = img
 					} catch {
 						// Foto que não volta (URL do estoque que saiu do ar) não pode
 						// derrubar a restauração do resto da peça.
@@ -221,7 +223,9 @@ export function useGerador(): Gerador {
 			for (const u of urlsTemporarias) URL.revokeObjectURL(u)
 			imagens.current = novas
 			origens.current = { ...c.fotos }
-			setEstado(structuredClone(c.estado))
+			// Peça guardada antes de um campo existir (o Premium chegou em 16/10)
+			// volta com o campo vazio do estado inicial, e não com `undefined`.
+			setEstado({ ...structuredClone(ESTADO_INICIAL), ...structuredClone(c.estado) })
 			redesenhar()
 		},
 		[redesenhar],
@@ -237,6 +241,13 @@ export function useGerador(): Gerador {
 		} catch {
 			// sem armazenamento a logo vale só para esta sessão
 		}
+		redesenhar()
+	}, [redesenhar])
+
+	const definirLogoModelo = useCallback((img: HTMLImageElement | null, arquivo?: Blob) => {
+		imagens.current.logoModelo = img
+		if (img && arquivo) origens.current.logoModelo = { origem: 'arquivo', arquivo }
+		else delete origens.current.logoModelo
 		redesenhar()
 	}, [redesenhar])
 
@@ -256,5 +267,6 @@ export function useGerador(): Gerador {
 		registrarOrigem,
 		restaurar,
 		definirLogo,
+		definirLogoModelo,
 	}
 }

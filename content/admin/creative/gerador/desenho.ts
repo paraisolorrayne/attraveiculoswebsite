@@ -167,7 +167,8 @@ export type ModoFoto = 'fit' | 'dark' | undefined
  */
 export function drawPhoto(
 	ctx: CanvasRenderingContext2D,
-	img: HTMLImageElement,
+	// Canvas também serve: é o que `fotoSemJuntas` devolve quando limpou o chão.
+	img: HTMLImageElement | HTMLCanvasElement,
 	rx: number,
 	ry: number,
 	rw: number,

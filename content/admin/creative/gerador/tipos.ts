@@ -16,7 +16,7 @@ export const ALTURA_STORIES = 1920
 /** Feed 4:5 da Meta — a mesma composição, só com a foto principal. */
 export const ALTURA_FEED = 1350
 
-export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'ficha'
+export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'ficha' | 'premium'
 
 export type PisoTipo = 'concreto' | 'asfalto'
 
@@ -29,6 +29,23 @@ export interface OpcoesFoto {
 	/** 0 a 1, onde 0,5 é o centro. */
 	x: number
 	y: number
+}
+
+/** Um número da linha de desempenho do Premium: "920" "cv" "POTÊNCIA". */
+export interface ItemDesempenho {
+	valor: string
+	unidade: string
+	rotulo: string
+}
+
+/**
+ * Um bloco da grade do Premium: rótulo editável ("MOTOR", "COR"…) e até
+ * três linhas, separadas por quebra de linha. A primeira sai em branco e as
+ * outras um tom abaixo, como na peça de referência.
+ */
+export interface BlocoFicha {
+	rotulo: string
+	texto: string
 }
 
 /** Um dos quatro carros da lista do formato Estoque. */
@@ -67,6 +84,20 @@ export interface EstadoCriativo {
 	corint: string
 	garantia: string
 
+	// Premium
+	/** Nome da cor na faixa colorida: "VIOLA PASIFAE". */
+	nomeCor: string
+	/** Cor de destaque (faixa e rótulos), em #rrggbb. Vazia = vermelho da Attra. */
+	corDestaque: string
+	/** Até quatro números na linha de desempenho. */
+	desempenho: ItemDesempenho[]
+	/**
+	 * Os cinco blocos da grade, nesta ordem: linha de cima (três colunas) e
+	 * linha de baixo (colunas do meio e da direita — a da esquerda fica livre
+	 * para a diagonal da foto de baixo).
+	 */
+	blocos: BlocoFicha[]
+
 	// Estoque
 	et1: string
 	et2: string
@@ -98,6 +129,8 @@ export interface ImagensDoOperador {
 	estFotos: (HTMLImageElement | null)[]
 	/** Logo enviada pelo operador, que substitui a oficial no Clássico. */
 	logo: HTMLImageElement | null
+	/** Logotipo do modelo (PNG transparente), no lugar do nome escrito no Premium. */
+	logoModelo: HTMLImageElement | null
 }
 
 /** Imagens fixas da marca, servidas de /public/gerador/. */
@@ -141,6 +174,21 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	rot2: 'INTERIOR',
 	corint: 'CARAMELO',
 	garantia: '2 ANOS DE GARANTIA',
+	nomeCor: 'CINZA SELENITA',
+	corDestaque: '',
+	desempenho: [
+		{ valor: '285', unidade: 'cv', rotulo: 'POTÊNCIA' },
+		{ valor: '61,2', unidade: 'kgfm', rotulo: 'TORQUE' },
+		{ valor: '', unidade: '', rotulo: '' },
+		{ valor: '', unidade: '', rotulo: '' },
+	],
+	blocos: [
+		{ rotulo: 'MOTOR', texto: '2.0 turbo gasolina' },
+		{ rotulo: 'COR', texto: 'Cinza Selenita Magno' },
+		{ rotulo: 'TRAÇÃO', texto: 'Traseira' },
+		{ rotulo: 'INTERIOR', texto: 'Preto' },
+		{ rotulo: 'DESTAQUES', texto: 'Pacote AMG Line' },
+	],
 	et1: 'NOVIDADES',
 	et2: 'EM ESTOQUE!',
 	estoque: [
@@ -176,4 +224,5 @@ export const IMAGENS_VAZIAS: ImagensDoOperador = {
 	foto4: null,
 	estFotos: [null, null, null, null],
 	logo: null,
+	logoModelo: null,
 }
