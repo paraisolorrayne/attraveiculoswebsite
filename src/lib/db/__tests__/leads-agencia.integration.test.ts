@@ -134,4 +134,31 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 		const r = await consultarLeadsAgencia('http://x/?dias=90', mhEscopo())
 		expect(r.total.entraram).toBe(4)
 	})
+
+	// 16/10: lead do anúncio da Meta que vai direto para o WhatsApp não passa
+	// pelo site. A campanha vem no card (dados.origem_detalhe) e é por ela que
+	// ele entra; da EB continua fora.
+	it('lead do anúncio da Meta direto no WhatsApp entra pela campanha do card, sem visita', async () => {
+		const ontem = new Date(Date.now() - DIA)
+		const ins = (id: string, origem: Record<string, unknown>) => sql`
+			insert into crm_cards (id, etapa, nome, telefone, veiculo, valor, vendedor, dados, criado_em, atualizado_em)
+			values (${id}, 'em_atendimento', 'Fulano Secreto', '11988887777', 'Mercedes-AMG G 63', 1500000, 'Vendedor Secreto',
+			        ${JSON.stringify({ origem_detalhe: origem })}::jsonb, ${ontem}, ${ontem})
+		`.execute(db)
+		await ins('teste-lead-9', { canal: 'meta_whatsapp_direto', plataforma: 'meta', agencia: 'Media House', campanha_nome: '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]' })
+		await ins('teste-lead-10', { canal: 'meta_whatsapp_direto', plataforma: 'meta', agencia: 'EB', campanha_nome: '[EB] [WPP] | Loja Rondon' })
+		try {
+			const r = await consultarLeadsAgencia('http://x/?dias=30', mhEscopo())
+			expect(r.total.entraram).toBe(4)
+			expect(r.lista.find(l => l.ligacao === 'anuncio')).toMatchObject({
+				campanha: '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]', plataforma: 'meta', status: 'com_vendedor',
+			})
+			expect(JSON.stringify(r)).not.toContain('Loja Rondon')
+			expect(JSON.stringify(r)).not.toContain('Secreto')
+			const google = await consultarLeadsAgencia('http://x/?dias=30', { ...mhEscopo(), plataforma: 'google' })
+			expect(google.lista.some(l => l.ligacao === 'anuncio')).toBe(false)
+		} finally {
+			await sql`delete from crm_cards where id in ('teste-lead-9', 'teste-lead-10')`.execute(db)
+		}
+	})
 })

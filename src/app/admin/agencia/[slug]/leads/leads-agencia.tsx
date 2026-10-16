@@ -53,7 +53,7 @@ const colunasLista: ColunaTabela<LeadDaAgencia>[] = [
 	{
 		chave: 'ligacao',
 		titulo: 'Como foi ligado',
-		render: l => (l.ligacao === 'clique' ? 'Na visita da campanha' : 'Em visita anterior'),
+		render: l => (l.ligacao === 'clique' ? 'Na visita da campanha' : l.ligacao === 'anuncio' ? 'Direto do anúncio' : 'Em visita anterior'),
 		valor: l => l.ligacao,
 		prioridade: 3,
 	},
