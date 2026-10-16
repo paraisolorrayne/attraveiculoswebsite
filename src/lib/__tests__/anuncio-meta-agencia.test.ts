@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { toqueDoAnuncioMeta } from '@/lib/agencias/anuncio-meta'
 
-const MH = { nome: 'Media House', prefixos: ['%5bva%5d', '[va]', 'va-'] }
+const MH = { nome: 'Media House', prefixos: ['%5bva%5d', '[va]', 'va-'], ids_campanha: ['120250000000000001'] }
 
 const card = (origem: Record<string, unknown> | null) => (origem ? { origem_detalhe: origem } : {})
 
@@ -33,8 +33,21 @@ describe('toqueDoAnuncioMeta', () => {
 		expect(toqueDoAnuncioMeta(card({ agencia: 'Media House', plataforma: 'meta' }), MH, {})).toBeNull()
 	})
 
-	it('prefixo vazio na lista não abre tudo', () => {
-		expect(toqueDoAnuncioMeta(card({ campanha_nome: 'qualquer', plataforma: 'meta' }), { nome: 'X', prefixos: ['', '  '] }, {})).toBeNull()
+	it('prefixo no meio do nome não conta (só no começo)', () => {
+		expect(toqueDoAnuncioMeta(card({ campanha_nome: 'nova-colecao-va-', plataforma: 'meta' }), MH, {})).toBeNull()
+	})
+
+	it('casa pelo id da campanha, como o utm_id da visita; sem nome, aparece pelo id', () => {
+		const t = toqueDoAnuncioMeta(card({ campanha_nome: 'Sem padrão', campanha_id: ' 120250000000000001 ', plataforma: 'meta' }), MH, {})
+		expect(t?.campanha).toBe('Sem padrão')
+		expect(toqueDoAnuncioMeta(card({ campanha_id: '120250000000000001', plataforma: 'meta' }), MH, {})?.campanha).toBe('120250000000000001')
+		expect(toqueDoAnuncioMeta(card({ campanha_nome: 'Sem padrão', campanha_id: '9', plataforma: 'meta' }), MH, {})).toBeNull()
+	})
+
+	it('prefixo ou id vazio na lista não abre tudo', () => {
+		const vazia = { nome: 'X', prefixos: ['', '  '], ids_campanha: [' '] }
+		expect(toqueDoAnuncioMeta(card({ campanha_nome: 'qualquer', plataforma: 'meta' }), vazia, {})).toBeNull()
+		expect(toqueDoAnuncioMeta(card({ campanha_nome: 'qualquer', campanha_id: '', plataforma: 'meta' }), vazia, {})).toBeNull()
 	})
 
 	it('respeita o filtro de plataforma e de campanha da tela', () => {

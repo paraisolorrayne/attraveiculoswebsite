@@ -7,18 +7,20 @@ import type { PlataformaCampanha } from '@/lib/db/types'
  * aba Leads (card ligado a uma visita com o marcador da agência) nunca o via.
  * Caso real: os 6 leads da Media House que foram ao vendedor estavam no CRM e a
  * área da Media House mostrava zero. A Fykos manda a campanha do anúncio no
- * card (`dados.origem_detalhe`: `campanha_nome`, `agencia`, `plataforma`), e
- * é por ela que o lead passa a contar.
+ * card (`dados.origem_detalhe`: `campanha_nome`, `campanha_id`, `agencia`,
+ * `plataforma`), e é por ela que o lead passa a contar.
  *
  * O marcador é o mesmo da sessão: o nome da campanha COMEÇA com um prefixo da
- * agência, sem diferenciar caixa nem espaço, e item vazio na lista é ignorado.
+ * agência, ou o id da campanha está em `ids_campanha` (como o `utm_id` da
+ * visita), sem diferenciar caixa nem espaço, e item vazio na lista é ignorado.
  * Vale também o nome da agência gravado no card, para campanha nova que ainda
- * não segue o padrão de nome.
+ * não segue o padrão de nome. Sem nome, a campanha aparece pelo id.
  */
 
 export interface AgenciaDoMarcador {
 	nome: string
 	prefixos: string[]
+	ids_campanha: string[]
 }
 
 export interface FiltroDaTela {
@@ -39,14 +41,17 @@ export function toqueDoAnuncioMeta(dados: unknown, agencia: AgenciaDoMarcador | 
 	const origem = dados && typeof dados === 'object' ? (dados as Record<string, unknown>).origem_detalhe : null
 	if (!origem || typeof origem !== 'object') return null
 	const o = origem as Record<string, unknown>
-	const campanha = limpo(o.campanha_nome)
+	const nomeDaCampanha = limpo(o.campanha_nome)
+	const id = limpo(o.campanha_id)
+	const campanha = nomeDaCampanha || id
 	if (!campanha) return null
 
 	if (agencia) {
-		const nome = campanha.toLowerCase()
-		const peloPrefixo = agencia.prefixos.some(p => limpo(p) !== '' && nome.startsWith(limpo(p).toLowerCase()))
+		const nome = nomeDaCampanha.toLowerCase()
+		const peloPrefixo = nome !== '' && agencia.prefixos.some(p => limpo(p) !== '' && nome.startsWith(limpo(p).toLowerCase()))
+		const peloId = id !== '' && agencia.ids_campanha.some(i => limpo(i) !== '' && limpo(i).toLowerCase() === id.toLowerCase())
 		const peloNome = limpo(o.agencia).toLowerCase() !== '' && limpo(o.agencia).toLowerCase() === limpo(agencia.nome).toLowerCase()
-		if (!peloPrefixo && !peloNome) return null
+		if (!peloPrefixo && !peloId && !peloNome) return null
 	}
 
 	const p = limpo(o.plataforma).toLowerCase()

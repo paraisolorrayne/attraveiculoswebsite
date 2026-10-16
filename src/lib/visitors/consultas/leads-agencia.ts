@@ -144,7 +144,7 @@ export async function consultarLeadsAgencia(endereco: string, escopo: Escopo) {
 	// no card. Só o que a regra da visita não contou, para não contar duas vezes.
 	const agencia: AgenciaDoMarcador | null =
 		escopo.tipo === 'agencia'
-			? ((await db.selectFrom('agencias').select(['nome', 'prefixos']).where('id', '=', escopo.agenciaId).executeTakeFirst()) ?? null)
+			? ((await db.selectFrom('agencias').select(['nome', 'prefixos', 'ids_campanha']).where('id', '=', escopo.agenciaId).executeTakeFirst()) ?? null)
 			: null
 	const filtro = escopo.tipo === 'agencia' ? { plataforma: escopo.plataforma, campanhas: escopo.campanhas } : {}
 	let doAnuncio = 0

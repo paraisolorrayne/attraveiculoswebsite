@@ -147,18 +147,23 @@ describe.skipIf(!TEST_DB)('leads da agência — SQL real', () => {
 		`.execute(db)
 		await ins('teste-lead-9', { canal: 'meta_whatsapp_direto', plataforma: 'meta', agencia: 'Media House', campanha_nome: '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]' })
 		await ins('teste-lead-10', { canal: 'meta_whatsapp_direto', plataforma: 'meta', agencia: 'EB', campanha_nome: '[EB] [WPP] | Loja Rondon' })
+		// Sem prefixo nem agência no card, mas com um id de campanha da lista da Media House.
+		await ins('teste-lead-11', { canal: 'meta_whatsapp_direto', plataforma: 'meta', campanha_nome: 'Campanha sem padrão', campanha_id: '24295047322' })
 		try {
 			const r = await consultarLeadsAgencia('http://x/?dias=30', mhEscopo())
-			expect(r.total.entraram).toBe(4)
-			expect(r.lista.find(l => l.ligacao === 'anuncio')).toMatchObject({
-				campanha: '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]', plataforma: 'meta', status: 'com_vendedor',
+			expect(r.total.entraram).toBe(5)
+			expect(r.lista.filter(l => l.ligacao === 'anuncio').map(l => l.campanha).sort()).toEqual(
+				['Campanha sem padrão', '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]'].sort(),
+			)
+			expect(r.lista.find(l => l.campanha === '[VA][MediaHouse][FORM][Leads][Whatsapp][Modelos]')).toMatchObject({
+				ligacao: 'anuncio', plataforma: 'meta', status: 'com_vendedor',
 			})
 			expect(JSON.stringify(r)).not.toContain('Loja Rondon')
 			expect(JSON.stringify(r)).not.toContain('Secreto')
 			const google = await consultarLeadsAgencia('http://x/?dias=30', { ...mhEscopo(), plataforma: 'google' })
 			expect(google.lista.some(l => l.ligacao === 'anuncio')).toBe(false)
 		} finally {
-			await sql`delete from crm_cards where id in ('teste-lead-9', 'teste-lead-10')`.execute(db)
+			await sql`delete from crm_cards where id in ('teste-lead-9', 'teste-lead-10', 'teste-lead-11')`.execute(db)
 		}
 	})
 })

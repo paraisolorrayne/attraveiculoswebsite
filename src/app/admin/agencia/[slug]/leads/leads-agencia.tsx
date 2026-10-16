@@ -27,7 +27,8 @@ const STATUS: Record<StatusLead, { rotulo: string; cor: string }> = {
 const COBERTURA =
 	'Contam os leads do CRM ligados a uma visita do site: pelo clique no WhatsApp no mesmo carro ou pelo telefone de quem se identificou no site. ' +
 	'O lead é de vocês quando qualquer visita da pessoa nos 90 dias antes dele veio das suas campanhas. ' +
-	'Ainda não entram os leads de anúncio que abre o WhatsApp direto, sem passar pelo site, nem os que não chegaram a um vendedor — passam a entrar quando o CRM enviar a campanha de cada lead.'
+	'Os leads de anúncio da Meta que abre o WhatsApp direto, sem passar pelo site, entram pela campanha que o CRM informa. ' +
+	'Ainda não entram os que não chegaram a um vendedor.'
 
 function dataHora(iso: string): string {
 	return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
