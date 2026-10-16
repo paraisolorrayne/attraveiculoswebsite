@@ -30,7 +30,7 @@ export function nomeDaPeca(estado: EstadoCriativo): string {
 			.filter(Boolean)
 			.map(limpar)
 			.join('-') || 'criativo-attra'
-	return estado.tipo === 'destaque' ? nome + '-DESTAQUE' : nome
+	return nome
 }
 
 /**

@@ -99,22 +99,6 @@ export function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 	ctx.closePath()
 }
 
-/** O mesmo caminho, com o nome que a Ficha usa. */
-export const cantoArredondado = rr
-
-/** Linha tracejada — assinatura do layout da Ficha. */
-export function linhaTracejada(ctx: CanvasRenderingContext2D, x1: number, y: number, x2: number, cor: string): void {
-	ctx.save()
-	ctx.strokeStyle = cor
-	ctx.lineWidth = 2
-	ctx.setLineDash([7, 6])
-	ctx.beginPath()
-	ctx.moveTo(x1, y)
-	ctx.lineTo(x2, y)
-	ctx.stroke()
-	ctx.restore()
-}
-
 /** Texto do Editorial alinhado à esquerda; devolve a largura ocupada. */
 export function edTextoEsq(
 	ctx: CanvasRenderingContext2D,
@@ -197,9 +181,9 @@ export function drawPhoto(
 			ctx.fillRect(rx, ry, rw, rh)
 		} else {
 			const bs = base * 1.2
-			ctx.filter = 'blur(45px)'
-			ctx.drawImage(img, rx + (rw - img.width * bs) / 2, ry + (rh - img.height * bs) / 2, img.width * bs, img.height * bs)
-			ctx.filter = 'none'
+			const fw = img.width * bs
+			const fh = img.height * bs
+			ctx.drawImage(desfocada(img, fw, 45) ?? img, rx + (rw - fw) / 2, ry + (rh - fh) / 2, fw, fh)
 			ctx.fillStyle = 'rgba(0,0,0,.38)'
 			ctx.fillRect(rx, ry, rw, rh)
 		}
@@ -240,72 +224,6 @@ export function placeholder(
 	ctx.textAlign = 'center'
 	ctx.fillText(label, rx + rw / 2, ry + rh * (rh > 500 ? 0.72 : 0.53))
 	ctx.textAlign = 'left'
-}
-
-/**
- * `modo === 'fit'` mostra a FOTO INTEIRA; sem ele, preenche a caixa cortando.
- *
- * A foto do estoque é horizontal (~1,29) e a caixa do Clássico é quase quadrada
- * (1080x1000 = 1,08). Preenchendo, a foto era ampliada até encher a ALTURA e
- * perdia 205px de largura — 102 por lado —, o que come a frente e a traseira do
- * carro e faz a peça abrir já com o veículo espremido nas bordas. Em fit o
- * zoom 100% passa a significar "a foto inteira", que é o que o operador espera,
- * e ele amplia a partir dali se quiser.
- *
- * NÃO está ligado no Clássico. Ligar sozinho piora: a foto passa a ocupar
- * 1080x840 numa caixa de 1000 de altura, sobra faixa vazia embaixo, e o logo e
- * o título — posicionados a partir de `topGap` — colidem com o letreiro que
- * aparece na própria foto. O enquadramento do Clássico depende da caixa e da
- * foto terem a mesma proporção; mudar isso é mexer no layout inteiro da peça,
- * não num parâmetro.
- */
-export function drawPhotoFeather(
-	ctx: CanvasRenderingContext2D,
-	img: HTMLImageElement,
-	rx: number,
-	ry: number,
-	rw: number,
-	rh: number,
-	opt?: OpcoesFoto,
-	modo?: 'fit',
-): number {
-	const o = opt ?? NEUTRO
-	const { dx, dy, dw, dh } = enquadrar(img, { x: rx, y: ry, largura: rw, altura: rh }, o, modo === 'fit' ? 'fit' : 'cover')
-	const oc = document.createElement('canvas')
-	oc.width = Math.ceil(dw)
-	oc.height = Math.ceil(dh)
-	const o2 = oc.getContext('2d')!
-	o2.drawImage(img, 0, 0, dw, dh)
-	o2.globalCompositeOperation = 'destination-out'
-	let g: CanvasGradient
-	if (dy > ry + 2) {
-		// borda superior esfumada
-		g = o2.createLinearGradient(0, 0, 0, 180)
-		g.addColorStop(0, 'rgba(0,0,0,1)')
-		g.addColorStop(1, 'rgba(0,0,0,0)')
-		o2.fillStyle = g
-		o2.fillRect(0, 0, oc.width, 180)
-	}
-	if (dw < rw - 4) {
-		// bordas laterais esfumadas
-		g = o2.createLinearGradient(0, 0, 110, 0)
-		g.addColorStop(0, 'rgba(0,0,0,1)')
-		g.addColorStop(1, 'rgba(0,0,0,0)')
-		o2.fillStyle = g
-		o2.fillRect(0, 0, 110, oc.height)
-		g = o2.createLinearGradient(oc.width, 0, oc.width - 110, 0)
-		g.addColorStop(0, 'rgba(0,0,0,1)')
-		g.addColorStop(1, 'rgba(0,0,0,0)')
-		o2.fillStyle = g
-		o2.fillRect(oc.width - 110, 0, 110, oc.height)
-	}
-	ctx.save()
-	ctx.beginPath()
-	ctx.rect(rx, ry, rw, rh)
-	ctx.clip()
-	ctx.drawImage(oc, dx, dy)
-	ctx.restore()
-	return dy
 }
 
 /** Logo vetorial de reserva, se a imagem falhar. */
@@ -508,6 +426,114 @@ export function suavizarDivisa(ctx: CanvasRenderingContext2D, y: number, largura
 	ctx.drawImage(oc.canvas, 0, 0, largura, H, 0, y, largura, H)
 }
 
+/** Pixels da tela que cada pixel da imagem desfocada cobre. */
+const PASSO_DESFOQUE = 8
+
+const desfocadasCache = new WeakMap<HTMLImageElement | HTMLCanvasElement, Map<string, HTMLCanvasElement | null>>()
+
+/**
+ * A imagem desfocada, para desenhar no lugar da original.
+ *
+ * `ctx.filter` não serve: o Safari ignora a propriedade sem erro nenhum, e a
+ * peça saía com o fundo nítido (16/10/2026). Aqui o desfoque é feito à mão: a
+ * imagem encolhe até cada pixel valer PASSO_DESFOQUE da tela, leva três
+ * passadas de média (que somadas dão uma gaussiana) e volta esticada — esticar
+ * o que já está liso não mostra degrau.
+ *
+ * `larguraNaTela` é a largura com que ela vai ser desenhada, e `raio` o desvio
+ * em pixels da tela, o mesmo número que iria no blur(). Uma vez por imagem e
+ * tamanho. Se o canvas recusar a leitura, devolve null.
+ */
+export function desfocada(
+	img: HTMLImageElement | HTMLCanvasElement,
+	larguraNaTela: number,
+	raio: number,
+): HTMLCanvasElement | null {
+	const w = Math.max(1, Math.round(larguraNaTela / PASSO_DESFOQUE))
+	const h = Math.max(1, Math.round((w * img.height) / img.width))
+	// Três caixas de raio r somam a variância de uma gaussiana de desvio `raio`.
+	const desvio = raio / PASSO_DESFOQUE
+	const r = Math.max(1, Math.round((Math.sqrt(4 * desvio * desvio + 1) - 1) / 2))
+	const chave = `${w}x${h}:${r}`
+	let porTamanho = desfocadasCache.get(img)
+	if (!porTamanho) desfocadasCache.set(img, (porTamanho = new Map()))
+	const pronta = porTamanho.get(chave)
+	if (pronta !== undefined) return pronta
+
+	let saida: HTMLCanvasElement | null = null
+	try {
+		// Encolher pela metade de cada vez: de 1920 direto para 135 o navegador
+		// pula pixels em vez de fazer a média.
+		let atual: HTMLImageElement | HTMLCanvasElement = img
+		let aw = img.width
+		let ah = img.height
+		while (aw > 2 * w) {
+			aw = Math.round(aw / 2)
+			ah = Math.round(ah / 2)
+			const meio = document.createElement('canvas')
+			meio.width = aw
+			meio.height = ah
+			const m = meio.getContext('2d')!
+			m.imageSmoothingQuality = 'high'
+			m.drawImage(atual, 0, 0, aw, ah)
+			atual = meio
+		}
+		const c = document.createElement('canvas')
+		c.width = w
+		c.height = h
+		const x = c.getContext('2d', { willReadFrequently: true })!
+		x.imageSmoothingQuality = 'high'
+		x.drawImage(atual, 0, 0, w, h)
+		const d = x.getImageData(0, 0, w, h)
+		desfocarPixels(d.data, w, h, r)
+		x.putImageData(d, 0, 0)
+		saida = c
+	} catch {
+		saida = null
+	}
+	porTamanho.set(chave, saida)
+	return saida
+}
+
+/** Três passadas de média de raio r, na horizontal e na vertical, no próprio RGBA. */
+export function desfocarPixels(dados: Uint8ClampedArray, w: number, h: number, r: number): void {
+	const a = Float32Array.from(dados)
+	const b = new Float32Array(a.length)
+	for (let passada = 0; passada < 3; passada++) {
+		mediaEmLinha(a, b, w, h, r, 4, 4 * w)
+		mediaEmLinha(b, a, h, w, r, 4 * w, 4)
+	}
+	dados.set(a)
+}
+
+/**
+ * Média móvel de raio r ao longo de cada linha (ou coluna, trocando os passos).
+ * Na borda repete o último pixel: com transparente, a foto escurecia nas beiradas.
+ */
+function mediaEmLinha(
+	de: Float32Array,
+	para: Float32Array,
+	n: number,
+	linhas: number,
+	r: number,
+	passo: number,
+	passoLinha: number,
+): void {
+	const k = 1 / (2 * r + 1)
+	for (let l = 0; l < linhas; l++) {
+		const base = l * passoLinha
+		for (let canal = 0; canal < 4; canal++) {
+			const em = (i: number) => de[base + Math.min(n - 1, Math.max(0, i)) * passo + canal]
+			let soma = 0
+			for (let j = -r; j <= r; j++) soma += em(j)
+			for (let i = 0; i < n; i++) {
+				para[base + i * passo + canal] = soma * k
+				soma += em(i + r + 1) - em(i - r)
+			}
+		}
+	}
+}
+
 /** A foto tratada e, quando foi possível medir, onde começa o chão em cada coluna dela. */
 interface FotoTratada {
 	tela: HTMLCanvasElement | HTMLImageElement
@@ -687,76 +713,6 @@ export function drawPhotoBanda(
 		chao: tratada.chao,
 	}
 	return { topo: Math.max(ry, dy), base: dy + dh, geo }
-}
-
-/**
- * Foto emoldurada — cantos arredondados e sombra suave, com o fundo original
- * fazendo parte da composição (a Ficha não usa recorte).
- *
- * O aspect fit mostra a foto INTEIRA — e por isso não há o que deslocar. Se
- * ele valesse sempre, os controles de posição não fariam nada, que era
- * exatamente o que acontecia. Então mexer na posição (ou no zoom) liga o modo
- * recorte, onde o deslocamento passa a ser visível. `preencher` força o
- * recorte para a foto ocupar a caixa toda — usado na foto principal, que
- * precisa ficar alinhada com as de cima.
- */
-export function fotoEmMoldura(
-	ctx: CanvasRenderingContext2D,
-	img: HTMLImageElement | null,
-	x: number,
-	y: number,
-	w: number,
-	h: number,
-	opt?: OpcoesFoto,
-	raio?: number,
-	preencher?: boolean,
-): void {
-	const r = raio === undefined ? 18 : raio
-	const zoom = opt?.zoom ?? 1
-	const px = opt?.x ?? 0.5
-	const py = opt?.y ?? 0.5
-
-	const moveu = Math.abs(px - 0.5) > 0.001 || Math.abs(py - 0.5) > 0.001
-	let fx = x
-	let fy = y
-	let fw = w
-	let fh = h
-	let recortar = true
-	if (img && zoom <= 1.001 && !moveu && !preencher) {
-		// Aspect fit: encolhe até caber e centraliza no espaço disponível.
-		const escala = Math.min(w / img.width, h / img.height)
-		fw = img.width * escala
-		fh = img.height * escala
-		fx = x + (w - fw) / 2
-		fy = y + (h - fh) / 2
-		recortar = false
-	}
-
-	ctx.save()
-	ctx.shadowColor = 'rgba(0,0,0,.18)'
-	ctx.shadowBlur = 26
-	ctx.shadowOffsetY = 8
-	ctx.fillStyle = '#e9e9ec'
-	cantoArredondado(ctx, fx, fy, fw, fh, r)
-	ctx.fill()
-	ctx.restore()
-
-	ctx.save()
-	cantoArredondado(ctx, fx, fy, fw, fh, r)
-	ctx.clip()
-	if (img) {
-		if (recortar) drawPhoto(ctx, img, fx, fy, fw, fh, opt)
-		else ctx.drawImage(img, fx, fy, fw, fh)
-	} else {
-		ctx.fillStyle = '#dcdce1'
-		ctx.fillRect(fx, fy, fw, fh)
-		ctx.fillStyle = 'rgba(0,0,0,.32)'
-		ctx.font = '600 22px Montserrat, sans-serif'
-		ctx.textAlign = 'center'
-		ctx.fillText('FOTO', fx + fw / 2, fy + fh / 2 + 8)
-		ctx.textAlign = 'left'
-	}
-	ctx.restore()
 }
 
 /** Largura fixa do canvas, reexportada para os formatos. */

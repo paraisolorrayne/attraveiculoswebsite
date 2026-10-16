@@ -16,11 +16,11 @@ export const ALTURA_STORIES = 1920
 /** Feed 4:5 da Meta — a mesma composição, só com a foto principal. */
 export const ALTURA_FEED = 1350
 
-export type FormatoId = 'classico' | 'classico-loja' | 'destaque' | 'estoque' | 'ficha' | 'premium'
+export type FormatoId = 'classico-loja' | 'estoque' | 'premium'
 
 export type PisoTipo = 'concreto' | 'asfalto'
 
-export type SlotFoto = 'foto1' | 'foto2' | 'foto3' | 'foto4'
+export type SlotFoto = 'foto1' | 'foto2'
 
 /** Enquadramento de uma foto dentro da caixa que a recebe. */
 export interface OpcoesFoto {
@@ -60,7 +60,7 @@ export interface CarroEstoque {
 export interface EstadoCriativo {
 	tipo: FormatoId
 
-	// Identificação do veículo (Clássico, Clássico Loja, Destaque, Editorial, Ficha)
+	// Identificação do veículo (Clássico Loja e Premium)
 	marca: string
 	modelo: string
 	ano: string
@@ -69,20 +69,10 @@ export interface EstadoCriativo {
 	/** Texto extra ao lado do km — "ÚNICO DONO", por exemplo. */
 	kmextra: string
 
-	/** Destaques do Clássico e do Clássico Loja: no máximo três, uma linha cada. */
+	/** Destaques do Clássico Loja: no máximo três, uma linha cada. */
 	b1: string
 	b2: string
 	b3: string
-
-	/** Pílulas do Destaque, separadas por vírgula. */
-	selo: string
-
-	// Ficha
-	rot1: string
-	corext: string
-	rot2: string
-	corint: string
-	garantia: string
 
 	// Premium
 	/** Nome da cor na faixa colorida: "VIOLA PASIFAE". */
@@ -104,7 +94,7 @@ export interface EstadoCriativo {
 	estoque: CarroEstoque[]
 
 	// Ajustes de composição
-	/** Corte transversal do Clássico: positivo sobe a divisa. */
+	/** Corte transversal do Clássico Loja: positivo sobe a divisa. */
 	corte: number
 	/** Deslocamento vertical do bloco de texto sobre o piso. */
 	pisoy: number
@@ -112,22 +102,15 @@ export interface EstadoCriativo {
 
 	f1: OpcoesFoto
 	f2: OpcoesFoto
-	f3: OpcoesFoto
-	f4: OpcoesFoto
-
-	/** Destino do clique na galeria do estoque (usado pela Ficha). */
-	slotFoto: SlotFoto
 }
 
 /** As imagens que o operador carregou ou escolheu do estoque. */
 export interface ImagensDoOperador {
 	foto1: HTMLImageElement | null
 	foto2: HTMLImageElement | null
-	foto3: HTMLImageElement | null
-	foto4: HTMLImageElement | null
 	/** As quatro fotos dos carros do formato Estoque. */
 	estFotos: (HTMLImageElement | null)[]
-	/** Logo enviada pelo operador, que substitui a oficial no Clássico. */
+	/** Logo enviada pelo operador, que substitui a oficial. */
 	logo: HTMLImageElement | null
 	/** Logotipo do modelo (PNG transparente), no lugar do nome escrito no Premium. */
 	logoModelo: HTMLImageElement | null
@@ -139,12 +122,9 @@ export interface Assets {
 	logoBranca: HTMLImageElement
 	/** Logo preta com o branco já convertido em transparente. */
 	logoPreta: CanvasImageSource
-	/** Close do letreiro, fundo do topo do Clássico original. */
-	fachadaClassico: HTMLImageElement
 	/** Foto inteira da loja, fundo do Clássico Loja. */
 	fachadaLoja: HTMLImageElement
 	pisoConcreto: HTMLImageElement
-	pisoAsfalto: HTMLImageElement
 }
 
 /** Tudo o que uma função de formato precisa para desenhar. */
@@ -168,12 +148,6 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	b1: 'Cor Cinza Selenita Magno',
 	b2: 'Motor 2.0 turbo gasolina 285 cv / 61,2 kgfm',
 	b3: 'Pacote AMG Line',
-	selo: 'BLINDADO',
-	rot1: 'EXTERIOR',
-	corext: 'PRETO',
-	rot2: 'INTERIOR',
-	corint: 'CARAMELO',
-	garantia: '2 ANOS DE GARANTIA',
 	nomeCor: 'CINZA SELENITA',
 	corDestaque: '',
 	desempenho: [
@@ -203,25 +177,13 @@ export const ESTADO_INICIAL: EstadoCriativo = {
 	corte: -32,
 	pisoy: -18,
 	pisoTipo: 'concreto',
-	// Neutro, porque o formato padrão é o Clássico Loja.
-	//
-	// O 0,88/0,18 que ficava aqui é a calibração da Lorrayne (04/08/2026) para o
-	// Clássico ORIGINAL, onde a foto entra na faixa 0..1000 e o zoom recuado
-	// mantém o carro abaixo do título. Ele não sumiu: `enquadramentoAutomatico`
-	// o aplica sozinho ao escolher uma foto no Clássico. Aqui vale o neutro, que
-	// é o que o Clássico Loja quer.
 	f1: { zoom: 1, x: 0.5, y: 0.5 },
 	f2: { zoom: 1, x: 0.5, y: 0.5 },
-	f3: { zoom: 1, x: 0.5, y: 0.5 },
-	f4: { zoom: 1, x: 0.5, y: 0.5 },
-	slotFoto: 'foto1',
 }
 
 export const IMAGENS_VAZIAS: ImagensDoOperador = {
 	foto1: null,
 	foto2: null,
-	foto3: null,
-	foto4: null,
 	estFotos: [null, null, null, null],
 	logo: null,
 	logoModelo: null,

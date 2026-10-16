@@ -61,17 +61,6 @@ interface VeiculoEstoque {
 
 const fmtBR = (n: number | string) => Number(n).toLocaleString('pt-BR')
 
-/**
- * Posições das fotos que a Ficha usa dentro da galeria do MESMO carro.
- *
- * A 1 é sempre a principal (é a capa do anúncio); 2 e 11, no padrão de
- * fotografia da Attra, costumam cair em ângulos bem diferentes — evitam dois
- * recortes quase iguais do mesmo lado do carro. São DUAS na tira de propósito:
- * com três, cada foto 4:3 ficava com 233px de altura e não dava para ler nada.
- */
-const FICHA_POSICOES = [1, 2, 11]
-const SLOTS_FICHA: SlotFoto[] = ['foto1', 'foto2', 'foto3']
-
 /** Lê o arquivo do computador e devolve a imagem já decodificada e o dataURL. */
 function lerArquivo(file: File): Promise<{ img: HTMLImageElement; dados: string }> {
 	return new Promise((ok, erro) => {
@@ -109,9 +98,6 @@ export function CriativosAdmin() {
 
 	const [historico, setHistorico] = useState<CriativoGuardado[]>([])
 	const [miniaturas, setMiniaturas] = useState<Record<string, string>>({})
-
-	const slotAtual = useRef<SlotFoto>('foto1')
-	const [slotVisivel, setSlotVisivel] = useState<SlotFoto>('foto1')
 
 	/* --------------------------------------- histórico das últimas 24h */
 
@@ -177,33 +163,6 @@ export function CriativosAdmin() {
 	}, [busca])
 
 	/**
-	 * Carrega a galeria do carro nas fotos da Ficha, respeitando quantas existem.
-	 * Com menos fotos que o esperado, distribui ao longo da galeria em vez de
-	 * repetir as primeiras — que costumam ser variações do mesmo ângulo.
-	 */
-	const preSelecionarFotosDaFicha = useCallback(
-		(fotos: string[]) => {
-			if (!fotos.length) return
-			// O terceiro detalhe começa vazio: a tira de 2 é o padrão. Limpa também
-			// um carro anterior, senão a foto dele sobrava na peça do carro novo.
-			imagens.current.foto4 = null
-			const ultima = FICHA_POSICOES[FICHA_POSICOES.length - 1]
-			const posicoes =
-				fotos.length >= ultima
-					? FICHA_POSICOES
-					: [1, ...[1, 2].map(i => Math.min(fotos.length, 1 + Math.round((i * (fotos.length - 1)) / 2)))]
-			posicoes.forEach((pos, i) => {
-				const url = fotos[Math.min(pos, fotos.length) - 1]
-				if (!url) return
-				void carregar(urlFotoEstoque(url)).then(img => {
-					g.aplicarFoto(SLOTS_FICHA[i], img, { origem: 'estoque', url: urlFotoEstoque(url) })
-				})
-			})
-		},
-		[g, imagens],
-	)
-
-	/**
 	 * O link do status leva UTM da ficha do carro.
 	 *
 	 * `utm_source=whatsapp` + `utm_medium=status` cai em "social orgânico" no
@@ -262,18 +221,11 @@ export function CriativosAdmin() {
 		setUsadas({})
 		const fotos = v.photos ?? []
 		setGaleria(fotos)
-		if (estado.tipo === 'ficha') preSelecionarFotosDaFicha(fotos)
 	}
 
-	/**
-	 * Clique numa miniatura da galeria.
-	 *
-	 * Na Ficha a tira usa foto2 e foto3, e o atalho antigo (clique / Shift+clique)
-	 * só alcançava as duas primeiras. Por isso ali o destino vem do seletor de
-	 * slot, que avança sozinho para dar pra clicar nas três em sequência.
-	 */
+	/** Clique numa miniatura da galeria: foto principal, ou a de baixo com Shift. */
 	function usarFotoDaGaleria(url: string, comShift: boolean) {
-		const destino: SlotFoto = estado.tipo === 'ficha' ? slotAtual.current : comShift ? 'foto2' : 'foto1'
+		const destino: SlotFoto = comShift ? 'foto2' : 'foto1'
 		void carregar(urlFotoEstoque(url)).then(img => {
 			g.aplicarFoto(destino, img, { origem: 'estoque', url: urlFotoEstoque(url) })
 			setUsadas(u => {
@@ -282,17 +234,12 @@ export function CriativosAdmin() {
 				novo[url] = destino
 				return novo
 			})
-			if (estado.tipo === 'ficha') {
-				const i = SLOTS_FICHA.indexOf(slotAtual.current)
-				slotAtual.current = SLOTS_FICHA[(i + 1) % SLOTS_FICHA.length]
-				setSlotVisivel(slotAtual.current)
-			}
 		})
 	}
 
 	/* -------------------------------------------------- fotos do computador */
 
-	function aoEscolherFotoDoComputador(slot: 'foto1' | 'foto2' | 'foto3' | 'foto4', file: File) {
+	function aoEscolherFotoDoComputador(slot: SlotFoto, file: File) {
 		void lerArquivo(file)
 			.then(({ img }) => g.aplicarFoto(slot, img, { origem: 'arquivo', arquivo: file }))
 			.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
@@ -511,30 +458,6 @@ export function CriativosAdmin() {
 							</ul>
 						)}
 
-						{estado.tipo === 'ficha' && galeria.length > 0 && (
-							<div>
-								<span className="mb-1 block text-xs font-medium text-foreground-secondary">
-									Clicar numa foto abaixo aplica em:
-								</span>
-								<Escolha<SlotFoto>
-									opcoes={[
-										{ id: 'foto1', nome: 'Principal', descricao: 'foto grande' },
-										{ id: 'foto2', nome: 'Detalhe 1', descricao: 'tira, esquerda' },
-										{ id: 'foto3', nome: 'Detalhe 2', descricao: 'tira, direita' },
-									]}
-									valor={slotVisivel}
-									aoEscolher={s => {
-										slotAtual.current = s
-										setSlotVisivel(s)
-									}}
-								/>
-								<Dica>
-									O destino avança sozinho a cada foto escolhida, então dá para clicar nas três
-									em sequência.
-								</Dica>
-							</div>
-						)}
-
 						{galeria.length > 0 && (
 							<div className="flex flex-wrap gap-2">
 								{galeria.map(u => (
@@ -545,9 +468,7 @@ export function CriativosAdmin() {
 										title={
 											usadas[u]
 												? `Aplicada em: ${usadas[u] === 'foto1' ? 'Principal' : usadas[u]}`
-												: estado.tipo === 'ficha'
-													? 'Clique: aplica no destino selecionado acima'
-													: 'Clique: Foto principal · Shift+clique: Foto 2'
+												: 'Clique: Foto principal · Shift+clique: Foto 2'
 										}
 										className={
 											'overflow-hidden rounded-md border-2 transition-colors ' +

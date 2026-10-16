@@ -4,8 +4,12 @@
  * Extraída de `drawPhoto` e `autoFrameFoto1` do HTML do gerador. Está separada
  * do desenho de propósito: é a única parte do motor que dá para testar sem
  * navegador, e é onde mora a calibração que o operador percebe na hora.
+ *
+ * Morava aqui também o enquadramento automático do Clássico original (zoom .88,
+ * y .18 em foto horizontal). Saiu com o formato em 16/10/2026: todos os que
+ * ficaram abrem a foto no NEUTRO.
  */
-import { LARGURA, type FormatoId, type OpcoesFoto } from './tipos'
+import type { OpcoesFoto } from './tipos'
 
 /** Caixa onde a foto será desenhada, em pixels do canvas. */
 export interface Caixa {
@@ -67,36 +71,3 @@ export function enquadrar(
 
 /** Sem ajuste: a foto centralizada, preenchendo a caixa. */
 export const NEUTRO: OpcoesFoto = { zoom: 1, x: 0.5, y: 0.5 }
-
-/**
- * Enquadramento padrão do Clássico para foto horizontal, calibrado pela
- * Lorrayne no próprio gerador (04/08/2026).
- *
- * O cálculo anterior era "largura inteira, sem sobra nas laterais": dava zoom
- * .84 e y .37 na foto de referência. Ela ajustou para .88 e .18 — um pouco
- * mais fechado e com a foto mais baixa, deixando o carro abaixo do título em
- * vez de encostar nele.
- *
- * É valor fixo, não fórmula: a calibração foi feita a olho sobre a peça
- * pronta, e não há regra derivável dela.
- */
-export const PADRAO_CLASSICO: OpcoesFoto = { zoom: 0.88, x: 0.5, y: 0.18 }
-
-/** Altura da caixa da foto principal do Clássico. */
-const ALTURA_FOTO1 = 1000
-/** Folga sobre a proporção da caixa antes de considerar a foto "horizontal". */
-const FOLGA = 0.05
-
-/**
- * O enquadramento com que a foto principal entra ao ser carregada.
- *
- * Só o Clássico original recebe a calibração: a banda 540..1060 do Clássico
- * Loja afunda e encolhe o carro com esse zoom, e nos demais formatos a foto
- * vive em caixa de outra proporção. Foto quadrada ou vertical também fica
- * neutra — o .88/.18 foi calibrado sobre foto horizontal do estoque.
- */
-export function enquadramentoAutomatico(img: Dimensoes, tipo: FormatoId): OpcoesFoto {
-	const proporcaoDaCaixa = LARGURA / ALTURA_FOTO1
-	const horizontal = img.width / img.height > proporcaoDaCaixa + FOLGA
-	return tipo === 'classico' && horizontal ? PADRAO_CLASSICO : NEUTRO
-}

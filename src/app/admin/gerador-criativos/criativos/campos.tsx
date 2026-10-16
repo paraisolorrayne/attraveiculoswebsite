@@ -10,7 +10,15 @@
  */
 
 import type { ChangeEvent } from 'react'
-import type { BlocoFicha, CarroEstoque, EstadoCriativo, ItemDesempenho, OpcoesFoto, PisoTipo } from '@content/admin/creative/gerador'
+import type {
+	BlocoFicha,
+	CarroEstoque,
+	EstadoCriativo,
+	ItemDesempenho,
+	OpcoesFoto,
+	PisoTipo,
+	SlotFoto,
+} from '@content/admin/creative/gerador'
 import { RED } from '@content/admin/creative/gerador/desenho'
 import type { Gerador } from './use-gerador'
 
@@ -216,25 +224,17 @@ export function Escolha<T extends string>({
 
 /* --------------------------------------------------- enquadramento de 1 foto */
 
-const LIMITES_ZOOM: Record<'f1' | 'f2' | 'f3' | 'f4', [number, number]> = {
-	f1: [55, 250],
-	f2: [55, 250],
-	// As fotos de detalhe nunca reduzem: elas preenchem uma tira estreita, e
-	// abaixo de 100 sobrava fundo dentro da moldura.
-	f3: [100, 250],
-	f4: [100, 250],
-}
+/** Zoom mínimo e máximo, em %. */
+const LIMITES_ZOOM: [number, number] = [55, 250]
 
 export function Enquadramento({
-	slot,
 	opcoes,
 	aoMudar,
 }: {
-	slot: 'f1' | 'f2' | 'f3' | 'f4'
 	opcoes: OpcoesFoto
 	aoMudar: (o: OpcoesFoto) => void
 }) {
-	const [min, max] = LIMITES_ZOOM[slot]
+	const [min, max] = LIMITES_ZOOM
 	return (
 		<div className="grid grid-cols-3 gap-3">
 			<CampoFaixa
@@ -411,17 +411,13 @@ export function PainelCampos({
 	aoEscolherLogoModelo,
 }: {
 	g: Gerador
-	aoEscolherFotoDoComputador: (slot: 'foto1' | 'foto2' | 'foto3' | 'foto4', f: File) => void
+	aoEscolherFotoDoComputador: (slot: SlotFoto, f: File) => void
 	aoEscolherFotoDaLista: (indice: number, f: File) => void
 	aoEscolherLogoModelo: (f: File) => void
 }) {
 	const { estado, campo } = g
 	const t = estado.tipo
-	// Os DOIS Clássicos compartilham o formulário: marca, destaques, corte e piso
-	// valem para ambos. O que os separa é o RECORTE — o Clássico original é
-	// anterior a ele e seu desenho nunca lê foto1Cut, então oferecer os controles
-	// de recorte ali seria um botão sem efeito.
-	const classico = t === 'classico' || t === 'classico-loja'
+	const classicoLoja = t === 'classico-loja'
 	const texto = <K extends keyof EstadoCriativo>(k: K) => (v: string) =>
 		campo(k, v as EstadoCriativo[K])
 
@@ -442,7 +438,7 @@ export function PainelCampos({
 						/>
 						<CampoTexto rotulo="Quilometragem" valor={estado.km} aoMudar={texto('km')} />
 					</div>
-					{(classico || t === 'premium') && (
+					{(classicoLoja || t === 'premium') && (
 						<CampoTexto
 							rotulo="Complemento da linha do KM (opcional)"
 							valor={estado.kmextra}
@@ -453,7 +449,7 @@ export function PainelCampos({
 				</Secao>
 			)}
 
-			{classico && (
+			{classicoLoja && (
 				<Secao titulo="Destaques (até 3, uma linha cada)">
 					<CampoTexto rotulo="Destaque 1" valor={estado.b1} aoMudar={texto('b1')} />
 					<CampoTexto rotulo="Destaque 2" valor={estado.b2} aoMudar={texto('b2')} />
@@ -467,86 +463,26 @@ export function PainelCampos({
 
 			{t === 'premium' && <CamposPremium g={g} aoEscolherLogoModelo={aoEscolherLogoModelo} />}
 
-			{t === 'ficha' && (
-				<Secao titulo="Ficha do veículo">
-					<div className="grid grid-cols-2 gap-3">
-						<CampoTexto
-							rotulo="Rótulo da 1ª linha"
-							valor={estado.rot1}
-							aoMudar={texto('rot1')}
-							placeholder="Ex.: EXTERIOR"
-						/>
-						<CampoTexto
-							rotulo="Conteúdo da 1ª linha"
-							valor={estado.corext}
-							aoMudar={texto('corext')}
-							placeholder="Ex.: BLU ELETTRICO"
-						/>
-					</div>
-					<div className="grid grid-cols-2 gap-3">
-						<CampoTexto
-							rotulo="Rótulo da 2ª linha"
-							valor={estado.rot2}
-							aoMudar={texto('rot2')}
-							placeholder="Ex.: INTERIOR"
-						/>
-						<CampoTexto
-							rotulo="Conteúdo da 2ª linha"
-							valor={estado.corint}
-							aoMudar={texto('corint')}
-							placeholder="Ex.: CUOIO"
-						/>
-					</div>
-					<Dica>
-						As duas linhas não precisam ser cor: sirvam para o que a peça pedir (BLINDAGEM, MOTOR,
-						PROCEDÊNCIA…). Rótulo vazio mostra só o conteúdo, sem os dois-pontos; conteúdo vazio
-						some com a linha inteira.
-					</Dica>
-					<CampoTexto
-						rotulo="Selo do rodapé (garantia, programa)"
-						valor={estado.garantia}
-						aoMudar={texto('garantia')}
-						placeholder="Ex.: 2 ANOS DE GARANTIA"
-					/>
-				</Secao>
-			)}
-
-			{t === 'destaque' && (
-				<Secao titulo="Diferenciais do carro">
-					<CampoTexto
-						rotulo="Separe por vírgula (viram pílulas vermelhas)"
-						valor={estado.selo}
-						aoMudar={texto('selo')}
-						placeholder="Ex.: 7 LUGARES, BLINDADO, ZERO KM, FULL PPF"
-					/>
-					<Dica>Até 4 diferenciais. O tamanho das pílulas se ajusta sozinho para caber na largura.</Dica>
-				</Secao>
-			)}
-
 			{t !== 'estoque' && (
 				<Secao titulo="Fotos">
 					<CampoArquivo
 						rotulo="Foto principal (frente / 3-4)"
 						aoEscolher={f => aoEscolherFotoDoComputador('foto1', f)}
 					/>
-					<Enquadramento slot="f1" opcoes={estado.f1} aoMudar={o => campo('f1', o)} />
+					<Enquadramento opcoes={estado.f1} aoMudar={o => campo('f1', o)} />
 					<Dica>
-						A foto entra inteira — não precisa recortar o fundo. No Clássico, o bloco de preço
+						A foto entra inteira — não precisa recortar o fundo. No Clássico Loja, o bloco de preço
 						acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é
 						cortado nem esmaecido.
 					</Dica>
 
 					<CampoArquivo
-						rotulo={
-							t === 'destaque'
-								? 'Foto de baixo 1 (interior / detalhe)'
-								: 'Foto secundária (traseira / lateral — rodapé)'
-						}
+						rotulo="Foto secundária (traseira / lateral — rodapé)"
 						aoEscolher={f => aoEscolherFotoDoComputador('foto2', f)}
 					/>
-					<Enquadramento slot="f2" opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
+					<Enquadramento opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
 
-					{classico && (
+					{classicoLoja && (
 						<>
 							<div>
 								<span className="mb-1 block text-xs font-medium text-foreground-secondary">
@@ -579,31 +515,6 @@ export function PainelCampos({
 							<Dica>
 								Arraste pra direita em carros ALTOS (mais área de foto); pra esquerda em carros
 								baixos (mais espaço pros destaques).
-							</Dica>
-						</>
-					)}
-
-					{(t === 'destaque' || t === 'ficha') && (
-						<>
-							<CampoArquivo
-								rotulo="Foto de baixo 2 (Detalhe 2 na Ficha)"
-								aoEscolher={f => aoEscolherFotoDoComputador('foto3', f)}
-							/>
-							<Enquadramento slot="f3" opcoes={estado.f3} aoMudar={o => campo('f3', o)} />
-							{/* A Ficha usa DUAS fotos na tira. Deixar a terceira no formulário só
-							    produzia um campo que não aparece em lugar nenhum da peça. */}
-							{t !== 'ficha' && (
-								<>
-									<CampoArquivo
-										rotulo="Foto de baixo 3 (opcional)"
-										aoEscolher={f => aoEscolherFotoDoComputador('foto4', f)}
-									/>
-									<Enquadramento slot="f4" opcoes={estado.f4} aoMudar={o => campo('f4', o)} />
-								</>
-							)}
-							<Dica>
-								No Destaque, com 1 foto o rodapé fica inteiro e com 3 vira uma tríade. Na Ficha
-								são duas na tira do topo — a posição e o zoom escolhem o trecho de cada uma.
 							</Dica>
 						</>
 					)}

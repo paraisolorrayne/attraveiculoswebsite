@@ -3,8 +3,8 @@
 /**
  * Casca do Gerador de Criativos: duas abas sobre a mesma porta de entrada.
  *
- *   Criativos      — Clássico Loja, Clássico, Destaque, Estoque, Ficha e
- *                    Premium. Stories 1080×1920 e Feed 1080×1350.
+ *   Criativos      — Clássico Loja, Estoque e Premium. Stories 1080×1920 e
+ *                    Feed 1080×1350.
  *   Story Vendido  — peça 1080×1920 de venda concluída.
  *
  * As duas são React sobre o mesmo desenho em módulo ES (content/admin/creative/).

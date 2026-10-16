@@ -18,7 +18,17 @@
  * como está, e os rótulos usam a mesma cor clareada até ler sobre o piso.
  */
 import { hexParaRgb, luminanciaRelativa, razaoDeContraste } from '../contraste'
-import { drawLogoWhite, drawPhoto, drawPhotoBanda, fotoSemJuntas, placeholder, RED, spacedText, spacedWidth } from '../desenho'
+import {
+	desfocada,
+	drawLogoWhite,
+	drawPhoto,
+	drawPhotoBanda,
+	fotoSemJuntas,
+	placeholder,
+	RED,
+	spacedText,
+	spacedWidth,
+} from '../desenho'
 import { enquadrar, NEUTRO } from '../enquadramento'
 import { ALTURA_FEED, LARGURA as W, type ContextoDesenho } from '../tipos'
 
@@ -195,9 +205,9 @@ export function renderPremium({ ctx, estado, imagens, assets, altura: H }: Conte
 		ctx.rect(0, 0, W, FIM_FOTO)
 		ctx.clip()
 		const e = enquadrar(foto1, { x: 0, y: 0, largura: W, altura: FIM_FOTO }, { zoom: 1.15, x: 0.5, y: 0.3 })
-		ctx.filter = 'blur(28px) brightness(0.55)'
-		ctx.drawImage(foto1, e.dx, e.dy, e.dw, e.dh)
-		ctx.filter = 'none'
+		ctx.drawImage(desfocada(foto1, e.dw, 28) ?? foto1, e.dx, e.dy, e.dw, e.dh)
+		ctx.fillStyle = 'rgba(0,0,0,.45)'
+		ctx.fillRect(0, 0, W, FIM_FOTO)
 		ctx.restore()
 		drawPhotoBanda(ctx, FIM_FOTO, foto1, 0, TOPO_FOTO, W, ALTURA_CAIXA_FOTO, estado.f1)
 
@@ -307,11 +317,14 @@ export function renderPremium({ ctx, estado, imagens, assets, altura: H }: Conte
 	ctx.clip()
 	const piso = assets.pisoConcreto
 	if (piso.complete && piso.naturalWidth) {
-		// O concreto tem luminância média 189; 0,22 leva ao (41,43,42) medido.
+		// O concreto tem luminância média 189; deixar passar 22% dele leva ao
+		// (41,43,42) medido. Escurecido com preto por cima, e não com
+		// ctx.filter: o Safari ignora o filter, e o piso saía cinza claro com
+		// o texto branco em cima (16/10/2026).
 		const e = enquadrar(piso, { x: 0, y: FIM_FOTO, largura: W, altura: H - FIM_FOTO }, NEUTRO)
-		ctx.filter = 'brightness(0.22) saturate(0.4)'
 		ctx.drawImage(piso, e.dx, e.dy, e.dw, e.dh)
-		ctx.filter = 'none'
+		ctx.fillStyle = 'rgba(0,0,0,.78)'
+		ctx.fillRect(0, FIM_FOTO, W, H - FIM_FOTO)
 	} else {
 		ctx.fillStyle = PISO
 		ctx.fillRect(0, FIM_FOTO, W, H - FIM_FOTO)
