@@ -11,10 +11,8 @@
  * operador calibrou valer nas duas peças.
  */
 import { renderClassicoLoja } from './formatos/classico-loja'
-import { renderClassicoOriginal } from './formatos/classico'
-import { renderDestaque } from './formatos/destaque'
 import { renderEstoque } from './formatos/estoque'
-import { renderFicha } from './formatos/ficha'
+import { renderPremium } from './formatos/premium'
 import {
 	ALTURA_FEED,
 	ALTURA_STORIES,
@@ -28,15 +26,17 @@ import {
 export { ALTURA_FEED, ALTURA_STORIES, LARGURA }
 export * from './tipos'
 export { carregarAssets, carregar } from './assets'
-export { enquadramentoAutomatico } from './enquadramento'
+export { NEUTRO } from './enquadramento'
 
-/** Os formatos na ordem em que aparecem na tela. */
+/**
+ * Os formatos na ordem em que aparecem na tela.
+ *
+ * Clássico, Destaque e Ficha saíram em 16/10/2026, a pedido da Lorrayne.
+ */
 export const FORMATOS: { id: FormatoId; nome: string; descricao: string }[] = [
 	{ id: 'classico-loja', nome: 'Clássico Loja', descricao: 'fundo da loja' },
-	{ id: 'classico', nome: 'Clássico', descricao: 'escuro, foto grande' },
-	{ id: 'destaque', nome: 'Destaque', descricao: 'claro, ficha técnica' },
 	{ id: 'estoque', nome: 'Estoque', descricao: 'lista de até 4 carros' },
-	{ id: 'ficha', nome: 'Ficha', descricao: 'claro, 2 detalhes + destaque' },
+	{ id: 'premium', nome: 'Premium', descricao: 'escuro, desempenho + ficha' },
 ]
 
 export function render(
@@ -53,16 +53,12 @@ export function render(
 
 	const contexto = { ctx, estado, imagens, assets, altura }
 	switch (estado.tipo) {
-		case 'destaque':
-			return renderDestaque(contexto)
 		case 'estoque':
 			return renderEstoque(contexto)
-		case 'ficha':
-			return renderFicha(contexto)
-		case 'classico-loja':
-			return renderClassicoLoja(contexto)
+		case 'premium':
+			return renderPremium(contexto)
 		default:
-			return renderClassicoOriginal(contexto)
+			return renderClassicoLoja(contexto)
 	}
 }
 

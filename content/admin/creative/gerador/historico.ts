@@ -24,7 +24,7 @@ const VERSAO = 1
 /** 24 horas. Passado isso, o registro é descartado na próxima abertura. */
 export const VALIDADE_MS = 24 * 60 * 60 * 1000
 
-export type ChaveFoto = 'foto1' | 'foto2' | 'foto3' | 'foto4' | 'logo' | `est${0 | 1 | 2 | 3}`
+export type ChaveFoto = 'foto1' | 'foto2' | 'logo' | 'logoModelo' | `est${0 | 1 | 2 | 3}`
 
 /** De onde a foto veio — decide o que precisa ser guardado. */
 export type FotoGuardada =

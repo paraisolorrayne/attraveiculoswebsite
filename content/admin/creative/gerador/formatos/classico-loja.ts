@@ -234,8 +234,9 @@ export function renderClassicoLoja({ ctx, estado, imagens, assets, altura: H }: 
 		baseDaFoto !== null ? Math.round(baseDaFoto) : BANDA_TOPO + BANDA_H + 4
 	const PISO_TOP = Math.min(pisoBruto, BASE_MAX) + pisoShift
 
-	// SEM véu sobre a foto — ver a nota no Clássico original: o degradê branco
-	// lavava a borracha do pneu e a sombra de contato, e o carro parecia flutuar.
+	// SEM véu sobre a foto. O Clássico original (removido em 16/10/2026) tinha
+	// um degradê branco que lavava a borracha do pneu e a sombra de contato, e o
+	// carro parecia flutuar.
 
 	// PALETA DOS TEXTOS: MEDIDA, NÃO FIXADA.
 	//

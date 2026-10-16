@@ -15,9 +15,10 @@ import {
 	ALTURA_STORIES,
 	carregar,
 	carregarAssets,
-	enquadramentoAutomatico,
 	ESTADO_INICIAL,
+	FORMATOS,
 	IMAGENS_VAZIAS,
+	NEUTRO,
 	render,
 	type Assets,
 	type EstadoCriativo,
@@ -67,6 +68,8 @@ export interface Gerador {
 	/** Recarrega uma peça inteira do histórico. */
 	restaurar: (c: CriativoGuardado) => Promise<void>
 	definirLogo: (img: HTMLImageElement | null, dataUrl?: string, arquivo?: Blob) => void
+	/** Logotipo do modelo do Premium. Não fica salvo como a logo: muda a cada carro. */
+	definirLogoModelo: (img: HTMLImageElement | null, arquivo?: Blob) => void
 }
 
 export function useGerador(): Gerador {
@@ -153,17 +156,11 @@ export function useGerador(): Gerador {
 	)
 
 	/**
-	 * Troca de formato reenquadra a foto principal.
-	 *
-	 * O Clássico original é o único que quer a calibração .88/.18, e só em foto
-	 * horizontal; todo o resto quer neutro. Sem reenquadrar aqui, sair do
-	 * Clássico deixava o carro afundado no formato novo.
+	 * Troca de formato volta a foto principal ao neutro: a caixa dela muda de
+	 * proporção de um formato para outro, e o ajuste feito num não serve no outro.
 	 */
 	const trocarFormato = useCallback((tipo: FormatoId) => {
-		setEstado(e => {
-			const f1 = imagens.current.foto1 ? enquadramentoAutomatico(imagens.current.foto1, tipo) : e.f1
-			return { ...e, tipo, f1 }
-		})
+		setEstado(e => ({ ...e, tipo, f1: imagens.current.foto1 ? { ...NEUTRO } : e.f1 }))
 	}, [])
 
 	const aplicarFoto = useCallback(
@@ -171,7 +168,7 @@ export function useGerador(): Gerador {
 			imagens.current[slot] = img
 			if (origem) origens.current[slot] = origem
 			if (slot === 'foto1') {
-				setEstado(e => ({ ...e, f1: enquadramentoAutomatico(img, e.tipo) }))
+				setEstado(e => ({ ...e, f1: { ...NEUTRO } }))
 			} else {
 				redesenhar()
 			}
@@ -198,6 +195,9 @@ export function useGerador(): Gerador {
 			await Promise.all(
 				Object.entries(c.fotos).map(async ([chave, foto]) => {
 					if (!foto) return
+					// foto3 e foto4 eram do Destaque e da Ficha (removidos em
+					// 16/10/2026): peça antiga que as tenha volta sem elas.
+					if (!/^(foto[12]|logo|logoModelo|est[0-3])$/.test(chave)) return
 					let src: string
 					if (foto.origem === 'estoque') {
 						src = foto.url
@@ -209,7 +209,7 @@ export function useGerador(): Gerador {
 						const img = await carregar(src)
 						const m = /^est([0-3])$/.exec(chave)
 						if (m) novas.estFotos[Number(m[1])] = img
-						else novas[chave as 'foto1' | 'foto2' | 'foto3' | 'foto4' | 'logo'] = img
+						else novas[chave as 'foto1' | 'foto2' | 'logo' | 'logoModelo'] = img
 					} catch {
 						// Foto que não volta (URL do estoque que saiu do ar) não pode
 						// derrubar a restauração do resto da peça.
@@ -221,7 +221,12 @@ export function useGerador(): Gerador {
 			for (const u of urlsTemporarias) URL.revokeObjectURL(u)
 			imagens.current = novas
 			origens.current = { ...c.fotos }
-			setEstado(structuredClone(c.estado))
+			// Peça guardada antes de um campo existir (o Premium chegou em 16/10)
+			// volta com o campo vazio do estado inicial, e não com `undefined`. E
+			// peça de um formato que saiu abre no Clássico Loja.
+			const estado = { ...structuredClone(ESTADO_INICIAL), ...structuredClone(c.estado) }
+			if (!FORMATOS.some(f => f.id === estado.tipo)) estado.tipo = ESTADO_INICIAL.tipo
+			setEstado(estado)
 			redesenhar()
 		},
 		[redesenhar],
@@ -237,6 +242,13 @@ export function useGerador(): Gerador {
 		} catch {
 			// sem armazenamento a logo vale só para esta sessão
 		}
+		redesenhar()
+	}, [redesenhar])
+
+	const definirLogoModelo = useCallback((img: HTMLImageElement | null, arquivo?: Blob) => {
+		imagens.current.logoModelo = img
+		if (img && arquivo) origens.current.logoModelo = { origem: 'arquivo', arquivo }
+		else delete origens.current.logoModelo
 		redesenhar()
 	}, [redesenhar])
 
@@ -256,5 +268,6 @@ export function useGerador(): Gerador {
 		registrarOrigem,
 		restaurar,
 		definirLogo,
+		definirLogoModelo,
 	}
 }

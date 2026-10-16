@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { enquadrar, enquadramentoAutomatico, NEUTRO, PADRAO_CLASSICO } from '@content/admin/creative/gerador/enquadramento'
+import { enquadrar } from '@content/admin/creative/gerador/enquadramento'
 
-/** A caixa da foto principal do Clássico: 1080×1000. */
+/** A caixa da foto principal do Clássico Loja: 1080×1000. */
 const CAIXA = { x: 0, y: 0, largura: 1080, altura: 1000 }
 const CENTRO = { zoom: 1, x: 0.5, y: 0.5 }
 /** Foto típica do estoque: 4:3 horizontal. */
@@ -49,31 +49,5 @@ describe('enquadrar — fit', () => {
 		const r = enquadrar(HORIZONTAL, CAIXA, CENTRO, 'fit')
 		expect(r.dw).toBeLessThanOrEqual(1080)
 		expect(r.dh).toBeLessThanOrEqual(1000)
-	})
-})
-
-describe('enquadramentoAutomatico — a calibração da Lorrayne (04/08/2026)', () => {
-	it('Clássico com foto horizontal usa o zoom .88 e a subida .18', () => {
-		expect(enquadramentoAutomatico(HORIZONTAL, 'classico')).toEqual(PADRAO_CLASSICO)
-		expect(PADRAO_CLASSICO).toEqual({ zoom: 0.88, x: 0.5, y: 0.18 })
-	})
-
-	it('qualquer outro formato fica neutro, mesmo com foto horizontal', () => {
-		// A banda 540..1060 do Clássico Loja afunda o carro com o zoom calibrado.
-		for (const tipo of ['classico-loja', 'destaque', 'estoque', 'ficha'] as const) {
-			expect(enquadramentoAutomatico(HORIZONTAL, tipo)).toEqual(NEUTRO)
-		}
-	})
-
-	it('no Clássico, foto quadrada ou vertical fica neutra', () => {
-		expect(enquadramentoAutomatico({ width: 1080, height: 1080 }, 'classico')).toEqual(NEUTRO)
-		expect(enquadramentoAutomatico({ width: 1080, height: 1440 }, 'classico')).toEqual(NEUTRO)
-	})
-
-	it('a divisa é a proporção da caixa (1,08) mais folga de 0,05', () => {
-		// Abaixo de 1,13 a foto é "quase quadrada": o zoom calibrado a afundaria.
-		expect(enquadramentoAutomatico({ width: 1120, height: 1000 }, 'classico')).toEqual(NEUTRO)
-		// Acima, é horizontal de estoque — o caso para o qual o .88/.18 foi feito.
-		expect(enquadramentoAutomatico({ width: 1140, height: 1000 }, 'classico')).toEqual(PADRAO_CLASSICO)
 	})
 })

@@ -10,10 +10,8 @@ import type { Assets } from './tipos'
 const ARQUIVOS = {
 	logoBranca: '/gerador/logo-branca.png',
 	logoPreta: '/gerador/logo-preta.jpg',
-	fachadaClassico: '/gerador/fachada-classico.jpg',
 	fachadaLoja: '/gerador/fachada-loja.jpg',
 	pisoConcreto: '/gerador/piso-concreto.jpg',
-	pisoAsfalto: '/gerador/piso-asfalto.jpg',
 } as const
 
 export function carregar(src: string): Promise<HTMLImageElement> {
@@ -26,8 +24,8 @@ export function carregar(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * A logo preta vem em JPEG, que não tem transparência: sobre o piso claro do
- * Clássico ela apareceria dentro de um retângulo branco. Aqui o branco vira
+ * A logo preta vem em JPEG, que não tem transparência: sobre o fundo claro do
+ * Estoque ela apareceria dentro de um retângulo branco. Aqui o branco vira
  * transparente, com o mesmo limiar do HTML — luminância média acima de 232 e
  * canais a menos de 20 de distância entre si, para não comer o vermelho da
  * marca, que tem R alto e G/B baixos.
@@ -54,26 +52,21 @@ let cache: Promise<Assets> | null = null
 /**
  * Carrega tudo uma vez por sessão do navegador. Trocar de aba ou de formato
  * não recarrega nada — e o primeiro desenho só acontece depois disto resolver,
- * senão o Clássico abre sem fachada e o operador vê a peça "piscar".
+ * senão o Clássico Loja abre sem fachada e o operador vê a peça "piscar".
  */
 export function carregarAssets(): Promise<Assets> {
 	cache ??= (async (): Promise<Assets> => {
-		const [logoBranca, logoPretaCrua, fachadaClassico, fachadaLoja, pisoConcreto, pisoAsfalto] =
-			await Promise.all([
-				carregar(ARQUIVOS.logoBranca),
-				carregar(ARQUIVOS.logoPreta),
-				carregar(ARQUIVOS.fachadaClassico),
-				carregar(ARQUIVOS.fachadaLoja),
-				carregar(ARQUIVOS.pisoConcreto),
-				carregar(ARQUIVOS.pisoAsfalto),
-			])
+		const [logoBranca, logoPretaCrua, fachadaLoja, pisoConcreto] = await Promise.all([
+			carregar(ARQUIVOS.logoBranca),
+			carregar(ARQUIVOS.logoPreta),
+			carregar(ARQUIVOS.fachadaLoja),
+			carregar(ARQUIVOS.pisoConcreto),
+		])
 		return {
 			logoBranca,
 			logoPreta: brancoParaTransparente(logoPretaCrua),
-			fachadaClassico,
 			fachadaLoja,
 			pisoConcreto,
-			pisoAsfalto,
 		}
 	})()
 	return cache

@@ -18,11 +18,6 @@ interface Dados {
 }
 
 const ROTULO_PLATAFORMA: Record<string, string> = { google: 'Google', meta: 'Meta', webmotors: 'WebMotors' }
-const ROTULO_LIGACAO: Record<LeadDaAgencia['ligacao'], string> = {
-	clique: 'Na visita da campanha',
-	visita_anterior: 'Em visita anterior',
-	anuncio: 'Anúncio da Meta (WhatsApp direto)',
-}
 const STATUS: Record<StatusLead, { rotulo: string; cor: string }> = {
 	com_vendedor: { rotulo: 'Com vendedor', cor: 'bg-amber-500/10 text-amber-500' },
 	vendido: { rotulo: 'Vendido', cor: 'bg-emerald-500/10 text-emerald-500' },
@@ -59,7 +54,7 @@ const colunasLista: ColunaTabela<LeadDaAgencia>[] = [
 	{
 		chave: 'ligacao',
 		titulo: 'Como foi ligado',
-		render: l => ROTULO_LIGACAO[l.ligacao],
+		render: l => (l.ligacao === 'clique' ? 'Na visita da campanha' : l.ligacao === 'anuncio' ? 'Direto do anúncio' : 'Em visita anterior'),
 		valor: l => l.ligacao,
 		prioridade: 3,
 	},

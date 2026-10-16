@@ -58,6 +58,10 @@ no Clássico Loja) e dissolvida. A região logo abaixo dessa divisa difere.
 Os outros quatro formatos continuam idênticos, e para eles o aparato segue
 valendo.
 
+Em 16/10/2026 o Clássico, o Destaque e a Ficha saíram do gerador. Os casos
+deles em `regressao.html` não têm mais o que comparar no motor novo e ficam só
+como registro.
+
 ## Três confundidores que custaram diagnóstico falso
 
 Nenhum era defeito do porte; todos faziam o comparador acusar diferença onde
