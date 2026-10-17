@@ -12,7 +12,8 @@
  *     ENTREGA", já sobre o piso escurecido;
  *   - a grade de cinco blocos com rótulo;
  *   - o valor;
- *   - a foto de baixo, numa janela em "A" (só no Stories).
+ *   - a foto de baixo, numa janela em "A" (só no Stories), que começa logo
+ *     abaixo do texto (`diagramarFicha`).
  *
  * A cor de destaque vem do operador, porque é a do carro: a faixa usa a cor
  * como está, e os rótulos usam a mesma cor clareada até ler sobre o piso.
@@ -56,13 +57,6 @@ const POSICOES: [number, number][] = [[0, 0], [1, 0], [2, 0], [1, 1], [2, 1]]
 const F_ROTULO = '600 14px Montserrat, sans-serif'
 const ESP_ROTULO = 4
 const ENTRE_LINHAS = 28
-
-/**
- * Onde a grade termina na referência (linha de cima com 2 linhas de texto,
- * a de baixo com 3). A janela da foto de baixo e o valor foram medidos com
- * ela assim; com outra quantidade de linhas, os dois andam junto.
- */
-const FIM_GRADE_REFERENCIA = 1246
 
 const css = ([r, g, b]: Rgb) => `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
 const clarear = ([r, g, b]: Rgb, t: number): Rgb => [r + (255 - r) * t, g + (255 - g) * t, b + (255 - b) * t]
@@ -183,6 +177,67 @@ function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number
 	ctx.moveTo(x1, y1)
 	ctx.lineTo(x2, y2)
 	ctx.stroke()
+}
+
+export interface BlocoDaFicha {
+	rotulo: string
+	linhas: string[]
+}
+
+/** A reta A desce 350 da esquerda para a direita, como na referência. */
+export const INCL_A = 350 / W
+/** Do pé do texto até a reta A. */
+export const FOLGA_A = 38
+/** O mais alto que a reta A começa: logo abaixo da linha do KM. */
+export const A_MAIS_ALTA = FIM_FOTO + 100
+
+/**
+ * Onde vai cada bloco da ficha, o valor e a reta A (de cima da janela da foto
+ * de baixo, só no Stories). Não desenha nada.
+ *
+ * A reta passa sob todo o texto. Como ela desce da esquerda para a direita,
+ * quem a segura é o pé de cada coluna, medido no começo da coluna. Antes ela
+ * andava junto com o fim da grade inteira e, com a ficha que a busca no
+ * estoque preenche, subia e cortava o texto do MOTOR (16/10/2026).
+ *
+ * Bloco sem texto fica de fora: a busca preenche só MOTOR e COR, e TRAÇÃO,
+ * INTERIOR e DESTAQUES saíam como rótulos soltos.
+ */
+export function diagramarFicha(blocos: BlocoDaFicha[], comPreco: boolean, feed: boolean) {
+	const naGrade = (i: number) => !!blocos[i] && blocos[i].linhas.length > 0
+	const linhasDaFileira = (fileira: number) =>
+		Math.max(0, ...POSICOES.map(([, l], i) => (l === fileira && naGrade(i) ? blocos[i].linhas.length : 0)))
+	const yRotulo1 = FIM_FOTO + 110
+	const fimFileira1 = yRotulo1 + 33 + ENTRE_LINHAS * (Math.max(1, linhasDaFileira(0)) - 1)
+	const temFileira2 = [3, 4].some(naGrade)
+	const yRotulo2 = fimFileira1 + 46
+	const fimGrade = temFileira2 ? yRotulo2 + 33 + ENTRE_LINHAS * (Math.max(1, linhasDaFileira(1)) - 1) : fimFileira1
+	/** Pé do texto de cada coluna; null quando a coluna está vazia. */
+	const fimColuna = COLUNAS.map((_, c) =>
+		POSICOES.reduce<number | null>((fim, [col, fil], i) => {
+			if (col !== c || !naGrade(i)) return fim
+			const y = (fil === 0 ? yRotulo1 : yRotulo2) + 33 + ENTRE_LINHAS * (blocos[i].linhas.length - 1)
+			return Math.max(fim ?? 0, y)
+		}, null),
+	)
+	const divisorias = DIVISORIAS.filter((_, n) => fimColuna[n] !== null && fimColuna[n + 1] !== null)
+
+	let aEsq = A_MAIS_ALTA
+	COLUNAS.forEach((x, c) => {
+		const fim = fimColuna[c]
+		if (fim !== null) aEsq = Math.max(aEsq, fim + FOLGA_A - INCL_A * x)
+	})
+	// Stories: o valor fica na coluna da direita, encostado na reta, como na
+	// referência; se a coluna tiver texto mais embaixo, ele desce e empurra a
+	// reta. Feed: não há reta, e ele vai para a casa livre da coluna da esquerda.
+	const xValor = feed ? COLUNAS[0] : COLUNAS[2] + 3
+	let yValor = yRotulo2 + 47
+	if (comPreco && !feed) {
+		const abaixoDaColuna = (fimColuna[2] ?? yRotulo1 - 37) + 37 + 47
+		yValor = Math.max(aEsq + INCL_A * xValor - FOLGA_A, abaixoDaColuna)
+		aEsq = Math.max(aEsq, yValor + FOLGA_A - INCL_A * xValor)
+	}
+	return { naGrade, yRotulo1, yRotulo2, fimFileira1, temFileira2, fimGrade, fimColuna, divisorias, aEsq, xValor, yValor }
 }
 
 export function renderPremium({ ctx, estado, imagens, assets, altura: H }: ContextoDesenho): void {
@@ -386,19 +441,13 @@ export function renderPremium({ ctx, estado, imagens, assets, altura: H }: Conte
 		rotulo: b.rotulo.trim().toUpperCase(),
 		linhas: b.texto.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3),
 	}))
-	const temBloco = (i: number) => !!blocos[i] && (blocos[i].rotulo !== '' || blocos[i].linhas.length > 0)
-	const linhasDaFileira = (fileira: number) =>
-		Math.max(0, ...POSICOES.map(([, l], i) => (l === fileira && temBloco(i) ? blocos[i].linhas.length : 0)))
+	const preco = estado.preco.trim().replace(/^R\$\s*/i, '')
 
-	const yRotulo1 = FIM_FOTO + 110
-	const n1 = Math.max(1, linhasDaFileira(0))
-	const fimFileira1 = yRotulo1 + 33 + ENTRE_LINHAS * (n1 - 1)
-	const temFileira2 = [3, 4].some(temBloco)
-	const yRotulo2 = fimFileira1 + 46
-	const fimGrade = temFileira2 ? yRotulo2 + 33 + ENTRE_LINHAS * (Math.max(1, linhasDaFileira(1)) - 1) : fimFileira1
+	const { naGrade, xValor, yValor, yRotulo1, yRotulo2, fimFileira1, temFileira2, fimGrade, divisorias, aEsq } =
+		diagramarFicha(blocos, preco !== '', FEED)
 
 	blocos.forEach((b, i) => {
-		if (!temBloco(i)) return
+		if (!naGrade(i)) return
 		const [col, fil] = POSICOES[i]
 		const x = COLUNAS[col]
 		const yRot = fil === 0 ? yRotulo1 : yRotulo2
@@ -419,27 +468,20 @@ export function renderPremium({ ctx, estado, imagens, assets, altura: H }: Conte
 	})
 
 	const corDivisoria = 'rgba(255,255,255,.22)'
-	DIVISORIAS.forEach((x, n) => {
-		const temAqui = POSICOES.some(([c], i) => (c === n || c === n + 1) && temBloco(i))
-		if (temAqui) linha(ctx, x, yRotulo1 - 16, x, fimGrade + 8, corDivisoria, 1.5)
-	})
+	// A divisória não segura a reta: com a ficha completa ela desce até encostar
+	// nela, como na referência, e para um pouco antes.
+	divisorias.forEach(x => linha(ctx, x, yRotulo1 - 16, x, FEED ? fimGrade + 8 : Math.min(fimGrade + 8, aEsq + INCL_A * x - 12), corDivisoria, 1.5))
 	if (temFileira2) linha(ctx, DIVISORIAS[0], fimFileira1 + 19, W - 70, fimFileira1 + 19, corDivisoria, 1.5)
 
 	/* ------------------------------------------------ valor */
 
-	const preco = estado.preco.trim().replace(/^R\$\s*/i, '')
 	if (preco) {
-		// Stories: na coluna da direita, logo abaixo da grade, como na
-		// referência. Feed: não há diagonal, então vai para a casa livre da
-		// coluna da esquerda e a peça fecha mais cedo.
-		const x = FEED ? COLUNAS[0] : COLUNAS[2] + 3
-		const yRot = FEED ? yRotulo2 : fimGrade + 37
-		espacadoEsq(ctx, 'VALOR', x, yRot, '600 13px Montserrat, sans-serif', ESP_ROTULO, corRotulo)
+		espacadoEsq(ctx, 'VALOR', xValor, yValor - 47, '600 13px Montserrat, sans-serif', ESP_ROTULO, corRotulo)
 		ctx.textAlign = 'left'
 		ctx.font = '400 24px Montserrat, sans-serif'
 		ctx.fillStyle = '#d6d6db'
-		ctx.fillText('R$', x, yRot + 47)
-		const xNum = x + ctx.measureText('R$').width + 10
+		ctx.fillText('R$', xValor, yValor)
+		const xNum = xValor + ctx.measureText('R$').width + 10
 		let tam = 46
 		ctx.font = `300 ${tam}px Montserrat, sans-serif`
 		while (tam > 30 && xNum + ctx.measureText(preco).width > W - 36) {
@@ -447,24 +489,21 @@ export function renderPremium({ ctx, estado, imagens, assets, altura: H }: Conte
 			ctx.font = `300 ${tam}px Montserrat, sans-serif`
 		}
 		ctx.fillStyle = '#f6f6f8'
-		ctx.fillText(preco, xNum, yRot + 47)
+		ctx.fillText(preco, xNum, yValor)
 	}
 
 	/* ------------------------------------------------ foto de baixo (Stories) */
 
 	if (FEED) return
 
-	// Duas retas, medidas na referência: A desce da esquerda para a direita
-	// passando sob o valor; B sobe do canto esquerdo até cruzar A. A janela é
-	// o que fica abaixo das duas — o "A" da marca, deitado.
-	const D = fimGrade - FIM_GRADE_REFERENCIA
-	const aEsq = 1130 + D
-	const aDir = 1480 + D
-	const bBase = 1640 + D
-	const yA = (x: number) => aEsq + ((aDir - aEsq) * x) / W
-	// B: de (0, bBase) a (270, 1218 + D), estendida até cruzar A.
-	const inclB = (1218 + D - bBase) / 270
-	const xTopo = (aEsq - bBase) / (inclB - (aDir - aEsq) / W)
+	// Duas retas: A desce da esquerda para a direita passando sob o texto; B
+	// sobe do canto esquerdo até cruzar A. A janela é o que fica abaixo das
+	// duas — o "A" da marca, deitado. B tem a inclinação medida na referência.
+	const aDir = aEsq + INCL_A * W
+	const yA = (x: number) => aEsq + INCL_A * x
+	const INCL_B = 422 / 270
+	const bBase = aEsq + 510
+	const xTopo = (bBase - aEsq) / (INCL_A + INCL_B)
 	const topo: [number, number] = [xTopo, yA(xTopo)]
 
 	ctx.save()
