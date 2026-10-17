@@ -9,5 +9,5 @@ export default async function GeradorCriativosPage() {
     redirect('/admin/login')
   }
 
-  return <GeradorCriativosAdmin />
+  return <GeradorCriativosAdmin usuarioId={admin.id} />
 }

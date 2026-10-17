@@ -33,6 +33,7 @@ import {
 } from '@content/admin/creative/gerador'
 import { corSugeridaPeloNome } from '@content/admin/creative/gerador/formatos/premium'
 import { FOLHA_GOOGLE } from '@content/admin/creative/gerador/fontes'
+import { AvisoTemasNovos } from './aviso-temas-novos'
 import { CampoArquivo, CampoTexto, Dica, Escolha, PainelCampos, Secao } from './campos'
 import { exportarPeca, nomeDaPeca } from './baixar'
 import {
@@ -74,7 +75,7 @@ function lerArquivo(file: File): Promise<{ img: HTMLImageElement; dados: string 
 	})
 }
 
-export function CriativosAdmin() {
+export function CriativosAdmin({ usuarioId }: { usuarioId: string }) {
 	const g = useGerador()
 	const { estado, campo, imagens, assets, pronto, erro } = g
 
@@ -355,6 +356,7 @@ export function CriativosAdmin() {
 			    antigo usava: o canvas pede a família "Montserrat" literal, que o
 			    next/font do layout não publica. Ver content/…/gerador/fontes.ts. */}
 			<link rel="stylesheet" href={FOLHA_GOOGLE} />
+			<AvisoTemasNovos usuarioId={usuarioId} aoUsar={g.trocarFormato} />
 
 			<div className="space-y-5">
 				{historico.length > 0 && (

@@ -3,7 +3,7 @@
 /**
  * Casca do Gerador de Criativos: duas abas sobre a mesma porta de entrada.
  *
- *   Criativos      — Clássico Loja, Estoque e Premium. Stories 1080×1920 e
+ *   Criativos      — Clássico Loja, Estoque, Premium e Edição. Stories 1080×1920 e
  *                    Feed 1080×1350.
  *   Story Vendido  — peça 1080×1920 de venda concluída.
  *
@@ -31,7 +31,7 @@ const ABAS = [
 
 type Aba = (typeof ABAS)[number]['id']
 
-export function GeradorCriativosAdmin() {
+export function GeradorCriativosAdmin({ usuarioId }: { usuarioId: string }) {
   const [aba, setAba] = useState<Aba>('criativos')
 
   return (
@@ -57,7 +57,7 @@ export function GeradorCriativosAdmin() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div hidden={aba !== 'criativos'}>
-          <CriativosAdmin />
+          <CriativosAdmin usuarioId={usuarioId} />
         </div>
         <div hidden={aba !== 'vendido'}>
           <StoryVendidoAdmin />
