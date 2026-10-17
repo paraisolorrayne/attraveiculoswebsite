@@ -182,23 +182,33 @@ export function CriativosAdmin() {
 
 	function aplicarVeiculo(v: VeiculoEstoque) {
 		const premium = estado.tipo === 'premium'
-		campo('marca', (v.brand ?? '').toUpperCase())
-		// No Premium o modelo vira o título grande, e a versão ("V8 Bi-Turbo")
-		// o deixaria comprido demais — ela cabe melhor no bloco do motor.
-		campo('modelo', (premium ? [v.model] : [v.model, v.version]).filter(Boolean).join(' ').toUpperCase())
-		campo('ano', String(v.year_model ?? ''))
-		campo('preco', v.price ? fmtBR(v.price) : '')
-		// 0 km é dado, não ausência: no Premium vira o "0KM" da linha sob a faixa.
-		campo('km', v.mileage ? fmtBR(v.mileage) : premium && v.mileage === 0 ? '0' : '')
-		if (!estado.b1.trim() && v.color) campo('b1', 'Cor ' + v.color)
-		if (v.color) {
-			campo('nomeCor', v.color.toUpperCase())
-			campo('corDestaque', corSugeridaPeloNome(v.color))
-		}
+		const edicao = estado.tipo === 'edicao'
 		// Desempenho e ficha só são trocados se ainda forem os do exemplo: senão
 		// os números de um C 300 iriam parar na peça de outro carro, e o que o
 		// operador já digitou não pode sumir por causa de uma busca.
 		const intocado = <T,>(atual: T, exemplo: T) => JSON.stringify(atual) === JSON.stringify(exemplo)
+		campo('marca', (v.brand ?? '').toUpperCase())
+		// No Premium e na Edição o modelo vira o título grande, e a versão ("V8
+		// Bi-Turbo") o deixaria comprido demais — ela cabe melhor na ficha.
+		campo('modelo', (premium || edicao ? [v.model] : [v.model, v.version]).filter(Boolean).join(' ').toUpperCase())
+		campo('ano', String(v.year_model ?? ''))
+		campo('preco', v.price ? fmtBR(v.price) : '')
+		// 0 km é dado, não ausência: no Premium vira o "0KM" da linha sob a faixa.
+		campo('km', v.mileage ? fmtBR(v.mileage) : (premium || edicao) && v.mileage === 0 ? '0' : '')
+		if (edicao) {
+			// Na Edição os três destaques são a ficha, e a primeira linha sai em
+			// destaque: é o lugar da versão (motor).
+			const exemplo = [ESTADO_INICIAL.b1, ESTADO_INICIAL.b2, ESTADO_INICIAL.b3]
+			if (intocado([estado.b1, estado.b2, estado.b3], exemplo) || ![estado.b1, estado.b2, estado.b3].some(b => b.trim())) {
+				campo('b1', v.version ?? '')
+				campo('b2', v.color ? 'Cor ' + v.color : '')
+				campo('b3', '')
+			}
+		} else if (!estado.b1.trim() && v.color) campo('b1', 'Cor ' + v.color)
+		if (v.color) {
+			campo('nomeCor', v.color.toUpperCase())
+			campo('corDestaque', corSugeridaPeloNome(v.color))
+		}
 		if (intocado(estado.desempenho, ESTADO_INICIAL.desempenho)) {
 			campo('desempenho', [
 				{ valor: v.horsepower ? String(v.horsepower) : '', unidade: 'cv', rotulo: 'POTÊNCIA' },

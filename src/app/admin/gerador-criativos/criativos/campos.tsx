@@ -418,6 +418,7 @@ export function PainelCampos({
 	const { estado, campo } = g
 	const t = estado.tipo
 	const classicoLoja = t === 'classico-loja'
+	const edicao = t === 'edicao'
 	const texto = <K extends keyof EstadoCriativo>(k: K) => (v: string) =>
 		campo(k, v as EstadoCriativo[K])
 
@@ -438,7 +439,7 @@ export function PainelCampos({
 						/>
 						<CampoTexto rotulo="Quilometragem" valor={estado.km} aoMudar={texto('km')} />
 					</div>
-					{(classicoLoja || t === 'premium') && (
+					{(classicoLoja || t === 'premium' || edicao) && (
 						<CampoTexto
 							rotulo="Complemento da linha do KM (opcional)"
 							valor={estado.kmextra}
@@ -461,6 +462,18 @@ export function PainelCampos({
 				</Secao>
 			)}
 
+			{edicao && (
+				<Secao titulo="Ficha (até 3 linhas)">
+					<CampoTexto rotulo="Linha 1 — em destaque (ex.: motor)" valor={estado.b1} aoMudar={texto('b1')} />
+					<CampoTexto rotulo="Linha 2" valor={estado.b2} aoMudar={texto('b2')} />
+					<CampoTexto rotulo="Linha 3 (só no Stories)" valor={estado.b3} aoMudar={texto('b3')} />
+					<Dica>
+						A primeira linha sai maior e em branco; as outras, em cinza. Uma linha cada: o que passar é
+						cortado com “…”. Informação como blindagem ou PPF vai aqui, não em tarja na foto.
+					</Dica>
+				</Secao>
+			)}
+
 			{t === 'premium' && <CamposPremium g={g} aoEscolherLogoModelo={aoEscolherLogoModelo} />}
 
 			{t !== 'estoque' && (
@@ -471,16 +484,21 @@ export function PainelCampos({
 					/>
 					<Enquadramento opcoes={estado.f1} aoMudar={o => campo('f1', o)} />
 					<Dica>
-						A foto entra inteira — não precisa recortar o fundo. No Clássico Loja, o bloco de preço
-						acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é
-						cortado nem esmaecido.
+						{edicao
+							? 'A foto entra inteira e ocupa a peça toda. Prefira uma foto sem tarja ou texto aplicado: na Edição esse tipo de informação vai na ficha.'
+							: 'A foto entra inteira — não precisa recortar o fundo. No Clássico Loja, o bloco de preço acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é cortado nem esmaecido.'}
 					</Dica>
 
-					<CampoArquivo
-						rotulo="Foto secundária (traseira / lateral — rodapé)"
-						aoEscolher={f => aoEscolherFotoDoComputador('foto2', f)}
-					/>
-					<Enquadramento opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
+					{/* A Edição usa só a foto principal. */}
+					{!edicao && (
+						<>
+							<CampoArquivo
+								rotulo="Foto secundária (traseira / lateral — rodapé)"
+								aoEscolher={f => aoEscolherFotoDoComputador('foto2', f)}
+							/>
+							<Enquadramento opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
+						</>
+					)}
 
 					{classicoLoja && (
 						<>
