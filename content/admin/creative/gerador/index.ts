@@ -12,6 +12,7 @@
  */
 import { renderClassicoLoja } from './formatos/classico-loja'
 import { renderEstoque } from './formatos/estoque'
+import { renderEdicao } from './formatos/edicao'
 import { renderPremium } from './formatos/premium'
 import {
 	ALTURA_FEED,
@@ -37,6 +38,7 @@ export const FORMATOS: { id: FormatoId; nome: string; descricao: string }[] = [
 	{ id: 'classico-loja', nome: 'Clássico Loja', descricao: 'fundo da loja' },
 	{ id: 'estoque', nome: 'Estoque', descricao: 'lista de até 4 carros' },
 	{ id: 'premium', nome: 'Premium', descricao: 'escuro, desempenho + ficha' },
+	{ id: 'edicao', nome: 'Edição', descricao: 'escuro, serifa, carro na loja' },
 ]
 
 export function render(
@@ -57,6 +59,8 @@ export function render(
 			return renderEstoque(contexto)
 		case 'premium':
 			return renderPremium(contexto)
+		case 'edicao':
+			return renderEdicao(contexto)
 		default:
 			return renderClassicoLoja(contexto)
 	}

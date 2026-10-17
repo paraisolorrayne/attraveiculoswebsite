@@ -16,10 +16,17 @@
  * inclinava o roman por conta própria. Carregar o itálico 500 "que faltava"
  * mudaria o desenho — a linha de ano/km do Destaque sairia com outro desenho de
  * letra e outra largura.
+ *
+ * A Gilda Display entrou em 16/10/2026 para o formato Edição (modelo e preço
+ * em serifa, como nas peças de referência da Lorrayne). Foi a escolhida entre
+ * nove por ter algarismos alinhados de fábrica: a Cormorant, a mais parecida no
+ * desenho, só tem os de texto ("63" e "849" descendo da linha), e o canvas não
+ * tem como ligar `lnum`. É família nova no fim da URL: não muda nada do que a
+ * Montserrat desenha.
  */
 
 export const FOLHA_GOOGLE =
-	'https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600&display=swap'
+	'https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600&family=Gilda+Display&display=swap'
 
 /**
  * Os pares peso/família que o desenho realmente pede.
@@ -46,6 +53,7 @@ const PESOS = [
 	'400 40px Inter',
 	'500 40px Inter',
 	'600 40px Inter',
+	'400 40px "Gilda Display"',
 ]
 
 let promessa: Promise<void> | null = null

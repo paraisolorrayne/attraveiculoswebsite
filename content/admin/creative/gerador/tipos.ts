@@ -16,7 +16,7 @@ export const ALTURA_STORIES = 1920
 /** Feed 4:5 da Meta — a mesma composição, só com a foto principal. */
 export const ALTURA_FEED = 1350
 
-export type FormatoId = 'classico-loja' | 'estoque' | 'premium'
+export type FormatoId = 'classico-loja' | 'estoque' | 'premium' | 'edicao'
 
 export type PisoTipo = 'concreto' | 'asfalto'
 
