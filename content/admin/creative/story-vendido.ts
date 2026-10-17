@@ -7,9 +7,10 @@
  *     numa névoa da cor do vidro da loja;
  *   - a loja sobe: acima da foto do carro vai o reflexo desfocado dela, e a
  *     névoa abre aos poucos até a foto ficar nítida antes do teto do carro;
- *   - o piso se dissolve no fundo, onde fica o mapa do Brasil com o arco
- *     vermelho de Uberlândia até a cidade do cliente;
- *   - VENDIDO (ou RESERVADO, ENTREGUE) e a linha "MODELO → CIDADE · UF".
+ *   - o piso se dissolve no fundo, onde fica o mapa do Brasil inteiro com o
+ *     arco vermelho de Uberlândia até a cidade do cliente;
+ *   - VENDIDO (ou RESERVADO, ENTREGUE) e a linha "MODELO → CIDADE · UF", que
+ *     podem passar por cima do sul do mapa, mas não dos pontos marcados.
  *
  * Tema claro ou escuro, à escolha do operador: carro escuro costuma pedir o
  * claro, e carro claro o escuro.
@@ -20,6 +21,9 @@
  *     deixava uma linha atravessando a peça. Acima do carro, só a própria foto;
  *   - degradê de duas paradas: faz quina, e a quina vira linha. Toda passagem
  *     aqui usa `suave()`;
+ *   - mapa recortado em volta da rota, sumindo nas beiradas: lia como um
+ *     pedaço de mapa. A Lorrayne pediu o Brasil inteiro, "mesmo que por baixo
+ *     do texto" (17/10/2026);
  *   - `ctx.filter`: o Safari ignora sem erro. O desfoque é `desfocada()`.
  *
  * Fotos do estoque passam por /_next/image (fotoDoVeiculo): direto do S3 o
@@ -29,8 +33,9 @@ import { desfocada, fotoSemJuntas, grainCanvas } from './gerador/desenho'
 import {
 	UBERLANDIA,
 	controleDoArco,
-	enquadrarRota,
+	enquadrarBrasil,
 	ladoDoRotulo,
+	limitesDe,
 	puxarPara,
 	recorteDaFoto,
 	suave,
@@ -76,6 +81,12 @@ const GRADE = {
 	fotoY: 400,
 	/** Foto em pé perde o excesso: acima disso o mapa não cabe. */
 	fotoHMax: 860,
+	/** O norte do mapa fica isto abaixo da base do carro. */
+	mapaFolga: 50,
+	/** Até onde o sul do mapa pode descer (a faixa de baixo do Stories começa em 1670). */
+	mapaFundo: 1690,
+	/** Uberlândia e o destino ficam acima daqui: o VENDIDO começa em ~1484 e o halo maior do ponto tem 38px. */
+	mapaLivre: 1444,
 	seloY: 1548,
 	linhaY: 1614,
 } as const
@@ -276,19 +287,18 @@ function cena(ctx: CanvasRenderingContext2D, foto: HTMLImageElement, p: Paleta, 
 
 /* ------------------------------------------------ mapa */
 
-function mapa(ctx: CanvasRenderingContext2D, ufs: ContornoUF[], destino: Cidade | null, p: Paleta, base: number, H: number): void {
-	const area = { x0: 170, x1: 910, y0: base + 110, y1: Math.min(base + 400, 1420) }
-	if (area.y1 - area.y0 < 120) return
+function mapa(ctx: CanvasRenderingContext2D, ufs: ContornoUF[], destino: Cidade | null, p: Paleta, base: number): void {
 	const o = UBERLANDIA
 	const d = destino ?? o
-	const proj = enquadrarRota(o, d, area)
+	// O Brasil inteiro, sem recorte nem borda apagada: o sul pode passar por
+	// baixo do VENDIDO, Uberlândia e o destino nunca.
+	const proj = enquadrarBrasil(
+		limitesDe(ufs),
+		{ cx: W / 2, topo: base + GRADE.mapaFolga, largura: 820, fundo: GRADE.mapaFundo, livreAte: GRADE.mapaLivre },
+		[o.lat, d.lat],
+	)
+	if (proj.altura < 200) return
 
-	// Os contornos num canvas à parte, que some nas beiradas: o mapa nasce do
-	// piso e não tem moldura.
-	const t = document.createElement('canvas')
-	t.width = W
-	t.height = H
-	const c = t.getContext('2d')!
 	const caminho = new Path2D()
 	for (const u of ufs)
 		for (const anel of u.aneis) {
@@ -300,24 +310,12 @@ function mapa(ctx: CanvasRenderingContext2D, ufs: ContornoUF[], destino: Cidade 
 			}
 			caminho.closePath()
 		}
-	c.fillStyle = p.mapa.preenche
-	c.fill(caminho)
-	c.strokeStyle = p.mapa.traco
-	c.lineWidth = 1.2
-	c.lineJoin = 'round'
-	c.stroke(caminho)
-	c.globalCompositeOperation = 'destination-in'
-	const cx = (area.x0 + area.x1) / 2
-	const cy = (area.y0 + area.y1) / 2
-	const r = c.createRadialGradient(cx, cy, 120, cx, cy, 620)
-	r.addColorStop(0, 'rgba(0,0,0,1)')
-	r.addColorStop(0.6, 'rgba(0,0,0,.7)')
-	r.addColorStop(1, 'rgba(0,0,0,0)')
-	c.fillStyle = r
-	c.fillRect(0, 0, W, H)
-	c.fillStyle = degrade(c, H, [[0, 0], ...suave(base - 20, 0, base + 90, 1), ...suave(1410, 1, 1475, 0), [H, 0]], a => `rgba(0,0,0,${a})`)
-	c.fillRect(0, 0, W, H)
-	ctx.drawImage(t, 0, 0)
+	ctx.fillStyle = p.mapa.preenche
+	ctx.fill(caminho)
+	ctx.strokeStyle = p.mapa.traco
+	ctx.lineWidth = 1.2
+	ctx.lineJoin = 'round'
+	ctx.stroke(caminho)
 
 	const O = { x: proj.x(o.lon), y: proj.y(o.lat) }
 	const D = { x: proj.x(d.lon), y: proj.y(d.lat) }
@@ -370,10 +368,13 @@ function mapa(ctx: CanvasRenderingContext2D, ufs: ContornoUF[], destino: Cidade 
 	ctx.beginPath()
 	ctx.arc(D.x, D.y, 22, 0, Math.PI * 2)
 	ctx.stroke()
-	ctx.strokeStyle = 'rgba(200,16,46,.2)'
-	ctx.beginPath()
-	ctx.arc(D.x, D.y, 38, 0, Math.PI * 2)
-	ctx.stroke()
+	// O halo de fora só quando não engole Uberlândia (Goiânia fica a ~30px).
+	if (Math.hypot(D.x - O.x, D.y - O.y) > 38 + 13) {
+		ctx.strokeStyle = 'rgba(200,16,46,.2)'
+		ctx.beginPath()
+		ctx.arc(D.x, D.y, 38, 0, Math.PI * 2)
+		ctx.stroke()
+	}
 	rotulo(d.nome.toUpperCase(), D.x, D.y, 50, D.x >= O.x ? 1 : -1, 600, 21, p.mapa.rotuloDestino)
 }
 
@@ -387,7 +388,7 @@ export function renderStory(canvas: HTMLCanvasElement, dados: DadosVendido, asse
 	const p = PALETAS[dados.tema]
 
 	const base = cena(ctx, assets.foto, p, H)
-	if (assets.ufs) mapa(ctx, assets.ufs, dados.destino, p, base, H)
+	if (assets.ufs) mapa(ctx, assets.ufs, dados.destino, p, base)
 
 	ctx.save()
 	ctx.globalAlpha = 0.03

@@ -79,50 +79,72 @@ export function buscarCidades(cidades: Cidade[], consulta: string, limite = 8): 
 
 /* ------------------------------------------------ mapa */
 
-export interface Area {
-	x0: number
-	x1: number
-	y0: number
-	y1: number
+/** Os extremos do mapa, em graus. */
+export interface Limites {
+	lon0: number
+	lon1: number
+	lat0: number
+	lat1: number
+}
+
+export function limitesDe(ufs: ContornoUF[]): Limites {
+	const l = { lon0: Infinity, lon1: -Infinity, lat0: Infinity, lat1: -Infinity }
+	for (const u of ufs)
+		for (const a of u.aneis)
+			for (let i = 0; i < a.length; i += 2) {
+				l.lon0 = Math.min(l.lon0, a[i] / 100)
+				l.lon1 = Math.max(l.lon1, a[i] / 100)
+				l.lat0 = Math.min(l.lat0, a[i + 1] / 100)
+				l.lat1 = Math.max(l.lat1, a[i + 1] / 100)
+			}
+	return l
+}
+
+/** Onde o mapa pode ficar na peça. */
+export interface Moldura {
+	/** Centro horizontal. */
+	cx: number
+	/** Altura do ponto mais ao norte. */
+	topo: number
+	largura: number
+	/** Até onde o sul pode descer. */
+	fundo: number
+	/**
+	 * Nenhum ponto marcado desce daqui: abaixo vem o VENDIDO, que pode passar
+	 * por cima do sul do mapa, mas não de Uberlândia nem da cidade do cliente.
+	 */
+	livreAte: number
 }
 
 export interface Projecao {
 	x: (lon: number) => number
 	y: (lat: number) => number
+	/** Altura do mapa inteiro na peça. */
+	altura: number
 }
 
 /**
- * Projeta lon/lat na área do mapa de modo que origem e destino caibam com
- * folga. Equirretangular com a longitude encolhida pelo cosseno da latitude
- * média — no recorte de um estado ou do país isso não deforma a ponto de se
- * notar. O vão mínimo de `vao` graus faz a venda para a cidade vizinha (ou na
- * própria Uberlândia) mostrar a região em volta, e não dois pontos colados no
- * meio de um mapa vazio.
+ * O Brasil inteiro, do maior tamanho que cabe na moldura com as `latitudes`
+ * marcadas (Uberlândia e o destino) acima de `livreAte`. Destino no Sul deixa
+ * o mapa menor; destino no Norte ou no Centro-Oeste deixa o sul do país
+ * passar por baixo do VENDIDO (pedido da Lorrayne, 17/10/2026: "que ele
+ * apareça inteiro mesmo que por baixo do texto").
+ *
+ * Equirretangular com a longitude encolhida pelo cosseno da latitude do meio
+ * do país: no Brasil inteiro isso não deforma a ponto de se notar.
  */
-export function enquadrarRota(origem: Cidade, destino: Cidade, area: Area, vao = 10): Projecao {
-	const kx = Math.cos(((origem.lat + destino.lat) / 2) * (Math.PI / 180))
-	let lon0 = Math.min(origem.lon, destino.lon)
-	let lon1 = Math.max(origem.lon, destino.lon)
-	let lat0 = Math.min(origem.lat, destino.lat)
-	let lat1 = Math.max(origem.lat, destino.lat)
-	if ((lon1 - lon0) * kx < vao) {
-		const c = (lon0 + lon1) / 2
-		lon0 = c - vao / kx / 2
-		lon1 = c + vao / kx / 2
-	}
-	if (lat1 - lat0 < vao * 0.45) {
-		const c = (lat0 + lat1) / 2
-		lat0 = c - vao * 0.225
-		lat1 = c + vao * 0.225
-	}
-	const esc = Math.min((area.x1 - area.x0) / ((lon1 - lon0) * kx), (area.y1 - area.y0) / (lat1 - lat0))
-	const cx = (area.x0 + area.x1) / 2
-	const cy = (area.y0 + area.y1) / 2
-	const lonC = (lon0 + lon1) / 2
-	const latC = (lat0 + lat1) / 2
+export function enquadrarBrasil(lim: Limites, m: Moldura, latitudes: number[]): Projecao {
+	const kx = Math.cos(((lim.lat0 + lim.lat1) / 2) * (Math.PI / 180))
+	const esc = Math.min(
+		m.largura / ((lim.lon1 - lim.lon0) * kx),
+		(m.fundo - m.topo) / (lim.lat1 - lim.lat0),
+		...latitudes.map(lat => (m.livreAte - m.topo) / Math.max(lim.lat1 - lat, 1e-6)),
+	)
+	const lonC = (lim.lon0 + lim.lon1) / 2
 	return {
-		x: lon => cx + (lon - lonC) * kx * esc,
-		y: lat => cy - (lat - latC) * esc,
+		x: lon => m.cx + (lon - lonC) * kx * esc,
+		y: lat => m.topo + (lim.lat1 - lat) * esc,
+		altura: (lim.lat1 - lim.lat0) * esc,
 	}
 }
 

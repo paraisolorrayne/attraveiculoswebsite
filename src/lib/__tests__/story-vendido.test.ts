@@ -5,15 +5,17 @@ import {
 	UBERLANDIA,
 	buscarCidades,
 	controleDoArco,
-	enquadrarRota,
+	enquadrarBrasil,
 	ladoDoRotulo,
 	lerMunicipios,
+	limitesDe,
 	luz,
 	normalizar,
 	puxarPara,
 	recorteDaFoto,
 	suave,
 	type Cidade,
+	type ContornoUF,
 } from '@content/admin/creative/vendido/calculos'
 
 const publico = (f: string) => JSON.parse(readFileSync(join(process.cwd(), 'public/creative/vendido', f), 'utf8'))
@@ -90,36 +92,53 @@ describe('busca de cidade', () => {
 })
 
 describe('enquadramento do mapa', () => {
-	const area = { x0: 170, x1: 910, y0: 1180, y1: 1420 }
-	const dentro = (x: number, y: number) => x >= area.x0 - 0.5 && x <= area.x1 + 0.5 && y >= area.y0 - 0.5 && y <= area.y1 + 0.5
+	const { ufs } = publico('ufs.json') as { ufs: ContornoUF[] }
+	const lim = limitesDe(ufs)
+	// A moldura da peça com o G 63 (base do carro em ~1090).
+	const m = { cx: 540, topo: 1140, largura: 820, fundo: 1690, livreAte: 1444 }
+
+	it('os limites são os do Brasil', () => {
+		expect(lim.lon0).toBeCloseTo(-73.98)
+		expect(lim.lon1).toBeCloseTo(-34.81)
+		expect(lim.lat0).toBeCloseTo(-33.74)
+		expect(lim.lat1).toBeCloseTo(5.27)
+	})
 
 	it.each([
 		['Goiânia', 'GO'],
 		['São Paulo', 'SP'],
 		['Manaus', 'AM'],
 		['Oiapoque', 'AP'],
+		['Porto Alegre', 'RS'],
 		['Chuí', 'RS'],
 		['Cruzeiro do Sul', 'AC'],
-	])('Uberlândia e %s cabem na área', (nome, uf) => {
+	])('o Brasil inteiro na largura e na altura, e Uberlândia e %s acima do VENDIDO', (nome, uf) => {
 		const d = achar(nome, uf)
-		const p = enquadrarRota(UBERLANDIA, d, area)
-		expect(dentro(p.x(UBERLANDIA.lon), p.y(UBERLANDIA.lat))).toBe(true)
-		expect(dentro(p.x(d.lon), p.y(d.lat))).toBe(true)
+		const p = enquadrarBrasil(lim, m, [UBERLANDIA.lat, d.lat])
+		expect(p.y(lim.lat1)).toBeCloseTo(m.topo)
+		expect(p.y(lim.lat0)).toBeLessThanOrEqual(m.fundo + 0.5)
+		expect(p.x(lim.lon0)).toBeGreaterThanOrEqual(m.cx - m.largura / 2 - 0.5)
+		expect(p.x(lim.lon1)).toBeLessThanOrEqual(m.cx + m.largura / 2 + 0.5)
+		expect(p.y(UBERLANDIA.lat)).toBeLessThanOrEqual(m.livreAte + 0.5)
+		expect(p.y(d.lat)).toBeLessThanOrEqual(m.livreAte + 0.5)
 	})
 
-	it('cidade vizinha não vira dois pontos colados: o vão mínimo mostra a região', () => {
-		const d = achar('Araguari', 'MG')
-		const p = enquadrarRota(UBERLANDIA, d, area)
-		const pxPorGrau = Math.abs(p.y(0) - p.y(1))
-		// 10° de vão em ~240px de altura útil: menos de 60px por grau.
-		expect(pxPorGrau).toBeLessThan(60)
-		expect(Math.hypot(p.x(d.lon) - p.x(UBERLANDIA.lon), p.y(d.lat) - p.y(UBERLANDIA.lat))).toBeLessThan(60)
+	it('destino no Norte deixa o sul passar por baixo do texto; no Sul, o mapa encolhe', () => {
+		const norte = enquadrarBrasil(lim, m, [UBERLANDIA.lat, achar('Manaus', 'AM').lat])
+		const sul = enquadrarBrasil(lim, m, [UBERLANDIA.lat, achar('Porto Alegre', 'RS').lat])
+		expect(norte.y(lim.lat0)).toBeGreaterThan(m.livreAte + 150)
+		expect(sul.altura).toBeLessThan(norte.altura)
+		// Manaus não puxa nada: quem limita é Uberlândia, igual a sem destino.
+		expect(norte.altura).toBeCloseTo(enquadrarBrasil(lim, m, [UBERLANDIA.lat]).altura)
 	})
 
-	it('venda na própria Uberlândia fica no centro', () => {
-		const p = enquadrarRota(UBERLANDIA, UBERLANDIA, area)
-		expect(p.x(UBERLANDIA.lon)).toBeCloseTo((area.x0 + area.x1) / 2)
-		expect(p.y(UBERLANDIA.lat)).toBeCloseTo((area.y0 + area.y1) / 2)
+	it('o país fica centrado e sem deformar', () => {
+		const p = enquadrarBrasil(lim, m, [UBERLANDIA.lat])
+		expect((p.x(lim.lon0) + p.x(lim.lon1)) / 2).toBeCloseTo(m.cx)
+		const largura = p.x(lim.lon1) - p.x(lim.lon0)
+		// ~39° nos dois sentidos, a longitude encolhida pelo cosseno de ~14°S.
+		expect(largura / p.altura).toBeGreaterThan(0.95)
+		expect(largura / p.altura).toBeLessThan(1)
 	})
 
 	it('o arco estufa para cima e cresce até 160px', () => {
