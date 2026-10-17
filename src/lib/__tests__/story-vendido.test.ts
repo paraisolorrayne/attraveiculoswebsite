@@ -94,8 +94,9 @@ describe('busca de cidade', () => {
 describe('enquadramento do mapa', () => {
 	const { ufs } = publico('ufs.json') as { ufs: ContornoUF[] }
 	const lim = limitesDe(ufs)
-	// A moldura da peça com o G 63 (base do carro em ~1090).
-	const m = { cx: 540, topo: 1140, largura: 820, fundo: 1690, livreAte: 1444 }
+	// A moldura da peça com o G 63 (base do carro em 1114): o sul vai até a
+	// faixa do chat do Instagram, em 1670.
+	const m = { cx: 540, topo: 1154, largura: 820, fundo: 1670, livreAte: 1480 }
 
 	it('os limites são os do Brasil', () => {
 		expect(lim.lon0).toBeCloseTo(-73.98)
@@ -123,13 +124,22 @@ describe('enquadramento do mapa', () => {
 		expect(p.y(d.lat)).toBeLessThanOrEqual(m.livreAte + 0.5)
 	})
 
-	it('destino no Norte deixa o sul passar por baixo do texto; no Sul, o mapa encolhe', () => {
+	it.each([
+		['Goiânia', 'GO'],
+		['Recife', 'PE'],
+		['Manaus', 'AM'],
+		['Brasília', 'DF'],
+	])('com destino em %s o mapa vai até a faixa do chat, passando por baixo do texto', (nome, uf) => {
+		const p = enquadrarBrasil(lim, m, [UBERLANDIA.lat, achar(nome, uf).lat])
+		expect(p.y(lim.lat0)).toBeCloseTo(m.fundo)
+		expect(p.altura).toBeCloseTo(enquadrarBrasil(lim, m, [UBERLANDIA.lat]).altura)
+	})
+
+	it('destino no Sul encolhe o mapa para o ponto não cair no VENDIDO', () => {
 		const norte = enquadrarBrasil(lim, m, [UBERLANDIA.lat, achar('Manaus', 'AM').lat])
 		const sul = enquadrarBrasil(lim, m, [UBERLANDIA.lat, achar('Porto Alegre', 'RS').lat])
-		expect(norte.y(lim.lat0)).toBeGreaterThan(m.livreAte + 150)
 		expect(sul.altura).toBeLessThan(norte.altura)
-		// Manaus não puxa nada: quem limita é Uberlândia, igual a sem destino.
-		expect(norte.altura).toBeCloseTo(enquadrarBrasil(lim, m, [UBERLANDIA.lat]).altura)
+		expect(sul.y(achar('Porto Alegre', 'RS').lat)).toBeCloseTo(m.livreAte)
 	})
 
 	it('o país fica centrado e sem deformar', () => {

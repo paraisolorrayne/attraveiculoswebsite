@@ -82,13 +82,13 @@ const GRADE = {
 	/** Foto em pé perde o excesso: acima disso o mapa não cabe. */
 	fotoHMax: 860,
 	/** O norte do mapa fica isto abaixo da base do carro. */
-	mapaFolga: 50,
-	/** Até onde o sul do mapa pode descer (a faixa de baixo do Stories começa em 1670). */
-	mapaFundo: 1690,
-	/** Uberlândia e o destino ficam acima daqui: o VENDIDO começa em ~1484 e o halo maior do ponto tem 38px. */
-	mapaLivre: 1444,
-	seloY: 1548,
-	linhaY: 1614,
+	mapaFolga: 40,
+	/** O sul do mapa vai até onde começa a faixa do chat do Instagram. */
+	mapaFundo: CANVAS.h - SAFE.bottom,
+	/** Uberlândia e o destino ficam acima daqui: as letras do VENDIDO começam em ~1520 e o halo do ponto tem 22px; sobram ~18px. */
+	mapaLivre: 1480,
+	seloY: 1584,
+	linhaY: 1646,
 } as const
 
 interface Paleta {
