@@ -41,8 +41,10 @@ describe('o motor do gerador não usa ctx.filter', () => {
 	// O Safari aceita a propriedade e não faz nada: em 16/10/2026 o piso do
 	// Premium saiu cinza claro em produção, com o texto branco em cima.
 	it('nenhum arquivo do motor atribui ctx.filter', () => {
-		const raiz = join(process.cwd(), 'content/admin/creative/gerador')
+		// content/admin/creative inteiro: o gerador, o Story Vendido e o Dossiê.
+		const raiz = join(process.cwd(), 'content/admin/creative')
 		const arquivos = readdirSync(raiz, { recursive: true, encoding: 'utf8' }).filter(f => f.endsWith('.ts'))
+		expect(arquivos).toContain('story-vendido.ts')
 		expect(arquivos.length).toBeGreaterThan(5)
 		const comFilter = arquivos.filter(f => /\.filter\s*=(?!=)/.test(readFileSync(join(raiz, f), 'utf8')))
 		expect(comFilter).toEqual([])
