@@ -16,9 +16,13 @@
  * As abas ficam MONTADAS e escondidas com `hidden`, não desmontadas: trocar de
  * aba e voltar não pode jogar fora o trabalho em andamento do operador — fotos
  * escolhidas, sliders ajustados, campos preenchidos.
+ *
+ * O aviso de novidade (aviso-novidades.tsx) fica aqui, na casca, para o botão
+ * dele poder abrir a aba da novidade.
  */
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { AvisoNovidades } from './aviso-novidades'
 import { CriativosAdmin } from './criativos/criativos-admin'
 import { DossieAdmin } from './dossie/dossie-admin'
 import { StoryVendidoAdmin } from './story-vendido-admin'
@@ -33,9 +37,12 @@ type Aba = (typeof ABAS)[number]['id']
 
 export function GeradorCriativosAdmin({ usuarioId }: { usuarioId: string }) {
   const [aba, setAba] = useState<Aba>('criativos')
+  const abrirVendido = useCallback(() => setAba('vendido'), [])
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
+      <AvisoNovidades usuarioId={usuarioId} aoUsar={abrirVendido} />
+
       <nav className="flex shrink-0 gap-1 border-b border-border bg-background-card px-4">
         {ABAS.map(a => (
           <button
@@ -57,7 +64,7 @@ export function GeradorCriativosAdmin({ usuarioId }: { usuarioId: string }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div hidden={aba !== 'criativos'}>
-          <CriativosAdmin usuarioId={usuarioId} />
+          <CriativosAdmin />
         </div>
         <div hidden={aba !== 'vendido'}>
           <StoryVendidoAdmin />
