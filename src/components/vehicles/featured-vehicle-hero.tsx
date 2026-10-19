@@ -1,123 +1,137 @@
-'use client'
-
-import { VehicleImage } from '@/components/ui/vehicle-image'
-import Image from 'next/image'
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import { Vehicle } from '@/types'
-import { formatPrice, formatMileage } from '@/lib/utils'
+import { Breadcrumb } from '@/components/ui/breadcrumb'
+import { VehicleImage } from '@/components/ui/vehicle-image'
+import { VehicleCardCTAs } from './vehicle-card-ctas'
+import { BreadcrumbItem, Vehicle } from '@/types'
+import { cn, formatMileage, formatPrice } from '@/lib/utils'
+import { larguraDaMarca } from '@/lib/largura-da-marca'
 
 interface FeaturedVehicleHeroProps {
   vehicle: Vehicle
-  /**
-   * Quando preenchido, renderiza o carro como PNG transparente flutuante
-   * (sem container/card/shadow). Vem do cache de remove-bg processado
-   * via Replicate. Quando null, cai pra foto original dentro de um card.
-   */
-  noBgPhotoUrl?: string | null
+  /** Breadcrumb da página: fica dentro do destaque, com as letras da marca começando atrás dele. */
+  breadcrumb: BreadcrumbItem[]
 }
 
-export function FeaturedVehicleHero({ vehicle, noBgPhotoUrl }: FeaturedVehicleHeroProps) {
-  const useTransparent = !!noBgPhotoUrl
+/**
+ * Destaque do topo de /veiculos: o nome da marca gigante atrás do carro, com
+ * a foto (sempre com o fundo da loja) num card que cobre a parte de baixo das
+ * letras. Baixo o bastante para a ponta da lista aparecer na primeira tela,
+ * senão a página parece dedicada a um carro só.
+ *
+ * No celular e no tablet a foto fica ao lado do nome; no computador, texto e
+ * foto meio a meio, com a foto em 2:1. Mais panorâmico que isso corta pneu ou
+ * teto (ver `.destaque-foto` em src/styles/hero.css). Tamanho e posição da
+ * palavra: `.destaque-marca`, no mesmo arquivo.
+ */
+export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHeroProps) {
+  const nome = `${vehicle.brand} ${vehicle.model}`
+  const href = `/veiculo/${vehicle.slug}`
+  const km = vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage)
+  const preco = formatPrice(vehicle.price)
+  const larguraDoNome = larguraDaMarca(vehicle.brand ?? '')
+  const rotulo = 'mb-1.5 block text-[11px] font-medium uppercase leading-none tracking-[0.14em] text-foreground-secondary'
+
   return (
-    <section className="relative w-full bg-gradient-to-b from-background-soft via-background to-background overflow-hidden">
-      <div className="max-w-[92%] lg:max-w-[68%] mx-auto py-3 sm:py-8 lg:py-16">
-        {/* Mobile: layout horizontal compacto (imagem esquerda, info direita).
-            Desktop (lg): mantém layout em 3 colunas com versão expandida. */}
-        <div className="relative flex flex-row lg:flex-row items-center gap-3 sm:gap-6 lg:gap-0">
+    <section className="@container relative w-full overflow-hidden bg-gradient-to-b from-background-soft to-background pt-20 font-sans">
+      <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8 pb-4 lg:pb-5">
+        <div className="relative z-10 pt-3 lg:pt-5">
+          <Breadcrumb items={breadcrumb} className="py-0" />
+        </div>
 
-          {/* Background brand watermark — escondido em mobile pra liberar espaço */}
-          <div className="absolute inset-0 hidden sm:flex items-center justify-center pointer-events-none opacity-[0.04] select-none">
-            <span className="text-[10rem] lg:text-[20rem] font-black uppercase tracking-tighter text-foreground whitespace-nowrap">
-              {vehicle.brand}
-            </span>
-          </div>
-
-          {/* Center: Vehicle image.
-              Aumentei a coluna de lg:w-2/5 → lg:w-1/2 e o max-width da
-              foto de lg:max-w-lg (512px) → lg:max-w-2xl (672px) pra dar
-              mais destaque ao carro destacado. As outras colunas se ajustam
-              proporcionalmente abaixo.
-              - Com remove-bg (PNG transparente): carro flutuante sem card.
-              - Sem remove-bg (cache miss): cai pro layout com border/shadow. */}
-          <div className="relative z-10 lg:w-1/2 lg:order-2 flex justify-center w-2/5 shrink-0">
-            {useTransparent ? (
-              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-lg lg:max-w-2xl">
-                <Image
-                  src={noBgPhotoUrl!}
-                  alt={`${vehicle.brand} ${vehicle.model}`}
-                  fill
-                  className="object-contain drop-shadow-2xl"
-                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 50vw"
-                  priority
-                />
-              </div>
-            ) : (
-              <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] max-w-full sm:max-w-lg lg:max-w-2xl rounded-lg sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-xl shadow-black/15 border border-border/50">
-                <VehicleImage
-                  src={vehicle.photos?.[0]}
-                  alt={`${vehicle.brand} ${vehicle.model}`}
-                  fill
-                  className="object-cover drop-shadow-2xl mix-blend-lighten"
-                  sizes="(max-width: 640px) 40vw, (max-width: 1024px) 90vw, 50vw"
-                  priority
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Right (mobile): Brand + Model + specs inline.
-              Left (desktop): Brand + Model info large.
-              Coluna reduzida pra lg:w-[30%] (era 2/5=40%) — sobra do espaço
-              foi pra coluna da imagem. */}
-          <div className="relative z-10 lg:w-[30%] lg:order-1 flex-1 text-left lg:text-left space-y-1 sm:space-y-3 lg:space-y-4 min-w-0">
-            <p className="text-primary text-[9px] sm:text-xs font-bold uppercase tracking-[0.2em]">
-              {vehicle.brand}
-            </p>
-            <h1 className="text-lg sm:text-4xl md:text-5xl lg:text-6xl font-black text-foreground tracking-tight leading-[0.95]">
-              {vehicle.model}
-            </h1>
-            {vehicle.version && (
-              <p className="hidden sm:block text-foreground-secondary text-xs sm:text-sm lg:text-base">
-                {vehicle.version}
-              </p>
-            )}
-            {/* Mobile-only inline specs (price highlighted) */}
-            <div className="sm:hidden flex items-baseline gap-2 pt-0.5">
-              <span className="text-base font-bold text-primary">{formatPrice(vehicle.price)}</span>
-              <span className="text-[10px] text-foreground-secondary">
-                {vehicle.year_model} · {vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage)}
+        {/* A palavra se posiciona a partir do topo desta linha: mudar a margem
+            de cima ou a altura do breadcrumb pede ajuste em .destaque-marca. */}
+        <div className="relative mt-10 flex items-center gap-3.5 lg:mt-[76px] lg:grid lg:grid-cols-2 lg:items-end lg:gap-0">
+          {larguraDoNome > 0 && (
+            <div
+              aria-hidden
+              className="destaque-marca-faixa pointer-events-none absolute bottom-full select-none"
+            >
+              <span
+                className="destaque-marca block whitespace-nowrap pr-[0.05em] text-center font-black uppercase leading-none tracking-[-0.05em]"
+                style={{ '--marca-em': larguraDoNome } as CSSProperties}
+              >
+                {vehicle.brand}
               </span>
             </div>
-            <Link
-              href={`/veiculo/${vehicle.slug}`}
-              className="inline-flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-4 text-primary font-semibold text-xs sm:text-sm hover:underline transition-colors"
-            >
-              Ver detalhes <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Link>
-          </div>
+          )}
 
-          {/* Right (desktop only): Specs card.
-              Coluna lg:w-[20%] (era 1/5=20%, mantido) + lg:-ml-8 pra puxar
-              pra esquerda e ficar colado no veículo. Total: 30% + 50% + 20% = 100%. */}
-          <div className="hidden sm:flex relative z-10 lg:w-[20%] lg:order-3 lg:-ml-8 justify-center lg:justify-end w-full sm:w-auto">
-            <div className="bg-background-card border border-border rounded-xl p-3 sm:p-5 shadow-lg min-w-[180px] w-full sm:w-auto">
-              <div className="flex sm:block gap-4 sm:gap-0 justify-between sm:space-y-4">
-                <div className="flex-1 sm:flex-none">
-                  <span className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium">Ano</span>
-                  <p className="text-sm sm:text-lg font-bold text-foreground">{vehicle.year_manufacture}/{vehicle.year_model}</p>
+          <div className="relative z-10 min-w-0 flex-1 self-end sm:self-center lg:self-auto lg:pr-4 xl:pr-7">
+            <p className="mb-[5px] text-[9px] font-bold uppercase leading-none tracking-[0.2em] text-primary sm:text-[11px] lg:mb-2.5 lg:text-xs">
+              {vehicle.brand}
+            </p>
+            <h1
+              className={cn(
+                'text-[22px] font-black leading-[0.95] tracking-[-0.025em] text-foreground sm:text-[32px]',
+                vehicle.model.length > 14 ? 'lg:text-[40px]' : 'lg:text-[52px]',
+              )}
+            >
+              {vehicle.model}
+            </h1>
+
+            {/* Celular: ano · km, preço e o link */}
+            <div className="lg:hidden">
+              <p className="mt-1 text-xs leading-snug text-foreground-secondary sm:text-sm">
+                {vehicle.year_model} · {km}
+              </p>
+              <p className="mt-1.5 text-base font-bold leading-tight text-foreground sm:text-xl">{preco}</p>
+              <Link
+                href={href}
+                className="inline-flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline sm:text-sm"
+              >
+                Ver detalhes <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Computador: versão, ano/km/valor numa linha e os dois botões */}
+            <div className="hidden lg:block">
+              {vehicle.version && (
+                <p className="mt-2 text-[15px] leading-snug text-foreground-secondary">{vehicle.version}</p>
+              )}
+              <dl className="mt-[18px] flex flex-wrap items-end gap-x-5 gap-y-3 whitespace-nowrap xl:gap-x-7">
+                <div>
+                  <dt className={rotulo}>Ano</dt>
+                  <dd className="text-base font-bold leading-tight text-foreground">
+                    {vehicle.year_manufacture}/{vehicle.year_model}
+                  </dd>
                 </div>
-                <div className="flex-1 sm:flex-none border-l sm:border-l-0 sm:border-t border-border pl-4 sm:pl-0 sm:pt-3">
-                  <span className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium">Km</span>
-                  <p className="text-sm sm:text-lg font-bold text-foreground">{vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage)}</p>
+                <div>
+                  <dt className={rotulo}>Km</dt>
+                  <dd className="text-base font-bold leading-tight text-foreground">{km}</dd>
                 </div>
-                <div className="flex-1 sm:flex-none border-l sm:border-l-0 sm:border-t border-border pl-4 sm:pl-0 sm:pt-3">
-                  <span className="text-[10px] uppercase tracking-wider text-foreground-secondary font-medium">Valor</span>
-                  <p className="text-sm sm:text-lg font-bold text-primary">{formatPrice(vehicle.price)}</p>
+                <div>
+                  <dt className={rotulo}>Valor</dt>
+                  <dd className="text-xl font-bold leading-none text-foreground xl:text-2xl">{preco}</dd>
                 </div>
+              </dl>
+              <div className="mt-[18px] flex flex-wrap gap-2.5">
+                <VehicleCardCTAs vehicle={vehicle} variant="outline" />
+                <Link
+                  href={href}
+                  className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+                >
+                  Ver detalhes <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
+
+          {/* Foto com o fundo da loja, num card que cobre a parte de baixo das letras */}
+          <Link
+            href={href}
+            tabIndex={-1}
+            className="relative z-10 order-first block aspect-[4/3] shrink-0 basis-[46%] overflow-hidden rounded-[10px] shadow-[0_12px_24px_-10px_rgba(0,0,0,0.4)] lg:order-none lg:aspect-[2/1] lg:w-full lg:max-w-[720px] lg:justify-self-end lg:rounded-2xl lg:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.35)]"
+          >
+            <VehicleImage
+              src={vehicle.photos?.[0]}
+              alt={nome}
+              fill
+              priority
+              sizes="(min-width: 1024px) 720px, 46vw"
+              className="destaque-foto object-cover"
+            />
+          </Link>
         </div>
       </div>
     </section>

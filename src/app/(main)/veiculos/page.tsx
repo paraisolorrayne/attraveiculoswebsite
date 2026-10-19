@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { canonicalUrl, listingRobots } from '@/lib/seo/page-metadata'
-import { getCachedHeroAsset } from '@/lib/vehicle-hero-asset'
 import { Vehicle } from '@/types'
 import {
   classificarCarroceria,
@@ -406,35 +405,24 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
         <VehicleUnavailableToast />
       </Suspense>
 
-      {/* Breadcrumb */}
-      <section className="pt-28 pb-4 bg-gradient-to-b from-background-soft to-background">
-        <Container>
-          <Breadcrumb items={breadcrumbItems} />
-        </Container>
-      </section>
-
-      {/* Featured vehicle hero - only on first page with no active filters.
-          Tenta o cache de remove-bg pelo ID do veículo destaque; se houver
-          processado, mostra o carro flutuante (PNG transparente). Cache
-          miss cai pra foto original dentro de um card.
-          O cron de hero:preprocess processa o top 9 (hero pool + editorial
-          pool) periodicamente, então o destaque deste pool já está
-          cacheado na maioria dos dias. */}
-      {featuredVehicle && (
-        <FeaturedVehicleHero
-          vehicle={featuredVehicle}
-          noBgPhotoUrl={
-            featuredVehicle.photos?.[0]
-              ? (await getCachedHeroAsset(featuredVehicle.id, featuredVehicle.photos[0]))?.no_bg_public_url ?? null
-              : null
-          }
-        />
+      {/* Destaque só na 1ª página sem filtro. Com ele, o breadcrumb vai dentro
+          do destaque (as letras da marca começam atrás dele), em vez de ocupar
+          uma faixa própria quase vazia no topo. */}
+      {featuredVehicle ? (
+        <FeaturedVehicleHero vehicle={featuredVehicle} breadcrumb={breadcrumbItems} />
+      ) : (
+        <section className="pt-28 pb-4 bg-gradient-to-b from-background-soft to-background">
+          <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
+            <Breadcrumb items={breadcrumbItems} />
+          </div>
+        </section>
       )}
 
-      {/* Search + Editorial Categories */}
-      <section className="py-6">
-        <div className="w-full lg:w-[64%] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-4">
+      {/* Search + Editorial Categories — na largura da lista. Pouco espaço em
+          cima (o destaque já tem o seu) para a ponta da lista caber na 1ª tela. */}
+      <section className="pt-2 pb-5">
+        <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="space-y-3">
             <Suspense fallback={<Skeleton className="h-12 w-full" />}>
               <VehicleSearchBar />
             </Suspense>
