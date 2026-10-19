@@ -30,8 +30,7 @@ import { evaluateCutouts } from '@/lib/rembg-quality'
 //
 // GATE (agressivo, pra não denegrir a marca): só cacheamos o no_bg se a
 // integridade >= REMBG_MIN_SCORE (99%) E a concordância >= REMBG_MIN_AGREEMENT
-// (90%). Reprovou → NÃO grava no_bg; o FeaturedVehicleHero cai pra foto
-// original automaticamente (noBgPhotoUrl null). A decisão fica cacheada
+// (90%). Reprovou → NÃO grava no_bg. A decisão fica cacheada
 // (rembg_status='rejected') pra o cron não re-billar a mesma foto.
 //
 // Usamos endpoint path-based (`/v1/models/{owner}/{name}/predictions`)
@@ -371,8 +370,8 @@ export async function generateAndCacheHeroAsset(
   // NOTA: a geração de composite (inpainting Flux Fill Pro) foi REMOVIDA.
   // O modelo alucinava texto e distorcia a foto premium do veículo —
   // inaceitável pra marca. O hero da home agora usa vídeo do YouTube.
-  // Mantemos só o no_bg, ainda usado no FeaturedVehicleHero da página
-  // /veiculos (carro flutuante sobre o card).
+  // Mantemos só o no_bg. Desde 19/10/2026 o FeaturedVehicleHero de /veiculos
+  // usa a foto com o fundo da loja, e o no_bg ficou sem uso no site.
 
   return {
     vehicle_id: numericId,

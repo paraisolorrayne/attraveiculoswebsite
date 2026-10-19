@@ -4,11 +4,11 @@ import { Calendar, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { Vehicle } from '@/types'
-import { formatPrice } from '@/lib/utils'
+import { cn, formatPrice } from '@/lib/utils'
 
 interface VehicleCardCTAsProps {
   vehicle: Vehicle
-  variant?: 'full' | 'compact' | 'icon-only'
+  variant?: 'full' | 'compact' | 'icon-only' | 'outline'
   className?: string
 }
 
@@ -58,6 +58,23 @@ Podem me enviar mais detalhes?`
           <MessageCircle className="w-4 h-4" />
         </a>
       </div>
+    )
+  }
+
+  // Botão de contorno, do tamanho do texto (destaque do topo de /veiculos)
+  if (variant === 'outline') {
+    return (
+      <Button
+        asChild
+        variant="outline"
+        className={cn('h-11 rounded-[10px] bg-background-card px-[18px] text-sm font-semibold', className)}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+      >
+        <a href={getWhatsAppUrl(moreInfoMessage)} target="_blank" rel="noopener noreferrer" {...marcacao}>
+          <MessageCircle className="w-4 h-4 mr-2" />
+          Falar com consultor
+        </a>
+      </Button>
     )
   }
 

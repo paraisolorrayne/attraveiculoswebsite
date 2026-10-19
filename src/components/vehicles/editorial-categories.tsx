@@ -54,8 +54,10 @@ export function EditorialCategoryChips() {
     router.push(`/veiculos?${params.toString()}`)
   }
 
+  // Celular: uma linha só que rola de lado (de borda a borda da tela), para não
+  // empurrar a lista para baixo da primeira tela.
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       {EDITORIAL_CATEGORIES.map((cat) => {
         const Icon = cat.icon
         const isActive = activeCategory === cat.id
@@ -65,7 +67,8 @@ export function EditorialCategoryChips() {
             onClick={() => handleCategoryClick(cat.id)}
             title={cat.description}
             className={cn(
-              'inline-flex items-center gap-2 px-4 sm:px-4 min-h-11 py-3 sm:py-2.5 rounded-xl text-sm font-medium transition-all border',
+              // Entre 1024 e 1279px um pouco mais compactos, para caberem numa linha
+              'inline-flex shrink-0 items-center gap-2 px-4 sm:px-4 min-h-11 py-3 sm:py-2.5 rounded-xl text-sm font-medium transition-all border lg:gap-1.5 lg:px-3 lg:text-[13px] xl:gap-2 xl:px-4 xl:text-sm',
               isActive
                 ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                 : 'bg-background-card border-border text-foreground-secondary hover:border-primary/40 hover:text-foreground'

@@ -333,3 +333,58 @@
   color: #FFFFFF;
 }
 
+
+/* ===== Destaque de /veiculos: nome da marca atrás do carro ===== */
+/* O nome tem que aparecer inteiro, sem letra cortada na lateral: a letra é do
+   tamanho que cabe na largura da seção (16/24/32px de margem de cada lado),
+   até um teto. --marca-em é a largura do nome em em, calculada no servidor
+   (src/lib/largura-da-marca.ts). A seção é o container (@container), então
+   100cqw é a largura dela. */
+.destaque-marca-faixa {
+  left: calc(50% - 50cqw);
+  width: 100cqw;
+}
+
+/* A faixa termina no topo da linha da foto e do texto; a palavra desce de lá
+   para a foto cobrir só a parte de baixo das letras: 1/5 no celular, 1/3 no
+   computador. 0.145em vai da base da caixa (line-height 1) até a linha de base
+   da Geist, e 0.72em é a altura das maiúsculas. O max() segura o topo das
+   letras 16px abaixo do cabeçalho fixo: 56px e 100px são a distância desse
+   limite até o topo da linha (cabeçalho de 80px + breadcrumb + margem). */
+.destaque-marca {
+  font-size: min(6rem, calc((100cqw - 2rem) / var(--marca-em)));
+  translate: 0 calc(0.145em + max(0.144em, 0.72em - 56px));
+}
+
+/* Cor das letras: o vermelho da Attra bem fraco no topo, chegando na linha de
+   base no cinza de sempre (o texto a 4,5%; 5% no escuro). 14.5% e 85.5% da
+   caixa são o topo das maiúsculas e a linha de base da Geist.
+   As cores são --primary e --foreground (tokens.css) escritas por extenso: com
+   color-mix() o build gera, para navegador sem suporte, a mesma faixa com as
+   cores cheias, e a palavra apareceria em vermelho e preto sólidos. */
+.destaque-marca {
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(to bottom, rgba(154, 28, 28, 0.1) 14.5%, rgba(17, 17, 17, 0.045) 85.5%);
+}
+.dark .destaque-marca {
+  background-image: linear-gradient(to bottom, rgba(154, 28, 28, 0.2) 14.5%, rgba(245, 245, 245, 0.05) 85.5%);
+}
+@media (min-width: 640px) {
+  .destaque-marca {
+    font-size: min(6rem, calc((100cqw - 3rem) / var(--marca-em)));
+  }
+}
+@media (min-width: 1024px) {
+  .destaque-marca {
+    font-size: min(14rem, calc((100cqw - 4rem) / var(--marca-em)));
+    translate: 0 calc(0.145em + max(0.238em, 0.72em - 100px));
+  }
+  /* Nas fotos da loja o carro fica entre ~20% e ~80% da altura (o G 63 é o
+     mais alto), com o chão sobrando embaixo: a foto em 2:1 com o recorte um
+     pouco abaixo do meio mostra do teto ao pneu. */
+  .destaque-foto {
+    object-position: 50% 55%;
+  }
+}
