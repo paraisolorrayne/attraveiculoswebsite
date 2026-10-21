@@ -120,12 +120,29 @@ function modeloDoCaminho(caminho) {
   if (/^\/veiculo\//.test(semQuery)) return '/veiculo/:slug'
   if (/^\/blog\/[^/]+/.test(semQuery)) return '/blog/:slug'
   if (/^\/manual-attra\/[^/]+/.test(semQuery)) return '/manual-attra/:termo'
+  // Foto otimizada e bundle separados: um 500 em /_next/image é foto que o
+  // robô não consegue ler; em /_next/static, chunk de build que já não existe.
+  if (semQuery === '/_next/image') return '/_next/image'
+  if (/^\/_next\/static\//.test(semQuery)) return '/_next/static/*'
   if (/^\/_next\//.test(semQuery)) return '/_next/*'
   if (semQuery === '/veiculos' && caminho.includes('?')) return '/veiculos?…'
   return semQuery
 }
 
 const somar = (mapa, chave) => mapa.set(chave, (mapa.get(chave) ?? 0) + 1)
+
+// "21/Oct/2026:00:47:45 +0200" → ms. Os arquivos rotacionados chegam em
+// qualquer ordem (access.log antes do .1), então primeiro/último saem da data
+// de cada linha, não da ordem de leitura.
+const MESES = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
+function instante(data) {
+  const m = data.match(/^(\d{2})\/(\w{3})\/(\d{4}):(\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})$/)
+  if (!m) return null
+  const [, d, mes, a, h, min, seg, sinal, oh, om] = m
+  const fuso = (sinal === '-' ? -1 : 1) * (Number(oh) * 60 + Number(om))
+  return Date.UTC(Number(a), MESES[mes], Number(d), Number(h), Number(min), Number(seg)) - fuso * 60_000
+}
+const dataBR = ms => (ms == null ? '—' : new Date(ms).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }))
 
 let linhas = 0
 for (const arquivo of arquivos) {
@@ -150,8 +167,11 @@ for (const arquivo of arquivos) {
     const modelo = modeloDoCaminho(caminho)
     somar(e.caminhos, modelo)
     if (status[0] !== '2' && status !== '304') somar(e.erros, `${status} ${modelo}`)
-    e.primeiro ??= data
-    e.ultimo = data
+    const t = instante(data)
+    if (t != null) {
+      if (e.primeiro == null || t < e.primeiro) e.primeiro = t
+      if (e.ultimo == null || t > e.ultimo) e.ultimo = t
+    }
   }
 }
 
@@ -174,8 +194,8 @@ const relatorio = ROBOS.map(r => {
     bloqueio_403_429: (e.porStatus['403'] ?? 0) + (e.porStatus['429'] ?? 0),
     erro_5xx: e.porStatus['5xx'] ?? 0,
     status: Object.fromEntries(Object.entries(e.porStatus).filter(([k]) => /^\d{3}$/.test(k))),
-    primeiro: e.primeiro,
-    ultimo: e.ultimo,
+    primeiro: e.primeiro == null ? null : new Date(e.primeiro).toISOString(),
+    ultimo: e.ultimo == null ? null : new Date(e.ultimo).toISOString(),
     paginas_mais_lidas: topo(e.caminhos),
     erros: topo(e.erros),
   }
@@ -189,7 +209,7 @@ if (JSON_OUT) {
     if (!r.acessos_com_o_nome) { console.log(`${r.robo}: nenhum acesso\n`); continue }
     const pct = r.sucesso == null ? '—' : `${(r.sucesso * 100).toFixed(1)}%`
     console.log(`${r.robo}: ${r.acessos_com_o_nome} acesso(s) com o nome · ${r.ip_verificado} de IP oficial · ${r.ip_fora_das_faixas} de IP de fora (falsos, ignorados)${r.sem_verificacao ? ` · ${r.sem_verificacao} sem verificação` : ''}`)
-    console.log(`  sucesso (2xx/304): ${pct} · 403/429: ${r.bloqueio_403_429} · 5xx: ${r.erro_5xx} · de ${r.primeiro ?? '—'} a ${r.ultimo ?? '—'}`)
+    console.log(`  sucesso (2xx/304): ${pct} · 403/429: ${r.bloqueio_403_429} · 5xx: ${r.erro_5xx} · de ${dataBR(r.primeiro && Date.parse(r.primeiro))} a ${dataBR(r.ultimo && Date.parse(r.ultimo))}`)
     if (r.paginas_mais_lidas.length) console.log(`  mais lidas: ${r.paginas_mais_lidas.map(([p, n]) => `${p} (${n})`).join(', ')}`)
     if (r.erros.length) console.log(`  erros: ${r.erros.map(([p, n]) => `${p} (${n})`).join(', ')}`)
     console.log('')
