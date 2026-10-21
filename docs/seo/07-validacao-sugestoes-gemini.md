@@ -10,7 +10,7 @@ produção e o código no mesmo dia. Veredito de cada uma: **já existe**, **pro
 | 2 | Página e menções de "entrega nacional" | já existe | erro de digitação corrigido |
 | 3 | Descrições longas e "semânticas" por carro | procede o diagnóstico, não a receita | depende da Attra no AutoConf |
 | 4 | Hub de conteúdo com guias | procede em parte | depende de conteúdo da Attra |
-| 5 | Velocidade e imagens em WebP | WebP já existe; os gargalos eram outros | 4 ajustes neste PR, 2 investigações |
+| 5 | Velocidade e imagens em WebP | WebP já existe; os gargalos eram outros | 4 ajustes neste PR, HTTP/2 no servidor, 2 investigações |
 
 ## 1. Dados estruturados
 
@@ -104,7 +104,13 @@ sem latência de rede. O tempo simulado do Lighthouse em localhost não serve de
 produção. **Medir de novo em produção depois do deploy.**
 
 **Fora deste PR:**
-- **HTTP/2:** o servidor só fala HTTP/1.1, porque o nginx está sem `http2`. O Lighthouse estima ganho de 0,6 a 2,2 s por página, já que são cerca de 40 scripts e 20 fotos por ficha numa conexão que só baixa poucos arquivos de cada vez. A mudança é na configuração do nginx da VPS, não no repositório.
+- **HTTP/2: ligado em 21/10** no nginx da VPS (`listen 443 ssl http2`, no site e no concierge, com backup em `/root/nginx-antes-http2-20261021205650`). Antes o servidor só falava HTTP/1.1, com cerca de 40 scripts e 20 fotos por ficha passando por uma conexão que baixa poucos arquivos de cada vez. Medido no mesmo momento, com o Chrome forçado em HTTP/1.1 e depois em HTTP/2, na melhor de 2 rodadas por página:
+
+  | Página | Primeira pintura, HTTP/1.1 → HTTP/2 | LCP real, HTTP/1.1 → HTTP/2 |
+  |---|---|---|
+  | Home | 1,6 → 1,2 s | 1,7 → 1,2 s |
+  | Ficha do BMW X4 | 1,5 → 1,2 s | 2,7 → 1,8 s |
+  | `/veiculos` | 1,4 → 1,6 s | 1,6 → 1,9 s (dentro da variação) |
 - **Ficha renderizada a cada acesso:** ela responde com `Cache-Control: no-store`, e o primeiro byte chega em 0,85 a 1,1 s. As páginas em cache, como home, `/blog` e `/sobre`, respondem em cerca de 0,5 s. Falta achar o que torna a rota dinâmica.
-- **Home:** a primeira pintura leva cerca de 3 s mesmo sem limitação de rede. Investigar com um trace de performance.
+- **Primeira pintura travada em ~2,7 s, de vez em quando, em qualquer página:** era o "3 s da home". Acontece em 1 de cada 2 ou 3 rodadas, nos dois protocolos. O trace mostra o HTML, o CSS e os scripts prontos por volta de 1,4 s, a thread principal quase parada (cerca de 100 ms de tarefas longas) e nenhum quadro novo pedido entre ~1,6 e ~2,6 s. Ainda não sei se é coisa do Chrome headless ou da página. Para separar, falta dado de campo: o relatório do Chrome (CrUX) no Search Console, ou medir os web vitals no próprio site.
 - **Scripts de terceiros:** GTM, Google Ads, Meta e Clarity somam cerca de 570 KB por página. É uma decisão de marketing.
