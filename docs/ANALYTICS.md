@@ -230,17 +230,10 @@ O arquivo `src/app/sitemap.ts` gera automaticamente um sitemap incluindo:
 
 ### Robots.txt
 
-O arquivo `src/app/robots.ts` gera regras para crawlers:
-
-```
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /_next/
-
-Sitemap: https://attraveiculos.com.br/sitemap.xml
-```
+A rota `src/app/robots.ts` publica as regras de `src/lib/seo/regras-robots.ts`: um grupo por
+robô de busca e de IA, todos com `/admin/`, `/private/`, `/api/` e `/*.json$` bloqueados (menos
+as duas APIs públicas do `llms.txt`), e o `/_next/` liberado para a renderização. O porquê de
+cada regra e a matriz por robô estão em `docs/seo/06-handoff-robots-openai.md`.
 
 ---
 
