@@ -118,6 +118,18 @@ if (TODOS) {
   const garantiaIds = {}
   const acessorios = new Map()
   const proprias = []
+  // O texto padrão é montado pela AutoConf a partir dos campos: a frase de
+  // garantia de cada `garantia_id` é o rótulo que a tela mostra (não prova nada
+  // sobre o carro, só traduz o código).
+  const frasesGarantia = new Map()
+  const frasesPericia = new Map()
+  const statusIds = {}
+  const versoes = []
+  const comGarantiaFabrica = []
+  let descricaoIgualAnuncio = 0
+  let chavesSoNoDetalhe = null
+  const contar = (mapa, chave) => mapa.set(chave, (mapa.get(chave) ?? 0) + 1)
+  const frase = (texto, re) => limparTexto(texto.match(re)?.[0]?.trim() ?? '(nenhuma frase)')
   for (const item of veiculos) {
     await new Promise(r => setTimeout(r, 250))
     let v
@@ -128,6 +140,7 @@ if (TODOS) {
       v = null
     }
     v ??= item // sem o detalhe, conta só o que a lista traz (que não tem `descricao`)
+    if (chavesSoNoDetalhe === null && v !== item) chavesSoNoDetalhe = Object.keys(v).filter(k => !(k in item)).sort()
     const d = typeof v.descricao === 'string' ? v.descricao.trim() : ''
     if (!d) contagem.descricaoVazia++
     else if (/^A procura de um/i.test(d)) contagem.descricaoPadrao++
@@ -140,11 +153,27 @@ if (TODOS) {
     if (v.versao_descricao) {
       contagem.versaoDescricao++
       if (v.versao_descricao.toUpperCase() !== (v.modelo_nome ?? '').toUpperCase()) contagem.versaoDescricaoDiferente++
+      versoes.push(`${v.id} ${v.marca_nome} · modelo_nome=${JSON.stringify(v.modelo_nome)} · versao_descricao=${JSON.stringify(v.versao_descricao)}`)
     }
+    if (d && d === (v.descricao_anuncio ?? '').trim()) descricaoIgualAnuncio++
+    contar(frasesGarantia, `garantia_id=${v.garantia_id ?? 'null'} → ${frase(d, /[^.]*garantia[^.]*\./i)}`)
+    contar(frasesPericia, `pericia=${v.pericia ?? 'null'} → ${frase(d, /[^.]*peric[^.]*\./i)}`)
+    statusIds[v.status_id ?? 'null'] = (statusIds[v.status_id ?? 'null'] ?? 0) + 1
+    if (v.garantiafabrica) comGarantiaFabrica.push(`${v.id} ${v.marca_nome} ${v.modelopai_nome} → ${v.garantiafabrica} (garantia_id=${v.garantia_id ?? 'null'})`)
   }
   console.log('\n=== estoque inteiro (/veiculo de cada carro)')
   console.log(JSON.stringify(contagem))
   console.log(`garantia_id: ${JSON.stringify(garantiaIds)}`)
   console.log(`descrição própria (não é o texto padrão): ${proprias.join(' | ') || 'nenhuma'}`)
+  console.log(`descricao igual a descricao_anuncio: ${descricaoIgualAnuncio} de ${veiculos.length}`)
+  console.log(`chaves que só o /veiculo traz (a lista /veiculos não): ${chavesSoNoDetalhe?.join(' ') || '?'}`)
+  console.log(`status_id: ${JSON.stringify(statusIds)}`)
+  console.log('frase de garantia do texto padrão, por garantia_id:')
+  for (const [f, q] of [...frasesGarantia].sort()) console.log(`  ${f}  (${q})`)
+  console.log('frase de perícia do texto padrão, por pericia:')
+  for (const [f, q] of [...frasesPericia].sort()) console.log(`  ${f}  (${q})`)
+  console.log(`com garantiafabrica: ${comGarantiaFabrica.join(' | ') || 'nenhum'}`)
+  console.log(`versao_descricao preenchida (${versoes.length}):`)
+  for (const l of versoes) console.log(`  ${l}`)
   console.log(`acessórios usados (${acessorios.size}): ${[...acessorios.entries()].sort((a, b) => b[1] - a[1]).map(([n, q]) => `${n} (${q})`).join(', ')}`)
 }
