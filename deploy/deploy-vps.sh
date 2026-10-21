@@ -115,6 +115,11 @@ for path in / /blog; do
   echo "    $path -> $code"
   [ "$code" = "200" ] || { echo "ERRO: $path não respondeu 200"; exit 1; }
 done
+# O índice de sitemaps é o que o robots.txt anuncia; ficou em 500 sem ninguém
+# notar (achado em 20/10/2026). Aviso, não erro: o site em si está no ar.
+scode=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "http://localhost:3000/sitemap.xml")
+echo "    /sitemap.xml -> $scode"
+[ "$scode" = "200" ] || echo "    AVISO: /sitemap.xml não respondeu 200 — ver 'pm2 logs attra --lines 200 | grep -i sitemap'"
 # Rota de admin SEM sessão deve redirecionar pro login (auth ativo). 307/302 = OK.
 acode=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "http://localhost:3000/admin/gerador-criativos")
 echo "    /admin/gerador-criativos -> $acode (esperado 307/302: redirect pro login)"

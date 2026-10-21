@@ -13,7 +13,8 @@ import {
   saveInventorySnapshot,
   InventorySnapshotSources,
 } from './inventory-snapshot'
-import { resolveBrand, nonEmpty, joinNonEmpty } from './vehicle-fallbacks'
+import { resolveBrand, nonEmpty } from './vehicle-fallbacks'
+import { tituloDoVeiculo } from './identidade-do-veiculo'
 import {
   classificarCarroceria,
   classificarCategoria,
@@ -419,19 +420,23 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
   const km = autoconfVehicle.km ?? 0
   const kmFormatted = km.toLocaleString('pt-BR')
 
-  // Build SEO strings only from fields we actually have
-  const namePart = joinNonEmpty([resolvedBrand, resolvedModel, autoconfVehicle.anomodelo])
-  const seoBase = namePart || 'Veículo premium'
+  const version = cleanVersionString(autoconfVehicle.modelo_nome, autoconfVehicle.modelopai_nome)
+    || autoconfVehicle.versao_descricao || null
+  const yearManufacture = parseInt(autoconfVehicle.anofabricacao) || 0
+  const yearModel = parseInt(autoconfVehicle.anomodelo) || 0
+  // Com a versão: "Porsche 911 2026" não distingue um GTS de um Carrera.
+  const seoBase = tituloDoVeiculo({
+    brand: resolvedBrand, model: resolvedModel, version, year_manufacture: yearManufacture, year_model: yearModel,
+  })
 
   return {
     id: String(autoconfVehicle.id),
     slug,
     brand: resolvedBrand,
     model: resolvedModel,
-    version: cleanVersionString(autoconfVehicle.modelo_nome, autoconfVehicle.modelopai_nome)
-      || autoconfVehicle.versao_descricao || null,
-    year_manufacture: parseInt(autoconfVehicle.anofabricacao) || 0,
-    year_model: parseInt(autoconfVehicle.anomodelo) || 0,
+    version,
+    year_manufacture: yearManufacture,
+    year_model: yearModel,
     color: nonEmpty(autoconfVehicle.cor_nome),
     mileage: km,
     fuel_type: nonEmpty(autoconfVehicle.combustivel_nome),

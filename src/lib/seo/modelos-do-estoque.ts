@@ -97,6 +97,20 @@ export interface ModeloDoEstoque {
 }
 
 /**
+ * A página de marca de um nome de marca do estoque. `chaveDeComparacao`
+ * resolve "Mercedes" x "mercedes-benz", que é a divergência real entre o nome
+ * no estoque e o slug da página.
+ */
+function marcaSeoDoEstoque(marca: string) {
+  const alvo = chaveDeComparacao(marca)
+  if (!alvo) return undefined
+  return SEO_BRANDS.find(b => {
+    const nome = chaveDeComparacao(b.name)
+    return nome === alvo || nome.startsWith(alvo) || alvo.startsWith(nome)
+  })
+}
+
+/**
  * Deriva um modelo a partir dos veículos daquele modelo.
  *
  * A descrição é montada com números reais e nada além disso. Um comprador que
@@ -184,14 +198,8 @@ export function modelosDoEstoque(veiculos: Vehicle[]): ModeloDoEstoque[] {
     const modelo = (veiculo.model ?? '').trim()
     if (!marca || !modelo) continue
 
-    // A marca precisa existir como página de SEO. `chaveDeComparacao` resolve
-    // "Mercedes" x "mercedes-benz", que é a divergência real entre o nome no
-    // estoque e o slug da página.
-    const marcaSeo = SEO_BRANDS.find(b => {
-      const nome = chaveDeComparacao(b.name)
-      const alvo = chaveDeComparacao(marca)
-      return nome === alvo || nome.startsWith(alvo) || alvo.startsWith(nome)
-    })
+    // A marca precisa existir como página de SEO.
+    const marcaSeo = marcaSeoDoEstoque(marca)
     if (!marcaSeo) continue
 
     const slugModelo = slugificar(modelo)
@@ -222,4 +230,30 @@ export function acharModeloDoEstoque(
   return modelosDoEstoque(veiculos).find(
     m => m.brandSlug === brandSlug && m.modelSlug === modelSlug,
   )
+}
+
+/**
+ * As páginas de marca e de modelo que cobrem um veículo do estoque — os degraus
+ * do breadcrumb da ficha ("Porsche > 911 > Carrera GTS Cabriolet 2026").
+ *
+ * O modelo curado ganha do derivado, com o mesmo critério de `modelosDoEstoque`.
+ * O derivado existe enquanto houver unidade, e quem pergunta é a ficha de uma
+ * unidade em estoque: a página do modelo sempre existe nesse caso.
+ */
+export function paginasDoVeiculo(veiculo: { brand: string | null; model: string | null }): {
+  marca: { slug: string; nome: string }
+  modelo: { slug: string; nome: string } | null
+} | null {
+  const marcaSeo = marcaSeoDoEstoque((veiculo.brand ?? '').trim())
+  if (!marcaSeo) return null
+  const marca = { slug: marcaSeo.slug, nome: marcaSeo.displayName }
+
+  const nomeDoModelo = (veiculo.model ?? '').trim()
+  const slugModelo = slugificar(nomeDoModelo)
+  if (!slugModelo) return { marca, modelo: null }
+  const curado = marcaSeo.models.find(m => m.slug === slugModelo || modeloCasa(m.name, nomeDoModelo))
+  return {
+    marca,
+    modelo: curado ? { slug: curado.slug, nome: curado.name } : { slug: slugModelo, nome: nomeDoModelo },
+  }
 }

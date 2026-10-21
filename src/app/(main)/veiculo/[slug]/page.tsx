@@ -14,24 +14,33 @@ import { AIVehicleDescription, AIVehicleDescriptionSkeleton } from '@/components
 import { VehicleSectionShowcase } from '@/components/vehicles/vehicle-section-showcase'
 import { RelatedVehiclesSkeleton } from '@/components/ui/skeleton'
 import { VehicleContextSetter } from '@/components/vehicles/vehicle-context-setter'
-import { VehicleDatasheetSection } from '@/components/vehicles/vehicle-datasheet'
 import { VehicleSpecsFallback } from '@/components/vehicles/vehicle-specs-fallback'
 import { FAQSection } from '@/components/home'
 import { getVehicleBySlug } from '@/lib/autoconf-api'
 import { getCachedVehicleSections, getFallbackVehicleSections, generateAndCacheVehicleSections } from '@/lib/vehicle-sections'
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
-import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
-import { buildVehiclePageSchemas } from '@/lib/vehicle-schema'
+import { buildVehiclePageSchemas, trilhaDoVeiculo } from '@/lib/vehicle-schema'
+import { nomeDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL } from '@/lib/constants'
 import { pageTitle } from '@/lib/seo/page-metadata'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
 
-/** Generate dynamic FAQ items based on vehicle data for SEO */
+/**
+ * FAQ da ficha, montada só com o que o anúncio informa.
+ *
+ * Nada de ficha técnica de referência aqui. Até 20/10/2026 a FAQ completava o
+ * anúncio com a tabela de `vehicle-datasheet.ts`, que tem uma versão por modelo
+ * e casa por palavra-chave: o 911 Carrera GTS Cabriolet 2026 saía com "2.981 cc
+ * e 385 cv" (o Carrera base da geração anterior), e o mesmo acontecia em 20
+ * das 68 fichas. A FAQ vira FAQPage no JSON-LD, que é o texto que
+ * buscadores e assistentes citam — dado errado ali vira resposta errada.
+ * Atributo que o anúncio não traz fica de fora; não se infere pelo nome.
+ */
 function generateVehicleFAQs(vehicle: Vehicle) {
-	const name = joinNonEmpty([vehicle.brand, vehicle.model]) || 'veículo'
+	const name = nomeDoVeiculo(vehicle) || 'veículo'
 	const faqs: { question: string; answer: string }[] = []
 
 	faqs.push({
@@ -39,9 +48,11 @@ function generateVehicleFAQs(vehicle: Vehicle) {
 		answer: `O ${name} ${vehicle.year_model} está disponível por ${formatPrice(vehicle.price)} na Attra Veículos. ${vehicle.mileage === 0 ? 'Este veículo é 0 km.' : `Este veículo possui ${formatMileage(vehicle.mileage)} rodados.`} Entre em contato para condições de financiamento e formas de pagamento.`,
 	})
 
+	// Sem "garantia integral" nem prazo: o feed não informa a garantia de cada
+	// carro (e importado 0 km nem sempre tem garantia de fábrica no Brasil).
 	faqs.push({
 		question: `O ${name} possui garantia?`,
-		answer: `${vehicle.is_new || vehicle.mileage === 0 ? `Sim, o ${name} 0 km possui garantia de fábrica integral.` : `Sim, o ${name} seminovo passou pela inspeção rigorosa da Attra e conta com garantia.`} Todos os veículos da Attra passam por curadoria técnica antes de serem disponibilizados para venda.`,
+		answer: `As condições de garantia deste ${name} são informadas pelo consultor da Attra junto com a documentação do veículo. Todos os veículos da Attra passam por curadoria técnica antes de serem disponibilizados para venda.`,
 	})
 
 	const specsParts = joinNonEmpty([
@@ -54,7 +65,7 @@ function generateVehicleFAQs(vehicle: Vehicle) {
 	if (specsParts) {
 		faqs.push({
 			question: `Quais as especificações do ${name} ${vehicle.year_model}?`,
-			answer: `O ${name} ${vehicle.year_model} possui ${specsParts}.${vehicle.version ? ` Versão: ${vehicle.version}.` : ''}`,
+			answer: `O ${name} ${vehicle.year_model} possui ${specsParts}.`,
 		})
 	}
 
@@ -66,7 +77,7 @@ function generateVehicleFAQs(vehicle: Vehicle) {
 	if (vehicle.mileage > 0) {
 		faqs.push({
 			question: `Qual a quilometragem do ${name}?`,
-			answer: `Este ${name} ${vehicle.year_model} possui ${formatMileage(vehicle.mileage)} rodados. ${vehicle.mileage <= 10000 ? 'Trata-se de um veículo com baixíssima quilometragem, em excelente estado de conservação.' : 'O veículo passou por inspeção completa da equipe técnica da Attra.'}`,
+			answer: `Este ${name} ${vehicle.year_model} possui ${formatMileage(vehicle.mileage)} rodados. O veículo passou por inspeção da equipe técnica da Attra antes de ser anunciado.`,
 		})
 	}
 
@@ -80,8 +91,7 @@ interface VehiclePageProps {
 /** Build a self-contained one-line summary used as meta description
  * and Open Graph / Twitter Card text via generateMetadata(). */
 function buildVehicleSummary(vehicle: Vehicle): string {
-	const name = joinNonEmpty([vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model])
-		|| 'Veículo premium'
+	const name = tituloDoVeiculo(vehicle)
 	const condition = vehicle.is_new || vehicle.mileage === 0
 		? '0 km'
 		: `${vehicle.mileage.toLocaleString('pt-BR')} km`
@@ -110,17 +120,16 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 		}
 	}
 
-	const fullName = joinNonEmpty([vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model])
-		|| 'Veículo premium'
+	const fullName = tituloDoVeiculo(vehicle)
 	const summary = buildVehicleSummary(vehicle)
 	const url = `${baseUrl}/veiculo/${vehicle.slug}`
 	const ogImages = (vehicle.photos ?? []).slice(0, 4).map(u => ({ url: u, alt: fullName }))
 
 	return {
-		// `pageTitle` remove o sufixo de marca: o template do layout raiz o
-		// reaplica, e `seo_title` pode vir do banco já com a marca gravada.
-		title: pageTitle(vehicle.seo_title || fullName),
-		description: vehicle.seo_description || summary,
+		// Marca + modelo + versão + ano. O `seo_title` do feed é o mesmo texto;
+		// `pageTitle` só garante que o sufixo de marca não saia duplicado.
+		title: pageTitle(fullName),
+		description: summary,
 		keywords: [
 			vehicle.brand,
 			joinNonEmpty([vehicle.brand, vehicle.model]),
@@ -186,9 +195,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 		permanentRedirect(`/veiculo/${vehicle.slug}`)
 	}
 
-	// Fetch engine sound; datasheet lookup is synchronous
 	const vehicleSound = await getVehicleSoundByVehicleId(vehicle.id)
-	const datasheet = findVehicleDatasheet(vehicle.brand, vehicle.model, vehicle.version)
 
 	// Vehicle section showcase (OVERVIEW / EXTERIOR / INTERIOR) — tenta cache
 	// no Supabase. Em cache miss, renderiza fallback estático (sem latência)
@@ -204,40 +211,9 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 		})
 	}
 
-	// Breadcrumb: skip the brand level entirely when brand is empty (rare —
-	// happens when AutoConf returns null marca_nome and we couldn't infer).
-	const breadcrumbItems: { label: string; href?: string }[] = [
-		{ label: 'Veículos', href: '/veiculos' },
-	]
-	if (vehicle.brand) {
-		breadcrumbItems.push({
-			label: vehicle.brand,
-			href: `/veiculos?marca=${vehicle.brand.toLowerCase()}`,
-		})
-	}
-	const lastLabel = joinNonEmpty([vehicle.model, vehicle.year_model]) || 'Detalhes'
-	breadcrumbItems.push({ label: lastLabel })
+	const breadcrumbItems = trilhaDoVeiculo(vehicle)
 
 	const vehicleFaqs = generateVehicleFAQs(vehicle)
-
-	if (datasheet) {
-		const dsName = joinNonEmpty([vehicle.brand, vehicle.model]) || 'veículo'
-		vehicleFaqs.push({
-			question: `Qual o motor do ${dsName}?`,
-			answer: `O ${dsName} é equipado com motor ${datasheet.engine} de ${datasheet.displacement}, que entrega ${datasheet.power} e ${datasheet.torque}. A transmissão é ${datasheet.transmission} com ${datasheet.drivetrain.toLowerCase()}.`,
-		})
-		const accelValue = datasheet.acceleration.replace(/\s*\(0\s*[\u2013-]\s*100\s*km\/h\)/, '')
-		vehicleFaqs.push({
-			question: `Qual a aceleração e velocidade máxima do ${dsName}?`,
-			answer: `O ${dsName} acelera de 0 a 100 km/h em ${accelValue} e atinge velocidade máxima de ${datasheet.topSpeed}. Peso em ordem de marcha: ${datasheet.weight}.`,
-		})
-		if (datasheet.brakes) {
-			vehicleFaqs.push({
-				question: `Quais os freios do ${dsName}?`,
-				answer: `O ${dsName} utiliza ${datasheet.brakes}, garantindo frenagem de alto desempenho compatível com a potência do veículo.`,
-			})
-		}
-	}
 
 	// Frescor: a ficha é montada lendo o estoque ao vivo, então "conferido em"
 	// é a data desta renderização — verdade verificável, não um carimbo fixo.
@@ -385,14 +361,11 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 							</div>
 						)}
 
-						{/* Technical Datasheet — usa catálogo curado quando o modelo
-						    bate (Porsche 911, Lambo Urus, Ferrari SF90 etc.); senão,
-						    mostra ficha simplificada com dados do Autoconf. */}
-						{datasheet ? (
-							<VehicleDatasheetSection datasheet={datasheet} vehicle={vehicle} />
-						) : (
-							<VehicleSpecsFallback vehicle={vehicle} />
-						)}
+						{/* Ficha técnica só com o que o anúncio traz. A tabela de
+						    referência por modelo (vehicle-datasheet.ts) dava ao 911
+						    GTS as dimensões, o peso e os destaques do Carrera base;
+						    ela continua só nas páginas de modelo, como referência. */}
+						<VehicleSpecsFallback vehicle={vehicle} />
 
 						{/* Contact - Mobile */}
 						<div className="lg:hidden">

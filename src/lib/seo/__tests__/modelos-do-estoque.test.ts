@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { modelosDoEstoque, acharModeloDoEstoque, modeloCasa, veiculosDoModelo } from '../modelos-do-estoque'
+import { modelosDoEstoque, acharModeloDoEstoque, modeloCasa, veiculosDoModelo, paginasDoVeiculo } from '../modelos-do-estoque'
 import type { Vehicle } from '@/types'
 
 function veiculo(sobrescreve: Partial<Vehicle> = {}): Vehicle {
@@ -136,5 +136,26 @@ describe('modelos derivados do estoque', () => {
       const achados = veiculosDoModelo(estoque, 'Mercedes-Benz', 'G 63 AMG')
       expect(achados).toEqual([{ brand: 'Mercedes', model: 'G-63' }])
     })
+  })
+})
+
+describe('paginasDoVeiculo — os degraus do breadcrumb da ficha', () => {
+  it('modelo com página curada aponta para o slug curado', () => {
+    // O estoque diz "G-63"; a página curada é /comprar/mercedes-benz/g63-amg.
+    expect(paginasDoVeiculo(veiculo({ model: 'G-63' }))).toEqual({
+      marca: { slug: 'mercedes-benz', nome: 'Mercedes-Benz' },
+      modelo: { slug: 'g63-amg', nome: 'G 63 AMG' },
+    })
+  })
+
+  it('modelo sem curadoria aponta para a página derivada do estoque', () => {
+    const paginas = paginasDoVeiculo(veiculo())
+    expect(paginas?.modelo).toEqual({ slug: 'glc', nome: 'GLC' })
+    // E é o mesmo slug que a rota derivada responde.
+    expect(acharModeloDoEstoque([veiculo()], 'mercedes-benz', paginas!.modelo!.slug)).toBeDefined()
+  })
+
+  it('marca sem página de SEO não vira link', () => {
+    expect(paginasDoVeiculo(veiculo({ brand: 'Cybertruck Motors' }))).toBeNull()
   })
 })

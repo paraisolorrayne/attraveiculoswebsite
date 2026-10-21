@@ -1,17 +1,15 @@
 /**
- * VehicleSpecsFallback — ficha técnica simplificada baseada em dados
- * do Autoconf. Aparece quando NÃO há datasheet curado (vehicle-datasheet.ts)
- * para o modelo do veículo.
+ * VehicleSpecsFallback — a ficha técnica da página do veículo, só com os
+ * dados do anúncio no Autoconf (motor, câmbio, KM, combustível etc.).
  *
- * Por que existir: o catálogo curado cobre ~20 modelos icônicos (911, Urus,
- * SF90 etc.). Pra qualquer outro modelo, antes a página simplesmente não
- * mostrava ficha — agora mostra essa versão minimal com os dados do
- * inventário que JÁ existem (motor, câmbio, KM, combustível, etc.).
+ * Desde 20/10/2026 é a única ficha da página. A outra, montada com o catálogo
+ * curado de `vehicle-datasheet.ts`, tinha uma versão por modelo e completava o
+ * anúncio por semelhança de nome: o 911 Carrera GTS Cabriolet saía com peso,
+ * dimensões e destaques do Carrera base. O catálogo segue nas páginas de
+ * modelo, onde é apresentado como referência do modelo, não do exemplar.
  *
- * Tom intencionalmente menos editorial que o datasheet curado: subtítulo
- * indica "dados do anúncio" em vez de "dados oficiais do fabricante", já
- * que os campos vêm do Autoconf (preenchido pela equipe), não da ficha
- * técnica oficial.
+ * O subtítulo diz "dados do anúncio", e não "dados oficiais do fabricante",
+ * porque os campos são preenchidos pela equipe no Autoconf.
  */
 
 import {

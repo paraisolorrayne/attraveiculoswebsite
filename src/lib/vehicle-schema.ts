@@ -1,5 +1,7 @@
 import type { Vehicle } from '@/types'
 import { SITE_URL } from './constants'
+import { anoDoVeiculo, tituloDoVeiculo, versaoDoVeiculo } from './identidade-do-veiculo'
+import { paginasDoVeiculo } from './seo/modelos-do-estoque'
 
 interface SchemaContext {
   baseUrl: string
@@ -40,10 +42,9 @@ function imageObjects(photos: string[] | null | undefined, vehicleName: string) 
 export function buildVehicleSchema(vehicle: Vehicle) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/veiculo/${vehicle.slug}`
-  const nameParts = [vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model]
-    .filter(p => p != null && String(p).trim() !== '')
-    .map(String)
-  const fullName = nameParts.join(' ') || 'Veículo premium'
+  // O mesmo nome do <title> (ver identidade-do-veiculo.ts).
+  const fullName = tituloDoVeiculo(vehicle)
+  const versao = versaoDoVeiculo(vehicle)
   const isNew = vehicle.is_new || vehicle.mileage === 0
 
   return {
@@ -60,7 +61,8 @@ export function buildVehicleSchema(vehicle: Vehicle) {
     productionDate: String(vehicle.year_manufacture),
     ...(vehicle.color ? { color: vehicle.color } : {}),
     ...(vehicle.body_type ? { bodyType: vehicle.body_type } : {}),
-    vehicleConfiguration: vehicle.version || undefined,
+    vehicleConfiguration: versao || undefined,
+    ...(vehicle.doors ? { numberOfDoors: vehicle.doors } : {}),
     mileageFromOdometer: {
       '@type': 'QuantitativeValue',
       value: vehicle.mileage,
@@ -81,7 +83,8 @@ export function buildVehicleSchema(vehicle: Vehicle) {
             '@type': 'EngineSpecification',
             ...(vehicle.engine ? { name: vehicle.engine } : {}),
             ...(vehicle.horsepower
-              ? { enginePower: { '@type': 'QuantitativeValue', value: vehicle.horsepower, unitCode: 'BHP' } }
+              // O feed informa cv (potência métrica), não BHP.
+              ? { enginePower: { '@type': 'QuantitativeValue', value: vehicle.horsepower, unitText: 'cv' } }
               : {}),
             ...(vehicle.torque
               ? { torque: { '@type': 'QuantitativeValue', value: vehicle.torque, unitCode: 'NU' } }
@@ -114,10 +117,7 @@ export function buildVehicleSchema(vehicle: Vehicle) {
 export function buildVehicleProductSchema(vehicle: Vehicle) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/veiculo/${vehicle.slug}`
-  const nameParts = [vehicle.brand, vehicle.model, vehicle.version, vehicle.year_model]
-    .filter(p => p != null && String(p).trim() !== '')
-    .map(String)
-  const name = nameParts.join(' ') || 'Veículo premium'
+  const name = tituloDoVeiculo(vehicle)
   const isNew = vehicle.is_new || vehicle.mileage === 0
 
   return {
@@ -144,23 +144,36 @@ export function buildVehicleProductSchema(vehicle: Vehicle) {
   }
 }
 
+/**
+ * O caminho da ficha até a página da marca e a do modelo — o breadcrumb
+ * visível e o BreadcrumbList usam esta mesma lista.
+ *
+ * Antes a marca apontava para `/veiculos?marca=…`, que canonicaliza para outra
+ * página, e o modelo não tinha link: da ficha não havia caminho em `<a>` até
+ * `/comprar/porsche/911`. Sem página de marca, a listagem filtrada continua.
+ */
+export function trilhaDoVeiculo(vehicle: Vehicle): { label: string; href?: string }[] {
+  const trilha: { label: string; href?: string }[] = [{ label: 'Veículos', href: '/veiculos' }]
+  const paginas = paginasDoVeiculo(vehicle)
+  if (paginas) {
+    trilha.push({ label: paginas.marca.nome, href: `/comprar/${paginas.marca.slug}` })
+    if (paginas.modelo) {
+      trilha.push({ label: paginas.modelo.nome, href: `/comprar/${paginas.marca.slug}/${paginas.modelo.slug}` })
+    }
+  } else if (vehicle.brand) {
+    trilha.push({ label: vehicle.brand, href: `/veiculos?marca=${encodeURIComponent(vehicle.brand.toLowerCase())}` })
+  }
+  const ultimo = paginas?.modelo
+    ? [versaoDoVeiculo(vehicle) || vehicle.model, anoDoVeiculo(vehicle)]
+    : [vehicle.model, versaoDoVeiculo(vehicle), anoDoVeiculo(vehicle)]
+  trilha.push({ label: ultimo.filter(Boolean).join(' ') || 'Detalhes' })
+  return trilha
+}
+
 export function buildVehicleBreadcrumbSchema(vehicle: Vehicle) {
   const { baseUrl } = getContext()
-  const items: { name: string; url: string }[] = [
-    { name: 'Início', url: baseUrl },
-    { name: 'Veículos', url: `${baseUrl}/veiculos` },
-  ]
-  if (vehicle.brand) {
-    items.push({
-      name: vehicle.brand,
-      url: `${baseUrl}/veiculos?marca=${vehicle.brand.toLowerCase()}`,
-    })
-  }
-  const lastName = [vehicle.model, vehicle.year_model]
-    .filter(p => p != null && String(p).trim() !== '')
-    .map(String)
-    .join(' ') || 'Detalhes'
-  items.push({ name: lastName, url: `${baseUrl}/veiculo/${vehicle.slug}` })
+  const url = `${baseUrl}/veiculo/${vehicle.slug}`
+  const items = [{ label: 'Início', href: '/' }, ...trilhaDoVeiculo(vehicle)]
 
   return {
     '@context': 'https://schema.org',
@@ -168,8 +181,8 @@ export function buildVehicleBreadcrumbSchema(vehicle: Vehicle) {
     itemListElement: items.map((it, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      name: it.name,
-      item: it.url,
+      name: it.label,
+      item: it.href ? `${baseUrl}${it.href === '/' ? '' : it.href}` : url,
     })),
   }
 }
