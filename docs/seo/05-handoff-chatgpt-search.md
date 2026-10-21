@@ -58,7 +58,7 @@ a URL de um build local. Roda toda segunda às 8h no GitHub Actions
    do texto genérico.
 3. **Potência**: o feed se contradiz em alguns carros (campo de potência ≠ número no nome
    da versão). A auditoria aponta esses casos como AVISO.
-4. **GPTBot**: liberado por decisão registrada em `src/app/robots.ts`. O handoff trata
+4. **GPTBot**: liberado por decisão registrada em `src/lib/seo/regras-robots.ts` (`POLITICA_GPTBOT`). O handoff trata
    bloquear treinamento como escolha jurídica/comercial. Não mexi.
 5. **OAI-AdsBot**: só faz sentido se a Attra anunciar no ChatGPT.
 6. **ACP / feed de produtos da OpenAI** (P3): o onboarding é para parceiros aprovados e

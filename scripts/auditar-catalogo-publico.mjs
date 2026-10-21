@@ -11,7 +11,10 @@
 //   node scripts/auditar-catalogo-publico.mjs --json                # saída para CI
 //
 // Sai com código 1 quando há FALHA (AVISO não muda o código). Não precisa de
-// credencial nem de dependência: só fetch e expressão regular.
+// credencial nem de dependência: só fetch, expressão regular e o leitor de
+// robots.txt do próprio repositório (scripts/lib/robots-txt.mjs).
+
+import { decidir, lerRobots } from './lib/robots-txt.mjs'
 
 const args = process.argv.slice(2)
 const BASE = (args.find(a => /^https?:\/\//.test(a)) ?? 'https://attraveiculos.com.br').replace(/\/$/, '')
@@ -71,12 +74,28 @@ const normalizar = s => (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ
 
 // --- 1. robots e sitemaps ---------------------------------------------------
 
+// Os robôs que trazem visita: busca orgânica e ChatGPT. O GPTBot (treinamento)
+// fica de fora de propósito — liberar ou bloquear é decisão da Attra.
+const ROBOS_DE_BUSCA = ['OAI-SearchBot', 'ChatGPT-User', 'Googlebot', 'Bingbot']
+
 const robots = await buscar('/robots.txt')
+// Lido como os robôs leem (RFC 9309): um grupo por nome substitui o `*` inteiro.
+const regras = lerRobots(robots.status === 200 ? robots.corpo : '')
 if (robots.status !== 200) falha('/robots.txt', `HTTP ${robots.status}`)
-else if (!/^sitemap:/im.test(robots.corpo)) falha('/robots.txt', 'sem linha Sitemap')
-// O grupo do OAI-SearchBot não pode bloquear a raiz.
-const grupoSearchBot = robots.corpo.split(/\n\s*\n/).find(g => /user-agent:\s*oai-searchbot/i.test(g))
-if (grupoSearchBot && /^disallow:\s*\/\s*$/im.test(grupoSearchBot)) falha('/robots.txt', 'OAI-SearchBot bloqueado em /')
+else {
+  if (!/^text\/plain/.test(robots.tipo)) aviso('/robots.txt', `Content-Type ${robots.tipo || 'ausente'}`)
+  if (!/^sitemap:/im.test(robots.corpo)) falha('/robots.txt', 'sem linha Sitemap')
+  if (regras.outras.some(o => o.campo === 'host')) aviso('/robots.txt', 'linha Host: (não é diretiva do protocolo)')
+  for (const robo of ROBOS_DE_BUSCA) {
+    for (const c of ['/', '/veiculos']) {
+      if (!decidir(regras, robo, c).permitido) falha('/robots.txt', `${robo} bloqueado em ${c}`)
+    }
+    // Restrição que some não derruba o site, mas é regressão do handoff de 21/10.
+    for (const c of ['/admin/', '/private/', '/api/auditoria-robots', '/auditoria.json']) {
+      if (decidir(regras, robo, c).permitido) aviso('/robots.txt', `${robo} pode rastrear ${c}`)
+    }
+  }
+}
 
 const indice = await buscar('/sitemap.xml')
 let subSitemaps = []
@@ -94,8 +113,22 @@ for (const s of subSitemaps) {
     falha(s, `HTTP ${r.status} (${r.tipo || 'sem tipo'})`)
     continue
   }
+  if (!/<urlset[\s>]/.test(r.corpo) || !/<\/urlset>\s*$/.test(r.corpo)) falha(s, 'XML sem <urlset> completo')
   urlsPorSitemap[s] = [...r.corpo.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1])
   if (/<lastmod>\s*<\/lastmod>/.test(r.corpo)) aviso(s, 'lastmod vazio')
+  const futuras = [...r.corpo.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].filter(m => Date.parse(m[1]) > Date.now() + 86_400_000)
+  if (futuras.length) aviso(s, `${futuras.length} lastmod no futuro (ex.: ${futuras[0][1]})`)
+}
+
+// Toda URL do sitemap no domínio canônico e liberada para quem busca: sitemap
+// que anuncia URL bloqueada no robots é sinal contraditório para o robô.
+for (const [s, urls] of Object.entries(urlsPorSitemap)) {
+  for (const url of urls) {
+    if (url !== CANONICAL_BASE && !url.startsWith(`${CANONICAL_BASE}/`)) falha(s, `URL fora do domínio canônico: ${url}`)
+    const caminho = caminhoDe(url) || '/'
+    const bloqueadoPara = ROBOS_DE_BUSCA.find(robo => !decidir(regras, robo, caminho).permitido)
+    if (bloqueadoPara) falha(s, `${caminho} está no sitemap e bloqueada no robots.txt para ${bloqueadoPara}`)
+  }
 }
 
 const fichas = (urlsPorSitemap['/sitemap-estoque.xml'] ?? []).map(caminhoDe)

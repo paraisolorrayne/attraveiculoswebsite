@@ -336,6 +336,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // A busca responde a qualquer `q`, então cada termo é uma URL nova. O
+        // robots.txt libera a rota para os assistentes que a leem pelo
+        // llms.txt; o noindex impede que essas respostas virem um número sem
+        // fim de páginas indexadas.
+        source: '/api/vehicles/search',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
         // Prevent caching of API responses with sensitive data
         source: '/api/admin/:path*',
         headers: [
