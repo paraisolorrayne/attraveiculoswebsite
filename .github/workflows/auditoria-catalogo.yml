@@ -1,0 +1,24 @@
+name: Auditoria do catálogo
+
+# O site como um robô de busca o vê (HTML sem JS): sitemaps abrindo, cada ficha
+# do estoque com canonical, h1, preço no JSON-LD e FAQ sem especificação que o
+# anúncio não traz, e todas as fichas com link a partir da listagem. Ver
+# scripts/auditar-catalogo-publico.mjs. Fica vermelho quando há FALHA.
+on:
+  schedule:
+    # Segunda-feira, 8h em Brasília.
+    - cron: '0 11 * * 1'
+  workflow_dispatch:
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Auditar produção
+        run: node scripts/auditar-catalogo-publico.mjs https://attraveiculos.com.br

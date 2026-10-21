@@ -13,7 +13,8 @@ export async function GET() {
     for (const v of vehicles) {
       urls.push({
         loc: `${BASE}/veiculo/${v.slug}`,
-        lastmod: v.updated_at ? new Date(v.updated_at).toISOString() : new Date().toISOString(),
+        // Sem data da fonte, sem lastmod — nunca now() (ver src/lib/seo/frescor.ts).
+        lastmod: v.updated_at ? new Date(v.updated_at).toISOString() : undefined,
         changefreq: 'daily',
         priority: 0.8,
       })

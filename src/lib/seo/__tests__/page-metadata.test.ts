@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pageTitle, canonicalUrl, listingRobots } from '../page-metadata'
+import { pageTitle, canonicalUrl, listingRobots, listingCanonical } from '../page-metadata'
 
 describe('pageTitle', () => {
   it('remove o sufixo de marca que o template do layout raiz reaplica', () => {
@@ -88,5 +88,32 @@ describe('listingRobots', () => {
       index: false,
       follow: true,
     })
+  })
+})
+
+describe('listingCanonical', () => {
+  const destinos = { marca: (m: string) => (m === 'porsche' ? '/comprar/porsche' : `/veiculos?marca=${m}`) }
+
+  it('listagem limpa aponta para si mesma', () => {
+    expect(listingCanonical('/veiculos', {}, destinos)).toBe('https://attraveiculos.com.br/veiculos')
+  })
+
+  it('cada página da paginação aponta para si mesma, não para a 1ª', () => {
+    expect(listingCanonical('/veiculos', { pagina: '3' }, destinos)).toBe('https://attraveiculos.com.br/veiculos?pagina=3')
+    expect(listingCanonical('/veiculos', { pagina: '1' }, destinos)).toBe('https://attraveiculos.com.br/veiculos')
+  })
+
+  it('filtro de marca vai para o destino da marca', () => {
+    expect(listingCanonical('/veiculos', { marca: 'porsche' }, destinos)).toBe('https://attraveiculos.com.br/comprar/porsche')
+    expect(listingCanonical('/veiculos', { marca: 'ram' }, destinos)).toBe('https://attraveiculos.com.br/veiculos?marca=ram')
+  })
+
+  it('combinação de filtros volta para a listagem limpa', () => {
+    expect(listingCanonical('/veiculos', { marca: 'porsche', pagina: '2' }, destinos)).toBe('https://attraveiculos.com.br/veiculos')
+    expect(listingCanonical('/veiculos', { ordenar: 'preco-asc' }, destinos)).toBe('https://attraveiculos.com.br/veiculos')
+  })
+
+  it('pagina que não é número não vira canonical', () => {
+    expect(listingCanonical('/veiculos', { pagina: 'abc' }, destinos)).toBe('https://attraveiculos.com.br/veiculos')
   })
 })

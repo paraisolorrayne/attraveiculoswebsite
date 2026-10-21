@@ -86,8 +86,8 @@ export default function robots(): MetadataRoute.Robots {
           // ficava invisível justamente para eles.
           //
           // Duplicação já é tratada no lugar certo: /veiculos?marca=x
-          // canonicaliza para /veiculos, e combinação de filtros vem com
-          // noindex. Bloquear no robots.txt seria pior, não melhor — o crawler
+          // canonicaliza para a página da marca (/comprar/x), e combinação de
+          // filtros vem com noindex. Bloquear no robots.txt seria pior, não melhor — o crawler
           // que não busca a página também não lê o canonical nem o noindex, e
           // a URL pode acabar indexada sem conteúdo.
         ],

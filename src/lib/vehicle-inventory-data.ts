@@ -6,6 +6,7 @@
 import type { Vehicle } from '@/types'
 import { type AutoConfVehicle, cleanVersionString } from './autoconf-api'
 import { resolveBrand, nonEmpty, joinNonEmpty } from './vehicle-fallbacks'
+import { tituloDoVeiculo } from './identidade-do-veiculo'
 import {
   classificarCarroceria,
   classificarCategoria,
@@ -88,8 +89,11 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
   const model = nonEmpty(autoconfVehicle.modelopai_nome)
   const isImported = importedBrands.some(b => brand.toLowerCase().includes(b.toLowerCase()))
 
-  const namePart = joinNonEmpty([brand, model, autoconfVehicle.anomodelo])
-  const seoBase = namePart || 'Veículo premium'
+  const version = cleanVersionString(autoconfVehicle.modelo_nome, autoconfVehicle.modelopai_nome)
+    || autoconfVehicle.versao_descricao || null
+  const yearManufacture = parseInt(autoconfVehicle.anofabricacao) || 0
+  const yearModel = parseInt(autoconfVehicle.anomodelo) || 0
+  const seoBase = tituloDoVeiculo({ brand, model, version, year_manufacture: yearManufacture, year_model: yearModel })
   const km = autoconfVehicle.km ?? 0
 
   return {
@@ -97,10 +101,9 @@ function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle {
     slug,
     brand,
     model,
-    version: cleanVersionString(autoconfVehicle.modelo_nome, autoconfVehicle.modelopai_nome)
-      || autoconfVehicle.versao_descricao || null,
-    year_manufacture: parseInt(autoconfVehicle.anofabricacao) || 0,
-    year_model: parseInt(autoconfVehicle.anomodelo) || 0,
+    version,
+    year_manufacture: yearManufacture,
+    year_model: yearModel,
     color: nonEmpty(autoconfVehicle.cor_nome),
     mileage: km,
     fuel_type: nonEmpty(autoconfVehicle.combustivel_nome),

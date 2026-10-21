@@ -7,7 +7,9 @@ import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
-import { canonicalUrl, listingRobots } from '@/lib/seo/page-metadata'
+import { listingCanonical, listingRobots } from '@/lib/seo/page-metadata'
+import { findSEOBrand } from '@/lib/seo-brands'
+import { normalizarMarca } from '@/lib/marca-normalizacao'
 import { Vehicle } from '@/types'
 import {
   classificarCarroceria,
@@ -56,24 +58,38 @@ function getSimilarBrands(brand: string): string[] {
 }
 
 // Só a marca tem demanda de busca própria; as outras cinco dimensões de filtro
-// e a ordenação só produzem recortes do mesmo estoque.
-const FILTROS_INDEXAVEIS = ['marca'] as const
+// e a ordenação só produzem recortes do mesmo estoque. A página (`pagina=N`)
+// entra porque cada uma lista carros que as outras não listam.
+const FILTROS_INDEXAVEIS = ['marca', 'pagina'] as const
 
 const VEICULOS_PATH = '/veiculos'
 
+/**
+ * O filtro de marca consolida na página da marca em /comprar, que lista o
+ * estoque inteiro da marca com texto próprio. Marca sem essa página fica na
+ * listagem filtrada mesmo.
+ */
+const DESTINOS_CANONICOS = {
+  marca: (valor: string) => {
+    const marca = findSEOBrand(normalizarMarca(valor) ?? '')
+    return marca ? `/comprar/${marca.slug}` : `${VEICULOS_PATH}?marca=${encodeURIComponent(valor.toLowerCase())}`
+  },
+}
+
 export async function generateMetadata({ searchParams }: VeiculosPageProps): Promise<Metadata> {
   const params = await searchParams
+  const pagina = Number(params.pagina) || 1
+  const canonical = listingCanonical(VEICULOS_PATH, params, DESTINOS_CANONICOS)
 
   return {
-    title: 'Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia',
+    // Título distinto por página: com o mesmo título, as páginas 2 a 6 se
+    // apresentavam como cópia da 1ª.
+    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` — Página ${pagina}` : ''}`,
     description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
-    // Toda combinação de filtro consolida na listagem limpa: o conteúdo é o
-    // mesmo estoque recortado, e o canonical evita que o espaço combinatório
-    // de 6 filtros mais ordenação vire URL indexada.
-    alternates: { canonical: canonicalUrl(VEICULOS_PATH) },
+    alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),
     // og:url apontava para a home, contradizendo o canonical.
-    openGraph: { url: canonicalUrl(VEICULOS_PATH) },
+    openGraph: { url: canonical },
   }
 }
 

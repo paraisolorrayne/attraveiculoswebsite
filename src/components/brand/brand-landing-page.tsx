@@ -98,9 +98,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 		registros_por_pagina: 100,
 	})
 
-	// Filtrado pela marca e ordenado do mais caro para o mais barato. A ordem
-	// vem ANTES do corte de seis da grade — cortar primeiro deixaria o carro
-	// mais caro de fora da página.
+	// Filtrado pela marca e ordenado do mais caro para o mais barato.
 	const brandVehicles = porPrecoDecrescente(
 		allVehicles.filter(v => marcaCasaCom(v.brand, brand.slug)),
 	)
@@ -231,14 +229,18 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 								href={`/veiculos?marca=${brand.slug}`}
 								className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
 							>
-								Ver todos <ArrowRight className="w-3 h-3" />
+								Filtrar no estoque <ArrowRight className="w-3 h-3" />
 							</Link>
 						)}
 					</div>
 
 					{brandVehicles.length > 0 ? (
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-							{brandVehicles.slice(0, 6).map(vehicle => (
+							{/* Todos, não os seis primeiros: esta é a página canônica da
+							    marca (o filtro /veiculos?marca= aponta para cá), e cada
+							    carro precisa de um link a partir dela. Com o corte, 16
+							    dos 22 Porsche ficavam fora (20/10/2026). */}
+							{brandVehicles.map(vehicle => (
 								<VehicleCard key={vehicle.id} vehicle={vehicle} />
 							))}
 						</div>

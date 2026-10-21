@@ -96,3 +96,32 @@ export function listingRobots(
     ? { index: false, follow: true }
     : { index: true, follow: true }
 }
+
+/**
+ * Canonical de uma listagem filtrável.
+ *
+ *   - sem filtro: a própria listagem;
+ *   - só `pagina=N`: a própria página N. Cada página lista outros carros, e o
+ *     canonical de todas na 1ª dizia ao buscador que as páginas 2 a 6 eram
+ *     cópia dela — junto com a paginação em botão, 56 dos 68 carros ficavam
+ *     sem caminho a partir da listagem (auditoria de 20/10/2026);
+ *   - um único filtro com destino próprio em `destinos` (a marca que tem
+ *     página em /comprar): esse destino;
+ *   - qualquer outra combinação: a listagem limpa (e `listingRobots` a tira do
+ *     índice).
+ */
+export function listingCanonical(
+  path: string,
+  searchParams: SearchParamsRecord | undefined,
+  destinos: Record<string, (valor: string) => string> = {},
+): string {
+  const ativas = activeFilterKeys(searchParams)
+  if (ativas.length !== 1) return canonicalUrl(path)
+
+  const [chave] = ativas
+  const bruto = searchParams?.[chave]
+  const valor = (Array.isArray(bruto) ? bruto[0] : bruto ?? '').trim()
+  if (chave === 'pagina' && /^\d+$/.test(valor)) return canonicalUrl(`${path}?pagina=${Number(valor)}`)
+  const destino = destinos[chave]
+  return canonicalUrl(destino ? destino(valor) : path)
+}

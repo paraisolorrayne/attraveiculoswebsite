@@ -121,6 +121,17 @@ const nextConfig: NextConfig = {
   // 301 Redirects for old URLs (SEO - permanent redirects)
   async redirects() {
     return [
+      // www → domínio sem www. O www respondia 200 com o mesmo conteúdo
+      // (20/10/2026); o canonical apontava certo, mas são dois hosts para o
+      // robô rastrear e para links externos dividirem. Depende de o nginx
+      // repassar o Host (proxy_set_header Host $host); sem isso a regra só não
+      // dispara. A query string segue junto.
+      {
+        source: '/:path*',
+        has: [{ type: 'host' as const, value: 'www.attraveiculos.com.br' }],
+        destination: 'https://attraveiculos.com.br/:path*',
+        permanent: true,
+      },
       // Posts duplicados do blog → o que ficou de cada grupo (ver src/lib/blog-consolidacao.ts).
       // Aqui e não na página: a rota do post tem loading.tsx, e um redirect
       // durante o streaming sairia com HTTP 200.
