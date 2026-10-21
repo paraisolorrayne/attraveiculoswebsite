@@ -11,6 +11,8 @@ import { VehicleCardCTAs } from './vehicle-card-ctas'
 interface CinematicVehicleCardProps {
   vehicle: Vehicle
   layout?: 'horizontal' | 'vertical'
+  /** Primeiro card visível da lista: a foto dele costuma ser o LCP da página. */
+  priority?: boolean
 }
 
 // Premium badges based on vehicle characteristics
@@ -58,7 +60,7 @@ function getPremiumBadges(vehicle: Vehicle) {
   return badges.sort((a, b) => a.priority - b.priority).slice(0, 2)
 }
 
-export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: CinematicVehicleCardProps) {
+export function CinematicVehicleCard({ vehicle, layout = 'horizontal', priority = false }: CinematicVehicleCardProps) {
   const badges = getPremiumBadges(vehicle)
 
   if (layout === 'vertical') {
@@ -72,6 +74,8 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
             fill
             className="card-vehicle-image transition-transform duration-500 group-hover:scale-[1.03]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={priority}
+            fetchPriority={priority ? 'high' : undefined}
           />
           {/* Badges - positioned to not cover car */}
           {badges.length > 0 && (
@@ -115,6 +119,8 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal' }: Cinemat
           fill
           className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
           sizes="(max-width: 768px) 100vw, 55vw"
+          priority={priority}
+          fetchPriority={priority ? 'high' : undefined}
         />
 
         {/* Badges - positioned bottom-left */}

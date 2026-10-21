@@ -184,7 +184,9 @@ export function Header() {
                 priority
                 unoptimized
               />
-              {/* Black logo - only visible when scrolled AND in light theme */}
+              {/* Black logo - only visible when scrolled AND in light theme.
+                  Sem priority: escondida na abertura de toda página, ela não
+                  precisa disputar o início do carregamento (são 77 KB). */}
               <Image
                 src="/images/logo-black.png"
                 alt="Attra Veículos"
@@ -194,7 +196,6 @@ export function Header() {
                   'absolute left-0 h-10 w-auto object-contain transition-opacity duration-300',
                   isScrolled && isLightMode ? 'opacity-100' : 'opacity-0'
                 )}
-                priority
                 unoptimized
               />
             </Link>
