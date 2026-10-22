@@ -84,6 +84,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
                   src={main.photos?.[0]}
                   alt={`${main.brand} ${main.model}`}
                   fill
+                  esqueleto
                   className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   sizes="(max-width: 1024px) 100vw, 58vw"
                 />
@@ -196,6 +197,7 @@ function SecondaryPick({ vehicle }: { vehicle: Vehicle }) {
             src={vehicle.photos?.[0]}
             alt={`${vehicle.brand} ${vehicle.model}`}
             fill
+            esqueleto
             className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             sizes="(max-width: 1024px) 100vw, 42vw"
           />

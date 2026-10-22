@@ -127,6 +127,7 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
               src={vehicle.photos?.[0]}
               alt={nome}
               fill
+              esqueleto
               priority
               sizes="(min-width: 1024px) 720px, 46vw"
               className="destaque-foto object-cover"

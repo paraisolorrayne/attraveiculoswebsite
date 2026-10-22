@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { ChevronLeft, ChevronRight, Expand, X, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Expand, X } from 'lucide-react'
+import { PhotoSkeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 interface CinematicGalleryProps {
@@ -25,15 +26,6 @@ interface CinematicGalleryProps {
 function buildVehicleLabel(vehicleName: string, vehicleYear?: string | number): string {
   const year = vehicleYear != null ? String(vehicleYear).trim() : ''
   return year ? `${vehicleName} ${year}` : vehicleName
-}
-
-// Skeleton loading component
-function ImageSkeleton() {
-  return (
-    <div className="absolute inset-0 bg-background-soft animate-pulse flex items-center justify-center">
-      <Loader2 className="w-12 h-12 text-primary/50 animate-spin" />
-    </div>
-  )
 }
 
 export function CinematicGallery({ photos, vehicleName, vehicleYear }: CinematicGalleryProps) {
@@ -111,8 +103,8 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
           aria-label="Clique para ver em tela cheia"
           onKeyDown={(e) => e.key === 'Enter' && setIsFullscreen(true)}
         >
-          {/* Loading skeleton for current image */}
-          {!isCurrentLoaded && <ImageSkeleton />}
+          {/* Esqueleto da marca até a foto atual chegar */}
+          <PhotoSkeleton className="absolute inset-0" loaded={isCurrentLoaded} />
 
           {photos.map((photo, index) => {
             // Only render current, previous, and next images for performance
@@ -284,12 +276,8 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
               paddingTop: '16px'
             }}
           >
-            {/* Loading spinner for fullscreen image */}
-            {!fullscreenLoaded.has(currentIndex) && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-white/60 animate-spin" />
-              </div>
-            )}
+            {/* Esqueleto da marca enquanto a foto original (a mais pesada) carrega */}
+            <PhotoSkeleton dark className="absolute inset-0" loaded={fullscreenLoaded.has(currentIndex)} />
             {/* eslint-disable-next-line @next/next/no-img-element -- o lightbox existe
                 justamente para mostrar a foto em resolução original; passar pelo
                 otimizador do next/image limitaria a largura aos deviceSizes. */}

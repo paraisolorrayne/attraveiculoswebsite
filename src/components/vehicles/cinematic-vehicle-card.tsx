@@ -69,14 +69,15 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal', priority 
     const linhaTecnica = [vehicle.year_model, formatMileage(vehicle.mileage), vehicle.fuel_type].filter(Boolean)
     return (
       <article className="group flex flex-col">
-        {/* Foto: entra suave por cima do esqueleto. O card com `priority` é o
-            LCP da página e aparece direto, sem esperar o JavaScript. */}
+        {/* Foto: entra suave por cima do esqueleto da marca. O card com
+            `priority` é o LCP da página e aparece direto, sem esperar o
+            JavaScript; o esqueleto fica por baixo até ela pintar. */}
         <Link href={`/veiculo/${vehicle.slug}`} className="relative block aspect-[4/3] overflow-hidden rounded-xl bg-background-soft">
-          {!priority && !fotoPronta && <div className="esqueleto absolute inset-0 rounded-none" aria-hidden="true" />}
           <VehicleImage
             src={vehicle.photos?.[0]}
             alt={`${vehicle.brand} ${vehicle.model}`}
             fill
+            esqueleto
             onLoad={() => setFotoPronta(true)}
             className={`foto-card object-cover object-center transition-[transform,opacity] duration-700 ease-out group-hover:scale-[1.04] ${
               priority || fotoPronta ? 'opacity-100' : 'opacity-0'
@@ -143,6 +144,7 @@ export function CinematicVehicleCard({ vehicle, layout = 'horizontal', priority 
           src={vehicle.photos?.[0]}
           alt={`${vehicle.brand} ${vehicle.model}`}
           fill
+          esqueleto
           className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
           sizes="(max-width: 768px) 100vw, 55vw"
           priority={priority}
