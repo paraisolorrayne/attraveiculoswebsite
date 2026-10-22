@@ -173,3 +173,84 @@
   50% { height: 100%; }
 }
 
+
+/* ── Prévia 22/10/2026: números, faixa de marcas e barra da ficha ───────── */
+
+/* Contador dos números da home. O número de verdade fica no texto do HTML
+   (é o que Google, assistentes e leitores de tela leem). O que conta é só o
+   desenho, num ::after por cima, com o texto transparente por baixo segurando
+   a largura final para nada pular. Sem suporte a @property, o número troca
+   de uma vez na metade da animação. */
+@property --contador-n {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+@keyframes contar {
+  from { --contador-n: 0; }
+  to { --contador-n: var(--contador-alvo); }
+}
+.contador {
+  position: relative;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+.contador__desenho { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .contador__valor { color: transparent; }
+  .contador__desenho {
+    display: block;
+    position: absolute;
+    inset: 0;
+    --contador-n: var(--contador-alvo);
+    counter-reset: contador var(--contador-n);
+    animation: contar 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .contador__desenho::after { content: counter(contador); }
+  /* Fora da tela quando a página carregou: espera zerado e conta ao aparecer.
+     Quem está na primeira tela conta direto, sem esperar o JavaScript. */
+  .contador[data-esperando] .contador__desenho {
+    animation: none;
+    --contador-n: 0;
+  }
+}
+
+/* Faixa de marcas. Duas cópias da lista lado a lado; andar metade da largura
+   fecha o laço sem emenda. Só anda no computador e para com o mouse ou o
+   foco em cima: no celular, um toque para parar a faixa vira clique errado,
+   então lá ela é uma fileira que se arrasta com o dedo. */
+.faixa-marcas__janela {
+  /* relative: o texto "N carros em estoque" é sr-only (position: absolute) e,
+     sem isso, escapa da rolagem da faixa e alarga a página no celular. */
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+.faixa-marcas__janela::-webkit-scrollbar { display: none; }
+.faixa-marcas__trilho { display: flex; width: max-content; }
+.faixa-marcas__copia { display: none; }
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .faixa-marcas__janela {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  }
+  .faixa-marcas__copia { display: flex; }
+  .faixa-marcas__trilho { animation: faixa-marcas 60s linear infinite; }
+  .faixa-marcas__trilho:hover,
+  .faixa-marcas__trilho:focus-within { animation-play-state: paused; }
+}
+@keyframes faixa-marcas {
+  to { transform: translateX(-50%); }
+}
+
+/* Barra de preço da ficha no celular: com ela na tela, o círculo verde do
+   WhatsApp sai para não haver dois botões flutuantes. */
+@media (max-width: 1023.98px) {
+  html[data-barra-ficha] [data-whatsapp-flutuante] {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

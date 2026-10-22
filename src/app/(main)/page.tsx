@@ -8,8 +8,10 @@ import {
   AboutSectionExpanded,
   HomeHero,
   LeadCaptureSection,
-  TrustStrip,
   EditorialSelection,
+  NumerosAttra,
+  FaixaDeMarcas,
+  marcasDaFaixa,
 } from '@/components/home'
 import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
@@ -110,6 +112,15 @@ export default async function Home() {
     console.error('Failed to fetch featured vehicles:', error)
   }
 
+  // Faixa de marcas: estoque inteiro (sem o piso de preço do hero), para a
+  // contagem por marca bater com a página de cada marca.
+  let estoque: Vehicle[] = []
+  try {
+    estoque = (await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })).vehicles
+  } catch (error) {
+    console.error('Failed to fetch stock for the brand strip:', error)
+  }
+
   // Hero exibe o vídeo mais recente do canal da Attra (RSS, sem API key).
   const latestVideo = await getLatestAttraVideo()
 
@@ -133,35 +144,37 @@ export default async function Home() {
       {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
       <HomeHero videoId={latestVideo?.videoId ?? null} />
 
-      {/* 2. Prova de confiança — antes da curadoria para reforçar a marca
-             antes de pedir os dados do visitante. */}
-      <TrustStrip />
+      {/* 2. Marcas com carro no estoque — atalho para a página de cada marca. */}
+      <FaixaDeMarcas marcas={marcasDaFaixa(estoque)} />
 
-      {/* 3. Seleção editorial curada — substitui a antiga grade "Destaques" */}
+      {/* 3. Prova de confiança em números, antes da curadoria. Substitui a
+             TrustStrip e os números que ficavam no Posicionamento. */}
+      <NumerosAttra />
+
+      {/* 4. Seleção editorial curada — substitui a antiga grade "Destaques" */}
       <EditorialSelection vehicles={editorialVehicles} />
 
-      {/* 4. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
-             Também carrega os números de autoridade (16+ / 500 / 27 / 5.0). */}
+      {/* 5. Posicionamento — rosto da marca (Thiago) + pilares narrativos. */}
       <AboutSectionExpanded />
 
-      {/* 5. Captação consultiva — form imediatamente antes da Operação,
+      {/* 6. Captação consultiva — form imediatamente antes da Operação,
              quando o visitante já consumiu prova social + curadoria + marca. */}
       <LeadCaptureSection />
 
-      {/* 6. Diferenciais da operação */}
+      {/* 7. Diferenciais da operação */}
       <ExperienceSection />
 
-      {/* 7. Jornada Attra */}
+      {/* 8. Jornada Attra */}
       <JourneyPreview />
 
-      {/* 8. Conteúdo editorial */}
+      {/* 9. Conteúdo editorial */}
       <FeaturedEditorial artigos={artigos} />
 
-      {/* 9. FAQ */}
+      {/* 10. FAQ */}
       <FAQSection faqs={homepageFAQs} />
       <FAQSchema faqs={homepageFAQs} />
 
-      {/* 10. Localização e contato */}
+      {/* 11. Localização e contato */}
       <LocationSection />
 
       {/* A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o

@@ -228,6 +228,9 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
         target="_blank"
         rel="noopener noreferrer"
         data-vehicle-id={vehicleId || undefined}
+        // Alvo da regra que esconde o círculo enquanto a barra de preço da
+        // ficha está na tela (celular). Ver barra-preco-ficha.tsx.
+        data-whatsapp-flutuante=""
         onClick={handleAnchorClick}
         onMouseEnter={() => {
           if (!pronto) return

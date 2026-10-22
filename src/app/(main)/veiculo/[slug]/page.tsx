@@ -5,7 +5,6 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CinematicGallery } from '@/components/vehicles/cinematic-gallery'
 import { VehicleInfo } from '@/components/vehicles/vehicle-info'
-import { VehicleSpecs } from '@/components/vehicles/vehicle-specs'
 import { VehicleOptions } from '@/components/vehicles/vehicle-options'
 import { VehicleContact } from '@/components/vehicles/vehicle-contact'
 import { RelatedVehicles } from '@/components/vehicles/related-vehicles'
@@ -15,6 +14,7 @@ import { VehicleSectionShowcase } from '@/components/vehicles/vehicle-section-sh
 import { RelatedVehiclesSkeleton } from '@/components/ui/skeleton'
 import { VehicleContextSetter } from '@/components/vehicles/vehicle-context-setter'
 import { VehicleSpecsFallback } from '@/components/vehicles/vehicle-specs-fallback'
+import { BarraPrecoFicha } from '@/components/vehicles/barra-preco-ficha'
 import { FAQSection } from '@/components/home'
 import { getVehicleBySlug } from '@/lib/autoconf-api'
 import { getCachedVehicleSections, getFallbackVehicleSections, generateAndCacheVehicleSections } from '@/lib/vehicle-sections'
@@ -23,7 +23,8 @@ import { formatPrice, formatMileage } from '@/lib/utils'
 import { buildVehiclePageSchemas, trilhaDoVeiculo } from '@/lib/vehicle-schema'
 import { nomeDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
-import { SITE_URL } from '@/lib/constants'
+import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
+import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
 import { pageTitle } from '@/lib/seo/page-metadata'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
@@ -263,6 +264,36 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 
 			{/* Vehicle Details Section */}
 			<Container className="py-8 lg:py-12">
+				{/* Título e preço - visível no mobile.
+				    Este é o ÚNICO h1 do documento (o título da sidebar desktop virou h2).
+				    Marca, modelo, versão e ano ficam DENTRO do h1, em spans que herdam o
+				    estilo que antes estava nos <p> irmãos: o texto do h1 passa a
+				    identificar o veículo inteiro em vez do modelo curto ("911"), que era
+				    sinal de entidade ambíguo para buscador e LLM. O Tailwind zera
+				    font-size/weight de h1 no preflight, então o render fica idêntico.
+				    O Googlebot renderiza em viewport mobile: é este bloco que ele lê.
+				    Vem antes da trilha e da data do anúncio: no celular o preço ficava
+				    na borda de baixo da primeira tela, atrás das duas. */}
+				<div className="lg:hidden mb-8">
+					<h1 className="mb-4">
+						{vehicle.brand && (
+							<span className="block text-primary text-sm font-medium uppercase tracking-wider mb-1">
+								{vehicle.brand}
+							</span>
+						)}
+						<span className="block text-3xl font-bold text-foreground mb-2">
+							{vehicle.model || vehicle.brand || 'Veículo premium'}
+						</span>
+						<span className="block text-foreground-secondary">
+							{vehicle.version && `${vehicle.version} • `}
+							{vehicle.year_manufacture}/{vehicle.year_model}
+						</span>
+					</h1>
+					<p id="preco-ficha" className="text-3xl font-bold text-foreground">
+						{formatPrice(vehicle.price)}
+					</p>
+				</div>
+
 				{/* Breadcrumb - afterHero because it comes after full-screen gallery */}
 				<Breadcrumb items={breadcrumbItems} afterHero />
 
@@ -276,34 +307,6 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				<div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
 					{/* Left column - Main info */}
 					<div className="lg:col-span-2 space-y-8">
-						{/* Título e preço - visível no mobile.
-						    Este é o ÚNICO h1 do documento (o título da sidebar desktop virou h2).
-						    Marca, modelo, versão e ano ficam DENTRO do h1, em spans que herdam o
-						    estilo que antes estava nos <p> irmãos: o texto do h1 passa a
-						    identificar o veículo inteiro em vez do modelo curto ("911"), que era
-						    sinal de entidade ambíguo para buscador e LLM. O Tailwind zera
-						    font-size/weight de h1 no preflight, então o render fica idêntico.
-						    O Googlebot renderiza em viewport mobile: é este bloco que ele lê. */}
-						<div className="lg:hidden">
-							<h1 className="mb-4">
-								{vehicle.brand && (
-									<span className="block text-primary text-sm font-medium uppercase tracking-wider mb-1">
-										{vehicle.brand}
-									</span>
-								)}
-								<span className="block text-3xl font-bold text-foreground mb-2">
-									{vehicle.model || vehicle.brand || 'Veículo premium'}
-								</span>
-								<span className="block text-foreground-secondary">
-									{vehicle.version && `${vehicle.version} • `}
-									{vehicle.year_manufacture}/{vehicle.year_model}
-								</span>
-							</h1>
-							<p className="text-3xl font-bold text-foreground">
-								{formatPrice(vehicle.price)}
-							</p>
-						</div>
-
 						{/* Engine Audio Player - shows if vehicle has sound configured in admin */}
 						{vehicleSound && (
 							<EngineAudioPlayer
@@ -318,57 +321,21 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 							<AIVehicleDescription vehicle={vehicle} />
 						</Suspense>
 
-						{/* Specs */}
-						<VehicleSpecs vehicle={vehicle} />
+						{/* Ficha técnica só com o que o anúncio traz. A tabela de
+						    referência por modelo (vehicle-datasheet.ts) dava ao 911
+						    GTS as dimensões, o peso e os destaques do Carrera base;
+						    ela continua só nas páginas de modelo, como referência.
+						    É a única ficha: os cards de VehicleSpecs e o bloco
+						    "Performance" repetiam os mesmos campos. */}
+						<VehicleSpecsFallback vehicle={vehicle} />
 
 						{/* Options */}
 						{vehicle.options && vehicle.options.length > 0 && (
 							<VehicleOptions options={vehicle.options} />
 						)}
 
-						{/* Performance specs (if available) */}
-						{(vehicle.horsepower || vehicle.torque || vehicle.acceleration || vehicle.top_speed) && (
-							<div className="bg-background-card border border-border rounded-xl p-6">
-								<h2 className="text-xl font-semibold text-foreground mb-6">
-									Performance
-								</h2>
-								<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-									{vehicle.horsepower && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.horsepower}</p>
-											<p className="text-sm text-foreground-secondary">cv</p>
-										</div>
-									)}
-									{vehicle.torque && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.torque}</p>
-											<p className="text-sm text-foreground-secondary">Nm</p>
-										</div>
-									)}
-									{vehicle.acceleration && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.acceleration}</p>
-											<p className="text-sm text-foreground-secondary">0-100 km/h</p>
-										</div>
-									)}
-									{vehicle.top_speed && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.top_speed}</p>
-											<p className="text-sm text-foreground-secondary">km/h máx</p>
-										</div>
-									)}
-								</div>
-							</div>
-						)}
-
-						{/* Ficha técnica só com o que o anúncio traz. A tabela de
-						    referência por modelo (vehicle-datasheet.ts) dava ao 911
-						    GTS as dimensões, o peso e os destaques do Carrera base;
-						    ela continua só nas páginas de modelo, como referência. */}
-						<VehicleSpecsFallback vehicle={vehicle} />
-
-						{/* Contact - Mobile */}
-						<div className="lg:hidden">
+						{/* Contact - Mobile. O id é onde a barra fixa de preço some. */}
+						<div className="lg:hidden" id="contato-ficha">
 							<VehicleContact vehicle={vehicle} />
 						</div>
 					</div>
@@ -405,6 +372,12 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				title={`Perguntas sobre o ${joinNonEmpty([vehicle.brand, vehicle.model]) || 'veículo'}`}
 				subtitle={`Dúvidas frequentes sobre este ${joinNonEmpty([vehicle.brand, vehicle.model, vehicle.year_model]) || 'veículo'}`}
 				className="mt-0"
+			/>
+
+			<BarraPrecoFicha
+				titulo={joinNonEmpty([vehicle.brand, vehicle.model, vehicle.year_model]) || 'Veículo'}
+				preco={formatPrice(vehicle.price)}
+				whatsappUrl={getWhatsAppUrl(mensagemWhatsAppDoVeiculo(vehicle))}
 			/>
 		</main>
 	)

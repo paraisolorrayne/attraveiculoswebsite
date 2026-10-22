@@ -3,19 +3,13 @@
 import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Award, Users, MapPin, Calendar, CheckCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { SectionKicker, SectionHeading } from '@/components/ui/brand'
-import { anosDeMercado } from '@/lib/constants'
 
-const stats = [
-  { value: String(anosDeMercado()), label: 'Anos de Mercado', icon: Calendar },
-  { value: '500+', label: 'Veículos/Ano', icon: Award },
-  { value: '27', label: 'Estados Atendidos', icon: MapPin },
-  { value: '5.0', label: 'Avaliação Google', icon: Users },
-]
-
+// Os números (anos, veículos/ano, estados, Google) saíram daqui em 22/10/2026:
+// agora ficam na faixa NumerosAttra, logo depois do hero.
 const pillars = [
   'Curadoria antes de catálogo',
   'Relação antes de transação',
@@ -81,22 +75,8 @@ export function AboutSectionExpanded() {
             </Button>
           </div>
 
-          {/* Right - Stats & Image */}
+          {/* Right - Image */}
           <div className={`opacity-0 ${isVisible ? 'animate-fade-in-up stagger-2' : ''}`}>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="institutional-card p-5 text-center hover:border-primary/30 transition-colors"
-                >
-                  <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <p className="type-display-md">{stat.value}</p>
-                  <p className="type-label">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
             {/* CEO Photo - Thiago */}
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border border-border">
               <Image

@@ -45,7 +45,10 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
   const badges = getInfoBadges(vehicle)
 
   return (
-    <div className="bg-background-card border border-border rounded-xl p-6 sticky top-24">
+    // Sem sticky próprio: quem acompanha a rolagem é o contêiner da coluna na
+    // ficha (junto com os botões). Com os dois sticky, no fim da coluna este
+    // card ficava parado e cobria o "Falar com consultor" logo abaixo.
+    <div className="bg-background-card border border-border rounded-xl p-6">
       {/* Status badges */}
       {badges.length > 0 && (
         <div className="mb-4 flex gap-2 flex-wrap">
