@@ -345,15 +345,6 @@ html[data-abertura-agora] .hero-entra { animation-delay: calc(var(--d, 0s) + 1.8
   .hero-tela { --alto: calc(100svh - 4rem - env(safe-area-inset-bottom)); min-height: 520px; }
 }
 
-/* Vídeo de fundo cobrindo a área toda (o iframe do YouTube não tem
-   object-fit): 16:9 no mínimo do tamanho do hero, centralizado, e um pouco
-   maior para a moldura do player ficar fora da tela. */
-.hero-video {
-  width: max(100%, calc(var(--alto) * 16 / 9));
-  height: max(var(--alto), calc(100vw * 9 / 16));
-  transform: translate(-50%, -50%) scale(1.18);
-}
-
 /* Ao rolar, o fundo desce mais devagar e o texto sobe e some: profundidade
    sem script, onde o navegador suporta animação ligada à rolagem. */
 @supports (animation-timeline: scroll()) {

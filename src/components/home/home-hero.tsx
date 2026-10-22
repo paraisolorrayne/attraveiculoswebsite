@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import Image from 'next/image'
+import { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, MessageCircle, Volume2, X } from 'lucide-react'
 import { getWhatsAppUrl } from '@/lib/constants'
@@ -11,13 +11,20 @@ const consultantWhatsAppMessage =
   'Olá, Attra. Gostaria de falar com um consultor sobre os veículos do acervo.'
 
 /**
- * Vídeo do fundo do hero, escolhido pela Attra em 22/10/2026 ("Novidade na
- * Attra e Única no Brasil", McLaren GTS). Fixo de propósito: o último vídeo do
- * canal mudava o hero a cada publicação, e nem todo vídeo serve de fundo
- * (conversa com câmera, legenda gravada). A imagem inicial é um quadro dele
- * (public/images/hero-video-poster.jpg), não a capa do YouTube, que tem texto.
+ * Filme próprio da Attra para o hero (22/10/2026), 30 s com trilha, em dois
+ * cortes: o do celular vem mais fechado, para o recorte em pé. O nome leva a
+ * versão porque o cache é de um ano (next.config.ts): vídeo novo, nome novo.
+ * A imagem inicial é o primeiro quadro de cada corte.
  */
-const VIDEO_ID = 'LVX2JylkQJY'
+const FILME = {
+  computador: { video: '/videos/hero-computador-v1.mp4', quadro: '/images/hero-computador-v1.jpg' },
+  celular: { video: '/videos/hero-celular-v1.mp4', quadro: '/images/hero-celular-v1.jpg' },
+}
+
+// Tela em pé ou estreita usa o corte do celular, no vídeo e na imagem inicial.
+const MIDIA_CELULAR = '(max-width: 767px), (orientation: portrait)'
+
+const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celular : FILME.computador).video
 
 const ROTACAO_MS = 7000
 
@@ -32,88 +39,81 @@ const MANIFESTO_LINES = [
   'O lugar\ndo extraordinário.',
 ] as const
 
-function embedDeFundo(origem: string): string {
-  // Mudo, em laço, sem controles; enablejsapi para saber quando começou a
-  // tocar (o vídeo só aparece por cima da imagem depois disso).
-  const params = new URLSearchParams({
-    autoplay: '1', mute: '1', loop: '1', playlist: VIDEO_ID, controls: '0',
-    disablekb: '1', playsinline: '1', rel: '0', modestbranding: '1',
-    iv_load_policy: '3', fs: '0', enablejsapi: '1', origin: origem,
-  })
-  return `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?${params.toString()}`
-}
-
-function embedComSom(): string {
-  const params = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', modestbranding: '1' })
-  return `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?${params.toString()}`
-}
-
 const semInscricao = () => () => {}
 
+/** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
+function QuadroInicial() {
+  const comum = { alt: '', sizes: '100vw', quality: 75 }
+  const { props: { srcSet: celular } } = getImageProps({ ...comum, src: FILME.celular.quadro, width: 1280, height: 720 })
+  const { props: { srcSet: computador, ...img } } = getImageProps({
+    ...comum, src: FILME.computador.quadro, width: 1920, height: 1080, loading: 'eager', fetchPriority: 'high',
+  })
+  return (
+    <picture>
+      <source media={MIDIA_CELULAR} srcSet={celular} sizes="100vw" />
+      <source srcSet={computador} sizes="100vw" />
+      <img {...img} alt="" className="absolute inset-0 h-full w-full object-cover" />
+    </picture>
+  )
+}
+
 /**
- * Vídeo de fundo: entra depois que a página carregou (a imagem inicial é o que
- * pinta primeiro) e só aparece quando o YouTube avisa que está tocando, mais
- * um intervalo que cobre o título que o player mostra nos primeiros segundos.
- * Sem vídeo com movimento reduzido ou economia de dados: fica a imagem.
+ * Vídeo de fundo: entra depois que a página carregou (o quadro inicial é o que
+ * pinta primeiro), aparece quando começa a tocar e pausa fora da tela. Sem
+ * vídeo com movimento reduzido ou economia de dados: fica o quadro.
  */
 function VideoDeFundo() {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [carregar, setCarregar] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [fonte, setFonte] = useState<string | null>(null)
   const [tocando, setTocando] = useState(false)
 
   useEffect(() => {
     const conexao = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || conexao?.saveData) return
     let espera: ReturnType<typeof setTimeout>
-    const comecar = () => { espera = setTimeout(() => setCarregar(true), 600) }
+    const comecar = () => { espera = setTimeout(() => setFonte(videoDaTela()), 600) }
     if (document.readyState === 'complete') comecar()
     else window.addEventListener('load', comecar, { once: true })
     return () => { clearTimeout(espera); window.removeEventListener('load', comecar) }
   }, [])
 
   useEffect(() => {
-    if (!carregar) return
-    let mostrar: ReturnType<typeof setTimeout> | undefined
-    const aoMensagem = (e: MessageEvent) => {
-      if (!/youtube(-nocookie)?\.com$/.test(new URL(e.origin).hostname)) return
-      let dados: { event?: string; info?: { playerState?: number } }
-      try { dados = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
-      const estado = dados?.info?.playerState
-      // 1 = tocando. Espera os controles e o título que o player mostra no
-      // começo sumirem (no celular, os botões de voltar/pausar/avançar).
-      if (estado === 1 && !mostrar) mostrar = setTimeout(() => setTocando(true), 4500)
-      // 0 = terminou (o laço recomeça) e 3 = carregando: o player mostra a
-      // própria interface por um instante; a imagem cobre até voltar a tocar.
-      if (estado === 0 || estado === 3) {
-        clearTimeout(mostrar)
-        mostrar = undefined
-        setTocando(false)
-      }
-    }
-    window.addEventListener('message', aoMensagem)
-    return () => { window.removeEventListener('message', aoMensagem); clearTimeout(mostrar) }
-  }, [carregar])
+    const video = videoRef.current
+    if (!fonte || !video) return
+    // O autoplay só é aceito mudo; no iOS a propriedade precisa estar ligada antes do play().
+    video.muted = true
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) video.play().catch(() => {}) // modo economia do iOS recusa: fica o quadro
+      else video.pause()
+    })
+    io.observe(video)
+    return () => io.disconnect()
+  }, [fonte])
 
-  if (!carregar) return null
+  if (!fonte) return null
 
   return (
-    <iframe
-      ref={iframeRef}
-      src={embedDeFundo(window.location.origin)}
-      title="Vídeo de apresentação da Attra"
+    <video
+      ref={videoRef}
+      src={fonte}
+      muted
+      loop
+      playsInline
+      preload="auto"
       aria-hidden="true"
       tabIndex={-1}
-      allow="autoplay; encrypted-media"
-      onLoad={() => {
-        // Pede ao player que avise as mudanças de estado (API do YouTube por postMessage).
-        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 'hero', channel: 'widget' }), '*')
-      }}
-      className={`hero-video pointer-events-none absolute left-1/2 top-1/2 border-0 transition-opacity duration-[1500ms] ease-out ${tocando ? 'opacity-100' : 'opacity-0'}`}
+      disablePictureInPicture
+      disableRemotePlayback
+      onPlaying={() => setTocando(true)}
+      className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${tocando ? 'opacity-100' : 'opacity-0'}`}
     />
   )
 }
 
 function JanelaDoVideo({ aoFechar }: { aoFechar: () => void }) {
+  // O mesmo arquivo do fundo, que a essa altura já está no cache.
+  const [fonte] = useState(videoDaTela)
+
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
     document.addEventListener('keydown', aoTeclar)
@@ -142,11 +142,11 @@ function JanelaDoVideo({ aoFechar }: { aoFechar: () => void }) {
         <X className="h-5 w-5" />
       </button>
       <div className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-xl bg-black" onClick={(e) => e.stopPropagation()}>
-        <iframe
-          src={embedComSom()}
-          title="Attra Veículos — vídeo de apresentação"
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen
+        <video
+          src={fonte}
+          controls
+          autoPlay
+          playsInline
           className="absolute inset-0 h-full w-full"
         />
       </div>
@@ -156,9 +156,9 @@ function JanelaDoVideo({ aoFechar }: { aoFechar: () => void }) {
 }
 
 /**
- * Hero da home em tela cheia, com o vídeo da Attra no fundo. Substitui o
- * vídeo enquadrado ao lado do texto, que dividia a atenção com o título e
- * mostrava a barra do YouTube ao passar o mouse.
+ * Hero da home em tela cheia, com o filme da Attra no fundo. Substitui o
+ * vídeo do YouTube enquadrado ao lado do texto, que dividia a atenção com o
+ * título e mostrava a barra do player ao passar o mouse.
  */
 export function HomeHero() {
   const [passo, setPasso] = useState(0)
@@ -183,15 +183,7 @@ export function HomeHero() {
       className="hero-tela relative w-full overflow-hidden bg-black"
     >
       <div className="hero-fundo absolute inset-0" aria-hidden="true">
-        <Image
-          src="/images/hero-video-poster.jpg"
-          alt=""
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-          className="object-cover object-center"
-        />
+        <QuadroInicial />
         {montado && <VideoDeFundo />}
       </div>
 
