@@ -56,21 +56,25 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
     setLoadedImages(prev => new Set(prev).add(index)) // Hide skeleton
   }, [])
 
-  // Preload adjacent images
+  // Original das vizinhas, para a tela cheia (que mostra a foto crua do
+  // AutoConf) trocar de foto sem espera. Só com ela aberta: a galeria já
+  // renderiza a atual e as duas vizinhas pelo next/image, e baixar o original
+  // de cada uma somava ~1,7 MB de JPEG a toda ficha aberta, disputando banda
+  // com a primeira foto.
   useEffect(() => {
+    if (!isFullscreen) return
     const preloadIndexes = [
-      currentIndex,
       (currentIndex + 1) % photos.length,
       (currentIndex - 1 + photos.length) % photos.length,
     ]
 
     preloadIndexes.forEach(index => {
-      if (!loadedImages.has(index) && photos[index]) {
+      if (!fullscreenLoaded.has(index) && photos[index]) {
         const img = new window.Image()
         img.src = photos[index]
       }
     })
-  }, [currentIndex, photos, loadedImages])
+  }, [isFullscreen, currentIndex, photos, fullscreenLoaded])
 
   const goToPrevious = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))
@@ -146,9 +150,14 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
                       // `block` porque sem `fill` a imagem volta a ser inline e
                       // ganharia o vão de baseline embaixo.
                       "block hero-vehicle-image transition-opacity duration-300",
-                      loadedImages.has(index) ? "opacity-100" : "opacity-0"
+                      // A primeira foto não espera o onLoad: com opacity-0 no
+                      // HTML, ela só aparecia depois de o React hidratar, e o LCP
+                      // da ficha ficava preso ao JS. O skeleton segue por baixo
+                      // até ela pintar.
+                      index === 0 || loadedImages.has(index) ? "opacity-100" : "opacity-0"
                     )}
                     priority={index === 0 || index === currentIndex}
+                    fetchPriority={index === 0 ? 'high' : undefined}
                     quality={90}
                     sizes="100vw"
                     onLoad={() => handleImageLoad(index)}

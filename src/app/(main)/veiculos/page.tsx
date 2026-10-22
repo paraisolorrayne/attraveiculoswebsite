@@ -546,8 +546,8 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
                     />
                   )}
                   <div className="space-y-4">
-                    {vehicles.map((vehicle) => (
-                      <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="horizontal" />
+                    {vehicles.map((vehicle, index) => (
+                      <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="horizontal" priority={index === 0} />
                     ))}
                   </div>
                 </Suspense>

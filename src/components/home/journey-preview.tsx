@@ -23,7 +23,7 @@ const journeySteps = [
   {
     number: '3',
     icon: Truck,
-    title: 'Logística National',
+    title: 'Logística Nacional',
     description: 'Transporte seguro em caminhão fechado com seguro premium até a porta da sua casa.',
   },
   {
