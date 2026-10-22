@@ -11,9 +11,13 @@
  *
  * A versão passa pela expansão de abreviação do AutoConf: sem isso o cliente
  * recebe "1500 LARAM. NIGHT ED. BI-TB 4x4 Aut." no WhatsApp.
+ *
+ * O nome sai de `nomeDoVeiculo`, o mesmo do título da ficha: a versão perde o
+ * modelo repetido no começo, que o AutoConf às vezes manda (modelo "Range
+ * Rover" + versão "Range Rover VELAR SV" virava "Range Rover Range Rover").
  */
 
-import { expandirAbreviacoes } from '@/lib/normalizar-abreviacoes'
+import { nomeDoVeiculo } from '@/lib/identidade-do-veiculo'
 
 interface VeiculoDoResumo {
 	brand: string
@@ -62,10 +66,7 @@ function ano(fabricacao: number | null | undefined, modelo: number | null | unde
  * defeito de cadastro — e o resumo deve calar, não inventar.
  */
 export function resumoDoVeiculo(v: VeiculoDoResumo): string {
-	const nome = [v.brand, v.model, expandirAbreviacoes(v.version)]
-		.map(p => (p ?? '').trim())
-		.filter(Boolean)
-		.join(' ')
+	const nome = nomeDoVeiculo(v)
 
 	const anoTexto = ano(v.year_manufacture, v.year_model)
 
