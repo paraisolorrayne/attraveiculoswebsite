@@ -44,7 +44,7 @@ export function FAQSection({
           </div>
 
           {/* FAQ Items */}
-          <div className="space-y-3">
+          <div data-revelar className="space-y-3">
             {faqs.map((faq, index) => (
               <div
                 key={index}

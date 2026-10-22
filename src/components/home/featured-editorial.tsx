@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, BookOpen, Newspaper } from 'lucide-react'
@@ -68,38 +68,18 @@ export interface ArtigoEmDestaque {
  * Google rastreava os três a partir da home.
  */
 export function FeaturedEditorial({ artigos }: { artigos: ArtigoEmDestaque[] }) {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [isVisible, setIsVisible] = useState(true)
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true)
-      },
-      { threshold: 0.1 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
-
-    // Fallback: garante que o conteúdo aparece mesmo sem scroll (mobile)
-    const timeout = setTimeout(() => setIsVisible(true), 1500)
-
-    return () => {
-      observer.disconnect()
-      clearTimeout(timeout)
-    }
-  }, [])
 
   if (artigos.length === 0) return null
 
   return (
     <section
-      ref={sectionRef}
       className="py-24 lg:py-32 bg-background"
       id="destaque-editorial"
     >
       <Container size="2xl">
         {/* Section Header */}
-        <div className={`mb-16 opacity-0 ${isVisible ? 'animate-fade-in-up' : ''}`}>
+        <div className={`mb-16`}>
           <div className="flex items-center gap-3 mb-4">
             <BookOpen className="w-6 h-6 text-primary" />
             <span className="text-primary font-medium tracking-wide uppercase text-sm">Destaque Editorial</span>
@@ -123,12 +103,11 @@ export function FeaturedEditorial({ artigos }: { artigos: ArtigoEmDestaque[] }) 
 
         {/* Featured Articles Grid */}
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-          {artigos.map((article, index) => (
+          {artigos.map((article) => (
             <Link
               key={article.slug}
               href={`/blog/${article.slug}`}
-              className={`group bg-background-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all
-                opacity-0 ${isVisible ? `animate-fade-in-up stagger-${index + 1}` : ''}`}
+              className={`group bg-background-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all`}
             >
               {/* Image Container */}
               <div className="relative w-full h-48 lg:h-56 overflow-hidden bg-background-soft">

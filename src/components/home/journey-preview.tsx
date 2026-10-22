@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Search, FileCheck, Truck, CheckCircle } from 'lucide-react'
 import { Container } from '@/components/ui/container'
@@ -35,36 +34,16 @@ const journeySteps = [
 ]
 
 export function JourneyPreview() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [isVisible, setIsVisible] = useState(true)
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true)
-      },
-      { threshold: 0.1 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
-
-    // Fallback: garante que o conteúdo aparece mesmo sem scroll (mobile)
-    const timeout = setTimeout(() => setIsVisible(true), 1500)
-
-    return () => {
-      observer.disconnect()
-      clearTimeout(timeout)
-    }
-  }, [])
 
   return (
     <section
-      ref={sectionRef}
       className="py-24 lg:py-32 bg-gradient-to-br from-primary/5 via-background to-background"
       id="jornada-attra"
     >
       <Container size="2xl">
         {/* Section Header */}
-        <div className={`text-center mb-16 opacity-0 ${isVisible ? 'animate-fade-in-up' : ''}`}>
+        <div className={`text-center mb-16`}>
           <span className="text-primary font-medium tracking-wide uppercase text-sm">Jornada Attra</span>
           <h2 className="text-4xl lg:text-5xl font-bold text-foreground mt-4 mb-6">
             Da Seleção à Entrega na Sua Garagem
@@ -77,12 +56,11 @@ export function JourneyPreview() {
 
         {/* Journey Steps */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
-          {journeySteps.map((step, index) => (
+          {journeySteps.map((step) => (
             <div
               key={step.number}
               className={`group bg-background-card border border-border rounded-2xl p-6 lg:p-7
-                hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all
-                opacity-0 ${isVisible ? `animate-fade-in-up stagger-${index + 1}` : ''}`}
+                hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all`}
             >
               <div className="flex items-start gap-4 mb-4">
                 <div className="flex-shrink-0">
@@ -105,7 +83,7 @@ export function JourneyPreview() {
         </div>
 
         {/* CTA */}
-        <div className={`text-center opacity-0 ${isVisible ? 'animate-fade-in-up stagger-5' : ''}`}>
+        <div className={`text-center`}>
           <Button asChild size="lg">
             <Link href="/jornada" className="flex items-center gap-2">
               Conheça a Jornada Completa <ArrowRight className="w-5 h-5" />

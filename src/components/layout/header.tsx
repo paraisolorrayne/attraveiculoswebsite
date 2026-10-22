@@ -8,6 +8,7 @@ import { Container } from '@/components/ui/container'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 import { EDITORIAL_SECTION } from '@/lib/constants'
+import { EVENTO_ABRIR_MENU } from '@/lib/navegacao'
 import { X } from 'lucide-react'
 
 // Minimal navigation for premium boutique feel
@@ -47,6 +48,13 @@ export function Header() {
   // Toggle menu function
   const toggleMenu = useCallback(() => {
     setMobileMenuOpen(prev => !prev)
+  }, [])
+
+  // A aba "Menu" da barra do celular (tab-bar-celular.tsx) abre este menu.
+  useEffect(() => {
+    const abrir = () => setMobileMenuOpen(true)
+    window.addEventListener(EVENTO_ABRIR_MENU, abrir)
+    return () => window.removeEventListener(EVENTO_ABRIR_MENU, abrir)
   }, [])
 
   // Lock body scroll when mobile menu is open - improved version
@@ -233,8 +241,10 @@ export function Header() {
               />
             </div>
 
-            {/* Mobile menu button - enhanced visibility and touch target */}
-            <div className="flex lg:hidden items-center gap-2">
+            {/* Mobile menu button - enhanced visibility and touch target.
+                Prévia 22/10/2026: escondidos — no celular, "Estoque" e o menu
+                foram para a barra de abas embaixo (tab-bar-celular.tsx). */}
+            <div className="hidden items-center gap-2">
               {/* Always-visible "Estoque" pill — zero-scroll access to inventory */}
               <Link
                 href="/veiculos"

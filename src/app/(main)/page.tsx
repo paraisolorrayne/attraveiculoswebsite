@@ -10,14 +10,12 @@ import {
   LeadCaptureSection,
   TrustStrip,
   EditorialSelection,
-  NumerosAttra,
   FaixaDeMarcas,
   marcasDaFaixa,
 } from '@/components/home'
 import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
-import { getLatestAttraVideo } from '@/lib/youtube-feed'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import type { ArtigoEmDestaque } from '@/components/home/featured-editorial'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
@@ -122,8 +120,6 @@ export default async function Home() {
     console.error('Failed to fetch stock for the brand strip:', error)
   }
 
-  // Hero exibe o vídeo mais recente do canal da Attra (RSS, sem API key).
-  const latestVideo = await getLatestAttraVideo()
 
   // Destaque editorial: os três posts mais recentes do blog.
   let artigos: ArtigoEmDestaque[] = []
@@ -142,23 +138,22 @@ export default async function Home() {
 
   return (
     <>
-      {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
-      <HomeHero videoId={latestVideo?.videoId ?? null} />
+      {/* 1. Hero em tela cheia com o vídeo da Attra no fundo (fixo, escolhido
+             por ela). A abertura de marca fica no layout (abertura-attra.tsx). */}
+      <HomeHero />
 
       {/* 2. Marcas com carro no estoque — atalho para a página de cada marca. */}
       <FaixaDeMarcas marcas={marcasDaFaixa(estoque)} />
 
-      {/* 3. Prova de confiança em números, antes da curadoria. Substitui os
-             números que ficavam no Posicionamento. */}
-      <NumerosAttra />
-
-      {/* "Por que confiar na Attra" — fica logo depois dos números. */}
+      {/* 3. Prova de confiança — antes da curadoria para reforçar a marca
+             antes de pedir os dados do visitante. */}
       <TrustStrip />
 
       {/* 4. Seleção editorial curada — substitui a antiga grade "Destaques" */}
       <EditorialSelection vehicles={editorialVehicles} />
 
-      {/* 5. Posicionamento — rosto da marca (Thiago) + pilares narrativos. */}
+      {/* 5. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
+             Também carrega os números de autoridade (anos / 500 / 27 / 5.0). */}
       <AboutSectionExpanded />
 
       {/* 6. Captação consultiva — form imediatamente antes da Operação,

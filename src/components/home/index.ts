@@ -24,6 +24,6 @@ export * from './home-hero'
 export * from './lead-capture-section'
 export * from './trust-strip'
 export * from './editorial-selection'
-export * from './numeros-attra'
 export * from './faixa-de-marcas'
+export * from './abertura-attra'
 

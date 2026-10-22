@@ -57,7 +57,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
     <section className="py-20 md:py-28 bg-background relative">
       <Container size="2xl">
         {/* Header */}
-        <div className="mb-12 md:mb-16 max-w-2xl">
+        <div data-revelar className="mb-12 md:mb-16 max-w-2xl">
           <SectionKicker className="mb-4">
             Seleção editorial · Atualizada semanalmente
           </SectionKicker>
@@ -74,7 +74,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
             (2 cards empilhados) preencha toda a altura do principal. */}
         <div className="grid gap-6 md:gap-8 lg:grid-cols-12 lg:items-stretch">
           {/* Main — large */}
-          <article className="lg:col-span-7 group">
+          <article data-revelar className="lg:col-span-7 group">
             <Link
               href={`/veiculo/${main.slug}`}
               className="block relative rounded-2xl overflow-hidden bg-background-card border border-border shadow-lg shadow-black/5"
@@ -145,7 +145,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
           </article>
 
           {/* Secondary — stacked editorial cards (NOT listing grid) */}
-          <div className="lg:col-span-5 flex flex-col gap-6 md:gap-8">
+          <div data-revelar style={{ ['--d' as string]: '120ms' }} className="lg:col-span-5 flex flex-col gap-6 md:gap-8">
             {secondary.map((v) => (
               <SecondaryPick key={v.id} vehicle={v} />
             ))}

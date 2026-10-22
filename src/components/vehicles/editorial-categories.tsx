@@ -59,7 +59,7 @@ export function EditorialCategoryChips() {
   // Celular: uma linha só que rola de lado (de borda a borda da tela), para não
   // empurrar a lista para baixo da primeira tela.
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,#000_82%,transparent)] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none]">
       {EDITORIAL_CATEGORIES.map((cat) => {
         const Icon = cat.icon
         const isActive = activeCategory === cat.id

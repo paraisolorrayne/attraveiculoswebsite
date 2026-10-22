@@ -21,8 +21,9 @@ const getSeoPageLabel = (path: string): string => {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-// Context-aware title/subtitle/message based on page and vehicle context
-function getContextMessage(sourcePage: string, vehicleBrand?: string, vehicleModel?: string) {
+// Context-aware title/subtitle/message based on page and vehicle context.
+// Exportada para a aba do WhatsApp da barra do celular mandar o mesmo texto.
+export function getContextMessage(sourcePage: string, vehicleBrand?: string, vehicleModel?: string) {
   if (vehicleBrand && vehicleModel) {
     return {
       title: `Interesse no ${vehicleBrand} ${vehicleModel}?`,

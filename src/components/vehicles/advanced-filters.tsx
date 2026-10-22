@@ -262,9 +262,12 @@ export function AdvancedFilters() {
         )}
       </button>
 
-      {/* Filter sidebar/overlay */}
+      {/* Filter sidebar/overlay. overflow-hidden no celular: o painel fechado
+          fica 320 px à direita da tela (translate-x-full) e, sem o corte,
+          alargava /veiculos para 760 px num celular de 440 — a página inteira
+          arrastava para o lado e a barra de abas saía cortada. */}
       <div className={cn(
-        'fixed lg:relative inset-0 lg:inset-auto z-50 lg:z-auto transition-all duration-300',
+        'fixed lg:relative inset-0 lg:inset-auto z-50 lg:z-auto transition-all duration-300 overflow-hidden lg:overflow-visible',
         isOpen ? 'visible' : 'invisible lg:visible'
       )}>
         {/* Backdrop */}

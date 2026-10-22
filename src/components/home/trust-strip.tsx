@@ -26,9 +26,11 @@ export function TrustStrip() {
           Por que confiar na Attra
         </p>
         <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-6">
-          {pillars.map(({ icon: Icon, title, line }) => (
+          {pillars.map(({ icon: Icon, title, line }, i) => (
             <li
               key={title}
+              data-revelar
+              style={{ ['--d' as string]: `${i * 70}ms` }}
               className="flex flex-col items-center text-center px-2"
             >
               <div className="w-10 h-10 mb-2.5 rounded-xl bg-primary/10 flex items-center justify-center">
