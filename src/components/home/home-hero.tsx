@@ -1,10 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import { getImageProps } from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, MessageCircle, Volume2, X } from 'lucide-react'
+import { ArrowRight, MessageCircle, Volume2, VolumeX } from 'lucide-react'
 import { getWhatsAppUrl } from '@/lib/constants'
 
 const consultantWhatsAppMessage =
@@ -39,8 +38,6 @@ const MANIFESTO_LINES = [
   'O lugar\ndo extraordinário.',
 ] as const
 
-const semInscricao = () => () => {}
-
 /** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
 function QuadroInicial() {
   const comum = { alt: '', sizes: '100vw', quality: 75 }
@@ -59,13 +56,17 @@ function QuadroInicial() {
 
 /**
  * Vídeo de fundo: entra depois que a página carregou (o quadro inicial é o que
- * pinta primeiro), aparece quando começa a tocar e pausa fora da tela. Sem
- * vídeo com movimento reduzido ou economia de dados: fica o quadro.
+ * pinta primeiro), aparece quando começa a tocar e pausa fora da tela ou com a
+ * aba escondida. Sem vídeo com movimento reduzido ou economia de dados: fica o
+ * quadro. O som é do hero (botão "Ligar som"), por isso o elemento é dele.
  */
-function VideoDeFundo() {
-  const videoRef = useRef<HTMLVideoElement>(null)
+function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
+  videoRef: RefObject<HTMLVideoElement | null>
+  tocando: boolean
+  setTocando: Dispatch<SetStateAction<boolean>>
+  setComSom: Dispatch<SetStateAction<boolean>>
+}) {
   const [fonte, setFonte] = useState<string | null>(null)
-  const [tocando, setTocando] = useState(false)
 
   useEffect(() => {
     const conexao = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
@@ -82,13 +83,21 @@ function VideoDeFundo() {
     if (!fonte || !video) return
     // O autoplay só é aceito mudo; no iOS a propriedade precisa estar ligada antes do play().
     video.muted = true
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) video.play().catch(() => {}) // modo economia do iOS recusa: fica o quadro
-      else video.pause()
+    const tocar = () => video.play().catch(() => {
+      // Com som, o navegador pode recusar sem um toque recente: volta ao mudo e
+      // segue tocando. Mudo e recusado (modo economia do iOS), fica o quadro.
+      if (video.muted) return
+      video.muted = true
+      setComSom(false)
+      video.play().catch(() => {})
     })
+    let visivel = false
+    const atualizar = () => (visivel && !document.hidden ? tocar() : video.pause())
+    const io = new IntersectionObserver(([e]) => { visivel = e.isIntersecting; atualizar() })
     io.observe(video)
-    return () => io.disconnect()
-  }, [fonte])
+    document.addEventListener('visibilitychange', atualizar)
+    return () => { io.disconnect(); document.removeEventListener('visibilitychange', atualizar) }
+  }, [fonte, videoRef, setComSom])
 
   if (!fonte) return null
 
@@ -110,51 +119,6 @@ function VideoDeFundo() {
   )
 }
 
-function JanelaDoVideo({ aoFechar }: { aoFechar: () => void }) {
-  // O mesmo arquivo do fundo, que a essa altura já está no cache.
-  const [fonte] = useState(videoDaTela)
-
-  useEffect(() => {
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }
-    document.addEventListener('keydown', aoTeclar)
-    const rolagem = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', aoTeclar)
-      document.body.style.overflow = rolagem
-    }
-  }, [aoFechar])
-
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Vídeo da Attra com som"
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
-      onClick={aoFechar}
-    >
-      <button
-        type="button"
-        onClick={aoFechar}
-        className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-        aria-label="Fechar vídeo"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      <div className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-xl bg-black" onClick={(e) => e.stopPropagation()}>
-        <video
-          src={fonte}
-          controls
-          autoPlay
-          playsInline
-          className="absolute inset-0 h-full w-full"
-        />
-      </div>
-    </div>,
-    document.body,
-  )
-}
-
 /**
  * Hero da home em tela cheia, com o filme da Attra no fundo. Substitui o
  * vídeo do YouTube enquadrado ao lado do texto, que dividia a atenção com o
@@ -162,9 +126,18 @@ function JanelaDoVideo({ aoFechar }: { aoFechar: () => void }) {
  */
 export function HomeHero() {
   const [passo, setPasso] = useState(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [tocando, setTocando] = useState(false)
   const [comSom, setComSom] = useState(false)
-  const fecharVideo = useCallback(() => setComSom(false), [setComSom])
-  const montado = useSyncExternalStore(semInscricao, () => true, () => false)
+
+  // No próprio clique: é o toque que autoriza o navegador a tocar com som.
+  const alternarSom = () => {
+    const video = videoRef.current
+    if (!video) return
+    video.muted = !video.muted
+    if (video.paused) video.play().catch(() => {})
+    setComSom(!video.muted)
+  }
 
   // Rotaciona o manifesto (respeitando prefers-reduced-motion).
   useEffect(() => {
@@ -184,7 +157,7 @@ export function HomeHero() {
     >
       <div className="hero-fundo absolute inset-0" aria-hidden="true">
         <QuadroInicial />
-        {montado && <VideoDeFundo />}
+        <VideoDeFundo videoRef={videoRef} tocando={tocando} setTocando={setTocando} setComSom={setComSom} />
       </div>
 
       {/* Escurecimento para o texto ler bem sobre qualquer quadro do vídeo */}
@@ -233,19 +206,22 @@ export function HomeHero() {
             </a>
           </div>
 
+          {/* Só aparece com o vídeo tocando; o espaço fica reservado para o
+              título não pular quando ele entra. */}
           <button
             type="button"
-            onClick={() => setComSom(true)}
-            className="hero-entra mt-7 inline-flex items-center gap-2.5 text-[11px] uppercase tracking-[0.24em] text-white/70 transition-colors hover:text-white"
-            style={{ ['--d' as string]: '0.2s' }}
+            onClick={alternarSom}
+            aria-pressed={comSom}
+            aria-hidden={!tocando || undefined}
+            tabIndex={tocando ? undefined : -1}
+            className={`mt-7 inline-flex items-center gap-2.5 text-[11px] uppercase tracking-[0.24em] text-white/70 transition-[color,opacity] duration-700 hover:text-white ${tocando ? 'opacity-100' : 'invisible opacity-0'}`}
           >
-            <Volume2 className="h-4 w-4" aria-hidden="true" />
-            Assistir com som
+            {comSom ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
+            {comSom ? 'Desligar som' : 'Ligar som'}
           </button>
         </div>
       </div>
 
-      {montado && comSom && <JanelaDoVideo aoFechar={fecharVideo} />}
     </section>
   )
 }
