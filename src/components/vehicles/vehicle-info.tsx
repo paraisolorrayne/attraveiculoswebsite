@@ -86,9 +86,10 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
             {vehicle.mileage === 0 ? '0 km (Novo)' : `${vehicle.mileage.toLocaleString('pt-BR')} km`}
           </p>
         </div>
+        {/* Cor e câmbio do molde da AutoConf, quando houver, como na ficha técnica. */}
         <div>
           <p className="text-sm text-foreground-secondary">Cor</p>
-          <p className="font-medium text-foreground">{vehicle.color}</p>
+          <p className="font-medium text-foreground">{vehicle.ficha?.cor ?? vehicle.color}</p>
         </div>
         <div>
           <p className="text-sm text-foreground-secondary">Combustível</p>
@@ -96,7 +97,7 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
         </div>
         <div>
           <p className="text-sm text-foreground-secondary">Câmbio</p>
-          <p className="font-medium text-foreground">{vehicle.transmission}</p>
+          <p className="font-medium text-foreground">{vehicle.ficha?.cambio ?? vehicle.transmission}</p>
         </div>
       </div>
 

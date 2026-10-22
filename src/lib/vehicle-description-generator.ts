@@ -2,9 +2,14 @@
  * Vehicle Description Generator
  * Generates consistent, deterministic descriptions based on structured vehicle data
  * No external API dependencies - pure data-driven approach
+ *
+ * Desde 22/10/2026, o anúncio com a ficha do molde da AutoConf tem texto
+ * próprio, montado com os campos dela (`descricaoPelaFicha`). Sem ficha, os
+ * modelos por categoria abaixo continuam como eram.
  */
 
 import type { Vehicle } from '@/types'
+import type { FichaDoAnuncio } from '@/lib/ficha-do-anuncio'
 import { expandirAbreviacoes } from '@/lib/normalizar-abreviacoes'
 
 // Category labels in Portuguese
@@ -168,6 +173,11 @@ export function generateVehicleDescription(vehicle: Vehicle): string {
   const yearDisplay = vehicle.year_manufacture === vehicle.year_model
     ? String(vehicle.year_model)
     : `${vehicle.year_manufacture}/${vehicle.year_model}`
+
+  if (vehicle.ficha) {
+    const abertura = `Este ${vehicle.brand} ${vehicle.model}${cleanVersion ? ` ${cleanVersion}` : ''} ${yearDisplay}`
+    return descricaoPelaFicha(vehicle, vehicle.ficha, abertura)
+  }
 
   // Get top accessories
   const topAccessories = getTopAccessories(vehicle.options)
@@ -357,6 +367,99 @@ function buildPremiumDescription(
   const signature = ` Um veículo ${categoryLabel} completo para quem valoriza qualidade.`
 
   return opening + mechanicsSection + conditionSection + colorSection + fuelSection + equipmentSection + signature
+}
+
+// --- texto pela ficha do molde ------------------------------------------------
+
+// Começo que não vai para minúscula: nome próprio de marca, material ou pacote.
+const NOME_PROPRIO = /^(Alcantara|Akrapovi[cč]|Bang|Bose|Bowers|Brembo|Burmester|Harman|Mark|Meridian|Michelin|Naim|Nappa|Pirelli|Recaro|Sport)\b/
+
+/**
+ * "Blindado BSS" vira "blindado BSS" no meio da frase. Sigla, número e nome
+ * próprio da lista ficam como o marketing escreveu.
+ */
+function emMinuscula(texto: string): string {
+  if (NOME_PROPRIO.test(texto)) return texto
+  return /^[A-ZÀ-Ý][a-zà-ÿ]+(?=[\s,;.]|$)/.test(texto) ? texto[0].toLowerCase() + texto.slice(1) : texto
+}
+
+/** "câmbio" + "PDK de 8 marchas"; sem repetir quando o valor já começa pelo rótulo. */
+function comRotulo(rotulo: string, valor: string, minuscula = true): string {
+  const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  if (semAcento(valor).startsWith(`${semAcento(rotulo)} `)) return `${rotulo}${valor.slice(rotulo.length)}`
+  return `${rotulo} ${minuscula ? emMinuscula(valor) : valor}`
+}
+
+/** "a", "a e b", "a, b e c". */
+function juntarComE(itens: string[]): string {
+  const lista = itens.filter(Boolean)
+  if (lista.length <= 1) return lista.join('')
+  return `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`
+}
+
+const MAX_ITENS_DA_LISTA = 4
+
+/**
+ * O "Sobre este veículo" de um anúncio com a ficha do molde da AutoConf
+ * (`ficha-do-anuncio.ts`): motor, potência e torque; câmbio, tração e freios;
+ * desempenho; cor, interior, som e rodas; os diferenciais e os opcionais que o
+ * marketing escreveu. Campo da ficha vence o do cadastro, como na tabela da
+ * ficha técnica.
+ *
+ * Só fatos. Sem "excelente estado" nem "bem cuidado": a ficha não diz nada
+ * sobre conservação, e o texto não promete o que o anúncio não afirma.
+ */
+function descricaoPelaFicha(vehicle: Vehicle, ficha: FichaDoAnuncio, abertura: string): string {
+  const frases: string[] = []
+
+  const potencia = ficha.potencia ?? (vehicle.horsepower ? `${vehicle.horsepower} cv` : null)
+  let motor = ficha.motor ? comRotulo('motor', ficha.motor, false) : ''
+  if (potencia) motor = motor ? `${motor} de ${potencia}` : `motor de ${potencia}`
+  if (ficha.torque) motor = motor ? `${motor} e ${ficha.torque} de torque` : `${ficha.torque} de torque`
+
+  const cambio = ficha.cambio ?? vehicle.transmission
+  const conjunto = juntarComE([
+    cambio ? comRotulo('câmbio', cambio) : '',
+    ficha.tracao ? comRotulo('tração', ficha.tracao) : '',
+    ficha.freios ? comRotulo('freios', ficha.freios) : '',
+  ])
+
+  if (motor && conjunto) frases.push(`${abertura} tem ${motor}, com ${conjunto}.`)
+  else if (motor || conjunto) frases.push(`${abertura} tem ${motor || conjunto}.`)
+  else frases.push(`${abertura} faz parte do estoque da Attra Veículos.`)
+
+  const { aceleracao_0_100: zeroACem, velocidade_maxima: velocidade } = ficha
+  if (zeroACem && velocidade) frases.push(`Acelera de 0 a 100 km/h em ${zeroACem} e chega a ${velocidade}.`)
+  else if (zeroACem) frases.push(`Acelera de 0 a 100 km/h em ${zeroACem}.`)
+  else if (velocidade) frases.push(`Chega a ${velocidade} de velocidade máxima.`)
+
+  const zeroKm = vehicle.is_new || vehicle.mileage === 0
+  const km = formatMileage(vehicle.mileage)
+  const quilometragem = zeroKm
+    ? 'Zero quilômetro'
+    : vehicle.mileage < 50000 ? `Com apenas ${km} rodados` : `Com ${km} rodados`
+  // A cor do molde é nome de pintura ("Prata High-Tech Metálico") e fica como
+  // foi escrita; a do cadastro vai em minúscula, como nos outros textos.
+  const cor = ficha.cor ?? vehicle.color?.toLowerCase()
+  const exemplar = juntarComE([
+    ficha.interior ? comRotulo('interior', ficha.interior) : '',
+    ficha.som ? comRotulo('som', ficha.som, false) : '',
+    ficha.rodas ? comRotulo('rodas', ficha.rodas) : '',
+  ])
+  if (cor) frases.push(`${quilometragem}, vem na cor ${cor}${exemplar ? `, com ${exemplar}` : ''}.`)
+  else if (exemplar) frases.push(`${quilometragem}, vem com ${exemplar}.`)
+  else frases.push(zeroKm ? 'É zero quilômetro.' : `Tem ${km} rodados.`)
+
+  if (ficha.diferenciais.length > 0) {
+    const itens = ficha.diferenciais.slice(0, MAX_ITENS_DA_LISTA).map(emMinuscula)
+    frases.push(`Diferenciais deste exemplar: ${juntarComE(itens)}.`)
+  }
+  if (ficha.opcionais.length > 0) {
+    const itens = ficha.opcionais.slice(0, MAX_ITENS_DA_LISTA).map(emMinuscula)
+    frases.push(`Traz ainda ${juntarComE(itens)}.`)
+  }
+
+  return frases.join(' ')
 }
 
 /**
