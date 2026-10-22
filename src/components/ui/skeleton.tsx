@@ -8,7 +8,8 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-foreground-secondary/10',
+        // Brilho que passa (`.esqueleto` em motion.css), não pisca-pisca.
+        'esqueleto rounded-md',
         className
       )}
     />
@@ -270,6 +271,24 @@ export function FiltersSkeleton() {
         </div>
       ))}
       <Skeleton className="h-10 w-full rounded-lg" />
+    </div>
+  )
+}
+
+/** Card em grade de /veiculos (layout "vertical" do CinematicVehicleCard). */
+export function VehicleGridCardSkeleton() {
+  return (
+    <div>
+      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+      <div className="pt-4 space-y-2.5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4 mt-4">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
+      </div>
     </div>
   )
 }

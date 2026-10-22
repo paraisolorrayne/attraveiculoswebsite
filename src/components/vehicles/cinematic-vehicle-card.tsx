@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { VehicleImage } from '@/components/ui/vehicle-image'
 import { Fuel, Gauge, Settings, Zap } from 'lucide-react'
@@ -62,49 +63,74 @@ function getPremiumBadges(vehicle: Vehicle) {
 
 export function CinematicVehicleCard({ vehicle, layout = 'horizontal', priority = false }: CinematicVehicleCardProps) {
   const badges = getPremiumBadges(vehicle)
+  const [fotoPronta, setFotoPronta] = useState(false)
 
   if (layout === 'vertical') {
+    const linhaTecnica = [vehicle.year_model, formatMileage(vehicle.mileage), vehicle.fuel_type].filter(Boolean)
     return (
-      <div className="group bg-background-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-1">
-        {/* Image container with consistent 4:3 aspect ratio - clickable link */}
-        <Link href={`/veiculo/${vehicle.slug}`} className="relative aspect-[4/3] overflow-hidden bg-background-soft vehicle-image-container block">
+      <article className="group flex flex-col">
+        {/* Foto: entra suave por cima do esqueleto. O card com `priority` é o
+            LCP da página e aparece direto, sem esperar o JavaScript. */}
+        <Link href={`/veiculo/${vehicle.slug}`} className="relative block aspect-[4/3] overflow-hidden rounded-xl bg-background-soft">
+          {!priority && !fotoPronta && <div className="esqueleto absolute inset-0 rounded-none" aria-hidden="true" />}
           <VehicleImage
             src={vehicle.photos?.[0]}
             alt={`${vehicle.brand} ${vehicle.model}`}
             fill
-            className="card-vehicle-image transition-transform duration-500 group-hover:scale-[1.03]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            onLoad={() => setFotoPronta(true)}
+            className={`foto-card object-cover object-center transition-[transform,opacity] duration-700 ease-out group-hover:scale-[1.04] ${
+              priority || fotoPronta ? 'opacity-100' : 'opacity-0'
+            }`}
+            sizes="(max-width: 640px) 100vw, (max-width: 1536px) 40vw, 28vw"
             priority={priority}
             fetchPriority={priority ? 'high' : undefined}
           />
-          {/* Badges - positioned to not cover car */}
+          {/* Selos num estilo só, discreto: a cor de cada um competia com a foto */}
           {badges.length > 0 && (
-            <div className="absolute top-3 left-3 flex gap-2">
+            <div className="absolute top-3 left-3 flex gap-1.5">
               {badges.map((badge, i) => (
-                <Badge key={i} variant={badge.variant} className="text-xs">{badge.label}</Badge>
+                <span
+                  key={i}
+                  className="rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/90 backdrop-blur-sm"
+                >
+                  {badge.label}
+                </span>
               ))}
             </div>
           )}
         </Link>
 
-        {/* Content */}
-        <div className="p-5">
+        <div className="flex flex-1 flex-col pt-4">
           <Link href={`/veiculo/${vehicle.slug}`} className="block">
-            <p className="text-primary text-xs font-medium mb-1 uppercase tracking-wider">{vehicle.brand}</p>
-            <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-foreground-secondary">{vehicle.brand}</p>
+            <h3
+              className="mt-1.5 text-[22px] leading-tight text-foreground line-clamp-1"
+              style={{ fontFamily: 'var(--font-montserrat)' }}
+            >
               {vehicle.model}
             </h3>
-            <p className="text-foreground-secondary text-sm mb-3">
-              {vehicle.year_model} • {formatMileage(vehicle.mileage)}
-            </p>
-            <p className="text-xl font-bold text-foreground mb-3">
-              {formatPrice(vehicle.price)}
+            {vehicle.version && (
+              <p className="mt-1 text-sm text-foreground-secondary line-clamp-1">{vehicle.version}</p>
+            )}
+            <p className="mt-3 text-sm text-foreground-secondary">
+              {linhaTecnica.map((item, i) => (
+                <span key={i}>
+                  {i > 0 && <span className="mx-1.5 text-foreground-secondary/60" aria-hidden="true">·</span>}
+                  {item}
+                </span>
+              ))}
             </p>
           </Link>
-          {/* CTA Buttons - outside link to avoid nested <a> */}
-          <VehicleCardCTAs vehicle={vehicle} variant="compact" />
+
+          {/* Preço e botão lado a lado; o botão fica fora do link (sem <a> dentro de <a>) */}
+          <div className="mt-auto pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
+              <p className="text-xl font-semibold tabular-nums text-foreground">{formatPrice(vehicle.price)}</p>
+              <VehicleCardCTAs vehicle={vehicle} variant="inline" />
+            </div>
+          </div>
         </div>
-      </div>
+      </article>
     )
   }
 

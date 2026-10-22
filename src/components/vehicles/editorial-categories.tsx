@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Zap, Mountain, Crown, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { avisarNavegacao } from '@/lib/navegacao'
 
 export interface EditorialCategory {
   id: string
@@ -51,6 +52,7 @@ export function EditorialCategoryChips() {
       params.set('categoria', categoryId)
     }
     params.delete('pagina')
+    avisarNavegacao(`/veiculos?${params.toString()}`)
     router.push(`/veiculos?${params.toString()}`)
   }
 

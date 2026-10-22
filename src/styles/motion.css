@@ -254,3 +254,58 @@
     pointer-events: none;
   }
 }
+
+/* ── Retorno de carregamento (prévia 22/10/2026) ─────────────────────────── */
+
+/* Linha de progresso do topo (racing-progress.tsx). Anda rápido no começo e
+   desacelera perto do fim sem nunca chegar sozinha; fecha quando a página
+   nova entra. */
+@keyframes navegando {
+  from { transform: scaleX(0.04); }
+  to { transform: scaleX(0.86); }
+}
+.progresso-navegacao { transform-origin: left center; transform: scaleX(0); }
+.progresso-navegacao[data-fase="andando"] {
+  animation: navegando 9s cubic-bezier(0.08, 0.7, 0.2, 1) forwards;
+}
+.progresso-navegacao[data-fase="chegando"] {
+  transform: scaleX(1);
+  opacity: 0;
+  transition: transform 0.2s ease-out, opacity 0.3s ease 0.15s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progresso-navegacao[data-fase="andando"] { animation: none; transform: scaleX(0.6); }
+  .progresso-navegacao[data-fase="chegando"] { transition: opacity 0.2s ease; }
+}
+
+/* Listagem esmaece enquanto o resultado do filtro carrega: o clique responde
+   na hora, mesmo com a página nova levando um segundo para chegar. */
+[data-lista-veiculos] { transition: opacity 0.25s ease; }
+html[data-navegando] [data-lista-veiculos] { opacity: 0.4; pointer-events: none; }
+
+/* Esqueleto de carregamento: um brilho que passa devagar, no lugar do
+   pisca-pisca do animate-pulse. */
+@keyframes brilho-carregando {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+.esqueleto {
+  background-color: color-mix(in srgb, var(--color-foreground-secondary) 9%, transparent);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-foreground) 7%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: brilho-carregando 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto { animation: none; background-image: none; }
+}
+
+/* Foto do card em grade nasce transparente e entra quando carrega; sem
+   JavaScript, aparece direto. */
+@media (scripting: none) {
+  .foto-card { opacity: 1 !important; }
+}

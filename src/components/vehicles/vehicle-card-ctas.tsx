@@ -8,7 +8,7 @@ import { cn, formatPrice } from '@/lib/utils'
 
 interface VehicleCardCTAsProps {
   vehicle: Vehicle
-  variant?: 'full' | 'compact' | 'icon-only' | 'outline'
+  variant?: 'full' | 'compact' | 'icon-only' | 'outline' | 'inline'
   className?: string
 }
 
@@ -42,6 +42,27 @@ Quando poderia fazer o agendamento?`
 Valor: ${formatPrice(vehicle.price)}
 
 Podem me enviar mais detalhes?`
+
+  // Botão do tamanho do texto, ao lado do preço (card em grade de /veiculos).
+  // Continua vermelho: é a ação de venda do card.
+  if (variant === 'inline') {
+    return (
+      <a
+        href={getWhatsAppUrl(moreInfoMessage)}
+        target="_blank"
+        rel="noopener noreferrer"
+        {...marcacao}
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          'inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover active:scale-[0.98]',
+          className,
+        )}
+      >
+        <MessageCircle className="w-4 h-4" aria-hidden="true" />
+        Falar com consultor
+      </a>
+    )
+  }
 
   if (variant === 'icon-only') {
     return (

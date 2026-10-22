@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { avisarNavegacao } from '@/lib/navegacao'
 
 interface SortDropdownProps {
   currentSort?: string
@@ -18,6 +19,7 @@ export function SortDropdown({ currentSort }: SortDropdownProps) {
     } else {
       params.delete('ordenar')
     }
+    avisarNavegacao(`${pathname}?${params.toString()}`)
     router.push(`${pathname}?${params.toString()}`)
   }
 

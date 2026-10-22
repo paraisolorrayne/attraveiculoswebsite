@@ -45,7 +45,7 @@ function Lista({ marcas, copia = false }: { marcas: MarcaDaFaixa[]; copia?: bool
           <Link
             href={`/comprar/${m.slug}`}
             tabIndex={copia ? -1 : undefined}
-            className="group flex items-baseline gap-2 px-6 py-2 md:px-9"
+            className="group flex items-baseline px-6 py-2 md:px-9"
           >
             <span
               className="whitespace-nowrap font-light tracking-tight text-foreground/70 transition-colors group-hover:text-foreground
@@ -54,10 +54,9 @@ function Lista({ marcas, copia = false }: { marcas: MarcaDaFaixa[]; copia?: bool
             >
               {m.nome}
             </span>
-            <span className="text-xs tabular-nums text-foreground-secondary">
-              {m.quantidade}
-              <span className="sr-only"> {m.quantidade === 1 ? 'carro' : 'carros'} em estoque</span>
-            </span>
+            {/* A quantidade fica só para leitor de tela: ao lado do nome, num
+                corpo pequeno e em outra fonte, destoava da marca. */}
+            <span className="sr-only">, {m.quantidade} {m.quantidade === 1 ? 'carro' : 'carros'} em estoque</span>
           </Link>
           <span aria-hidden="true" className="block h-1.5 w-1.5 rotate-45 bg-primary" />
         </li>

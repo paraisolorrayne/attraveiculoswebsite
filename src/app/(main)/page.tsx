@@ -8,6 +8,7 @@ import {
   AboutSectionExpanded,
   HomeHero,
   LeadCaptureSection,
+  TrustStrip,
   EditorialSelection,
   NumerosAttra,
   FaixaDeMarcas,
@@ -147,9 +148,12 @@ export default async function Home() {
       {/* 2. Marcas com carro no estoque — atalho para a página de cada marca. */}
       <FaixaDeMarcas marcas={marcasDaFaixa(estoque)} />
 
-      {/* 3. Prova de confiança em números, antes da curadoria. Substitui a
-             TrustStrip e os números que ficavam no Posicionamento. */}
+      {/* 3. Prova de confiança em números, antes da curadoria. Substitui os
+             números que ficavam no Posicionamento. */}
       <NumerosAttra />
+
+      {/* "Por que confiar na Attra" — fica logo depois dos números. */}
+      <TrustStrip />
 
       {/* 4. Seleção editorial curada — substitui a antiga grade "Destaques" */}
       <EditorialSelection vehicles={editorialVehicles} />

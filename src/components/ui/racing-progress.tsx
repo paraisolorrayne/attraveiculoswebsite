@@ -1,102 +1,98 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { EVENTO_NAVEGANDO } from '@/lib/navegacao'
 
 interface RacingProgressProps {
   className?: string
 }
 
-export function RacingProgress({ className }: RacingProgressProps) {
-  const [progress, setProgress] = useState(0)
-  const [isVisible, setIsVisible] = useState(false)
+/**
+ * Linha fina no topo enquanto a próxima página não chega.
+ *
+ * Começa no clique num link interno ou no aviso dos filtros (EVENTO_NAVEGANDO)
+ * e termina quando o endereço muda de verdade — antes era um cronômetro de 3 s
+ * que acabava com a página carregada ou não, com bolinha e bandeirada.
+ * Enquanto anda, marca `data-navegando` no <html>: a listagem usa isso para
+ * esmaecer enquanto o resultado do filtro carrega (motion.css).
+ */
+function Barra({ className }: RacingProgressProps) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const rota = `${pathname}?${searchParams.toString()}`
+
+  // Rota de onde a navegação partiu. A fase sai da comparação com a rota
+  // atual, sem estado extra: mudou o endereço, a barra fecha.
+  const [partida, setPartida] = useState<string | null>(null)
+  const fase = partida === null ? 'parada' : partida === rota ? 'andando' : 'chegando'
 
   useEffect(() => {
-    const handleStart = () => {
-      setIsVisible(true)
-      setProgress(0)
+    const rotaAtual = () => `${window.location.pathname}?${new URLSearchParams(window.location.search).toString()}`
+    let desiste: ReturnType<typeof setTimeout> | undefined
+
+    const comecar = (destino: URL) => {
+      const atual = rotaAtual()
+      const alvo = `${destino.pathname}?${destino.searchParams.toString()}`
+      if (alvo === atual) return
+      setPartida(atual)
+      clearTimeout(desiste)
+      // Se a navegação não acontecer (erro, clique cancelado), a barra não fica presa.
+      desiste = setTimeout(() => setPartida(null), 12000)
     }
 
-    const handleProgress = () => {
-      setProgress((prev) => Math.min(prev + Math.random() * 30, 90))
+    const aoClicar = (e: MouseEvent) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const link = (e.target as HTMLElement | null)?.closest('a')
+      if (!link || !link.href || link.target === '_blank' || link.hasAttribute('download')) return
+      const destino = new URL(link.href, window.location.href)
+      if (destino.origin !== window.location.origin) return
+      comecar(destino)
     }
 
-    const handleComplete = () => {
-      setProgress(100)
-      setTimeout(() => {
-        setIsVisible(false)
-        setProgress(0)
-      }, 300)
+    const aoAvisar = (e: Event) => {
+      const destino = (e as CustomEvent<{ destino: string }>).detail?.destino
+      if (destino) comecar(new URL(destino, window.location.href))
     }
 
-    // Listen for route changes (Next.js navigation)
-    const handleRouteChangeStart = () => handleStart()
-    const handleRouteChangeComplete = () => handleComplete()
-
-    // Simulate progress during navigation
-    let interval: NodeJS.Timeout
-
-    const startProgress = () => {
-      handleStart()
-      interval = setInterval(handleProgress, 200)
-    }
-
-    const stopProgress = () => {
-      clearInterval(interval)
-      handleComplete()
-    }
-
-    // Listen for clicks on internal links
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      const link = target.closest('a')
-      if (link && link.href && link.href.startsWith(window.location.origin)) {
-        startProgress()
-        // Stop after a reasonable time if navigation doesn't complete
-        setTimeout(stopProgress, 3000)
-      }
-    }
-
-    document.addEventListener('click', handleClick)
-
+    document.addEventListener('click', aoClicar)
+    window.addEventListener(EVENTO_NAVEGANDO, aoAvisar)
     return () => {
-      document.removeEventListener('click', handleClick)
-      clearInterval(interval)
+      document.removeEventListener('click', aoClicar)
+      window.removeEventListener(EVENTO_NAVEGANDO, aoAvisar)
+      clearTimeout(desiste)
     }
   }, [])
 
-  if (!isVisible) return null
+  useEffect(() => {
+    const raiz = document.documentElement
+    if (fase === 'andando') raiz.dataset.navegando = '1'
+    else delete raiz.dataset.navegando
+  }, [fase])
+
+  if (fase === 'parada') return null
 
   return (
-    <div className={cn('fixed top-0 left-0 right-0 z-[100] h-1', className)}>
-      {/* Track background */}
-      <div className="absolute inset-0 bg-foreground-secondary/20" />
-      
-      {/* Progress bar with racing stripe effect */}
+    <div className={cn('pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5', className)} aria-hidden="true">
       <div
-        className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-primary/80 transition-all duration-200 ease-out"
-        style={{ width: `${progress}%` }}
-      >
-        {/* Racing car indicator */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
-          <div className="w-3 h-3 bg-primary rounded-full shadow-lg shadow-primary/50 animate-pulse" />
-        </div>
-        
-        {/* Speed lines effect */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-        </div>
-      </div>
-      
-      {/* Checkered flag at end */}
-      {progress > 95 && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 flex">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className={`flex-1 ${i % 2 === 0 ? 'bg-foreground' : 'bg-background'}`} />
-          ))}
-        </div>
-      )}
+        data-fase={fase}
+        // Na cor do texto, não no vermelho: o cabeçalho já tem uma linha
+        // vermelha no topo e a barra sumia em cima dela.
+        className="progresso-navegacao h-full bg-foreground"
+        onTransitionEnd={(e) => {
+          if (fase === 'chegando' && e.propertyName === 'opacity') setPartida(null)
+        }}
+      />
     </div>
   )
 }
 
+export function RacingProgress({ className }: RacingProgressProps) {
+  // useSearchParams pede Suspense; sem ele, as páginas estáticas não montam.
+  return (
+    <Suspense fallback={null}>
+      <Barra className={className} />
+    </Suspense>
+  )
+}
