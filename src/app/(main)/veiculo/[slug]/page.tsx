@@ -25,6 +25,7 @@ import { nomeDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
+import { opcionaisDoVeiculo } from '@/lib/ficha-do-anuncio'
 import { pageTitle } from '@/lib/seo/page-metadata'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
@@ -227,6 +228,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	const mostrarPublicado = publicadoEmBR && publicadoEmBR !== conferidoEmBR
 
 	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs, conferidoEm)
+	const opcionais = opcionaisDoVeiculo(vehicle)
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -329,9 +331,9 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 						    "Performance" repetiam os mesmos campos. */}
 						<VehicleSpecsFallback vehicle={vehicle} />
 
-						{/* Options */}
-						{vehicle.options && vehicle.options.length > 0 && (
-							<VehicleOptions options={vehicle.options} />
+						{/* Opcionais: os do molde da AutoConf antes dos do catálogo fixo */}
+						{opcionais.length > 0 && (
+							<VehicleOptions options={opcionais} />
 						)}
 
 						{/* Contact - Mobile. O id é onde a barra fixa de preço some. */}

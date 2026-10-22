@@ -1,3 +1,5 @@
+import type { FichaDoAnuncio } from '@/lib/ficha-do-anuncio'
+
 export type Json =
   | string
   | number
@@ -48,6 +50,9 @@ export interface Database {
           engine: string | null
           origin: 'national' | 'imported' | null
           audio_url: string | null
+          /** Ficha do molde da "Descrição Customizada" da AutoConf. Só vem do
+           *  `POST /veiculo` (a lista não traz a descrição); null sem molde. */
+          ficha?: FichaDoAnuncio | null
         }
         Insert: Omit<Database['public']['Tables']['vehicles']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['vehicles']['Insert']>

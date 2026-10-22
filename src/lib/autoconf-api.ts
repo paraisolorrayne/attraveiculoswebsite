@@ -15,6 +15,7 @@ import {
 } from './inventory-snapshot'
 import { resolveBrand, nonEmpty } from './vehicle-fallbacks'
 import { tituloDoVeiculo } from './identidade-do-veiculo'
+import { lerFichaDoAnuncio, potenciaEmCv } from './ficha-do-anuncio'
 import {
   classificarCarroceria,
   classificarCategoria,
@@ -57,12 +58,17 @@ export interface AutoConfVehicle {
   anomodelo: string
   km: number
   potencia: number | null
+  potencia2?: number | null
   valorvenda: string
   valorpromocao: string | null
   zero_km: number
   foto: string
   fotos: Array<{ url: string }>
   versao_descricao: string | null
+  /** "Descrição Customizada para o Site". Só no `POST /veiculo`; a lista não
+   *  traz. Nunca é publicada como veio: o site lê dela só a ficha do molde
+   *  (`ficha-do-anuncio.ts`). */
+  descricao?: string | null
   acessorios: Array<{ nome: string; id: number; categoria: string | null; destaque: number; slug: string }>
   acessorios_destaque: Array<{ nome: string; id: number; categoria: string | null; destaque: number; slug: string }>
   filtro: string
@@ -75,6 +81,7 @@ export interface AutoConfVehicle {
   placa_completa: string
   sugestoes: number[]
   favorito: boolean
+  tags?: unknown[]
 }
 
 /**
@@ -424,6 +431,7 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
     || autoconfVehicle.versao_descricao || null
   const yearManufacture = parseInt(autoconfVehicle.anofabricacao) || 0
   const yearModel = parseInt(autoconfVehicle.anomodelo) || 0
+  const ficha = lerFichaDoAnuncio(autoconfVehicle)
   // Com a versão: "Porsche 911 2026" não distingue um GTS de um Carrera.
   const seoBase = tituloDoVeiculo({
     brand: resolvedBrand, model: resolvedModel, version, year_manufacture: yearManufacture, year_model: yearModel,
@@ -460,13 +468,15 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
     created_at: autoconfVehicle.publicacao || new Date().toISOString(),
     updated_at: autoconfVehicle.publicacao || new Date().toISOString(),
     crm_id: String(autoconfVehicle.id),
-    horsepower: autoconfVehicle.potencia ?? null,
+    // O cadastro vence; a ficha do molde só completa o que ele não tem.
+    horsepower: autoconfVehicle.potencia || potenciaEmCv(ficha) || null,
     torque: null,
     acceleration: null,
     top_speed: null,
-    engine: null,
+    engine: ficha?.motor ?? null,
     origin: isImported ? 'imported' : 'national',
     audio_url: null,
+    ficha,
   }
 }
 

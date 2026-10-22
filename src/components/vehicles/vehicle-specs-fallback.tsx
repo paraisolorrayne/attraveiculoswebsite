@@ -12,9 +12,12 @@
  * (`vehicle-specs.tsx`) e o bloco "Performance", que repetiam combustível,
  * câmbio, cor, carroceria, km e ano. Virou lista de rótulo e valor, sem ícone
  * em caixa, e perdeu a "Categoria" (classificação do site, não dado do
- * anúncio; saía "premium" em minúscula). É onde os dados da Descrição
- * Customizada da AutoConf (tração, interior, rodas, freios) entram quando a
- * Attra preencher.
+ * anúncio; saía "premium" em minúscula).
+ *
+ * Quando o marketing preenche a Descrição Customizada da AutoConf no molde
+ * (`ficha-do-anuncio.ts`), os campos dela vencem os do cadastro ("Prata
+ * High-Tech Metálico" no lugar de "Prata") e entram tração, freios, interior,
+ * rodas, som e os diferenciais. Sem molde, a ficha fica como era.
  *
  * O subtítulo diz "dados do anúncio", e não "dados oficiais do fabricante",
  * porque os campos são preenchidos pela equipe no Autoconf.
@@ -37,24 +40,32 @@ function preenchidos(itens: SpecItem[]): SpecItem[] {
 }
 
 export function VehicleSpecsFallback({ vehicle }: VehicleSpecsFallbackProps) {
+  const ficha = vehicle.ficha
   const mecanica = preenchidos([
-    { label: 'Motor', value: vehicle.engine ?? '' },
-    { label: 'Potência', value: vehicle.horsepower ? `${vehicle.horsepower} cv` : '' },
-    { label: 'Torque', value: vehicle.torque ? `${vehicle.torque} Nm` : '' },
-    { label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : '' },
-    { label: 'Velocidade máxima', value: vehicle.top_speed ? `${vehicle.top_speed} km/h` : '' },
-    { label: 'Câmbio', value: vehicle.transmission ?? '' },
+    { label: 'Motor', value: ficha?.motor ?? vehicle.engine ?? '' },
+    { label: 'Potência', value: ficha?.potencia ?? (vehicle.horsepower ? `${vehicle.horsepower} cv` : '') },
+    { label: 'Torque', value: ficha?.torque ?? (vehicle.torque ? `${vehicle.torque} Nm` : '') },
+    { label: '0–100 km/h', value: ficha?.aceleracao_0_100 ?? (vehicle.acceleration ? `${vehicle.acceleration} s` : '') },
+    { label: 'Velocidade máxima', value: ficha?.velocidade_maxima ?? (vehicle.top_speed ? `${vehicle.top_speed} km/h` : '') },
+    { label: 'Câmbio', value: ficha?.cambio ?? vehicle.transmission ?? '' },
+    { label: 'Tração', value: ficha?.tracao ?? '' },
     { label: 'Combustível', value: vehicle.fuel_type ?? '' },
+    { label: 'Freios', value: ficha?.freios ?? '' },
   ])
 
   const exemplar = preenchidos([
     { label: 'Ano', value: `${vehicle.year_manufacture}/${vehicle.year_model}` },
     { label: 'Quilometragem', value: vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage) },
-    { label: 'Cor', value: vehicle.color ?? '' },
+    { label: 'Cor', value: ficha?.cor ?? vehicle.color ?? '' },
+    { label: 'Interior', value: ficha?.interior ?? '' },
+    { label: 'Rodas', value: ficha?.rodas ?? '' },
+    { label: 'Som', value: ficha?.som ?? '' },
     { label: 'Carroceria', value: vehicle.body_type ?? '' },
   ])
 
-  if (mecanica.length === 0 && exemplar.length === 0) return null
+  const diferenciais = ficha?.diferenciais ?? []
+
+  if (mecanica.length === 0 && exemplar.length === 0 && diferenciais.length === 0) return null
 
   const modelName = `${vehicle.brand} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''}`
   const grupos = [
@@ -87,6 +98,24 @@ export function VehicleSpecsFallback({ vehicle }: VehicleSpecsFallbackProps) {
           </div>
         ))}
       </div>
+
+      {diferenciais.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-[11px] font-medium uppercase tracking-[0.22em] text-foreground-secondary">
+            Diferenciais
+          </h3>
+          <ul className="mt-2">
+            {diferenciais.map((item) => (
+              <li
+                key={item}
+                className="border-b border-border/70 py-3 text-[15px] font-medium text-foreground last:border-b-0"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }
