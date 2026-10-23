@@ -194,7 +194,10 @@ export function Header() {
               />
               {/* Black logo - only visible when scrolled AND in light theme.
                   Sem priority: escondida na abertura de toda página, ela não
-                  precisa disputar o início do carregamento (são 77 KB). */}
+                  precisa disputar o início do carregamento. Desde 23/10/2026
+                  o PNG tem a mesma moldura do branco (1080×287): antes era uma
+                  folha 3508×2481 com o desenho no meio, e com h-10 o logo
+                  aparecia com ~10 px de altura ao rolar no tema claro. */}
               <Image
                 src="/images/logo-black.png"
                 alt="Attra Veículos"
