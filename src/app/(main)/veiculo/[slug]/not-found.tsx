@@ -65,9 +65,11 @@ export default async function VeiculoNaoEncontrado() {
 
         {veiculos.length > 0 && (
           <section className="mt-12" aria-label="Veículos semelhantes disponíveis">
+            {/* Card em pé, como no estoque: o deitado (foto ao lado do texto)
+                numa coluna de quatro cortava o preço e quebrava o botão. */}
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {veiculos.map(veiculo => (
-                <CinematicVehicleCard key={veiculo.id} vehicle={veiculo} />
+                <CinematicVehicleCard key={veiculo.id} vehicle={veiculo} layout="vertical" />
               ))}
             </div>
           </section>
