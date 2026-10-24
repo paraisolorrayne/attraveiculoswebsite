@@ -20,18 +20,37 @@ interface FeaturedVehicleHeroProps {
  * letras. Baixo o bastante para a ponta da lista aparecer na primeira tela,
  * senão a página parece dedicada a um carro só.
  *
- * No celular e no tablet a foto fica ao lado do nome; no computador, texto e
- * foto meio a meio, com a foto em 2:1. Mais panorâmico que isso corta pneu ou
- * teto (ver `.destaque-foto` em src/styles/hero.css). Tamanho e posição da
+ * No celular e no tablet a foto fica ao lado do nome; no computador, a foto
+ * em 2:1 à direita e o texto logo ao lado. Mais panorâmico que isso corta pneu
+ * ou teto (ver `.destaque-foto` em src/styles/hero.css). Tamanho e posição da
  * palavra: `.destaque-marca`, no mesmo arquivo.
+ *
+ * Desde 23/10/2026 a foto e o texto crescem com a tela a partir de ~1700 px
+ * (`.destaque-foto-moldura`). Antes a foto parava em 720 px, encostada na
+ * direita, e o texto ficava na outra ponta: em 2560 px sobravam ~900 px vazios
+ * entre o preço e o carro. Até 1536 px nada mudou, nem a dobra.
  */
+
+/**
+ * Versão curta vai na linha do modelo ("296 GTS", "Corvette Z06"): é o nome do
+ * carro. Longa ("V8 Bi-Turbo" do Temerário, "AMG S E Performance Aut.") fica
+ * na linha de baixo; na mesma linha, com o modelo a 96 px, estourava a coluna.
+ */
+const MAX_TITULO_NUMA_LINHA = 14
+
+export function versaoNaLinhaDoModelo(vehicle: Pick<Vehicle, 'model' | 'version'>): boolean {
+  const versao = vehicle.version?.trim()
+  return !!versao && `${vehicle.model} ${versao}`.length <= MAX_TITULO_NUMA_LINHA
+}
 export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHeroProps) {
   const nome = `${vehicle.brand} ${vehicle.model}`
   const href = `/veiculo/${vehicle.slug}`
   const km = vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage)
   const preco = formatPrice(vehicle.price)
   const larguraDoNome = larguraDaMarca(vehicle.brand ?? '')
-  const rotulo = 'mb-1.5 block text-[11px] font-medium uppercase leading-none tracking-[0.14em] text-foreground-secondary'
+  const rotulo = 'mb-1.5 block text-[11px] font-medium uppercase leading-none tracking-[0.14em] text-foreground-secondary xl:text-[clamp(11px,0.62cqw,14px)]'
+  const versaoNaLinha = versaoNaLinhaDoModelo(vehicle)
+  const titulo = versaoNaLinha ? `${vehicle.model} ${vehicle.version?.trim()}` : vehicle.model
 
   return (
     <section className="@container relative w-full overflow-hidden bg-gradient-to-b from-background-soft to-background pt-20 font-sans">
@@ -42,7 +61,7 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
 
         {/* A palavra se posiciona a partir do topo desta linha: mudar a margem
             de cima ou a altura do breadcrumb pede ajuste em .destaque-marca. */}
-        <div className="relative mt-10 flex items-center gap-3.5 lg:mt-[76px] lg:grid lg:grid-cols-2 lg:items-end lg:gap-0">
+        <div className="relative mt-10 flex items-center gap-3.5 lg:mt-[76px] lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-0">
           {larguraDoNome > 0 && (
             <div
               aria-hidden
@@ -58,16 +77,23 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
           )}
 
           <div className="relative z-10 min-w-0 flex-1 self-end sm:self-center lg:self-auto lg:pr-4 xl:pr-7">
-            <p className="mb-[5px] text-[9px] font-bold uppercase leading-none tracking-[0.2em] text-primary sm:text-[11px] lg:mb-2.5 lg:text-xs">
+            <p className="mb-[5px] text-[9px] font-bold uppercase leading-none tracking-[0.2em] text-primary sm:text-[11px] lg:mb-2.5 lg:text-[clamp(12px,0.75cqw,16px)]">
               {vehicle.brand}
             </p>
             <h1
               className={cn(
                 'text-[22px] font-black leading-[0.95] tracking-[-0.025em] text-foreground sm:text-[32px]',
-                vehicle.model.length > 14 ? 'lg:text-[40px]' : 'lg:text-[52px]',
+                titulo.length > 14 ? 'lg:text-[clamp(40px,2.8cqw,72px)]' : 'lg:text-[clamp(52px,3.6cqw,96px)]',
               )}
             >
               {vehicle.model}
+              {/* inline-block: sem espaço, a versão nunca se parte; desce inteira. */}
+              {versaoNaLinha && (
+                <>
+                  {' '}
+                  <span className="inline-block font-normal tracking-[-0.01em]">{vehicle.version?.trim()}</span>
+                </>
+              )}
             </h1>
 
             {/* Celular: ano · km, preço e o link */}
@@ -86,26 +112,28 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
 
             {/* Computador: versão, ano/km/valor numa linha e os dois botões */}
             <div className="hidden lg:block">
-              {vehicle.version && (
-                <p className="mt-2 text-[15px] leading-snug text-foreground-secondary">{vehicle.version}</p>
+              {vehicle.version && !versaoNaLinha && (
+                <p className="mt-2 text-[clamp(20px,1.45cqw,34px)] font-semibold leading-tight tracking-[-0.01em] text-foreground">
+                  {vehicle.version}
+                </p>
               )}
-              <dl className="mt-[18px] flex flex-wrap items-end gap-x-5 gap-y-3 whitespace-nowrap xl:gap-x-7">
+              <dl className="mt-[clamp(18px,1.4cqw,32px)] flex flex-wrap items-end gap-x-5 gap-y-3 whitespace-nowrap xl:gap-x-[clamp(1.75rem,2.2cqw,3.5rem)]">
                 <div>
                   <dt className={rotulo}>Ano</dt>
-                  <dd className="text-base font-bold leading-tight text-foreground">
+                  <dd className="text-base font-bold leading-tight text-foreground xl:text-[clamp(16px,1.15cqw,28px)]">
                     {vehicle.year_manufacture}/{vehicle.year_model}
                   </dd>
                 </div>
                 <div>
                   <dt className={rotulo}>Km</dt>
-                  <dd className="text-base font-bold leading-tight text-foreground">{km}</dd>
+                  <dd className="text-base font-bold leading-tight text-foreground xl:text-[clamp(16px,1.15cqw,28px)]">{km}</dd>
                 </div>
                 <div>
                   <dt className={rotulo}>Valor</dt>
-                  <dd className="text-xl font-bold leading-none text-foreground xl:text-2xl">{preco}</dd>
+                  <dd className="text-xl font-bold leading-none text-foreground xl:text-[clamp(24px,1.6cqw,40px)]">{preco}</dd>
                 </div>
               </dl>
-              <div className="mt-[18px] flex flex-wrap gap-2.5">
+              <div className="mt-[clamp(18px,1.4cqw,32px)] flex flex-wrap gap-2.5">
                 <VehicleCardCTAs vehicle={vehicle} variant="outline" />
                 <Link
                   href={href}
@@ -121,7 +149,7 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
           <Link
             href={href}
             tabIndex={-1}
-            className="relative z-10 order-first block aspect-[4/3] shrink-0 basis-[46%] overflow-hidden rounded-[10px] shadow-[0_12px_24px_-10px_rgba(0,0,0,0.4)] lg:order-none lg:aspect-[2/1] lg:w-full lg:max-w-[720px] lg:justify-self-end lg:rounded-2xl lg:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.35)]"
+            className="relative z-10 order-first block aspect-[4/3] shrink-0 basis-[46%] overflow-hidden rounded-[10px] shadow-[0_12px_24px_-10px_rgba(0,0,0,0.4)] destaque-foto-moldura lg:order-none lg:aspect-[2/1] lg:justify-self-end lg:rounded-2xl lg:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.35)]"
           >
             <VehicleImage
               src={vehicle.photos?.[0]}
@@ -129,7 +157,7 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
               fill
               esqueleto
               priority
-              sizes="(min-width: 1024px) 720px, 46vw"
+              sizes="(min-width: 2200px) 1120px, (min-width: 1700px) 52vw, (min-width: 1024px) 41vw, 46vw"
               className="destaque-foto object-cover"
             />
           </Link>
