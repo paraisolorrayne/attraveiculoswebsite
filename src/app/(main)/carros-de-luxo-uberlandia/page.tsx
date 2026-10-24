@@ -51,7 +51,7 @@ export const metadata: Metadata = {
  * tráfego do site. Não é lista aspiracional: é de onde partem os contatos.
  */
 const REGIOES = [
-  { nome: 'Uberlândia', detalhe: 'Showroom na Av. Rondon Pacheco — atendimento presencial' },
+  { nome: 'Uberlândia', detalhe: 'Showroom na Av. Rondon Pacheco, com atendimento presencial' },
   { nome: 'Belo Horizonte', detalhe: 'Atendimento remoto e entrega' },
   { nome: 'Uberaba e Triângulo Mineiro', detalhe: 'Cerca de uma hora de Uberlândia' },
   { nome: 'Goiânia e Catalão', detalhe: 'Divisa com Goiás, entrega frequente' },
@@ -121,7 +121,7 @@ export default function CarrosDeLuxoUberlandiaPage() {
                 <br />
                 {ADDRESS.neighborhood}
                 <br />
-                {ADDRESS.city} — {ADDRESS.state}
+                {ADDRESS.city}, {ADDRESS.state}
                 <br />
                 CEP {ADDRESS.postalCode}
               </p>
@@ -166,7 +166,7 @@ export default function CarrosDeLuxoUberlandiaPage() {
           </h2>
           <p className="text-foreground-secondary mb-8 max-w-3xl leading-relaxed">
             Uberlândia é a base, mas boa parte das negociações acontece com compradores de
-            fora — de Belo Horizonte ao interior paulista. A compra à distância segue o mesmo
+            fora, de Belo Horizonte ao interior paulista. A compra à distância segue o mesmo
             processo: verificação de procedência antes do pagamento e transporte com seguro.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl">

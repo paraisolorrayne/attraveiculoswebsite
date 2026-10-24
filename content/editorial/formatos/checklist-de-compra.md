@@ -1,12 +1,12 @@
 # Formato: Checklist de compra (`/blog`, editoria "Comprar bem")
 
-Perene, fundo de funil puro — quem busca estes termos está a semanas de comprar. O eixo
-não é **qual** carro comprar, mas **de quem** — sem citar ninguém, porque descrever o
+Perene, fundo de funil puro: quem busca estes termos está a semanas de comprar. O eixo
+não é **qual** carro comprar, mas **de quem**, sem citar ninguém, porque descrever o
 padrão correto já expõe quem não o cumpre. A comparação é feita pelo leitor.
 
 **Restrição operacional:** cada item publicado precisa ser verdade na operação da
 Attra. O conteúdo é promessa pública. `[PENDENTE-SÓCIOS: validar item a item contra a
-operação real antes de publicar — checagem 5 da revisão humana.]`
+operação real antes de publicar: checagem 5 da revisão humana.]`
 
 ## Estrutura fixa (por item do checklist)
 
@@ -14,8 +14,8 @@ operação real antes de publicar — checagem 5 da revisão humana.]`
 2. **Por que importa.** O risco real que a pergunta expõe, em uma ou duas frases.
 3. **Como verificar na prática.** O passo concreto: que documento pedir, que consulta
    fazer, o que olhar no carro.
-4. **O que uma resposta ruim indica.** Sem acusar ninguém — o padrão, não o praticante.
-5. **O padrão da Attra naquele item.** O que a Attra faz — somente o que estiver
+4. **O que uma resposta ruim indica.** Sem acusar ninguém, o padrão, não o praticante.
+5. **O padrão da Attra naquele item.** O que a Attra faz, somente o que estiver
    confirmado no `fatos.md`.
 
 ## Pautas do backlog (da spec)

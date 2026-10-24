@@ -176,7 +176,7 @@ function derivarModelo(brandSlug: string, marca: string, modelo: string, veiculo
         `${modelo} seminovo`,
       ].map(k => k.toLowerCase()),
       category: categoriaDoModelo(veiculos),
-      priceRange: precos.length ? `${reais(precos[0])} — ${reais(precos[precos.length - 1])}` : undefined,
+      priceRange: precos.length ? `${reais(precos[0])} a ${reais(precos[precos.length - 1])}` : undefined,
       highlights: destaques,
     },
   }

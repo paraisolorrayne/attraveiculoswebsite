@@ -149,7 +149,7 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 				<section className="py-12 lg:py-16">
 					<Container>
 						<h2 className="text-2xl font-bold text-foreground mb-8">
-							Ficha Técnica — {model.fullName}
+							Ficha técnica: {model.fullName}
 						</h2>
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 							{[
@@ -282,7 +282,7 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 							<p className="text-sm text-foreground-secondary">
 								{modelVehicles.length > 0
 									? `Temos ${modelVehicles.length} unidade(s) de ${model.fullName} disponíveis. Os preços variam de acordo com ano, quilometragem e versão. Entre em contato para valores atualizados e condições de financiamento.`
-									: `O preço do ${model.fullName} varia conforme ano, versão e quilometragem. A Attra trabalha com busca personalizada — solicite o modelo desejado e enviaremos opções disponíveis.`
+									: `O preço do ${model.fullName} varia conforme ano, versão e quilometragem. A Attra trabalha com busca personalizada: solicite o modelo desejado e enviaremos opções disponíveis.`
 								}
 							</p>
 						</div>

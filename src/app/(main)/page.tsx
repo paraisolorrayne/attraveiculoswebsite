@@ -47,7 +47,7 @@ function selectBiweeklyHeroSlice(pool: Vehicle[], count: number): Vehicle[] {
 export const metadata: Metadata = {
   title: 'Comprar Carros de Luxo e Supercarros no Brasil',
   description:
-    'Supercarros, veículos premium e importados com curadoria e procedência verificada. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini, McLaren e Audi. Entrega em todo o Brasil — Attra Veículos.',
+    'Supercarros, veículos premium e importados com curadoria e procedência verificada. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini, McLaren e Audi. Entrega em todo o Brasil. Attra Veículos.',
   keywords: [
     'comprar carro de luxo brasil',
     'comprar supercarro brasil',
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
   alternates: { canonical: canonicalUrl('/') },
   openGraph: {
     url: canonicalUrl('/'),
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
+    title: 'Attra Veículos | Supercarros e Veículos Premium no Brasil',
     description:
       'Curadoria de supercarros e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz e mais. Entrega nacional.',
   },

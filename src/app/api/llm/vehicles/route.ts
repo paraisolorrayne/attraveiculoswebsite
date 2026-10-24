@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 		if (format === 'text') {
 			const range = priceRange(vehicles)
 			const lines = [
-				`# Attra Veículos — Estoque Atual`,
+				`# Attra Veículos: estoque atual`,
 				'',
 				`> Curadoria de supercarros, importados e veículos premium com procedência verificada.`,
 				`> Entrega em todo o Brasil. WhatsApp: (34) 99944-4747`,
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
 		const structured = {
 			'@context': 'https://schema.org',
 			'@type': 'ItemList',
-			name: 'Attra Veículos — Estoque de Supercarros e Veículos Premium',
+			name: 'Attra Veículos: estoque de supercarros e veículos premium',
 			description: 'Curadoria de supercarros, importados e veículos premium com procedência verificada. Entrega em todo o Brasil.',
 			url: `${BASE}/veiculos`,
 			// Total do inventário (após o filtro de marca, quando houver) — não

@@ -15,12 +15,12 @@ const pillars = [
   {
     icon: HeartHandshake,
     title: 'Relacionamento contínuo',
-    description: 'Um relacionamento de longo prazo conecta cada etapa — da escolha ao pós-entrega — para que você tenha sempre alguém ao lado nas grandes decisões.',
+    description: 'Um relacionamento de longo prazo conecta cada etapa, da escolha ao pós-entrega, para que você tenha sempre alguém ao lado nas grandes decisões.',
   },
   {
     icon: MapPin,
     title: 'Alcance nacional estruturado',
-    description: 'De Uberlândia para o Brasil: operação própria, logística especializada, seguro total e histórico de entregas em 27 estados — incluindo a entrega de um veículo em Manaus.',
+    description: 'De Uberlândia para o Brasil: operação própria, logística especializada, seguro total e histórico de entregas em 27 estados, incluindo a entrega de um veículo em Manaus.',
   },
   {
     icon: Users,
@@ -44,7 +44,7 @@ export function ExperienceSection() {
           <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
             Com o tempo, a Attra evoluiu. O que começou como uma visão clara sobre curadoria cresceu para
             uma operação própria de atendimento, relacionamento contínuo com o cliente e alcance nacional
-            estruturado. Hoje, a empresa combina sensibilidade automotiva com uma operação robusta —
+            estruturado. Hoje, a empresa combina sensibilidade automotiva com uma operação robusta,
             ampliando atendimento em todo o país sem perder proximidade, confiança e atenção aos detalhes.
           </p>
         </div>

@@ -58,7 +58,7 @@ export default async function VeiculoNaoEncontrado() {
           </h1>
           <p className="text-lg text-foreground-secondary leading-relaxed">
             {veiculos.length > 0
-              ? 'O carro saiu do estoque — nosso giro é rápido. Estes são os mais próximos do que você procurava, disponíveis agora.'
+              ? 'O carro saiu do estoque: nosso giro é rápido. Estes são os mais próximos do que você procurava, disponíveis agora.'
               : 'O carro que você procurava saiu do estoque ou o endereço mudou. Vale conferir o que temos agora ou nos dizer o que procura.'}
           </p>
         </div>

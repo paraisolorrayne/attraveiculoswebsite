@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 const locations = [
   {
     id: '1',
-    name: 'Attra Veículos – Showroom',
+    name: 'Attra Veículos | Showroom',
     address: 'Av. Rondon Pacheco, 1670',
     city: 'Uberlândia',
     state: 'MG',

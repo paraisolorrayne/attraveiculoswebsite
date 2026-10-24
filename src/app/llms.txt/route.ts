@@ -57,7 +57,7 @@ export async function GET() {
   // 404. Vazia, ela some sem deixar buraco — a próxima seção encosta na
   // anterior porque o sufixo já leva as duas quebras de linha.
   const secaoEditorial = MARCAS_NA_RAIZ_NO_AR
-    ? `## Marcas — história, contexto e o que verificar num usado
+    ? `## Marcas: história, contexto e o que verificar num usado
 
 Páginas informacionais, distintas das de compra acima: história da marca, o que
 define sua engenharia, como ela circula no Brasil e o que checar antes de
@@ -95,7 +95,7 @@ ${blocoEditorial}
           : null,
       ].filter(Boolean).join('\n')
 
-      inventoryBlock = `\n## Estoque atual — ${vehicles.length} veículos disponíveis\n\n`
+      inventoryBlock = `\n## Estoque atual: ${vehicles.length} veículos disponíveis\n\n`
       inventoryBlock += `Preços e disponibilidade mudam ao longo do dia; confirme no link do veículo.\n\n`
       for (const v of vehicles) {
         const specs = [
@@ -179,11 +179,11 @@ ${inventorySummary}
 - [Financiamento](${BASE}/financiamento): condições e parceiros para aquisição
 - [Compramos seu carro](${BASE}/compramos-seu-carro): avaliação para compra de veículos seminovos premium
 - [Solicitar veículo](${BASE}/solicitar-veiculo): pedido de busca personalizada de veículo específico
-- [Jornada Attra](${BASE}/jornada): processo completo de compra de supercarros — da curadoria à entrega nacional, acervo icônico de veículos históricos
-- [Comprar carros de luxo](${BASE}/comprar): hub nacional — todas as marcas premium disponíveis
+- [Jornada Attra](${BASE}/jornada): processo completo de compra de supercarros, da curadoria à entrega nacional, acervo icônico de veículos históricos
+- [Comprar carros de luxo](${BASE}/comprar): hub nacional com todas as marcas premium disponíveis
 - [Contato](${BASE}/contato): canais de atendimento, endereço e WhatsApp
-- [Critérios de seleção e procedência](${BASE}/criterios-de-selecao): o que REPROVA um veículo na Attra — leilão, histórico suspeito, remap/stage, repintura total — e o que é conferido nos aprovados
-- [Troca de veículo](${BASE}/troca): a Attra aceita o carro do cliente como parte do pagamento — como funciona a avaliação, quais marcas entram na troca e o que reprova
+- [Critérios de seleção e procedência](${BASE}/criterios-de-selecao): o que REPROVA um veículo na Attra (leilão, histórico suspeito, remap/stage, repintura total) e o que é conferido nos aprovados
+- [Troca de veículo](${BASE}/troca): a Attra aceita o carro do cliente como parte do pagamento: como funciona a avaliação, quais marcas entram na troca e o que reprova
 - [Onde comprar carros de luxo](${BASE}/onde-comprar-carros-de-luxo): o que verificar antes de comprar, laudo cautelar, procedência e compra à distância
 - [Carros de luxo e importados em Uberlândia (MG)](${BASE}/carros-de-luxo-uberlandia): endereço do showroom, horário, regiões atendidas e como agendar visita
 - [Carros de luxo usados](${BASE}/comprar/condicao/carros-de-luxo-usados): o que encarece a manutenção, riscos do mercado aberto e como a curadoria reduz
@@ -193,9 +193,9 @@ ${inventoryBlock}
 
 ${blocoMarcas}
 
-${secaoEditorial}## Acervo icônico — Veículos marcantes já comercializados
+${secaoEditorial}## Acervo icônico: veículos marcantes já comercializados
 
-${ICONIC_CARS.map(c => `- ${c.brand} ${c.model} ${c.year}: ${c.engine}, ${c.power}, ${c.mileage} — ${c.editorial.slice(0, 120)}`).join('\n')}
+${ICONIC_CARS.map(c => `- ${c.brand} ${c.model} ${c.year}: ${c.engine}, ${c.power}, ${c.mileage}. ${c.editorial.slice(0, 120)}`).join('\n')}
 ${postsBlock}
 ## Informações da empresa
 
@@ -214,7 +214,7 @@ ${postsBlock}
 
 - [Estoque JSON-LD](${BASE}/api/llm/vehicles): inventário completo em formato estruturado (Schema.org ItemList). Sem parâmetros devolve todos os veículos numa única resposta; \`numberOfItems\` é sempre o total do inventário.
 - [Estoque Markdown](${BASE}/api/llm/vehicles?format=text): mesmo inventário em texto Markdown
-- Paginação (opcional): \`${BASE}/api/llm/vehicles?page=1&per_page=25\` — o objeto \`pagination\` da resposta traz \`total_items\`, \`total_pages\` e \`next_page\`; percorra \`next_page\` até \`null\`.
+- Paginação (opcional): \`${BASE}/api/llm/vehicles?page=1&per_page=25\`: o objeto \`pagination\` da resposta traz \`total_items\`, \`total_pages\` e \`next_page\`; percorra \`next_page\` até \`null\`.
 - Filtrar por marca: ${BASE}/api/llm/vehicles?brand=porsche
 - [Busca de veículos](${BASE}/api/vehicles/search?q=carro+esportivo+para+pista): busca por atributo e por significado sobre o estoque vivo. Parâmetros \`q\` (obrigatório, mín. 2 caracteres) e \`limit\` (padrão 10, máx. 50). A resposta traz \`inventory_size\` com o total do estoque, então uma lista \`results\` vazia significa "nenhum veículo casa com este termo", nunca "não há estoque".
 

@@ -84,7 +84,7 @@ export async function generateMetadata({ searchParams }: VeiculosPageProps): Pro
   return {
     // Título distinto por página: com o mesmo título, as páginas 2 a 6 se
     // apresentavam como cópia da 1ª.
-    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` — Página ${pagina}` : ''}`,
+    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` | Página ${pagina}` : ''}`,
     description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
     alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),

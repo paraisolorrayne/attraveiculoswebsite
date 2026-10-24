@@ -123,7 +123,7 @@ export function LeadCaptureSection() {
           </SectionHeading>
           <p className="text-foreground-secondary text-base md:text-lg leading-relaxed">
             Busca discreta em rede nacional de procedência. Sem pressão e sem
-            vitrine — só o carro certo, no momento certo.
+            vitrine. Só o carro certo, no momento certo.
           </p>
         </div>
 

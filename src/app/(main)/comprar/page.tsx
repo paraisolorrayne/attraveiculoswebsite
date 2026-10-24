@@ -12,7 +12,7 @@ import { ANO_FUNDACAO, anosDeMercado } from '@/lib/constants'
 
 export const metadata: Metadata = {
 	title: 'Comprar Carros de Luxo e Supercarros no Brasil',
-	description: 'Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos — desde 2008.',
+	description: 'Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos, desde 2008.',
 	keywords: [
 		'comprar carro de luxo brasil', 'comprar supercarro brasil',
 		'carros de luxo à venda brasil', 'carros importados premium brasil',

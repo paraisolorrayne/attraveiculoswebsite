@@ -79,12 +79,12 @@ export const manualAttraTerms: ManualAttraTerm[] = [
   {
     id: 'pts-paint-to-sample',
     slug: 'pts-paint-to-sample',
-    title: 'PTS – Paint to Sample (Porsche)',
+    title: 'PTS (Paint to Sample), da Porsche',
     category: 'personalizacao-fabrica',
     displayOrder: 1,
     matchKeywords: ['pts', 'paint to sample', 'paint-to-sample', 'cor especial porsche', 'pintura especial'],
     relatedVehicleIds: [],
-    answerSnippet: 'Paint to Sample (PTS) é o programa de personalização de pintura da Porsche que permite ao comprador escolher qualquer cor — incluindo tons históricos e cores sob medida — aplicada diretamente na fábrica de Zuffenhausen. Um Porsche PTS valoriza significativamente no mercado secundário por sua exclusividade comprovável e rastreabilidade documental.',
+    answerSnippet: 'Paint to Sample (PTS) é o programa de personalização de pintura da Porsche que permite ao comprador escolher qualquer cor, incluindo tons históricos e cores sob medida, aplicada diretamente na fábrica de Zuffenhausen. Um Porsche PTS valoriza significativamente no mercado secundário por sua exclusividade comprovável e rastreabilidade documental.',
     shortDescription: 'Programa Porsche de pintura exclusiva sob demanda. Cores históricas ou totalmente personalizadas, aplicadas em fábrica.',
     longDescription: `## O que é Paint to Sample (PTS) em um Porsche?
     
@@ -105,7 +105,7 @@ Paint to Sample permite que o proprietário defina uma cor única, retirada do a
     displayOrder: 1,
     matchKeywords: ['vistoria cautelar', 'laudo cautelar', 'inspeção veicular', 'vistoria elite', 'cautelar'],
     relatedVehicleIds: [],
-    answerSnippet: 'A Vistoria Cautelar Elite é o protocolo proprietário da Attra Veículos que submete cada automóvel a uma inspeção de mais de 200 pontos — estrutural, mecânica, elétrica e documental — antes de integrar o estoque. Esse processo assegura que o comprador receba um veículo com procedência verificável e histórico transparente.',
+    answerSnippet: 'A Vistoria Cautelar Elite é o protocolo proprietário da Attra Veículos que submete cada automóvel a uma inspeção de mais de 200 pontos (estrutural, mecânica, elétrica e documental) antes de integrar o estoque. Esse processo assegura que o comprador receba um veículo com procedência verificável e histórico transparente.',
     shortDescription: 'Inspeção proprietária de 200+ pontos. Garante procedência, integridade estrutural e documentação impecável.',
     longDescription: `## Rigor Técnico na Vistoria Elite
     
@@ -126,7 +126,7 @@ Nossa vistoria utiliza equipamentos de ultrassom para verificar chassis e medido
     displayOrder: 2,
     matchKeywords: ['ad personam', 'personam', 'lamborghini personalização'],
     relatedVehicleIds: [],
-    answerSnippet: 'Ad Personam é o programa de personalização da Lamborghini que oferece combinações ilimitadas de cores externas, acabamentos internos e materiais — todos aplicados à mão em Sant\'Agata Bolognese. Transforma o superesportivo em uma peça única com artesanato italiano sob medida.',
+    answerSnippet: 'Ad Personam é o programa de personalização da Lamborghini que oferece combinações ilimitadas de cores externas, acabamentos internos e materiais, todos aplicados à mão em Sant\'Agata Bolognese. Transforma o superesportivo em uma peça única com artesanato italiano sob medida.',
     shortDescription: 'Programa de personalização total da Lamborghini. Cores e materiais exclusivos aplicados artesanalmente na fábrica.',
     longDescription: `## Exclusividade Ad Personam
     
@@ -181,7 +181,7 @@ Enquanto uma marcha está engatada, a próxima já está pronta na segunda embre
   {
     id: 'ppf-paint-protection-film',
     slug: 'ppf-paint-protection-film',
-    title: 'PPF – Paint Protection Film',
+    title: 'PPF (Paint Protection Film)',
     category: 'estetica-detailing',
     displayOrder: 1,
     matchKeywords: ['ppf', 'pelicula protetora', 'proteção de pintura', 'xpell', 'suntek', 'paint protection film'],
@@ -287,7 +287,7 @@ Utilizada em volantes, bancos e painéis, a Alcantara® é resistente a manchas 
     displayOrder: 4,
     matchKeywords: ['aerodinamica ativa', 'spoiler retratil', 'asa ativa', 'active aero', 'air flaps'],
     relatedVehicleIds: [],
-    answerSnippet: 'Aerodinâmica ativa refere-se a componentes móveis da carroceria — como aerofólios, flaps e difusores — que alteram sua posição automaticamente para otimizar o fluxo de ar. O sistema reduz o arrasto para ganhar velocidade final e aumenta o downforce para estabilidade extrema em curvas e frenagens.',
+    answerSnippet: 'Aerodinâmica ativa refere-se a componentes móveis da carroceria, como aerofólios, flaps e difusores, que alteram sua posição automaticamente para otimizar o fluxo de ar. O sistema reduz o arrasto para ganhar velocidade final e aumenta o downforce para estabilidade extrema em curvas e frenagens.',
     shortDescription: 'Componentes móveis que ajustam o fluxo de ar em tempo real para maximizar velocidade e estabilidade.',
     longDescription: `## O que é Aerodinâmica Ativa?
     
@@ -367,7 +367,7 @@ Acionar o Launch Control em um supercarro como o **BMW M5** ou uma **Ferrari F8*
     displayOrder: 3,
     matchKeywords: ['hud', 'head up display', 'projeção no vidro', 'display virtual'],
     relatedVehicleIds: [],
-    answerSnippet: 'O Head-Up Display projeta informações vitais — como velocidade, navegação GPS e alertas de segurança — diretamente no para-brisa, no campo de visão do motorista. Essa tecnologia, derivada da aviação de caça, permite que o condutor mantenha os olhos na estrada o tempo todo, aumentando a segurança em altas velocidades.',
+    answerSnippet: 'O Head-Up Display projeta informações vitais, como velocidade, navegação GPS e alertas de segurança, diretamente no para-brisa, no campo de visão do motorista. Essa tecnologia, derivada da aviação de caça, permite que o condutor mantenha os olhos na estrada o tempo todo, aumentando a segurança em altas velocidades.',
     shortDescription: 'Sistema que projeta dados de condução no para-brisa, evitando que o motorista desvie o olhar da pista.',
     longDescription: `## Informação no Campo de Visão
     

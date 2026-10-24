@@ -208,6 +208,10 @@ REFERENCIAL EDITORIAL (estude o padrão antes de escrever):
 - https://attraveiculos.com.br/blog/ferrari-812-gts-a-obra-prima-italiana-que-a-attra-veiculos-trouxe-para-o-brasil
 - https://attraveiculos.com.br/blog/ferrari-sf90-spider-quando-1-000cv-redefinem-o-conceito-de-performance
 
+PONTUAÇÃO: nunca use travessão (—) nem meia-risca como pontuação, em nenhum
+trecho (título, resumo, corpo, legendas). Use vírgula, dois-pontos, parênteses
+ou ponto. É regra da marca.
+
 TOM: híbrido luxury-aspiracional + técnico-específico. Em português do Brasil.
 Pode (e deve) usar superlativos editoriais ("obra-prima", "perfeição", "ápice
 da engenharia"), metáforas evocativas ("sinfonia visual", "rugido inconfundível"),

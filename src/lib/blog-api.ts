@@ -1,3 +1,4 @@
+import { semTravessao } from './sem-travessao'
 import { unstable_cache } from 'next/cache'
 import type { DualBlogPost, BlogPostType, BlogAuthor, EducativoFields, CarReviewFields, BlogPostSEO } from '@/types'
 import { importedBlogPosts } from './imported-blog-posts'
@@ -16,14 +17,16 @@ function isoOrUndef(v: unknown): string | undefined {
   return v instanceof Date ? v.toISOString() : String(v)
 }
 
+// Posts do banco foram escritos pela IA antes da regra de não usar travessão;
+// o filtro vale para título, resumo e corpo (ver sem-travessao.ts).
 function transformDbPost(p: Record<string, unknown>): DualBlogPost {
   return {
     id: p.id as string,
     post_type: p.post_type as BlogPostType,
-    title: p.title as string,
+    title: semTravessao(p.title as string),
     slug: p.slug as string,
-    excerpt: p.excerpt as string,
-    content: p.content as string,
+    excerpt: semTravessao(p.excerpt as string),
+    content: semTravessao(p.content as string),
     featured_image: p.featured_image as string,
     featured_image_alt: p.featured_image_alt as string,
     author: p.author as BlogAuthor,
@@ -183,6 +186,8 @@ async function fetchAllPreviews(): Promise<BlogPostPreview[]> {
       .execute()
     dbPreviews = rows.map(r => toPreview({
       ...r,
+      title: semTravessao(r.title),
+      excerpt: semTravessao(r.excerpt),
       published_date: isoOrUndef(r.published_date),
     } as unknown as DualBlogPost))
   } catch (error) {

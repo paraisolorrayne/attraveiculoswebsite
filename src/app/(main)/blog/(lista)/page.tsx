@@ -96,7 +96,7 @@ export default async function BlogPage() {
 					<Container>
 						<h2 className="text-2xl lg:text-3xl font-bold text-foreground">Guias Attra: como comprar bem</h2>
 						<p className="mt-2 text-foreground-secondary max-w-2xl">
-							Procedência, curadoria e decisão patrimonial — o critério da Attra antes de qualquer compra.
+							Procedência, curadoria e decisão patrimonial: o critério da Attra antes de qualquer compra.
 						</p>
 						<div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 							{anchorPosts.map(post => <BlogCardStatic key={post.id} post={post} />)}

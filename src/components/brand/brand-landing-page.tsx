@@ -250,7 +250,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 								Nenhuma {brand.displayName} disponível no estoque neste momento.
 							</p>
 							<p className="mt-3 text-foreground-secondary max-w-xl mx-auto">
-								A Attra localiza veículos sob encomenda — no Brasil e no exterior.
+								A Attra localiza veículos sob encomenda, no Brasil e no exterior.
 								Diga qual {brand.displayName} você procura e nós buscamos, com a
 								mesma verificação de procedência do estoque próprio.
 							</p>

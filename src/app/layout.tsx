@@ -84,13 +84,13 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     url: 'https://attraveiculos.com.br',
     siteName: 'Attra Veículos',
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
+    title: 'Attra Veículos | Supercarros e Veículos Premium no Brasil',
     description:
       'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
+    title: 'Attra Veículos | Supercarros e Veículos Premium no Brasil',
     description:
       'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
   },

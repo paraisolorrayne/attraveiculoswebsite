@@ -93,7 +93,7 @@ export async function GET() {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">',
     '  <channel>',
-    '    <title>Attra Veículos — Estoque</title>',
+    '    <title>Attra Veículos | Estoque</title>',
     `    <link>${BASE}</link>`,
     '    <description>Curadoria de veículos premium, importados e superesportivos</description>',
     '    <language>pt-br</language>',

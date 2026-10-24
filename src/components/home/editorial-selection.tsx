@@ -23,7 +23,7 @@ function curationReason(vehicle: Vehicle): string {
     return '0 km, pronto para entrega imediata'
   }
   if (vehicle.mileage > 0 && vehicle.mileage < 5000) {
-    return 'Baixíssima rodagem — praticamente novo'
+    return 'Baixíssima rodagem, praticamente novo'
   }
   if (vehicle.price >= 2_000_000) {
     return 'Peça de acervo, rara no mercado brasileiro'
@@ -65,7 +65,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
             Três peças do acervo que merecem sua atenção.
           </SectionHeading>
           <p className="text-foreground-secondary text-base md:text-lg leading-relaxed">
-            Curadoria feita à mão. Cada veículo entra por mérito —
+            Curadoria feita à mão. Cada veículo entra por mérito,
             raridade, estado, procedência ou oportunidade.
           </p>
         </div>
@@ -157,7 +157,7 @@ export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
         <div className="mt-14 md:mt-20 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/60 pt-8">
           <p className="text-foreground-secondary text-sm md:text-base max-w-md">
             Não encontrou a peça certa? Fazemos a busca personalizada na rede
-            nacional — fora do estoque visível.
+            nacional, fora do estoque visível.
           </p>
           <div className="flex gap-2">
             <Link
