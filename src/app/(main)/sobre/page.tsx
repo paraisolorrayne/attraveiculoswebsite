@@ -10,7 +10,7 @@ import { HistoryGallery, type HistoryEra } from '@/components/about/history-gall
 import { CabecalhoSecao, MONTSERRAT } from '@/components/ui/cabecalho-secao'
 import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
-import { EquipeNoCarro } from '@/components/attra/equipe-no-carro'
+import { EquipeIndice } from '@/components/attra/equipe-indice'
 import { PostInstagram } from '@/components/attra/post-instagram'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
@@ -181,32 +181,8 @@ export default function SobrePage() {
         </Container>
       </section>
 
-      {/* A equipe dirigindo, montada como página de revista (EquipeNoCarro).
-          Os três olham para a direita, então as fotos ficam à esquerda e o
-          texto à direita, para onde eles olham; a seção seguinte inverte
-          (texto à esquerda, post à direita). No HTML o texto vem primeiro. */}
-      <section className="py-20 lg:py-28 bg-background-soft">
-        <Container>
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-16">
-            <div className="self-start lg:sticky lg:top-32 lg:order-last">
-              <CabecalhoSecao
-                rotulo="Equipe"
-                titulo="Quem faz a Attra"
-                texto="Thiago, Cris e Gabriel: as pessoas que você encontra na Attra, em Uberlândia."
-              />
-              <a
-                href={getWhatsAppUrl('Olá! Gostaria de falar com a equipe da Attra.')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-flex items-center gap-2 text-[15px] font-medium text-foreground hover:text-primary"
-              >
-                Falar com a equipe no WhatsApp <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-            <EquipeNoCarro />
-          </div>
-        </Container>
-      </section>
+      {/* A equipe: nomes grandes e um retrato por vez num palco fixo (EquipeIndice). */}
+      <EquipeIndice />
 
       {/* O post do Instagram sobre a Porsche do Thiago, incorporado como o
           Instagram mostra (com a legenda). O texto ao lado só repete o que o

@@ -5,7 +5,7 @@ import { EQUIPE_ATTRA } from '@/lib/equipe-attra'
 /**
  * A equipe em pé, na /jornada: três fotos 4:5 lado a lado, cada uma abrindo
  * em cortina com um pequeno atraso. No celular, carrossel com rolagem para o
- * lado. No /sobre a equipe aparece dirigindo (EquipeNoCarro).
+ * lado. No /sobre a equipe aparece dirigindo (EquipeIndice).
  */
 export function EquipeAttra({ className }: { className?: string }) {
   return (
@@ -35,12 +35,9 @@ export function EquipeAttra({ className }: { className?: string }) {
   )
 }
 
-export function Legenda({ nome, cargo, atraso }: { nome: string; cargo?: string; atraso?: number }) {
+function Legenda({ nome, cargo }: { nome: string; cargo?: string }) {
   return (
-    <figcaption
-      className="mt-4 flex items-baseline gap-3"
-      {...(atraso != null ? { 'data-revelar': '', style: { ['--d' as string]: `${atraso}s` } } : {})}
-    >
+    <figcaption className="mt-4 flex items-baseline gap-3">
       <span className="text-lg font-semibold text-foreground" style={MONTSERRAT}>{nome}</span>
       {cargo && <span className="text-[13px] uppercase tracking-[0.14em] text-foreground-secondary">{cargo}</span>}
     </figcaption>

@@ -5,13 +5,21 @@
  * Cargos a confirmar com a Attra: só o do Thiago (CEO) aparece em outro ponto
  * do site; sem cargo, a legenda mostra só o nome.
  */
+export interface FotoDaEquipe {
+  src: string
+  /** object-position do recorte (4:5 nas duas páginas). */
+  enquadramento: string
+}
+
 export interface PessoaDaAttra {
   nome: string
   cargo?: string
-  /** Em pé, 9:16. Recortada em 4:5 na /jornada; o valor é o object-position. */
-  emPe: { src: string; enquadramento: string }
-  /** Dirigindo, no formato em que foi feita (ver EquipeNoCarro). */
-  noCarro: { src: string; largura: number; altura: number }
+  emPe: FotoDaEquipe
+  /**
+   * Dirigindo, com a mesma gradação nas três (scripts/imagens/gradar-equipe.mjs,
+   * modo cinema-escuro): a do Thiago é de cinema e as outras duas de celular.
+   */
+  noCarro: FotoDaEquipe
 }
 
 export const EQUIPE_ATTRA: PessoaDaAttra[] = [
@@ -19,16 +27,16 @@ export const EQUIPE_ATTRA: PessoaDaAttra[] = [
     nome: 'Thiago',
     cargo: 'CEO',
     emPe: { src: '/about/equipe-thiago.jpg', enquadramento: '50% 14%' },
-    noCarro: { src: '/about/equipe-thiago-carro.jpg', largura: 1600, altura: 900 },
+    noCarro: { src: '/about/equipe-thiago-carro-cinema-escuro.jpg', enquadramento: '38% 50%' },
   },
   {
     nome: 'Cris',
     emPe: { src: '/about/equipe-cris.jpg', enquadramento: '50% 24%' },
-    noCarro: { src: '/about/equipe-cris-carro.jpg', largura: 960, altura: 1200 },
+    noCarro: { src: '/about/equipe-cris-carro-cinema-escuro.jpg', enquadramento: '50% 50%' },
   },
   {
     nome: 'Gabriel',
     emPe: { src: '/about/equipe-gabriel.jpg', enquadramento: '50% 16%' },
-    noCarro: { src: '/about/equipe-gabriel-carro.jpg', largura: 960, altura: 1707 },
+    noCarro: { src: '/about/equipe-gabriel-carro-cinema-escuro.jpg', enquadramento: '50% 62%' },
   },
 ]
