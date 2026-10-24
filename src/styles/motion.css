@@ -406,3 +406,64 @@ html[data-revelar] [data-revelar="cortina"][data-revelado] img {
   }
 }
 
+
+/* Mapa de /contato (mapa-atendimento.tsx): quando ele entra na tela, as rotas
+   saem de Uberlândia uma a uma e o ponto de cada destino aparece no fim da
+   sua. Sem o script (ou com movimento reduzido) o mapa já vem desenhado. */
+html[data-revelar] [data-revelar="mapa"] .mapa-rota { stroke-dasharray: 1; stroke-dashoffset: 1; }
+html[data-revelar] [data-revelar="mapa"][data-revelado] .mapa-rota {
+  animation: mapa-rota 1.1s cubic-bezier(0.65, 0, 0.35, 1) calc(0.35s + var(--i) * 0.12s) forwards;
+}
+html[data-revelar] [data-revelar="mapa"] .mapa-destino { opacity: 0; }
+html[data-revelar] [data-revelar="mapa"][data-revelado] .mapa-destino {
+  animation: mapa-destino 0.4s ease-out calc(1.3s + var(--i) * 0.12s) forwards;
+}
+@keyframes mapa-rota { to { stroke-dashoffset: 0; } }
+@keyframes mapa-destino { to { opacity: 1; } }
+
+/* ── /jornada (23/10/2026) ──────────────────────────────────────────────── */
+
+/* Foto do topo assenta do zoom na entrada; com a abertura, espera ela subir. */
+.jornada-hero-foto { animation: jornada-foto-assenta 2.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+html[data-abertura-agora] .jornada-hero-foto { animation-delay: 1.3s; }
+@keyframes jornada-foto-assenta { from { transform: scale(1.08); } }
+
+/* Linha entre os números das etapas: se desenha da esquerda para a direita. */
+html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { opacity: 1; transform: scaleX(0); }
+html[data-revelar] [data-revelar="linha"][data-revelado] {
+  transform-origin: left center;
+  animation: jornada-linha 1.6s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+}
+@keyframes jornada-linha { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Linha do tempo: um fio vermelho cresce por cima do cinza conforme a rolagem
+   (só onde o navegador liga animação à rolagem; nos outros fica o cinza). A
+   posição acompanha a coluna do ano (4.5rem + 1.5rem; 7rem + 2.5rem). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .linha-do-tempo::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 3rem;
+      left: 6rem;
+      width: 1px;
+      background: var(--primary);
+      transform-origin: top center;
+      animation: linha-do-tempo-cresce linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 70%;
+    }
+    @media (min-width: 640px) { .linha-do-tempo::after { left: 9.5rem; } }
+  }
+}
+@keyframes linha-do-tempo-cresce { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Carrossel dos carros icônicos no celular: sem a barra de rolagem. */
+.jornada-carrossel { scrollbar-width: none; }
+.jornada-carrossel::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jornada-hero-foto { animation: none; }
+  html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { transform: none; }
+}
