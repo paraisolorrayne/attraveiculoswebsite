@@ -48,7 +48,8 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
     // Sem sticky próprio: quem acompanha a rolagem é o contêiner da coluna na
     // ficha (junto com os botões). Com os dois sticky, no fim da coluna este
     // card ficava parado e cobria o "Falar com consultor" logo abaixo.
-    <div className="bg-background-card border border-border rounded-xl p-6">
+    // Sem caixa desde 23/10/2026, como os blocos da coluna principal.
+    <div>
       {/* Status badges */}
       {badges.length > 0 && (
         <div className="mb-4 flex gap-2 flex-wrap">
@@ -58,47 +59,15 @@ export function VehicleInfo({ vehicle }: VehicleInfoProps) {
         </div>
       )}
 
-      {/* Título da sidebar (visível só em desktop). É h2, não h1: o h1 único da
-          ficha vive no bloco de título da página. Classes inalteradas — o
-          Tailwind zera font-size/weight de h2 no preflight, então o visual é
-          idêntico ao que era com h1. */}
-      <h2 className="text-2xl font-bold text-foreground mb-1">
-        {vehicle.brand} {vehicle.model}
-      </h2>
-      <p className="text-foreground-secondary mb-6">
-        {vehicle.version && `${vehicle.version} • `}
-        {vehicle.year_manufacture}/{vehicle.year_model}
-      </p>
-
-      {/* Price */}
+      {/* Desde 23/10/2026 a lateral abre direto no preço, na altura do título
+          da coluna principal (TituloDaFicha). Nome, versão, quilometragem,
+          cor, combustível e câmbio saíram daqui: o título e os números grandes
+          ao lado já mostram, e a ficha técnica logo abaixo também. */}
       <div className="mb-6">
-        <p className="text-sm text-foreground-secondary mb-1">Valor</p>
-        <p className="text-3xl font-bold text-primary">
+        <p className="text-[13px] font-medium uppercase tracking-[0.12em] text-foreground-secondary mb-1">Valor</p>
+        <p className="text-3xl font-bold text-primary xl:text-4xl">
           {formatPrice(vehicle.price)}
         </p>
-      </div>
-
-      {/* Quick specs */}
-      <div className="grid grid-cols-2 gap-4 py-4 border-t border-border">
-        <div>
-          <p className="text-sm text-foreground-secondary">Quilometragem</p>
-          <p className="font-medium text-foreground">
-            {vehicle.mileage === 0 ? '0 km (Novo)' : `${vehicle.mileage.toLocaleString('pt-BR')} km`}
-          </p>
-        </div>
-        {/* Cor e câmbio do molde da AutoConf, quando houver, como na ficha técnica. */}
-        <div>
-          <p className="text-sm text-foreground-secondary">Cor</p>
-          <p className="font-medium text-foreground">{vehicle.ficha?.cor ?? vehicle.color}</p>
-        </div>
-        <div>
-          <p className="text-sm text-foreground-secondary">Combustível</p>
-          <p className="font-medium text-foreground">{vehicle.fuel_type}</p>
-        </div>
-        <div>
-          <p className="text-sm text-foreground-secondary">Câmbio</p>
-          <p className="font-medium text-foreground">{vehicle.ficha?.cambio ?? vehicle.transmission}</p>
-        </div>
       </div>
 
       {/* Sold message */}

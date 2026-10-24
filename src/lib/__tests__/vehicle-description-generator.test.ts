@@ -67,7 +67,7 @@ describe('"Sobre este veículo" com a ficha do molde', () => {
 		expect(generateVehicleDescription(s63)).toBe(
 			'Este Mercedes S-63 AMG S E Performance Automático 2025 oferece motor de 802 cv e câmbio automático, '
 			+ 'aliando desempenho e sofisticação. Com apenas 1.920 km rodados, está em excelente estado. '
-			+ 'Apresenta-se na cor prata e motorização gasolina e elétrico. Um veículo premium completo para quem valoriza qualidade.',
+			+ 'Apresenta-se na cor prata e motorização híbrida. Um veículo premium completo para quem valoriza qualidade.',
 		)
 	})
 })

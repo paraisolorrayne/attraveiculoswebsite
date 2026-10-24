@@ -21,6 +21,8 @@ import { SectionKicker } from '@/components/ui/brand'
 import { Vehicle } from '@/types'
 import { formatMileage, cn } from '@/lib/utils'
 import type { VehicleSections } from '@/lib/vehicle-sections'
+import { motorizacao } from '@/lib/taxonomia-veiculo'
+import { semTravessao } from '@/lib/sem-travessao'
 
 interface VehicleSectionShowcaseProps {
   vehicle: Vehicle
@@ -63,7 +65,7 @@ function buildFallbackCopy(vehicle: Vehicle, kind: 'overview' | 'exterior' | 'in
   // interior
   const parts: string[] = []
   if (vehicle.transmission) parts.push(`Câmbio ${vehicle.transmission.toLowerCase()}.`)
-  if (vehicle.fuel_type) parts.push(`Motorização ${vehicle.fuel_type.toLowerCase()}.`)
+  if (vehicle.fuel_type) parts.push(`Motorização ${motorizacao(vehicle.fuel_type)}.`)
   parts.push(`Acabamento original ${vehicle.brand}.`)
   return parts.join(' ')
 }
@@ -75,7 +77,7 @@ export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShow
       kicker: 'Overview',
       title: `${vehicle.brand} ${vehicle.model}`,
       photo: sections.overview.photo_url,
-      copy: sections.overview.copy ?? buildFallbackCopy(vehicle, 'overview'),
+      copy: semTravessao(sections.overview.copy) ?? buildFallbackCopy(vehicle, 'overview'),
       photoSide: 'right',
       aspectClass: 'aspect-[16/10]',
     },
@@ -86,7 +88,7 @@ export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShow
         ? `${vehicle.body_type.charAt(0).toUpperCase()}${vehicle.body_type.slice(1).toLowerCase()}`
         : 'Design',
       photo: sections.exterior.photo_url,
-      copy: sections.exterior.copy ?? buildFallbackCopy(vehicle, 'exterior'),
+      copy: semTravessao(sections.exterior.copy) ?? buildFallbackCopy(vehicle, 'exterior'),
       photoSide: 'left',
       aspectClass: 'aspect-[16/10]',
     },
@@ -95,7 +97,7 @@ export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShow
       kicker: 'Interior',
       title: 'Acabamento',
       photo: sections.interior.photo_url,
-      copy: sections.interior.copy ?? buildFallbackCopy(vehicle, 'interior'),
+      copy: semTravessao(sections.interior.copy) ?? buildFallbackCopy(vehicle, 'interior'),
       photoSide: 'right',
       aspectClass: 'aspect-[16/10]',
     },

@@ -32,6 +32,57 @@
 @media (min-width: 1024px) { .hero-vehicle-image { object-fit: contain !important; object-position: center center !important; padding: 2rem 4rem !important; } }
 @media (min-width: 1440px) { .hero-vehicle-image { padding: 2rem 6rem !important; } }
 
+/* Galeria da ficha em carrossel (cinematic-gallery.tsx): a foto atual numa
+   moldura 4:3 no centro e as vizinhas nas laterais, deslizando na troca.
+   --pos é -1, 0 ou 1 e --lateral é 1 nas vizinhas; --arrasto é o quanto o dedo
+   já levou o carrossel.
+
+   A moldura fica só na faixa livre do palco: abaixo do cabeçalho fixo (80 px,
+   h-20) e acima das miniaturas. Até 23/10/2026 a foto começava a 2rem do topo
+   e passava por baixo do cabeçalho.
+
+   No celular a atual tem 82% da largura e as vizinhas aparecem como uma faixa
+   nas bordas, quase do mesmo tamanho; a partir de 1280 px a atual vai até 72%
+   e as vizinhas ficam a 82% do tamanho. O deslocamento (1 - redução/2) × 100%
+   + vão deixa sempre o mesmo vão entre a borda da atual e a da vizinha. */
+.galeria-vitrine-foto {
+  --galeria-topo: 5.75rem;  /* cabeçalho de 80 px + 12 px */
+  --galeria-base: 5.5rem;   /* miniaturas: 16 + 8 + 48 + 8 px, + 8 px */
+  --reducao: 0.08;
+  --vao: 0.5rem;
+  inset: auto;
+  top: var(--galeria-topo);
+  left: 50%;
+  height: calc(100% - var(--galeria-topo) - var(--galeria-base));
+  width: auto;
+  aspect-ratio: 4 / 3;
+  max-width: 82%;
+  transform:
+    translateX(calc(-50% + var(--pos) * (100% * (1 - var(--reducao) / 2) + var(--vao)) + var(--arrasto, 0px)))
+    scale(calc(1 - var(--reducao) * var(--lateral)));
+  transition: transform 500ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 500ms ease;
+}
+.galeria-vitrine-foto .hero-vehicle-image { padding: 0 !important; object-position: center center !important; }
+@media (min-width: 1024px) {
+  .galeria-vitrine-foto {
+    --galeria-topo: 6rem;   /* 80 + 16 px */
+    --galeria-base: 6rem;   /* miniaturas: 16 + 8 + 56 + 8 px, + 8 px */
+  }
+}
+@media (min-width: 1280px) {
+  .galeria-vitrine-foto {
+    --reducao: 0.18;
+    --vao: 1.5rem;
+    max-width: 72%;
+    transition-duration: 600ms;
+  }
+}
+/* Enquanto o dedo arrasta, o carrossel acompanha sem atraso. */
+[data-arrastando] .galeria-vitrine-foto { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .galeria-vitrine-foto { transition: opacity 200ms ease; }
+}
+
 /* Hero banner image */
 .hero-banner-image { object-fit: cover; object-position: center center; width: 100%; height: 100%; }
 @media (max-width: 767px) { .hero-banner-image { object-fit: contain !important; object-position: center center !important; background: #111111 !important; } }

@@ -20,7 +20,9 @@ import {
   classificarCarroceria,
   classificarCategoria,
   rotuloDeCarroceria,
+  rotuloDeCombustivel,
 } from './taxonomia-veiculo'
+import { semelhantesDoVeiculo } from './veiculos-semelhantes'
 
 // AutoConf API Types
 export interface AutoConfVehicle {
@@ -204,7 +206,7 @@ export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Prom
 
   const data = (await response.json()) as AutoConfResponse
   // Cache only the broad "first-page no-filters, large page size" response so
-  // small-page-size calls (e.g. getRelatedVehicles with 5 items) don't
+  // small-page-size calls (e.g. a 5-item query) don't
   // overwrite a comprehensive 100-vehicle snapshot from the listing page.
   const pageSize = filters.registros_por_pagina ?? 20
   const isBroadQuery = !filters.marca_id && !filters.modelo_id && !filters.preco_de
@@ -447,7 +449,7 @@ export function mapAutoConfToVehicle(autoconfVehicle: AutoConfVehicle): Vehicle 
     year_model: yearModel,
     color: nonEmpty(autoconfVehicle.cor_nome),
     mileage: km,
-    fuel_type: nonEmpty(autoconfVehicle.combustivel_nome),
+    fuel_type: rotuloDeCombustivel(autoconfVehicle.combustivel_nome),
     transmission: nonEmpty(autoconfVehicle.cambio_nome),
     price,
     category,
@@ -512,7 +514,7 @@ function generateDescription(vehicle: AutoConfVehicle): string {
   const brand = vehicle.marca_nome || 'Veículo'
   const model = vehicle.modelopai_nome || ''
   const year = vehicle.anomodelo || ''
-  const fuel = vehicle.combustivel_nome || 'não informado'
+  const fuel = rotuloDeCombustivel(vehicle.combustivel_nome) || 'não informado'
   const transmission = vehicle.cambio_nome || 'não informado'
   const version = vehicle.versao_descricao || ''
 
@@ -665,9 +667,9 @@ export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
 /**
  * Get related/similar vehicles using the sugestoes IDs from the current vehicle
  */
-export async function getRelatedVehicles(currentId: string, brand: string, limit = 4): Promise<Vehicle[]> {
+export async function getRelatedVehicles(current: Vehicle, limit = 4): Promise<Vehicle[]> {
   try {
-    const numericId = parseInt(currentId, 10)
+    const numericId = parseInt(current.id, 10)
 
     // First, get the current vehicle to access its sugestoes
     if (!isNaN(numericId)) {
@@ -687,29 +689,18 @@ export async function getRelatedVehicles(currentId: string, brand: string, limit
       }
     }
 
-    // Fallback: if no sugestoes, get random vehicles from the list
-    const response = await fetchAutoConfVehicles({
-      tipo: 'carros',
-      registros_por_pagina: limit + 1,
-    })
-
-    const filtered = response.veiculos
-      .filter(v => String(v.id) !== currentId)
-      .slice(0, limit)
-
-    return filtered.map(mapAutoConfToVehicle)
+    // Sem sugestões (o caso do estoque inteiro em 23/10/2026): os mais
+    // parecidos do estoque. Antes eram os primeiros da lista, os mesmos
+    // quatro carros em toda ficha (ver semelhantesDoVeiculo).
+    const { vehicles } = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
+    return semelhantesDoVeiculo(vehicles, current, limit)
   } catch (error) {
     console.error('Error fetching related vehicles:', error)
     const listSnapshot = await loadLatestListSnapshot().catch(() => null)
-    if (listSnapshot?.veiculos.length) {
-      return listSnapshot.veiculos
-        .filter(v => String(v.id) !== currentId)
-        .slice(0, limit)
-        .map(mapAutoConfToVehicle)
-    }
-    return mockVehicles
-      .filter(v => v.id !== currentId)
-      .slice(0, limit)
+    const estoque = listSnapshot?.veiculos.length
+      ? listSnapshot.veiculos.map(mapAutoConfToVehicle)
+      : mockVehicles
+    return semelhantesDoVeiculo(estoque, current, limit)
   }
 }
 

@@ -11,6 +11,7 @@
 import type { Vehicle } from '@/types'
 import type { FichaDoAnuncio } from '@/lib/ficha-do-anuncio'
 import { expandirAbreviacoes } from '@/lib/normalizar-abreviacoes'
+import { motorizacao } from '@/lib/taxonomia-veiculo'
 
 // Category labels in Portuguese
 const categoryLabels: Record<string, string> = {
@@ -360,7 +361,7 @@ function buildPremiumDescription(
       : ` Com ${kmFormatted} rodados e bem cuidado.`
 
   const colorSection = vehicle.color ? ` Apresenta-se na cor ${vehicle.color.toLowerCase()}` : ''
-  const fuelSection = vehicle.fuel_type ? ` e motorização ${vehicle.fuel_type.toLowerCase()}.` : '.'
+  const fuelSection = vehicle.fuel_type ? ` e motorização ${motorizacao(vehicle.fuel_type)}.` : '.'
 
   const equipmentSection = accessoriesText ? ` ${accessoriesText}` : ''
 
@@ -378,20 +379,20 @@ const NOME_PROPRIO = /^(Alcantara|Akrapovi[cč]|Bang|Bose|Bowers|Brembo|Burmeste
  * "Blindado BSS" vira "blindado BSS" no meio da frase. Sigla, número e nome
  * próprio da lista ficam como o marketing escreveu.
  */
-function emMinuscula(texto: string): string {
+export function emMinuscula(texto: string): string {
   if (NOME_PROPRIO.test(texto)) return texto
   return /^[A-ZÀ-Ý][a-zà-ÿ]+(?=[\s,;.]|$)/.test(texto) ? texto[0].toLowerCase() + texto.slice(1) : texto
 }
 
 /** "câmbio" + "PDK de 8 marchas"; sem repetir quando o valor já começa pelo rótulo. */
-function comRotulo(rotulo: string, valor: string, minuscula = true): string {
+export function comRotulo(rotulo: string, valor: string, minuscula = true): string {
   const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   if (semAcento(valor).startsWith(`${semAcento(rotulo)} `)) return `${rotulo}${valor.slice(rotulo.length)}`
   return `${rotulo} ${minuscula ? emMinuscula(valor) : valor}`
 }
 
 /** "a", "a e b", "a, b e c". */
-function juntarComE(itens: string[]): string {
+export function juntarComE(itens: string[]): string {
   const lista = itens.filter(Boolean)
   if (lista.length <= 1) return lista.join('')
   return `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`

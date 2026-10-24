@@ -21,10 +21,17 @@
  *
  * O subtítulo diz "dados do anúncio", e não "dados oficiais do fabricante",
  * porque os campos são preenchidos pela equipe no Autoconf.
+ *
+ * Desde 23/10/2026 é um bloco aberto (`SecaoDaFicha`), sem card. Mecânica,
+ * Exemplar e Diferenciais dividem a largura da coluna: um embaixo do outro
+ * no celular, dois lado a lado e, com a coluna bem larga, os três.
+ * No mesmo dia a letra cresceu (valor 15→17 px, rótulo 14→16 px, título do
+ * grupo 11→13 px): ao lado da referência da Shiftcar, a ficha lia pequena.
  */
 
 import type { Vehicle } from '@/types'
 import { formatMileage } from '@/lib/utils'
+import { SecaoDaFicha } from './secao-da-ficha'
 
 interface VehicleSpecsFallbackProps {
   vehicle: Vehicle
@@ -74,48 +81,45 @@ export function VehicleSpecsFallback({ vehicle }: VehicleSpecsFallbackProps) {
   ].filter((g) => g.itens.length > 0)
 
   return (
-    <section className="bg-background-card border border-border rounded-xl p-6 lg:p-8">
-      <h2 className="text-xl font-semibold text-foreground">Ficha técnica</h2>
-      <p className="mt-1 text-sm text-foreground-secondary">{modelName} — dados do anúncio</p>
-
-      <div className="mt-6 grid gap-x-10 gap-y-8 md:grid-cols-2">
+    <SecaoDaFicha titulo="Ficha técnica" subtitulo={`${modelName}, dados do anúncio`}>
+      <div className="grid gap-x-12 gap-y-10 @xl:grid-cols-2 @[78rem]:grid-cols-3">
         {grupos.map((grupo) => (
           <div key={grupo.titulo}>
-            <h3 className="text-[11px] font-medium uppercase tracking-[0.22em] text-foreground-secondary">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">
               {grupo.titulo}
             </h3>
             <dl className="mt-2">
               {grupo.itens.map((spec) => (
                 <div
                   key={spec.label}
-                  className="flex items-baseline justify-between gap-6 border-b border-border/70 py-3 last:border-b-0"
+                  className="flex items-baseline justify-between gap-6 border-b border-border/70 py-3.5 last:border-b-0"
                 >
-                  <dt className="text-sm text-foreground-secondary">{spec.label}</dt>
-                  <dd className="text-right text-[15px] font-medium text-foreground">{spec.value}</dd>
+                  <dt className="text-base text-foreground-secondary">{spec.label}</dt>
+                  <dd className="text-right text-[17px] font-medium text-foreground">{spec.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
         ))}
-      </div>
 
-      {diferenciais.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-[11px] font-medium uppercase tracking-[0.22em] text-foreground-secondary">
-            Diferenciais
-          </h3>
-          <ul className="mt-2">
-            {diferenciais.map((item) => (
-              <li
-                key={item}
-                className="border-b border-border/70 py-3 text-[15px] font-medium text-foreground last:border-b-0"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </section>
+        {diferenciais.length > 0 && (
+          <div>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">
+              Diferenciais
+            </h3>
+            <ul className="mt-2">
+              {diferenciais.map((item) => (
+                <li
+                  key={item}
+                  className="border-b border-border/70 py-3.5 text-[17px] font-medium text-foreground last:border-b-0"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </SecaoDaFicha>
   )
 }

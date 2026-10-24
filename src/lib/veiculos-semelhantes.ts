@@ -158,3 +158,34 @@ export function semelhantesDoSlug(
     modelo,
   }
 }
+
+/**
+ * Semelhantes a um veículo que está no estoque: o bloco "Veículos Similares"
+ * da ficha.
+ *
+ * Até 23/10/2026 o bloco usava as `sugestoes` da AutoConf e, sem elas, os
+ * primeiros carros da lista. As sugestões vêm vazias, então toda ficha mostrava
+ * os mesmos quatro carros mais recentes: o Mercedes S 63 sugeria Porsche 911,
+ * Ferrari 812 e GWM Tank com outros seis Mercedes no estoque.
+ *
+ * Os degraus são os do 404 (mesmo modelo, depois mesma marca, depois o resto).
+ * A diferença é que aqui o carro existe e tem preço: dentro de cada degrau vem
+ * primeiro o de preço mais próximo, não o mais caro.
+ */
+export function semelhantesDoVeiculo(
+  estoque: Vehicle[],
+  atual: Vehicle,
+  limite = 4,
+): Vehicle[] {
+  const modelo = chaveDeComparacao(atual.model)
+  const degrau = (veiculo: Vehicle) => {
+    if (!marcaCasaComFiltro(veiculo.brand, atual.brand)) return 0
+    return modelo.length >= 2 && chaveDeComparacao(veiculo.model) === modelo ? 2 : 1
+  }
+  const distancia = (veiculo: Vehicle) => Math.abs(veiculo.price - atual.price)
+
+  return estoque
+    .filter(veiculo => veiculo.id !== atual.id)
+    .sort((a, b) => degrau(b) - degrau(a) || distancia(a) - distancia(b))
+    .slice(0, limite)
+}

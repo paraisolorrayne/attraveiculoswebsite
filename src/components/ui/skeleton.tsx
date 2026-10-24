@@ -238,12 +238,13 @@ export function VehicleDetailSkeleton() {
 
 export function RelatedVehiclesSkeleton() {
   return (
-    <div className="py-16 bg-background-soft">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="py-16 bg-background-soft mt-16">
+      {/* Mesma largura e grade de RelatedVehicles, para a troca não pular. */}
+      <div className="mx-auto w-full max-w-[max(80%,1280px)] px-4 sm:px-6 lg:px-8">
         <Skeleton className="h-8 w-48 mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-x-8">
           {Array.from({ length: 4 }).map((_, i) => (
-            <VehicleCardSkeleton key={i} />
+            <VehicleGridCardSkeleton key={i} />
           ))}
         </div>
       </div>

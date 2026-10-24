@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, type CSSProperties, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Expand, X } from 'lucide-react'
@@ -76,6 +76,48 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
     setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1))
   }, [photos.length])
 
+  // Arrastar com o dedo. O carrossel acompanha o dedo (--arrasto no palco,
+  // sem re-render) e, ao soltar, troca de foto se o gesto passou de 60 px ou
+  // de 15% da largura. Só o gesto horizontal conta: o vertical continua sendo
+  // a rolagem da página (touch-action: pan-y no palco).
+  const palcoRef = useRef<HTMLDivElement>(null)
+  const toqueRef = useRef<{ x: number; y: number; horizontal: boolean | null } | null>(null)
+  // Um arrasto não pode terminar abrindo a tela cheia, que é o clique do palco.
+  const arrastouRef = useRef(false)
+
+  const aoTocar = useCallback((e: TouchEvent) => {
+    const toque = e.touches[0]
+    toqueRef.current = { x: toque.clientX, y: toque.clientY, horizontal: null }
+    arrastouRef.current = false
+  }, [])
+
+  const aoArrastar = useCallback((e: TouchEvent) => {
+    const inicio = toqueRef.current
+    const palco = palcoRef.current
+    if (!inicio || !palco) return
+    const dx = e.touches[0].clientX - inicio.x
+    const dy = e.touches[0].clientY - inicio.y
+    if (inicio.horizontal === null && Math.hypot(dx, dy) > 8) inicio.horizontal = Math.abs(dx) > Math.abs(dy)
+    if (!inicio.horizontal) return
+    palco.dataset.arrastando = ''
+    palco.style.setProperty('--arrasto', `${dx}px`)
+  }, [])
+
+  const aoSoltar = useCallback((e: TouchEvent) => {
+    const inicio = toqueRef.current
+    const palco = palcoRef.current
+    toqueRef.current = null
+    if (!palco) return
+    delete palco.dataset.arrastando
+    palco.style.removeProperty('--arrasto')
+    if (!inicio?.horizontal) return
+    arrastouRef.current = true
+    const dx = (e.changedTouches[0]?.clientX ?? inicio.x) - inicio.x
+    if (Math.abs(dx) < Math.min(60, palco.clientWidth * 0.15)) return
+    if (dx < 0) goToNext()
+    else goToPrevious()
+  }, [goToNext, goToPrevious])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,12 +134,26 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
 
   return (
     <>
-      {/* Main Hero Gallery - 60-70% viewport */}
-      <div className="relative h-[60vh] lg:h-[70vh] w-full bg-background-soft overflow-hidden">
+      {/* Main Hero Gallery. 80% da tela no computador (era 70%): a foto agora
+          fica só entre o cabeçalho e as miniaturas e precisava da altura de
+          volta. No celular, nunca menos de 26rem, senão a foto encolhia demais
+          em telas baixas. */}
+      <div className="relative h-[60vh] min-h-[26rem] lg:h-[80vh] w-full bg-background-soft overflow-hidden">
         {/* Main Image - Clickable area to open fullscreen */}
         <div
-          className="relative h-full w-full cursor-pointer group"
-          onClick={() => setIsFullscreen(true)}
+          ref={palcoRef}
+          className="relative h-full w-full cursor-pointer group touch-pan-y"
+          onClick={() => {
+            if (arrastouRef.current) {
+              arrastouRef.current = false
+              return
+            }
+            setIsFullscreen(true)
+          }}
+          onTouchStart={aoTocar}
+          onTouchMove={aoArrastar}
+          onTouchEnd={aoSoltar}
+          onTouchCancel={aoSoltar}
           role="button"
           tabIndex={0}
           aria-label="Clique para ver em tela cheia"
@@ -107,20 +163,36 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
           <PhotoSkeleton className="absolute inset-0" loaded={isCurrentLoaded} />
 
           {photos.map((photo, index) => {
-            // Only render current, previous, and next images for performance
-            const shouldRender =
-              index === currentIndex ||
-              index === (currentIndex + 1) % photos.length ||
-              index === (currentIndex - 1 + photos.length) % photos.length
+            // Só a atual e as duas vizinhas existem no DOM. As vizinhas aparecem
+            // nas laterais, apagadas, e a troca desliza (`.galeria-vitrine-foto`
+            // em media.css): no celular, como uma faixa nas bordas; a partir de
+            // 1280 px, menores e mais à mostra. Com duas fotos, a outra é a
+            // "próxima".
+            const posicao =
+              index === currentIndex ? 0
+                : index === (currentIndex + 1) % photos.length ? 1
+                  : index === (currentIndex - 1 + photos.length) % photos.length ? -1
+                    : null
 
-            if (!shouldRender) return null
+            if (posicao === null) return null
 
             return (
               <div
                 key={photo}
+                // Vizinha é atalho de toque e de mouse para a seta do mesmo lado;
+                // teclado e leitor de tela já têm as setas e as miniaturas.
+                aria-hidden={posicao !== 0 || undefined}
+                onClick={posicao === 0 ? undefined : (e) => {
+                  e.stopPropagation()
+                  if (posicao === 1) goToNext()
+                  else goToPrevious()
+                }}
+                style={{ '--pos': posicao, '--lateral': posicao === 0 ? 0 : 1 } as CSSProperties}
                 className={cn(
-                  'absolute inset-0 transition-opacity duration-500',
-                  index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                  'galeria-vitrine-foto absolute inset-0 transition-opacity duration-500',
+                  posicao === 0
+                    ? 'opacity-100 z-10'
+                    : 'opacity-50 z-0 xl:opacity-40 hover:opacity-70'
                 )}
               >
                 {hasCurrentError && index === currentIndex ? (
@@ -130,7 +202,7 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
                 ) : (
                   <Image
                     src={photo}
-                    alt={`${vehicleLabel} — foto ${index + 1} de ${totalPhotos} do veículo em estoque na Attra Veículos`}
+                    alt={`${vehicleLabel}, foto ${index + 1} de ${totalPhotos} do veículo em estoque na Attra Veículos`}
                     // width/height declarados no lugar de `fill` só para que os
                     // atributos existam no HTML bruto (era o que faltava para o CLS
                     // no mobile). O tamanho real continua vindo do CSS
@@ -167,17 +239,19 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
         {/* Subtle gradient overlays - reduced for better image visibility */}
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background/80 to-transparent pointer-events-none z-20" />
 
-        {/* Navigation arrows - stopPropagation to prevent opening fullscreen when clicking arrows */}
+        {/* Navigation arrows - stopPropagation to prevent opening fullscreen when clicking arrows.
+            Só a partir de 768 px: no celular elas cobriam a faixa das fotos
+            vizinhas, e lá a troca é por arrasto, pela faixa ou pelas miniaturas. */}
         <button
           onClick={(e) => { e.stopPropagation(); goToPrevious() }}
-          className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full text-white transition-all z-40"
+          className="hidden md:block absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full text-white transition-all z-40"
           aria-label="Imagem anterior"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); goToNext() }}
-          className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full text-white transition-all z-40"
+          className="hidden md:block absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full text-white transition-all z-40"
           aria-label="Próxima imagem"
         >
           <ChevronRight className="w-6 h-6" />
@@ -284,7 +358,7 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
             <img
               key={currentIndex}
               src={photos[currentIndex]}
-              alt={`${vehicleLabel} — foto ${currentIndex + 1} de ${totalPhotos} em tela cheia`}
+              alt={`${vehicleLabel}, foto ${currentIndex + 1} de ${totalPhotos} em tela cheia`}
               className={cn(
                 "max-w-full max-h-full object-contain transition-opacity duration-300",
                 fullscreenLoaded.has(currentIndex) ? "opacity-100" : "opacity-0"

@@ -35,7 +35,7 @@ function imageObjects(photos: string[] | null | undefined, vehicleName: string) 
     '@type': 'ImageObject',
     url,
     contentUrl: url,
-    caption: i === 0 ? vehicleName : `${vehicleName} — foto ${i + 1}`,
+    caption: i === 0 ? vehicleName : `${vehicleName}, foto ${i + 1}`,
   }))
 }
 
@@ -144,19 +144,36 @@ export function buildVehicleProductSchema(vehicle: Vehicle) {
   }
 }
 
+interface ItemDaTrilha {
+  label: string
+  /** Para onde o link visível leva. */
+  href?: string
+  /** O endereço que vai no BreadcrumbList, quando não é o próprio `href`. */
+  canonico?: string
+}
+
 /**
- * O caminho da ficha até a página da marca e a do modelo — o breadcrumb
- * visível e o BreadcrumbList usam esta mesma lista.
+ * O caminho da ficha até a marca e o modelo — o breadcrumb visível e o
+ * BreadcrumbList usam esta mesma lista.
  *
- * Antes a marca apontava para `/veiculos?marca=…`, que canonicaliza para outra
- * página, e o modelo não tinha link: da ficha não havia caminho em `<a>` até
- * `/comprar/porsche/911`. Sem página de marca, a listagem filtrada continua.
+ * A marca leva à listagem filtrada (`/veiculos?marca=…`), que é o que quem
+ * clica espera: até 23/10/2026 levava à página de compra da marca
+ * (`/comprar/mercedes-benz`), uma página de conteúdo com o estoque só depois
+ * da apresentação. Para buscador nada muda: a listagem filtrada canonicaliza
+ * para a página da marca, e é ela que vai no BreadcrumbList (`canonico`).
+ *
+ * O modelo continua na página de compra do modelo (`/comprar/porsche/911`),
+ * que abre com os carros daquele modelo; antes ele não tinha link nenhum.
  */
-export function trilhaDoVeiculo(vehicle: Vehicle): { label: string; href?: string }[] {
-  const trilha: { label: string; href?: string }[] = [{ label: 'Veículos', href: '/veiculos' }]
+export function trilhaDoVeiculo(vehicle: Vehicle): ItemDaTrilha[] {
+  const trilha: ItemDaTrilha[] = [{ label: 'Veículos', href: '/veiculos' }]
   const paginas = paginasDoVeiculo(vehicle)
   if (paginas) {
-    trilha.push({ label: paginas.marca.nome, href: `/comprar/${paginas.marca.slug}` })
+    trilha.push({
+      label: paginas.marca.nome,
+      href: `/veiculos?marca=${paginas.marca.slug}`,
+      canonico: `/comprar/${paginas.marca.slug}`,
+    })
     if (paginas.modelo) {
       trilha.push({ label: paginas.modelo.nome, href: `/comprar/${paginas.marca.slug}/${paginas.modelo.slug}` })
     }
@@ -173,17 +190,20 @@ export function trilhaDoVeiculo(vehicle: Vehicle): { label: string; href?: strin
 export function buildVehicleBreadcrumbSchema(vehicle: Vehicle) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/veiculo/${vehicle.slug}`
-  const items = [{ label: 'Início', href: '/' }, ...trilhaDoVeiculo(vehicle)]
+  const items: ItemDaTrilha[] = [{ label: 'Início', href: '/' }, ...trilhaDoVeiculo(vehicle)]
 
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: items.map((it, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: it.label,
-      item: it.href ? `${baseUrl}${it.href === '/' ? '' : it.href}` : url,
-    })),
+    itemListElement: items.map((it, i) => {
+      const destino = it.canonico ?? it.href
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        name: it.label,
+        item: destino ? `${baseUrl}${destino === '/' ? '' : destino}` : url,
+      }
+    }),
   }
 }
 

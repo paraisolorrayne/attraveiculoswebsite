@@ -88,6 +88,12 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
 
   const currentPage = sourcePage && sourcePage !== 'global' ? sourcePage : pathname
 
+  // Na ficha do veículo o balão não abre, nem sozinho nem com o mouse; a
+  // bolinha fica e leva direto ao WhatsApp. Até 23/10/2026 o balão abria 15 s
+  // depois da chegada por cima da lateral e cobria o "Financiar".
+  const naFicha = pathname?.startsWith('/veiculo/') ?? false
+  const balaoAberto = isOpen && !naFicha
+
   const context = getContextMessage(currentPage, vehicleBrand, vehicleModel)
 
   // O botão só aparece (e só aceita toque) depois de ATRASO_BOTAO_MS da chegada.
@@ -125,19 +131,19 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
   // estiver digitando em um formulário. Em mobile o tooltip ocupa muito
   // espaço e atrapalha, então não há auto-open.
   useEffect(() => {
-    if (hasInteracted) return
+    if (hasInteracted || naFicha) return
     if (isMobileViewport()) return
 
     const timer = window.setTimeout(() => {
       if (!isTypingInForm()) setIsOpen(true)
     }, 15000)
     return () => window.clearTimeout(timer)
-  }, [hasInteracted])
+  }, [hasInteracted, naFicha])
 
   // Fecha tooltip ao tocar/clicar fora (mobile-safe, já que onMouseLeave
   // não dispara em touch).
   useEffect(() => {
-    if (!isOpen) return
+    if (!balaoAberto) return
 
     const handlePointerDown = (e: Event) => {
       const target = e.target as Node
@@ -152,17 +158,17 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
 
     document.addEventListener('pointerdown', handlePointerDown, true)
     return () => document.removeEventListener('pointerdown', handlePointerDown, true)
-  }, [isOpen])
+  }, [balaoAberto])
 
   // Fecha tooltip ao pressionar ESC (acessibilidade desktop)
   useEffect(() => {
-    if (!isOpen) return
+    if (!balaoAberto) return
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false)
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [isOpen])
+  }, [balaoAberto])
 
   // URL wa.me memoizada — calculada de forma síncrona pra ser usada como
   // href do anchor (preserva o user-gesture do clique).
@@ -234,7 +240,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
         data-whatsapp-flutuante=""
         onClick={handleAnchorClick}
         onMouseEnter={() => {
-          if (!pronto) return
+          if (!pronto || naFicha) return
           setIsOpen(true)
           setHasInteracted(true)
         }}
@@ -257,7 +263,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
       </a>
 
       {/* Backdrop tocável em mobile pra fechar o tooltip */}
-      {isOpen && (
+      {balaoAberto && (
         <button
           type="button"
           aria-label="Fechar tooltip"
@@ -279,7 +285,7 @@ export function WhatsAppButton({ sourcePage }: WhatsAppButtonProps) {
           // Mobile: largura adaptativa (viewport - 2rem), max 20rem
           // Desktop (sm+): largura fixa 18rem
           'w-[calc(100vw-2rem)] max-w-xs sm:w-72',
-          isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
+          balaoAberto ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
         )}
         onMouseLeave={() => setIsOpen(false)}
       >
