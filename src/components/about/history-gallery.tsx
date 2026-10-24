@@ -61,34 +61,37 @@ export function HistoryGallery({ eras }: HistoryGalleryProps) {
     }
   }, [lightboxIndex, closeLightbox, goTo])
 
-  let globalOffset = 0
+  // Onde cada era começa na lista única do lightbox.
+  const inicioDaEra = eras.map((_, i) => eras.slice(0, i).reduce((n, era) => n + era.slides.length, 0))
 
   return (
     <>
       <div className="space-y-16">
         {eras.map((era, eraIndex) => {
-          const eraOffset = globalOffset
-          globalOffset += era.slides.length
+          const eraOffset = inicioDaEra[eraIndex]
 
           return (
             <div key={eraIndex}>
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-sm font-bold text-primary uppercase tracking-wider">
+              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">
                   {era.label}
                 </span>
-                <div className="flex-1 h-px bg-border" />
+                <div className="hidden h-px flex-1 bg-border sm:block" />
                 <span className="text-sm text-foreground-secondary">
                   {era.description}
                 </span>
               </div>
 
+              {/* No celular, carrossel com rolagem para o lado (eram ~3.000 px
+                  de fotos em duas colunas); a partir de 640 px, a grade. */}
               <div className={cn(
-                'grid gap-3 lg:gap-4',
+                'jornada-carrossel -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2',
+                'sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 lg:gap-4',
                 era.slides.length <= 2
-                  ? 'grid-cols-1 sm:grid-cols-2'
+                  ? 'sm:grid-cols-2'
                   : era.slides.length <= 4
-                    ? 'grid-cols-2 lg:grid-cols-4'
-                    : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                    ? 'sm:grid-cols-2 lg:grid-cols-4'
+                    : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
               )}>
                 {era.slides.map((slide, index) => {
                   const isFeature = index === 0 && era.slides.length > 2
@@ -99,14 +102,14 @@ export function HistoryGallery({ eras }: HistoryGalleryProps) {
                       onClick={() => openLightbox(eraOffset + index)}
                       onContextMenu={blockAction}
                       className={cn(
-                        'relative rounded-2xl overflow-hidden group cursor-pointer text-left',
+                        'relative w-[80%] shrink-0 snap-start rounded-2xl overflow-hidden group cursor-pointer text-left sm:w-auto',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        isFeature ? 'col-span-2 row-span-2' : ''
+                        isFeature ? 'sm:col-span-2 sm:row-span-2' : ''
                       )}
                     >
                       <div className={cn(
                         'relative bg-background-soft w-full',
-                        isFeature ? 'aspect-square' : 'aspect-[4/3]'
+                        isFeature ? 'aspect-[4/3] sm:aspect-square' : 'aspect-[4/3]'
                       )}>
                         <Image
                           src={slide.image}
@@ -115,12 +118,14 @@ export function HistoryGallery({ eras }: HistoryGalleryProps) {
                           draggable={false}
                           className="object-cover transition-transform duration-500 group-hover:scale-105 select-none pointer-events-none"
                           sizes={isFeature
-                            ? '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw'
-                            : '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+                            ? '(max-width: 640px) 80vw, 50vw'
+                            : '(max-width: 640px) 80vw, (max-width: 1024px) 33vw, 25vw'
                           }
                           quality={85}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+                        {/* Degradê sempre inteiro embaixo da legenda: a 60%, em foto clara
+                            (a fachada de dia) o texto branco quase sumia. */}
+                        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                         <div className="absolute top-3 right-3 p-2 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <ZoomIn className="w-4 h-4 text-white" />
                         </div>

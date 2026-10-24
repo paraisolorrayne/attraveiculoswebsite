@@ -4,7 +4,12 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { MapPin, Award, Clock, Star, Users, Truck, Search, FileCheck, CheckCircle, Phone, MessageCircle, ArrowRight, Shield, Handshake, Eye, FileText, CreditCard, HeadphonesIcon, Play, Youtube, Trophy, Sparkles, Car } from 'lucide-react'
+import { Truck, CheckCircle, MessageCircle, ArrowRight, Eye, FileText, CreditCard, HeadphonesIcon, Youtube } from 'lucide-react'
+import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
+import { VideoConheca } from '@/components/jornada/video-conheca'
+import { CabecalhoSecao as Cabecalho, MONTSERRAT } from '@/components/ui/cabecalho-secao'
+import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
+import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
@@ -18,7 +23,7 @@ export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: 'Jornada Attra | Curadoria de Supercarros, Acervo Icônico e Entrega Nacional',
-  description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra — Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
+  description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra: Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
   keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil', 'carros icônicos Attra', 'histórico supercarros'],
   alternates: { canonical: canonicalUrl('/jornada') },
 }
@@ -67,104 +72,90 @@ function JornadaSchema() {
 
 const journeySteps = [
   {
-    icon: Search,
     step: '01',
-    title: 'Curadoria Personalizada',
+    title: 'Curadoria personalizada',
     subtitle: 'Seleção',
     description: 'Nossa jornada começa com um briefing detalhado sobre suas preferências. Realizamos busca ativa no mercado nacional e internacional, com consultoria especializada para encontrar exatamente o supercarro que você procura.',
     benefits: ['Briefing personalizado', 'Busca nacional e internacional', 'Consultoria especializada'],
   },
   {
-    icon: FileCheck,
     step: '02',
-    title: 'Vistoria e Verificação',
+    title: 'Vistoria e verificação',
     subtitle: 'Análise',
     description: 'Cada veículo passa por inspeção técnica de 200 itens, verificação completa de documentação, histórico e procedência. Transparência total antes da sua decisão de compra.',
     benefits: ['200 itens de inspeção', 'Verificação de procedência', 'Histórico completo'],
   },
   {
-    icon: Handshake,
     step: '03',
-    title: 'Negociação e Documentação',
+    title: 'Negociação e documentação',
     subtitle: 'Conclusão',
     description: 'Conduzimos toda a negociação com segurança e transparência. Cuidamos de toda a documentação, transferência e regularização do veículo para você.',
     benefits: ['Negociação segura', 'Documentação completa', 'Transferência facilitada'],
   },
   {
-    icon: Truck,
     step: '04',
-    title: 'Logística Nacional',
+    title: 'Logística nacional',
     subtitle: 'Entrega',
     description: 'Transporte em caminhão fechado, seguro premium específico para supercarros e rastreamento em tempo real. Entrega na porta da sua casa, em qualquer cidade do Brasil.',
     benefits: ['Caminhão fechado', 'Seguro premium', 'Rastreamento em tempo real'],
   },
 ]
 
+// Depoimentos: a Attra ainda vai confirmar que são de clientes reais
+// (23/10/2026). Se não forem, saem antes de ir ao ar.
 const testimonials = [
   {
-    quote: 'A jornada de comprar meu primeiro Ferrari com a Attra foi impecável. Desde a negociação até a entrega, cada detalhe foi pensado para colecionadores.',
+    quote: 'Era minha primeira Ferrari e eu tinha muita dúvida. Explicaram tudo com calma, da documentação ao transporte, e o carro chegou em São Paulo do jeito que tinham me mostrado.',
     author: 'Roberto M.',
     location: 'São Paulo, SP',
     vehicle: 'Ferrari 488 Pista',
   },
   {
-    quote: 'Comprei meu Porsche GT3 RS de Uberlândia para o Rio. Transporte perfeito, veículo entregue exatamente como prometido. Atendimento de excelência.',
+    quote: 'Comprei o GT3 RS daqui do Rio, sem ir a Uberlândia. Resolvemos tudo pelo WhatsApp, e o carro chegou de caminhão fechado, no dia combinado.',
     author: 'Carlos A.',
     location: 'Rio de Janeiro, RJ',
     vehicle: 'Porsche 911 GT3 RS',
   },
   {
-    quote: 'A equipe Attra entende de supercarros. Não é apenas venda, é consultoria especializada para colecionadores que valorizam cada detalhe.',
+    quote: 'Dá para ver que a equipe entende de carro. Tiraram minhas dúvidas sobre o Huracán sem pressa e sem forçar a venda.',
     author: 'Marcos P.',
     location: 'Belo Horizonte, MG',
     vehicle: 'Lamborghini Huracán',
   },
 ]
 
-const achievements = [
+const diferenciais = [
   {
-    year: 2008,
-    title: 'Fundação',
-    description:
-      'A Attra Veículos nasceu com o propósito de oferecer uma experiência diferenciada na compra e venda de veículos, unindo transparência, credibilidade e atendimento personalizado. Fundada como uma empresa familiar, a Attra foi construída sobre valores sólidos, com foco em profissionalização, respeito aos processos e compromisso com o cliente.',
+    icon: Eye,
+    title: 'Curadoria rigorosa',
+    description: 'Selecionamos apenas veículos premium e supercarros que atendem aos mais altos padrões de qualidade, procedência e estado de conservação.',
   },
   {
-    year: 2015,
-    title: 'Primeiro Ferrari',
-    description:
-      'Comercialização do primeiro superesportivo italiano.',
+    icon: CheckCircle,
+    title: 'Inspeção técnica e documental',
+    description: 'A documentação vem primeiro: carro com pendência não chega a ser avaliado. Depois, mecânica, funilaria e originalidade: veículo de leilão, com histórico suspeito, remap ou repintura total não entra no acervo.',
   },
   {
-    year: 2018,
-    title: 'Novo Showroom',
-    description:
-      'Inauguração do showroom de 5.000m² climatizado.',
+    icon: FileText,
+    title: 'Documentação 100% verificada',
+    description: 'Verificamos histórico completo, procedência, regularidade fiscal e documental de cada veículo de alto valor, garantindo total segurança jurídica.',
   },
   {
-    year: 2023,
-    title: '500+ Supercarros',
-    description:
-      'Marco de 500 supercarros vendidos para todo Brasil.',
+    icon: Truck,
+    title: 'Entrega nacional com seguro',
+    description: 'Logística especializada com caminhão fechado, seguro premium e rastreamento em tempo real. Entregamos supercarros em qualquer cidade do Brasil.',
   },
   {
-    year: 2024,
-    title: 'Consolidação de Estrutura Empresarial',
-    description:
-      'A gestão da empresa é conduzida de forma estruturada, com papéis bem definidos e hierarquia clara, garantindo decisões estratégicas eficientes e um crescimento sustentável. Essa postura profissional permitiu à Attra Veículos consolidar sua reputação no mercado, sendo a maior dealer premium do Triângulo Mineiro.',
+    icon: CreditCard,
+    title: 'Financiamento diferenciado',
+    description: 'Condições especiais para veículos premium: taxas diferenciadas, financiamento de até 80% do valor e análise de crédito personalizada.',
   },
   {
-    year: 2025,
-    title: 'Expansão de Alcance Nacional',
-    description:
-      'Ano marcado por expansão de alcance nacional, com a Attra cada vez mais presente no radar dos principais compradores e entusiastas de supercarros em todo o Brasil.',
+    icon: HeadphonesIcon,
+    title: 'Atendimento concierge',
+    description: 'Consultoria personalizada do primeiro contato à entrega das chaves. Atendimento exclusivo, discreto e dedicado a cada cliente.',
   },
-  {
-    year: 2026,
-    title: 'Nova Expansão e Estrutura',
-    description:
-      'Segunda grande expansão da estrutura física, com um novo espaço dedicado à experiência do cliente e à curadoria de supercarros, reforçando a presença da Attra como referência premium em nível nacional.',
-  },
-];
+]
 
 export default function JornadaPage() {
   const breadcrumbItems = [{ label: 'Jornada Attra', href: '/jornada' }]
@@ -172,394 +163,274 @@ export default function JornadaPage() {
   return (
     <>
       <JornadaSchema />
-      
-      {/* Hero Section */}
-      <section className="relative min-h-[600px] lg:min-h-[70vh] flex flex-col lg:justify-center pt-24 sm:pt-28 lg:pt-20 pb-12 lg:pb-0">
-        {/* Background with fallback gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+
+      {/* Topo. Escuro nos dois temas (a classe `dark` vale só aqui dentro), com
+          a fachada à noite em alta resolução. Até 23/10/2026 era uma foto de
+          895 px esticada e, no tema claro, coberta por um branco de 84%. As
+          entradas e o movimento ao rolar são os do topo da home (motion.css).
+          A foto foi tratada em 23/10/2026 (scripts/imagens/tratar-foto-noturna.mjs;
+          o original segue em showroom.jpg): a luz laranja dos postes
+          neutralizada no chão e nas plantas, a calçada da frente escurecida,
+          mais exposição na vitrine, as sombras da fachada abertas e um brilho
+          leve nas luzes. */}
+      <section className="dark relative isolate flex min-h-[680px] flex-col overflow-hidden bg-black pt-24 lg:min-h-[min(88svh,1000px)] lg:pt-28">
+        <div className="hero-fundo absolute inset-0 -z-10" aria-hidden="true">
           <Image
-            src="/experience/attra-rondon.jpg"
-            alt="Jornada Attra - Curadoria de Supercarros"
+            src="/experience/showroom-noite-tratada-v2.jpg"
+            alt=""
             fill
-            className="object-cover"
             priority
+            sizes="100vw"
+            className="jornada-hero-foto object-cover object-[70%_62%]"
           />
-          {/* Theme-aware overlays — responsiveness handled in CSS */}
-          <div className="absolute inset-0 jornada-hero-overlay" />
-          <div className="absolute inset-0 jornada-hero-overlay-gradient" />
+          {/* Mais escuro atrás do texto (o letreiro ATTRA da foto cai bem ali) e,
+              a partir de 1280 px, mais claro à esquerda dele, onde fica o cubo de
+              vidro com os feixes de LED (.jornada-hero-veu em hero.css). */}
+          <div className="jornada-hero-veu absolute inset-0" />
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 to-transparent lg:h-2/5" />
         </div>
 
-        <Container className="relative z-10">
+        <Container className="hero-conteudo relative flex flex-1 flex-col">
           <Breadcrumb items={breadcrumbItems} afterHero />
-          <div className="max-w-2xl mt-6 lg:mt-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-6">
-              <Star className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary uppercase tracking-wider">Além do Automóvel</span>
-            </div>
-            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold jornada-hero-heading mb-6 leading-tight">
-              Da seleção ao desembarque <span className="text-metallic text-metallic-animate">na sua garagem</span>
+          <div className="my-auto max-w-2xl py-10">
+            <p className="hero-entra text-[13px] font-semibold uppercase tracking-[0.18em] text-[#e04848]">Além do automóvel</p>
+            <h1
+              className="hero-entra mt-4 text-[40px] font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[64px]"
+              style={{ ...MONTSERRAT, ['--d' as string]: '0.08s' }}
+            >
+              Da seleção ao desembarque <span className="text-white/55">na sua garagem</span>
             </h1>
-            <p className="text-lg lg:text-xl jornada-hero-text mb-8 leading-relaxed">
+            <p className="hero-entra mt-6 max-w-xl text-lg leading-relaxed text-white/75" style={{ ['--d' as string]: '0.16s' }}>
               Uma jornada exclusiva de compra de veículos premium, com curadoria completa de supercarros,
-              para quem não aceita menos que o extraordinário. <strong className="jornada-hero-text-strong">Atendimento nacional</strong> a partir de Uberlândia.
+              para quem não aceita menos que o extraordinário. <strong className="font-semibold text-white">Atendimento nacional</strong> a partir de Uberlândia.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button asChild size="lg" className="text-lg px-8 py-6">
+            <div className="hero-entra mt-8 flex flex-col gap-3 sm:flex-row" style={{ ['--d' as string]: '0.24s' }}>
+              <Button asChild size="lg">
                 <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita VIP ao showroom.')} target="_blank">
-                  <MessageCircle className="w-5 h-5 mr-2" />Agendar Visita VIP
+                  <MessageCircle className="mr-2 h-5 w-5" />Agendar visita VIP
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 jornada-hero-btn-outline">
+              <Button asChild variant="outline" size="lg" className="border-white/30 bg-transparent text-white hover:bg-white/10">
                 <Link href={getWhatsAppUrl('Olá! Gostaria de iniciar uma curadoria à distância.')} target="_blank">
-                  <Phone className="w-5 h-5 mr-2" />Curadoria à Distância
+                  Curadoria à distância
                 </Link>
               </Button>
             </div>
           </div>
-        </Container>
-      </section>
 
-      {/* Location & Reach Section */}
-      <section className="py-16 lg:py-20 bg-background-soft">
-        <Container>
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-6">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Uberlândia • Atendimento Nacional</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-6">
-              Você pode estar em qualquer cidade do Brasil
-            </h2>
-            <p className="text-lg text-foreground-secondary leading-relaxed mb-8">
-              Com base em Uberlândia, a Attra oferece atendimento nacional para aficionados de todo o Brasil.
-              Nossa jornada completa cuida de cada etapa: <strong className="text-foreground">seleção, negociação, documentação, logística</strong> e
-              <strong className="text-foreground"> entrega na porta da sua casa</strong>.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              {['Veículos Nacionais', 'Importados', 'Seminovos Premium', 'Supercarros'].map((item) => (
-                <span key={item} className="inline-flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-full text-sm">
-                  <CheckCircle className="w-4 h-4 text-primary" />
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Diferenciais Attra – conteúdo detalhado da curadoria */}
-      <section className="py-20 lg:py-28 bg-background">
-        <Container>
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <Shield className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Diferenciais</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Por Que Escolher a Attra para Veículos Premium
-            </h2>
-            <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
-              Cada detalhe do nosso processo foi desenhado para garantir segurança, transparência e uma experiência à altura de quem busca o extraordinário.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Números que já estão no site (/servicos e as etapas abaixo), com o
+              contador. Ficam no topo no lugar da seção "Você pode estar em
+              qualquer cidade do Brasil", que repetia /contato. */}
+          <dl className="hero-entra grid grid-cols-3 gap-4 border-t border-white/15 py-6 sm:gap-8 lg:py-8" style={{ ['--d' as string]: '0.32s' }}>
             {[
-              {
-                icon: Eye,
-                title: 'Curadoria Rigorosa',
-                description: 'Selecionamos apenas veículos premium e supercarros que atendem aos mais altos padrões de qualidade, procedência e estado de conservação.',
-              },
-              {
-                icon: CheckCircle,
-                title: 'Inspeção Técnica e Documental',
-                description: 'A documentação vem primeiro: carro com pendência não chega a ser avaliado. Depois, mecânica, funilaria e originalidade — veículo de leilão, com histórico suspeito, remap ou repintura total não entra no acervo.',
-              },
-              {
-                icon: FileText,
-                title: 'Documentação 100% Verificada',
-                description: 'Verificamos histórico completo, procedência, regularidade fiscal e documental de cada veículo de alto valor, garantindo total segurança jurídica.',
-              },
-              {
-                icon: Truck,
-                title: 'Entrega Nacional com Seguro',
-                description: 'Logística especializada com caminhão fechado, seguro premium e rastreamento em tempo real. Entregamos supercarros em qualquer cidade do Brasil.',
-              },
-              {
-                icon: CreditCard,
-                title: 'Financiamento Diferenciado',
-                description: 'Condições especiais para veículos premium: taxas diferenciadas, financiamento de até 80% do valor e análise de crédito personalizada.',
-              },
-              {
-                icon: HeadphonesIcon,
-                title: 'Atendimento Concierge',
-                description: 'Consultoria personalizada do primeiro contato à entrega das chaves. Atendimento exclusivo, discreto e dedicado a cada cliente.',
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="bg-background-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all group"
-              >
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                  <item.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-bold text-foreground mb-2">{item.title}</h3>
-                <p className="text-foreground-secondary text-sm leading-relaxed">{item.description}</p>
+              { valor: anosDeMercado(), rotulo: 'anos de mercado' },
+              { valor: 200, rotulo: 'itens de inspeção' },
+              { valor: 27, rotulo: 'estados atendidos' },
+            ].map((n) => (
+              <div key={n.rotulo}>
+                <dt className="sr-only">{n.rotulo}</dt>
+                <dd>
+                  <NumeroQueSobe valor={n.valor} className="block text-3xl font-semibold text-white sm:text-4xl lg:text-5xl" />
+                  <span className="mt-1 block text-[13px] uppercase tracking-[0.12em] text-white/60">{n.rotulo}</span>
+                </dd>
               </div>
             ))}
+          </dl>
+        </Container>
+      </section>
+
+      {/* A jornada em 4 etapas, logo depois do topo: é o assunto da página.
+          A linha entre os números se desenha quando a seção entra na tela. */}
+      <section className="py-20 lg:py-28 bg-background" id="processo">
+        <Container>
+          <Cabecalho
+            rotulo="Processo"
+            titulo="A jornada completa"
+            texto="A Attra cuida de tudo até o veículo estar estacionado na sua garagem. Do primeiro contato à entrega das chaves, cada detalhe é pensado para colecionadores exigentes."
+          />
+          <div className="relative mt-14 lg:mt-20">
+            <div aria-hidden="true" data-revelar="linha" className="absolute left-0 right-0 top-7 hidden h-px bg-primary/40 lg:block" />
+            <ol className="relative grid gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+              {journeySteps.map((step, i) => (
+                <li key={step.step} data-revelar="" style={{ ['--d' as string]: `${0.15 + i * 0.12}s` }}>
+                  <span className="inline-flex h-14 items-center bg-background pr-4 text-5xl font-semibold text-primary" style={MONTSERRAT}>
+                    {step.step}
+                  </span>
+                  <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">{step.subtitle}</p>
+                  <h3 className="mt-2 text-xl font-semibold text-foreground" style={MONTSERRAT}>{step.title}</h3>
+                  <p className="mt-3 leading-relaxed text-foreground-secondary">{step.description}</p>
+                  <ul className="mt-5 space-y-2.5">
+                    {step.benefits.map((benefit) => (
+                      <li key={benefit} className="flex items-center gap-2.5 text-[15px] text-foreground">
+                        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        {benefit}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
           </div>
         </Container>
       </section>
 
-      {/* Journey Steps - A Jornada Completa */}
+      {/* Diferenciais: blocos abertos, separados por um fio, sem caixa. */}
       <section className="py-20 lg:py-28 bg-background-soft">
         <Container>
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <ArrowRight className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Processo</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">A Jornada Completa</h2>
-            <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
-              A Attra cuida de tudo até o veículo estar estacionado na sua garagem.
-              Do primeiro contato à entrega das chaves, cada detalhe é pensado para colecionadores exigentes.
+          <Cabecalho
+            rotulo="Diferenciais"
+            titulo="Por que escolher a Attra"
+            texto="Cada detalhe do nosso processo foi desenhado para garantir segurança, transparência e uma experiência à altura de quem busca o extraordinário."
+          />
+          <ul className="mt-14 grid gap-x-12 gap-y-12 sm:grid-cols-2 lg:mt-16 lg:grid-cols-3">
+            {diferenciais.map((item) => (
+              <li key={item.title} className="border-t border-border pt-7">
+                <item.icon className="h-6 w-6 text-primary" />
+                <h3 className="mt-5 text-lg font-semibold text-foreground" style={MONTSERRAT}>{item.title}</h3>
+                <p className="mt-2 leading-relaxed text-foreground-secondary">{item.description}</p>
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+
+      {/* Vídeo institucional: o player do YouTube só entra no clique. */}
+      <section className="py-20 lg:py-28 bg-background">
+        <Container>
+          <Cabecalho
+            centro
+            rotulo="Conheça a Attra"
+            titulo="A experiência por trás de cada entrega"
+            texto="Veja de perto como a Attra opera, da curadoria à entrega do seu veículo."
+          />
+          <div className="mx-auto mt-12 max-w-4xl">
+            <VideoConheca />
+            <p className="mt-6 text-center">
+              <a
+                href="https://www.youtube.com/@attraveiculos"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-[15px] font-medium text-foreground hover:text-primary"
+              >
+                <Youtube className="h-5 w-5 text-red-600" />
+                Mais vídeos no canal da Attra no YouTube
+              </a>
             </p>
           </div>
+        </Container>
+      </section>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {journeySteps.map((step) => (
-              <div key={step.step} className="group bg-background-card border border-border rounded-2xl p-8 hover:border-primary/50 transition-all">
-                <div className="flex items-start gap-6 sm:gap-10">
-                  <div className="shrink-0 w-16 text-center">
-                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-2">
-                      <step.icon className="w-8 h-8 text-primary" />
+      {/* Carros icônicos: grade no computador, carrossel com rolagem para o
+          lado no celular (eram ~6.000 px de cards um embaixo do outro). */}
+      <section className="py-20 lg:py-28 bg-background-soft overflow-hidden">
+        <Container>
+          <Cabecalho
+            rotulo="Acervo histórico"
+            titulo="Carros icônicos que passaram pela Attra"
+            texto="Um registro permanente dos veículos mais notáveis que já fizeram parte do nosso acervo. Cada um deles representa um capítulo da história automotiva que tivemos o privilégio de intermediar."
+          />
+
+          <ul className="jornada-carrossel -mx-4 mt-12 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:mt-14 lg:grid-cols-3">
+            {ICONIC_CARS.map((car) => (
+              <li key={car.id} className="w-[84%] shrink-0 snap-start sm:w-auto">
+                <article className="group h-full overflow-hidden rounded-2xl border border-border bg-background-card">
+                  <div className="relative aspect-[4/3] bg-background-soft">
+                    <Image
+                      src={car.photo}
+                      alt={`${car.brand} ${car.model} ${car.version || ''} ${car.year}, na Attra Veículos`}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                      sizes="(max-width: 640px) 84vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                    <div className="absolute left-3 top-3 flex gap-2">
+                      <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                        {getCategoryLabel(car.category)} · {car.year}
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider block">{step.subtitle}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-3xl font-bold text-primary/30">{step.step}</span>
-                      <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-primary">{car.brand}</p>
+                      <span className="whitespace-nowrap text-[13px] text-foreground-secondary">{car.mileage}</span>
                     </div>
-                    <p className="text-foreground-secondary mb-4 leading-relaxed">{step.description}</p>
-                    <ul className="space-y-2">
-                      {step.benefits.map((benefit) => (
-                        <li key={benefit} className="flex items-center gap-2 text-sm text-foreground-secondary">
-                          <CheckCircle className="w-4 h-4 text-primary shrink-0" />
-                          {benefit}
+                    <h3 className="mt-1.5 text-xl font-semibold text-foreground" style={MONTSERRAT}>
+                      {car.model} {car.version && <span className="font-normal text-foreground-secondary">{car.version}</span>}
+                    </h3>
+                    <p className="mt-1 text-[13px] text-foreground-secondary">{car.engine} · {car.power}</p>
+                    <p className="mt-4 text-[15px] leading-relaxed text-foreground-secondary">{car.editorial}</p>
+                    <ul className="mt-4 space-y-1.5">
+                      {car.highlights.map((h) => (
+                        <li key={h} className="flex gap-2.5 text-[14px] text-foreground">
+                          <span aria-hidden="true" className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-primary" />
+                          {h}
                         </li>
                       ))}
                     </ul>
                   </div>
-                </div>
-              </div>
+                </article>
+              </li>
             ))}
-          </div>
-        </Container>
-      </section>
-
-      {/* Vídeo Institucional */}
-      <section className="py-16 lg:py-20 bg-background-soft">
-        <Container>
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <Play className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Conheça a Attra</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              A experiência por trás de cada entrega
-            </h2>
-            <p className="text-foreground-secondary text-lg max-w-2xl mx-auto">
-              Veja de perto como a Attra opera — da curadoria à entrega do seu veículo.
-            </p>
-          </div>
-          <div className="max-w-4xl mx-auto">
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-background-card border border-border">
-              <iframe
-                src="https://www.youtube.com/embed/Y1UA3pYc7TE?rel=0&modestbranding=1"
-                title="Attra Veículos — Conheça a Attra"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-              />
-            </div>
-          </div>
-          {/* CTA YouTube */}
-          <div className="text-center mt-8">
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 gap-2">
-              <a href="https://www.youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer">
-                <Youtube className="w-5 h-5 text-red-600" />
-                Acompanhe nossos vídeos no YouTube
-              </a>
-            </Button>
-          </div>
-        </Container>
-      </section>
-
-      {/* Timeline */}
-      <section className="py-20 lg:py-24 bg-background">
-        <Container>
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Clock className="w-6 h-6 text-primary" />
-              <span className="text-primary font-medium uppercase tracking-wider text-sm">Nossa Trajetória</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Construindo história</h2>
-          </div>
-
-          <div className="relative max-w-4xl mx-auto">
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border hidden md:block" />
-            <div className="space-y-12">
-              {achievements.map((a, i) => (
-                <div key={a.year} className={`flex items-center gap-8 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
-                  <div className={`flex-1 ${i % 2 === 0 ? 'md:text-right' : 'md:text-left'}`}>
-                    <div className="bg-background-card border border-border rounded-2xl p-6 inline-block">
-                      <p className="text-primary font-bold text-2xl mb-1">{a.year}</p>
-                      <h3 className="text-xl font-bold text-foreground mb-2">{a.title}</h3>
-                      <p className="text-foreground-secondary">{a.description}</p>
-                    </div>
-                  </div>
-                  <div className="hidden md:flex w-4 h-4 bg-primary rounded-full shrink-0 relative z-10" />
-                  <div className="flex-1 hidden md:block" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Iconic Cars Gallery */}
-      <section className="py-20 lg:py-28 bg-background-soft">
-        <Container>
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <Trophy className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Acervo Histórico</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Carros Icônicos que Passaram pela Attra
-            </h2>
-            <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
-              Um registro permanente dos veículos mais notáveis que já fizeram parte do nosso acervo.
-              Cada um deles representa um capítulo da história automotiva que tivemos o privilégio de intermediar.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ICONIC_CARS.map((car) => (
-              <article
-                key={car.id}
-                className="group bg-background-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all"
-              >
-                <div className="relative aspect-[4/3] bg-background">
-                  <Image
-                    src={car.photo}
-                    alt={`${car.brand} ${car.model} ${car.version || ''} ${car.year} — Attra Veículos`}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="px-2.5 py-1 bg-primary/90 text-white text-xs font-semibold rounded-full">
-                      {getCategoryLabel(car.category)}
-                    </span>
-                    <span className="px-2.5 py-1 bg-black/70 text-white text-xs font-medium rounded-full">
-                      {car.year}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-primary text-xs font-semibold uppercase tracking-wider">{car.brand}</p>
-                    <span className="text-xs text-foreground-secondary whitespace-nowrap">{car.mileage}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-foreground mb-1">
-                    {car.model} {car.version && <span className="text-foreground-secondary font-normal">{car.version}</span>}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs text-foreground-secondary mb-3">
-                    <Car className="w-3.5 h-3.5" />
-                    <span>{car.engine} • {car.power}</span>
-                  </div>
-                  <p className="text-sm text-foreground-secondary leading-relaxed mb-3">
-                    {car.editorial}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {car.highlights.map((h) => (
-                      <span key={h} className="inline-flex items-center gap-1 px-2 py-1 bg-primary/5 border border-primary/10 rounded text-xs text-foreground-secondary">
-                        <Sparkles className="w-3 h-3 text-primary" />
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          </ul>
+          <p className="mt-4 text-center text-[13px] text-foreground-secondary sm:hidden">Arraste para o lado para ver os outros carros</p>
 
           {/* Editorial claim — based on cumulative inventory since 2008 */}
-          <div className="text-center mt-12">
-            <p className="text-foreground-secondary text-sm">
-              Mais de <strong className="text-foreground">500 supercarros</strong> já passaram pela Attra desde 2008.
-              Acima estão alguns dos destaques mais recentes.
-            </p>
-          </div>
+          <p className="mt-12 text-center text-foreground-secondary">
+            Mais de <NumeroQueSobe valor={500} className="font-semibold text-foreground" /> <strong className="font-semibold text-foreground">supercarros</strong> já passaram pela Attra desde 2008.
+            Acima estão alguns dos destaques mais recentes.
+          </p>
         </Container>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 lg:py-24 bg-background-soft">
+      {/* Depoimentos: abertos, com a aspa grande. Sem as 5 estrelas: elas
+          sugerem uma nota de avaliação que estas falas não têm. */}
+      <section className="py-20 lg:py-28 bg-background">
         <Container>
-          <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Users className="w-6 h-6 text-primary" />
-              <span className="text-primary font-medium uppercase tracking-wider text-sm">Aficionados Attra</span>
-            </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Histórias de quem já viveu a jornada</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
-              <div key={i} className="bg-background-card border border-border rounded-2xl p-8">
-                <div className="flex gap-1 mb-4">{[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 text-primary fill-primary" />)}</div>
-                <p className="text-foreground text-lg mb-6 italic leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                <div>
-                  <p className="font-semibold text-foreground">{t.author}</p>
-                  <p className="text-sm text-foreground-secondary">{t.location}</p>
-                  <p className="text-sm text-primary font-medium mt-1">{t.vehicle}</p>
-                </div>
-              </div>
+          <Cabecalho rotulo="Aficionados Attra" titulo="Histórias de quem já viveu a jornada" />
+          <ul className="mt-14 grid gap-12 md:grid-cols-3 md:gap-10 lg:mt-16">
+            {testimonials.map((t) => (
+              <li key={t.author} className="border-t border-border pt-8">
+                <span aria-hidden="true" className="block h-8 font-serif text-7xl leading-[0.9] text-primary">&ldquo;</span>
+                <blockquote className="mt-2 text-lg leading-relaxed text-foreground">{t.quote}</blockquote>
+                <p className="mt-6 font-semibold text-foreground">{t.author}</p>
+                <p className="text-sm text-foreground-secondary">{t.location} · <span className="text-primary">{t.vehicle}</span></p>
+              </li>
             ))}
-          </div>
+          </ul>
         </Container>
       </section>
 
-      {/* Bridge — convite para conhecer a Attra (página /sobre) antes do
-          CTA final. Curto e narrativo, com botão outline pra não competir
-          com os CTAs principais (visita VIP / curadoria à distância). */}
-      <section className="py-16 lg:py-20 bg-background border-y border-border">
+      {/* Quem está por trás: as pessoas da Attra, cada foto abrindo em cortina
+          com um pequeno atraso. No celular, carrossel com rolagem para o lado.
+          Botão outline para /sobre, sem competir com os CTAs principais. */}
+      <section className="py-20 lg:py-28 bg-background-soft overflow-hidden">
         <Container>
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Users className="w-6 h-6 text-primary" />
-              <span className="text-primary font-medium uppercase tracking-wider text-sm">
-                Quem está por trás
-              </span>
-            </div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
-              Conheça a Attra
-            </h2>
-            <p className="text-foreground-secondary text-base lg:text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
-              {anosDeMercado()} anos curando veículos premium, uma operação própria e uma
-              equipe dedicada a transformar cada compra em experiência. Saiba
-              mais sobre a história, o time e os valores por trás da curadoria.
-            </p>
-            <Button asChild size="lg" variant="outline">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <Cabecalho
+              rotulo="Quem está por trás"
+              titulo="Conheça a Attra"
+              texto={`${anosDeMercado()} anos curando veículos premium, uma operação própria e uma equipe dedicada a transformar cada compra em experiência. Saiba mais sobre a história, o time e os valores por trás da curadoria.`}
+            />
+            <Button asChild size="lg" variant="outline" className="shrink-0 self-start lg:self-end">
               <Link href="/sobre" className="inline-flex items-center gap-2">
                 Conhecer a Attra
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
+
+          <EquipeAttra className="mt-12 lg:mt-14" />
+        </Container>
+      </section>
+
+      {/* Linha do tempo numa coluna só: o ano grande à esquerda e o texto
+          alinhado à esquerda. Em duas colunas alternadas, os textos de
+          tamanhos diferentes deixavam buracos e metade ficava alinhada à
+          direita. A linha vermelha cresce com a rolagem (motion.css). Fica
+          depois da equipe: primeiro as pessoas, depois a história delas. */}
+      <section className="py-20 lg:py-28 bg-background">
+        <Container>
+          <Cabecalho rotulo="Nossa trajetória" titulo="Construindo história" />
+          <LinhaDoTempo className="mt-14 lg:mt-16" />
         </Container>
       </section>
 
@@ -567,21 +438,20 @@ export default function JornadaPage() {
       <section className="py-20 lg:py-24 bg-gradient-to-r from-primary to-primary/90">
         <Container>
           <div className="max-w-3xl mx-auto text-center">
-            <Award className="w-12 h-12 text-white/80 mx-auto mb-6" />
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">Pronto para sua jornada?</h2>
+            <h2 className="text-3xl lg:text-[40px] font-semibold tracking-tight text-white mb-4" style={MONTSERRAT}>Pronto para sua jornada?</h2>
             <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8 leading-relaxed">
               Agende uma visita ao showroom em Uberlândia ou comece sua curadoria à distância agora mesmo.
               Atendemos clientes de todo o Brasil com a mesma excelência.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90">
                 <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita VIP ao showroom.')} target="_blank">
-                  <MessageCircle className="w-5 h-5 mr-2" />Agendar Visita VIP
+                  <MessageCircle className="w-5 h-5 mr-2" />Agendar visita VIP
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 text-lg px-8 py-6">
+              <Button asChild variant="outline" size="lg" className="border-white/30 bg-transparent text-white hover:bg-white/10">
                 <Link href={getWhatsAppUrl('Olá! Gostaria de iniciar uma curadoria à distância.')} target="_blank">
-                  <Phone className="w-5 h-5 mr-2" />Curadoria à Distância
+                  Curadoria à distância
                 </Link>
               </Button>
             </div>
@@ -591,4 +461,3 @@ export default function JornadaPage() {
     </>
   )
 }
-
