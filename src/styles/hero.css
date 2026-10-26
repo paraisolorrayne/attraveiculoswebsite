@@ -151,25 +151,13 @@
   will-change: transform, opacity;
 }
 
-/* ===== JORNADA HERO (23/10/2026) ===== */
-/* Véu sobre a foto do topo de /jornada. A coluna de texto fica centrada com
-   672 px, então começa em 50% - 336px: a partir de 1280 px, o que fica à
-   esquerda disso (o cubo de vidro da foto) fica quase sem véu, e o
-   escurecimento forte começa 24 px antes do texto. Luz sob véu preto
-   semitransparente vira cinza: com 45% o cubo parecia sujo. */
-.jornada-hero-veu {
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.8) 55%, rgba(0, 0, 0, 0.2));
-}
-@media (min-width: 1280px) {
-  .jornada-hero-veu {
-    background: linear-gradient(
-      to right,
-      rgba(0, 0, 0, 0.2) 0,
-      rgba(0, 0, 0, 0.3) calc(50% - 540px),
-      rgba(0, 0, 0, 0.93) calc(50% - 360px),
-      rgba(0, 0, 0, 0.82) 58%,
-      rgba(0, 0, 0, 0.2) 100%
-    );
+/* ===== JORNADA HERO (26/10/2026) ===== */
+/* Vídeo em pé do topo de /jornada. No computador a largura acompanha a tela e
+   também a altura dela: o vídeo inteiro (9:16) cabe abaixo do cabeçalho sem
+   rolar, entre 260 e 380 px de largura. */
+@media (min-width: 1024px) {
+  .jornada-hero-video {
+    width: clamp(260px, min(24vw, calc((100svh - 18rem) * 0.5625)), 380px);
   }
 }
 

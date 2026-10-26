@@ -7,6 +7,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Truck, CheckCircle, MessageCircle, ArrowRight, Eye, FileText, CreditCard, HeadphonesIcon, Youtube } from 'lucide-react'
 import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { VideoConheca } from '@/components/jornada/video-conheca'
+import { VideoEmPe } from '@/components/ui/video-em-pe'
 import { CabecalhoSecao as Cabecalho, MONTSERRAT } from '@/components/ui/cabecalho-secao'
 import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
 import { EquipeAttra } from '@/components/attra/equipe-attra'
@@ -164,78 +165,83 @@ export default function JornadaPage() {
     <>
       <JornadaSchema />
 
-      {/* Topo. Escuro nos dois temas (a classe `dark` vale só aqui dentro), com
-          a fachada à noite em alta resolução. Até 23/10/2026 era uma foto de
-          895 px esticada e, no tema claro, coberta por um branco de 84%. As
-          entradas e o movimento ao rolar são os do topo da home (motion.css).
-          A foto foi tratada em 23/10/2026 (scripts/imagens/tratar-foto-noturna.mjs;
-          o original segue em showroom.jpg): a luz laranja dos postes
-          neutralizada no chão e nas plantas, a calçada da frente escurecida,
-          mais exposição na vitrine, as sombras da fachada abertas e um brilho
-          leve nas luzes. */}
-      <section className="dark relative isolate flex min-h-[680px] flex-col overflow-hidden bg-black pt-24 lg:min-h-[min(88svh,1000px)] lg:pt-28">
-        <div className="hero-fundo absolute inset-0 -z-10" aria-hidden="true">
-          <Image
-            src="/experience/showroom-noite-tratada-v2.jpg"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="jornada-hero-foto object-cover object-[70%_62%]"
-          />
-          {/* Mais escuro atrás do texto (o letreiro ATTRA da foto cai bem ali) e,
-              a partir de 1280 px, mais claro à esquerda dele, onde fica o cubo de
-              vidro com os feixes de LED (.jornada-hero-veu em hero.css). */}
-          <div className="jornada-hero-veu absolute inset-0" />
-          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 to-transparent lg:h-2/5" />
-        </div>
-
-        <Container className="hero-conteudo relative flex flex-1 flex-col">
+      {/* Topo. Até 26/10/2026 tinha a fachada à noite de fundo e ficava escuro
+          nos dois temas; a dona achou a foto ruim mesmo tratada, e o lugar dela
+          ficou com o vídeo de apresentação da Attra (em pé, com legenda
+          gravada). Sem a foto, o topo segue o tema, como o do /sobre. No
+          computador: texto à esquerda, o vídeo e, na ponta direita, os números
+          empilhados. As entradas e o movimento ao rolar são os do topo da home
+          (motion.css). */}
+      <section className="relative isolate flex min-h-[680px] flex-col overflow-hidden bg-background-soft pt-24 lg:min-h-[min(88svh,1000px)] lg:pt-28">
+        <Container className="hero-conteudo hero-conteudo-alto relative flex flex-1 flex-col">
           <Breadcrumb items={breadcrumbItems} afterHero />
-          <div className="my-auto max-w-2xl py-10">
-            <p className="hero-entra text-[13px] font-semibold uppercase tracking-[0.18em] text-[#e04848]">Além do automóvel</p>
-            <h1
-              className="hero-entra mt-4 text-[40px] font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[64px]"
-              style={{ ...MONTSERRAT, ['--d' as string]: '0.08s' }}
-            >
-              Da seleção ao desembarque <span className="text-white/55">na sua garagem</span>
-            </h1>
-            <p className="hero-entra mt-6 max-w-xl text-lg leading-relaxed text-white/75" style={{ ['--d' as string]: '0.16s' }}>
-              Uma jornada exclusiva de compra de veículos premium, com curadoria completa de supercarros,
-              para quem não aceita menos que o extraordinário. <strong className="font-semibold text-white">Atendimento nacional</strong> a partir de Uberlândia.
-            </p>
-            <div className="hero-entra mt-8 flex flex-col gap-3 sm:flex-row" style={{ ['--d' as string]: '0.24s' }}>
-              <Button asChild size="lg">
-                <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita VIP ao showroom.')} target="_blank">
-                  <MessageCircle className="mr-2 h-5 w-5" />Agendar visita VIP
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/30 bg-transparent text-white hover:bg-white/10">
-                <Link href={getWhatsAppUrl('Olá! Gostaria de iniciar uma curadoria à distância.')} target="_blank">
-                  Curadoria à distância
-                </Link>
-              </Button>
+          <div className="my-auto grid gap-12 py-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-12 xl:gap-20">
+            <div className="max-w-2xl">
+              <p className="hero-entra text-[13px] font-semibold uppercase tracking-[0.18em] text-primary">Além do automóvel</p>
+              <h1
+                className="hero-entra mt-4 text-[40px] font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[clamp(44px,4.2vw,64px)]"
+                style={{ ...MONTSERRAT, ['--d' as string]: '0.08s' }}
+              >
+                Da seleção ao desembarque <span className="text-foreground/45">na sua garagem</span>
+              </h1>
+              <p className="hero-entra mt-6 max-w-xl text-lg leading-relaxed text-foreground-secondary" style={{ ['--d' as string]: '0.16s' }}>
+                Uma jornada exclusiva de compra de veículos premium, com curadoria completa de supercarros,
+                para quem não aceita menos que o extraordinário. <strong className="font-semibold text-foreground">Atendimento nacional</strong> a partir de Uberlândia.
+              </p>
+              {/* Em 1024 px a coluna do texto não comporta os dois botões lado a
+                  lado: o segundo desce inteiro em vez de quebrar o texto. */}
+              <div className="hero-entra mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap [&>*]:whitespace-nowrap" style={{ ['--d' as string]: '0.24s' }}>
+                <Button asChild size="lg">
+                  <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita VIP ao showroom.')} target="_blank">
+                    <MessageCircle className="mr-2 h-5 w-5" />Agendar visita VIP
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href={getWhatsAppUrl('Olá! Gostaria de iniciar uma curadoria à distância.')} target="_blank">
+                    Curadoria à distância
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* O vídeo e os números. No celular, um embaixo do outro (números em
+                linha); a partir do tablet, os números viram coluna ao lado do
+                vídeo, alinhados pela base dele. */}
+            <div className="flex flex-col gap-10 sm:flex-row sm:items-end sm:gap-10 xl:gap-14">
+              <VideoEmPe
+                noTopo
+                video="/videos/jornada-apresentacao.mp4"
+                quadro="/images/jornada-apresentacao-quadro.jpg"
+                alt="Apresentação da Attra Veículos no showroom, em Uberlândia"
+                assunto="de apresentação da Attra"
+                sizes="(min-width: 1024px) 380px, (min-width: 640px) 300px, 90vw"
+                className="hero-entra jornada-hero-video mx-auto w-full max-w-[340px] sm:mx-0 sm:w-[300px] sm:max-w-none"
+                style={{ ['--d' as string]: '0.2s' }}
+              />
+
+              {/* Números que já estão no site (/servicos e as etapas abaixo), com o
+                  contador. Ficam no topo no lugar da seção "Você pode estar em
+                  qualquer cidade do Brasil", que repetia /contato. */}
+              <dl
+                className="hero-entra grid grid-cols-3 gap-4 border-t border-border pt-6 sm:flex sm:flex-col sm:gap-0 sm:border-t-0 sm:pt-0"
+                style={{ ['--d' as string]: '0.32s' }}
+              >
+                {[
+                  { valor: anosDeMercado(), rotulo: 'anos de mercado' },
+                  { valor: 200, rotulo: 'itens de inspeção' },
+                  { valor: 27, rotulo: 'estados atendidos' },
+                ].map((n) => (
+                  <div key={n.rotulo} className="sm:border-t sm:border-border sm:py-6 sm:last:pb-0">
+                    <dt className="sr-only">{n.rotulo}</dt>
+                    <dd>
+                      <NumeroQueSobe valor={n.valor} className="block text-3xl font-semibold text-foreground sm:text-4xl lg:text-5xl" />
+                      <span className="mt-1 block text-[13px] uppercase tracking-[0.12em] text-foreground-secondary">{n.rotulo}</span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
-
-          {/* Números que já estão no site (/servicos e as etapas abaixo), com o
-              contador. Ficam no topo no lugar da seção "Você pode estar em
-              qualquer cidade do Brasil", que repetia /contato. */}
-          <dl className="hero-entra grid grid-cols-3 gap-4 border-t border-white/15 py-6 sm:gap-8 lg:py-8" style={{ ['--d' as string]: '0.32s' }}>
-            {[
-              { valor: anosDeMercado(), rotulo: 'anos de mercado' },
-              { valor: 200, rotulo: 'itens de inspeção' },
-              { valor: 27, rotulo: 'estados atendidos' },
-            ].map((n) => (
-              <div key={n.rotulo}>
-                <dt className="sr-only">{n.rotulo}</dt>
-                <dd>
-                  <NumeroQueSobe valor={n.valor} className="block text-3xl font-semibold text-white sm:text-4xl lg:text-5xl" />
-                  <span className="mt-1 block text-[13px] uppercase tracking-[0.12em] text-white/60">{n.rotulo}</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
         </Container>
       </section>
 

@@ -355,6 +355,12 @@ html[data-abertura-agora] .hero-entra { animation-delay: calc(var(--d, 0s) + 1.8
 }
 @keyframes hero-fundo-desce { to { transform: translateY(22%) scale(1.06); } }
 @keyframes hero-conteudo-sobe { to { transform: translateY(-12%); opacity: 0; } }
+/* Topo mais alto que a tela do celular (/jornada com o vídeo, /sobre com os
+   números): lá o conteúdo não some ao rolar, senão o que fica embaixo do topo
+   apagaria antes de chegar à vista. */
+@media (max-width: 1023.98px) {
+  .hero-conteudo.hero-conteudo-alto { animation: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hero-linha > span, .hero-entra { animation: none; }
@@ -423,11 +429,6 @@ html[data-revelar] [data-revelar="mapa"][data-revelado] .mapa-destino {
 
 /* ── /jornada (23/10/2026) ──────────────────────────────────────────────── */
 
-/* Foto do topo assenta do zoom na entrada; com a abertura, espera ela subir. */
-.jornada-hero-foto { animation: jornada-foto-assenta 2.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-html[data-abertura-agora] .jornada-hero-foto { animation-delay: 1.3s; }
-@keyframes jornada-foto-assenta { from { transform: scale(1.08); } }
-
 /* Linha entre os números das etapas: se desenha da esquerda para a direita. */
 html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { opacity: 1; transform: scaleX(0); }
 html[data-revelar] [data-revelar="linha"][data-revelado] {
@@ -464,6 +465,5 @@ html[data-revelar] [data-revelar="linha"][data-revelado] {
 .jornada-carrossel::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .jornada-hero-foto { animation: none; }
   html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { transform: none; }
 }

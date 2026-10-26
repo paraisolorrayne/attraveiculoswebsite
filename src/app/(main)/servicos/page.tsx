@@ -6,7 +6,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
-import { VideoAtendimento } from '@/components/servicos/video-atendimento'
+import { VideoEmPe } from '@/components/ui/video-em-pe'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
@@ -480,7 +480,15 @@ export default function ServicosPage() {
                 </Button>
               </div>
             </div>
-            <VideoAtendimento />
+            {/* Largura fixa no computador: a coluna do vídeo se mede pelo conteúdo, e
+                com w-full (tudo lá dentro é absoluto) a caixa ficava com 0 px. */}
+            <VideoEmPe
+              video="/videos/atendimento-showroom.mp4"
+              quadro="/images/atendimento-showroom-quadro.jpg"
+              alt="Atendimento no showroom da Attra Veículos, em Uberlândia"
+              assunto="do atendimento"
+              className="mx-auto w-full max-w-[360px] lg:w-[380px] lg:max-w-none"
+            />
           </div>
         </Container>
       </section>

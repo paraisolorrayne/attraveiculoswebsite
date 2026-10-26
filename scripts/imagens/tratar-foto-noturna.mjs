@@ -1,6 +1,6 @@
 // Tratamento da foto noturna da fachada (hero de /jornada).
 // Uso: EXPO=0.5 BRILHO=0.5 CUBO=1 CUBO_PRETO=30 CUBO_GAMA=1.25 node scripts/imagens/tratar-foto-noturna.mjs <entrada> <saida> 1
-// (assim saiu public/experience/showroom-noite-tratada-v2.jpg, em 23/10/2026)
+// (assim saiu a foto do topo da /jornada em 23/10/2026; saiu do site em 26/10/2026, trocada por vídeo)
 //
 // O cubo de vidro da esquerda (os feixes de LED) tem tratamento próprio
 // (CUBO, passo 7): é uma área toda clara, e o brilho e a vinheta do resto da
