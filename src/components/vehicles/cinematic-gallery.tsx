@@ -200,8 +200,10 @@ export function CinematicGallery({ photos, vehicleName, vehicleYear }: Cinematic
           <Expand className="w-5 h-5" />
         </button>
 
-        {/* Image counter */}
-        <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-full text-white text-sm z-40 pointer-events-none">
+        {/* Image counter. No celular fica no alto, na linha do botão de tela
+            cheia: embaixo, a fileira de miniaturas passava por cima dele e o
+            "1 / 20" aparecia cortado. */}
+        <div className="absolute top-24 left-4 lg:top-auto lg:bottom-4 px-4 py-2 bg-black/40 backdrop-blur-sm rounded-full text-white text-sm z-40 pointer-events-none">
           {currentIndex + 1} / {photos.length}
         </div>
 

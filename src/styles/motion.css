@@ -110,7 +110,12 @@
 .animate-fade-in-up { animation: reveal 0.8s var(--ease-premium) forwards; }
 .animate-fade-in-scale { animation: reveal-scale var(--duration-slow) var(--ease-premium) forwards; }
 .animate-slide-in-right { animation: focus-shift 0.8s var(--ease-premium) forwards; }
-.page-enter { animation: section-enter 0.4s var(--ease-decelerate) forwards; }
+/* Sem `forwards`: o fim da animação é o estado normal do <main>, e com ela
+   presa no fim ele guardava um transform (mesmo `none` no último quadro vira
+   translateY(0) na interpolação). Com qualquer transform, os elementos `fixed`
+   da página ficam presos ao <main> e não à tela: o painel de filtros fechado
+   alargava /veiculos para 760 px num celular de 440. */
+.page-enter { animation: section-enter 0.4s var(--ease-decelerate) backwards; }
 
 /* Smooth zoom on image hover */
 .image-hover-zoom { overflow: hidden; }
