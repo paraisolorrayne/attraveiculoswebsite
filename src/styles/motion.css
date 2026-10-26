@@ -14,12 +14,7 @@
 
 @keyframes section-enter {
   from { opacity: 0; transform: translateY(24px); }
-  /* `none`, não translateY(0): com `forwards` o valor final fica aplicado, e
-     qualquer transform no <main> (o .page-enter usa esta animação) faz os
-     elementos `fixed` de dentro dele ficarem presos ao <main> e não à tela.
-     Era isso que jogava o painel de filtros do celular para fora da tela e
-     deixava /veiculos com 760 px de largura num celular de 440. */
-  to { opacity: 1; transform: none; }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes focus-shift {
