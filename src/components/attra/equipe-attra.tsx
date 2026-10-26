@@ -5,7 +5,7 @@ import { EQUIPE_ATTRA } from '@/lib/equipe-attra'
 /**
  * A equipe em pé, na /jornada: três fotos 4:5 lado a lado, cada uma abrindo
  * em cortina com um pequeno atraso. No celular, carrossel com rolagem para o
- * lado. No /sobre a equipe aparece dirigindo (EquipeIndice).
+ * lado. Desde 25/10/2026 o /sobre usa esta mesma seção.
  */
 export function EquipeAttra({ className }: { className?: string }) {
   return (

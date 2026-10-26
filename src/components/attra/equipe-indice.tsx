@@ -20,6 +20,10 @@ import { cn } from '@/lib/utils'
  *
  * Substituiu a "página de revista" e, antes dela, a versão literal com faixa
  * de pista: a dona achou as duas sem cara de marca premium.
+ *
+ * Fora da página desde 25/10/2026: ela também não gostou desta dinâmica, e o
+ * /sobre voltou a usar a EquipeAttra da /jornada até decidir o formato. O
+ * componente e as fotos dirigindo (`noCarro`) ficam para essa decisão.
  */
 export function EquipeIndice() {
   const [ativo, setAtivo] = useState(0)

@@ -10,7 +10,7 @@ import { HistoryGallery, type HistoryEra } from '@/components/about/history-gall
 import { CabecalhoSecao, MONTSERRAT } from '@/components/ui/cabecalho-secao'
 import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
-import { EquipeIndice } from '@/components/attra/equipe-indice'
+import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { PostInstagram } from '@/components/attra/post-instagram'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
@@ -106,9 +106,11 @@ export default function SobrePage() {
     <>
       {/* Topo: texto à esquerda e os números com contador embaixo (eram uma
           faixa vermelha à parte). Sem as bolhas desfocadas nem o selo
-          "Referência em Veículos Premium": o rótulo agora é um fato. */}
+          "Referência em Veículos Premium": o rótulo agora é um fato. Ao rolar,
+          o conteúdo sobe e some como no topo da home e da /jornada
+          (.hero-conteudo em motion.css); aqui não há foto de fundo para descer. */}
       <section className="relative overflow-hidden bg-background-soft pt-24 lg:pt-28">
-        <Container>
+        <Container className="hero-conteudo hero-conteudo-alto">
           <Breadcrumb items={[{ label: 'Sobre a Attra', href: '/sobre' }]} afterHero />
           <div className="grid gap-10 pb-12 pt-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-16 lg:pb-16 lg:pt-10">
             <div className="hero-entra">
@@ -181,8 +183,32 @@ export default function SobrePage() {
         </Container>
       </section>
 
-      {/* A equipe: nomes grandes e um retrato por vez num palco fixo (EquipeIndice). */}
-      <EquipeIndice />
+      {/* A equipe em pé, como na /jornada (EquipeAttra). O "Índice" com as
+          fotos dirigindo (EquipeIndice) saiu em 25/10/2026: a dona não gostou
+          da dinâmica e o /sobre fica igual à /jornada até decidir o formato. */}
+      <section className="py-20 lg:py-28 bg-background-soft overflow-hidden">
+        <Container>
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <CabecalhoSecao
+              rotulo="Equipe"
+              titulo="Quem faz a Attra"
+              texto="Thiago, Cris e Gabriel: as pessoas que você encontra na Attra, em Uberlândia."
+            />
+            <Button asChild size="lg" variant="outline" className="shrink-0 self-start lg:self-end">
+              <Link
+                href={getWhatsAppUrl('Olá! Gostaria de falar com a equipe da Attra.')}
+                target="_blank"
+                className="inline-flex items-center gap-2"
+              >
+                Falar com a equipe
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <EquipeAttra className="mt-12 lg:mt-14" />
+        </Container>
+      </section>
 
       {/* O post do Instagram sobre a Porsche do Thiago, incorporado como o
           Instagram mostra (com a legenda). O texto ao lado só repete o que o
