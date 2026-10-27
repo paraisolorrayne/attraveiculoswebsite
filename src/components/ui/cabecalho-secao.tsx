@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react'
+
 /** Montserrat dos títulos das páginas institucionais (ficha, /contato, /servicos, /jornada, /sobre). */
 export const MONTSERRAT = { fontFamily: 'var(--font-montserrat)' }
 
 interface CabecalhoSecaoProps {
   rotulo: string
-  titulo: string
+  /** Texto, ou texto com a segunda metade em `<span className="text-foreground/45">`. */
+  titulo: ReactNode
   texto?: string
   centro?: boolean
   /** Nível do título; h1 só no topo da página. */

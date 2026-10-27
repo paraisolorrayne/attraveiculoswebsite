@@ -7,6 +7,7 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { Container } from '@/components/ui/container'
+import { MONTSERRAT } from '@/components/ui/cabecalho-secao'
 import { anosDeMercado } from '@/lib/constants'
 
 const pillars = [
@@ -18,28 +19,32 @@ const pillars = [
   { icon: UserCheck,   title: 'Consultor dedicado', line: 'do primeiro contato à entrega' },
 ]
 
+/**
+ * "Por que confiar na Attra": desde 27/10/2026 logo antes do Posicionamento,
+ * em blocos abertos com um fio em cima (como os diferenciais de /jornada e
+ * /sobre), no lugar dos ícones em quadradinho centralizados. Sem espaço
+ * embaixo: o Posicionamento tem o mesmo fundo e as duas se leem como um bloco.
+ */
 export function TrustStrip() {
   return (
-    <section className="py-10 md:py-14 border-y border-border/60 bg-background-card/40">
-      <Container size="2xl">
-        <p className="text-center text-[11px] uppercase tracking-[0.22em] text-foreground-secondary mb-6">
+    <section className="bg-background-soft pt-14 lg:pt-20">
+      <Container>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">
           Por que confiar na Attra
         </p>
-        <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-6">
+        <ul className="mt-8 grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-3 lg:grid-cols-6">
           {pillars.map(({ icon: Icon, title, line }, i) => (
             <li
               key={title}
               data-revelar
               style={{ ['--d' as string]: `${i * 70}ms` }}
-              className="flex flex-col items-center text-center px-2"
+              className="border-t border-border pt-5"
             >
-              <div className="w-10 h-10 mb-2.5 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm font-semibold text-foreground leading-tight">
+              <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+              <p className="mt-4 text-[17px] font-semibold text-foreground" style={MONTSERRAT}>
                 {title}
               </p>
-              <p className="text-xs text-foreground-secondary mt-0.5 leading-snug">
+              <p className="mt-1 text-[14px] leading-snug text-foreground-secondary">
                 {line}
               </p>
             </li>

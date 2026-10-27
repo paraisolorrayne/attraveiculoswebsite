@@ -114,8 +114,11 @@ export default async function Home() {
   // Faixa de marcas: estoque inteiro (sem o piso de preço do hero), para a
   // contagem por marca bater com a página de cada marca.
   let estoque: Vehicle[] = []
+  let totalEstoque: number | undefined
   try {
-    estoque = (await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })).vehicles
+    const resultado = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
+    estoque = resultado.vehicles
+    totalEstoque = resultado.total
   } catch (error) {
     console.error('Failed to fetch stock for the brand strip:', error)
   }
@@ -145,15 +148,15 @@ export default async function Home() {
       {/* 2. Marcas com carro no estoque — atalho para a página de cada marca. */}
       <FaixaDeMarcas marcas={marcasDaFaixa(estoque)} />
 
-      {/* 3. Prova de confiança — antes da curadoria para reforçar a marca
-             antes de pedir os dados do visitante. */}
+      {/* 3. Seleção editorial curada — substitui a antiga grade "Destaques" */}
+      <EditorialSelection vehicles={editorialVehicles} totalEstoque={totalEstoque} />
+
+      {/* 4. Prova de confiança — desde 27/10/2026 logo antes do
+             Posicionamento (antes vinha antes da curadoria). */}
       <TrustStrip />
 
-      {/* 4. Seleção editorial curada — substitui a antiga grade "Destaques" */}
-      <EditorialSelection vehicles={editorialVehicles} />
-
-      {/* 5. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
-             Também carrega os números de autoridade (anos / 500 / 27 / 5.0). */}
+      {/* 5. Posicionamento — rosto da marca (Thiago) + os três princípios.
+             Sem números desde 27/10/2026: o "Por que confiar" já os traz. */}
       <AboutSectionExpanded />
 
       {/* 6. Captação consultiva — form imediatamente antes da Operação,

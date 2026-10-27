@@ -183,8 +183,10 @@ export function HomeHero() {
           </h1>
 
           <p className="hero-entra max-w-xl text-[15px] font-light leading-relaxed tracking-wide text-white/75 sm:text-base mb-8 sm:mb-9">
-            Ferrari, Porsche, Mercedes AMG, Land Rover, BMW e Audi. Selecionados em
-            Uberlândia, entregues em todo o Brasil.
+            {/* Sem a lista de marcas: a faixa logo abaixo já mostra as que têm
+                carro no estoque, com link (27/10/2026). */}
+            Supercarros e veículos premium selecionados em Uberlândia, entregues
+            em todo o Brasil.
           </p>
 
           <div className="hero-entra flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4" style={{ ['--d' as string]: '0.1s' }}>

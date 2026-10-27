@@ -1,116 +1,96 @@
-'use client'
-
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Award, Users, MapPin, Calendar, CheckCircle } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
-import { Button } from '@/components/ui/button'
-import { SectionKicker, SectionHeading } from '@/components/ui/brand'
-import { anosDeMercado } from '@/lib/constants'
+import { CabecalhoSecao, MONTSERRAT } from '@/components/ui/cabecalho-secao'
 
-const stats = [
-  { value: String(anosDeMercado()), label: 'Anos de Mercado', icon: Calendar },
-  { value: '500+', label: 'Veículos/Ano', icon: Award },
-  { value: '27', label: 'Estados Atendidos', icon: MapPin },
-  { value: '5.0', label: 'Avaliação Google', icon: Users },
+const FOTO = '/about/attra-ceo-thiago-fundador-2026.jpg'
+const ALT = 'Thiago, CEO da Attra Veículos, entre duas Ferrari no showroom da Attra'
+const PILARES = [
+  { termo: 'Curadoria', resto: 'antes de catálogo' },
+  { termo: 'Relação', resto: 'antes de transação' },
+  { termo: 'Procedência', resto: 'antes de pressa' },
 ]
+const atraso = (s: number) => ({ ['--d' as string]: `${s}s` })
 
-const pillars = [
-  'Curadoria antes de catálogo',
-  'Relação antes de transação',
-  'Procedência antes de pressa',
-]
-
+/**
+ * Posicionamento da home, direção "Tríptico" (escolhida em 27/10/2026 entre
+ * três do design; as outras eram Cinema e Manifesto). A foto do Thiago já tem
+ * três partes, carro branco, ele e os carros vermelhos, e vira três painéis
+ * com um princípio embaixo de cada; "Relação antes de transação" fica sob o
+ * Thiago, porque a relação é a pessoa. Nada escrito sobre a foto.
+ *
+ * Substituiu os cards de números em cima da foto (anos e 27 estados, que o
+ * "Por que confiar" logo acima já traz) e o parágrafo longo da esquerda.
+ */
 export function AboutSectionExpanded() {
-  // Animação ao rolar (revelar-ao-rolar.tsx + motion.css): cada peça entra na
-  // sua vez, com `--d` escalonando; a foto do Thiago abre como cortina e, onde
-  // o navegador permite, acompanha a rolagem. Antes a seção inteira aparecia
-  // de uma vez, 1,5 s depois de a página abrir, com ninguém olhando para ela.
-  const atraso = (ms: number) => ({ ['--d' as string]: `${ms}ms` })
-
   return (
-    <section className="py-20 lg:py-28 bg-background-soft" id="sobre">
-      <Container size="2xl">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left - Content */}
-          <div>
-            <div data-revelar>
-              <SectionKicker className="mb-3">Posicionamento</SectionKicker>
-            </div>
-            <div data-revelar style={atraso(80)}>
-              <SectionHeading as="h2" size="lg" className="mb-6">
-                Mais do que carros. Uma visão.
-              </SectionHeading>
-            </div>
-
-            {/* 1 parágrafo principal */}
-            <p data-revelar style={atraso(180)} className="text-foreground-secondary leading-relaxed mb-6">
-              A história da Attra começa com uma inquietação simples: por que a compra de um carro
-              extraordinário tantas vezes vinha acompanhada de uma experiência comum? A empresa nasceu
-              para corrigir esse desalinhamento, tratando cada veículo como patrimônio e cada cliente
-              com o nível de atenção que esse tipo de decisão exige.
+    <section id="sobre" className="bg-background-soft py-20 lg:py-28">
+      <Container>
+        <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+          <CabecalhoSecao
+            rotulo="Posicionamento"
+            titulo={<>Mais do que carros. <span className="text-foreground/45">Uma visão.</span></>}
+          />
+          <div className="lg:max-w-sm">
+            <p className="text-lg leading-relaxed text-foreground-secondary">
+              Cada veículo tratado como patrimônio. Cada cliente, com a atenção que uma decisão desse tamanho exige.
             </p>
-
-            {/* 3 bullets – pilares */}
-            <div className="space-y-3 mb-8">
-              {pillars.map((item, i) => (
-                <div key={item} data-revelar style={atraso(280 + i * 110)} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-primary shrink-0" />
-                  <span className="text-foreground font-medium">{item}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <div data-revelar style={atraso(640)}>
-              <Button asChild size="lg">
-                <Link href="/sobre" className="flex items-center gap-2">
-                  Conheça o posicionamento completo <ArrowRight className="w-5 h-5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Right - Stats & Image */}
-          <div>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {stats.map((stat, i) => (
-                <div
-                  key={stat.label}
-                  data-revelar
-                  style={atraso(120 + i * 100)}
-                  className="institutional-card p-5 text-center hover:border-primary/30 transition-colors"
-                >
-                  <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <p className="type-display-md">{stat.value}</p>
-                  <p className="type-label">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* CEO Photo - Thiago: revelada aos poucos */}
-            <div
-              data-revelar="cortina"
-              style={atraso(200)}
-              className="cortina-na-rolagem relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border border-border"
-            >
-              <Image
-                src="/about/attra-ceo-thiago-fundador-2026.jpg"
-                alt="Thiago - CEO Attra Veículos"
-                fill
-                className="object-cover object-center"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                <p className="text-lg font-semibold text-white">Thiago</p>
-                <p className="text-sm text-white/80">CEO - Attra Veículos</p>
-              </div>
-            </div>
+            <Link href="/sobre" className="mt-4 inline-flex items-center gap-2 whitespace-nowrap text-[15px] font-medium text-foreground hover:text-primary">
+              Conhecer a Attra <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
+
+        {/* Cada painel mostra o seu terço da mesma imagem (300% de largura,
+            deslocada), então a cortina continua de um painel para o outro.
+            O do Thiago abre primeiro. */}
+        <ul className="mt-12 grid grid-cols-3 gap-2 md:gap-3 lg:mt-16 lg:gap-4">
+          {PILARES.map((p, i) => (
+            <li key={p.termo}>
+              <div
+                data-revelar="cortina"
+                style={atraso(i === 1 ? 0 : 0.18)}
+                className="relative aspect-[1/3] overflow-hidden rounded-xl bg-background md:aspect-[3/4] md:rounded-2xl"
+              >
+                <div className="absolute inset-y-0 w-[300%]" style={{ left: `${-100 * i}%` }}>
+                  <Image
+                    src={FOTO}
+                    alt={i === 1 ? ALT : ''}
+                    fill
+                    sizes="(min-width: 1280px) 1216px, 100vw"
+                    className="object-cover object-[50%_50%] md:object-[50%_12%]"
+                  />
+                </div>
+              </div>
+              <div data-revelar style={atraso(0.3 + i * 0.1)} className="mt-6 hidden border-t border-border pt-5 md:block">
+                <p className="text-[13px] font-semibold tracking-[0.16em] text-primary">{String(i + 1).padStart(2, '0')}</p>
+                <p className="mt-2 text-xl font-semibold leading-snug lg:text-2xl" style={MONTSERRAT}>
+                  {p.termo}
+                  <br />
+                  <span className="text-foreground/45">{p.resto}</span>
+                </p>
+                {i === 1 && <p className="mt-3 text-[13px] uppercase tracking-[0.14em] text-foreground-secondary">Na foto: Thiago, CEO</p>}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Celular: os painéis ficam lado a lado como faixas altas e os
+            princípios descem em lista. */}
+        <p className="mt-3 text-center text-[13px] uppercase tracking-[0.14em] text-foreground-secondary md:hidden">Na foto: Thiago, CEO</p>
+        <ol className="mt-8 md:hidden">
+          {PILARES.map((p, i) => (
+            <li key={p.termo} className="grid grid-cols-[2.5rem_1fr] items-baseline border-t border-border py-5 last:border-b">
+              <span className="font-semibold text-primary" style={MONTSERRAT}>{String(i + 1).padStart(2, '0')}</span>
+              <span className="text-2xl font-semibold leading-tight" style={MONTSERRAT}>
+                <span className="block">{p.termo}</span>
+                <span className="block text-foreground/45">{p.resto}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
       </Container>
     </section>
   )
 }
-
