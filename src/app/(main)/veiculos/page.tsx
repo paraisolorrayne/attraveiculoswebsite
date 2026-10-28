@@ -458,7 +458,8 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
             </aside>
 
             <div className="flex-1">
-              <div className="flex items-center justify-between mb-6">
+              {/* Embaixo alinhado: o "Ordenar por" tem o rótulo em cima. */}
+              <div className="flex items-end justify-between gap-6 mb-6">
                 <p className="text-foreground-secondary">
                   <span className="text-foreground font-medium">{total}</span> veículos
                   <span className="text-sm"> · estoque conferido em {formatarDataBR(new Date().toISOString())}</span>
