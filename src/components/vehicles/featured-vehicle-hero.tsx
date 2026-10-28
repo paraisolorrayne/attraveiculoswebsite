@@ -61,7 +61,7 @@ export function FeaturedVehicleHero({ vehicle, breadcrumb }: FeaturedVehicleHero
 
         {/* A palavra se posiciona a partir do topo desta linha: mudar a margem
             de cima ou a altura do breadcrumb pede ajuste em .destaque-marca. */}
-        <div className="relative mt-10 flex items-center gap-3.5 lg:mt-[76px] lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-0">
+        <div className="relative mt-[60px] flex items-center gap-3.5 lg:mt-[100px] lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-0">
           {larguraDoNome > 0 && (
             <div
               aria-hidden

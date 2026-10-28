@@ -329,11 +329,13 @@
    para a foto cobrir só a parte de baixo das letras: 1/5 no celular, 1/3 no
    computador. 0.145em vai da base da caixa (line-height 1) até a linha de base
    da Geist, e 0.72em é a altura das maiúsculas. O max() segura o topo das
-   letras 16px abaixo do cabeçalho fixo: 56px e 100px são a distância desse
-   limite até o topo da linha (cabeçalho de 80px + breadcrumb + margem). */
+   letras 12px abaixo do breadcrumb: 48px e 88px são a margem de cima da linha
+   (60px e 100px, no featured-vehicle-hero.tsx) menos esses 12px. Até
+   28/10/2026 o limite era o cabeçalho, e as letras passavam por trás do
+   "Início > Veículos". */
 .destaque-marca {
   font-size: min(6rem, calc((100cqw - 2rem) / var(--marca-em)));
-  translate: 0 calc(0.145em + max(0.144em, 0.72em - 56px));
+  translate: 0 calc(0.145em + max(0.144em, 0.72em - 48px));
 }
 
 /* Cor das letras: o vermelho da Attra bem fraco no topo, chegando na linha de
@@ -359,7 +361,7 @@
 @media (min-width: 1024px) {
   .destaque-marca {
     font-size: min(14rem, calc((100cqw - 4rem) / var(--marca-em)));
-    translate: 0 calc(0.145em + max(0.238em, 0.72em - 100px));
+    translate: 0 calc(0.145em + max(0.238em, 0.72em - 88px));
   }
   /* Nas fotos da loja o carro fica entre ~20% e ~80% da altura (o G 63 é o
      mais alto), com o chão sobrando embaixo: a foto em 2:1 com o recorte um
