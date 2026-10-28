@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
@@ -40,10 +41,28 @@ export default function ImportacaoPage() {
 
 	return (
 		<main>
+			{/* Banner (27/10/2026): o caminhão da Attra, foto inteira. No
+			    computador o topo fica atrás do menu (ali só tem a fachada); até o
+			    tablet o menu cobriria os letreiros, então a foto começa abaixo
+			    dele, numa faixa preta, e mais fechada para o caminhão caber. */}
+			<section aria-label="Transporte fechado da Attra" className="bg-black pt-20 lg:pt-0">
+				<div className="relative aspect-[3/2] w-full sm:aspect-[2/1] lg:aspect-[1983/793] lg:max-h-[78vh]">
+					<Image
+						src="/images/importacao-caminhao-attra.jpg"
+						alt="Caminhão de transporte fechado da Attra Veículos em frente a concessionárias Porsche e McLaren"
+						fill
+						priority
+						sizes="100vw"
+						className="object-cover object-[50%_60%]"
+					/>
+				</div>
+			</section>
+
 			{/* HERO — segue o padrão da página /servicos: badge pill + H1 grande
 			    com palavra em text-metallic + descritivo + stats em 3 colunas +
-			    CTAs (primary + outline). Background com blur circles primary. */}
-			<section className="relative pt-28 pb-20 lg:pt-32 lg:pb-28 bg-gradient-to-br from-background via-background-soft to-background overflow-hidden">
+			    CTAs (primary + outline). Background com blur circles primary.
+			    Abaixo do banner desde 27/10/2026, por isso o topo é curto. */}
+			<section className="relative pt-4 pb-20 lg:pt-6 lg:pb-28 bg-gradient-to-br from-background via-background-soft to-background overflow-hidden">
 				<Container className="relative z-10 mb-8">
 					<Breadcrumb items={breadcrumbItems} afterHero />
 				</Container>
