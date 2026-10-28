@@ -5,8 +5,10 @@ import { normalizarMarca } from '@/lib/marca-normalizacao'
 
 /**
  * Marcas de assinatura, na ordem da faixa. Só entram as que têm página em
- * /comprar (é para lá que o link vai, com o estoque da marca) e só aparecem
- * quando há carro delas no estoque: a faixa nunca anuncia marca sem carro.
+ * /comprar (é de lá que vem o nome) e só aparecem quando há carro delas no
+ * estoque: a faixa nunca anuncia marca sem carro. O link vai para /veiculos
+ * já filtrado pela marca (27/10/2026; antes ia para /comprar/{marca}), com o
+ * valor no formato do filtro "Marca" de lá, para ele aparecer escolhido.
  * Chevrolet fica de fora de propósito: no estoque ela é o Corvette, e o nome
  * da marca ao lado de Ferrari diz menos do que o carro.
  */
@@ -43,7 +45,7 @@ function Lista({ marcas, copia = false }: { marcas: MarcaDaFaixa[]; copia?: bool
       {marcas.map((m) => (
         <li key={m.slug} className="flex items-center">
           <Link
-            href={`/comprar/${m.slug}`}
+            href={`/veiculos?marca=${encodeURIComponent(m.nome.toLowerCase())}`}
             tabIndex={copia ? -1 : undefined}
             className="group flex items-baseline px-6 py-2 md:px-9"
           >
