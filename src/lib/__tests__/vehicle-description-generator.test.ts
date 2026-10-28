@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateVehicleDescription } from '@/lib/vehicle-description-generator'
+import { generateVehicleDescription, secoesPelaFicha } from '@/lib/vehicle-description-generator'
 import { lerFichaDoAnuncio } from '@/lib/ficha-do-anuncio'
 import type { Vehicle } from '@/types'
 
@@ -69,5 +69,45 @@ describe('"Sobre este veículo" com a ficha do molde', () => {
 			+ 'aliando desempenho e sofisticação. Com apenas 1.920 km rodados, está em excelente estado. '
 			+ 'Apresenta-se na cor prata e motorização híbrida. Um veículo premium completo para quem valoriza qualidade.',
 		)
+	})
+})
+
+describe('Overview, Exterior Design e Interior com a ficha do molde', () => {
+	it('o S 63 sai com a cor, o motor e os itens da ficha, cada um na sua seção', () => {
+		expect(secoesPelaFicha(s63, fichaDoS63!)).toEqual({
+			overview: 'Mercedes S-63 AMG S E Performance Automático 2025, com 1.920 km rodados. '
+				+ 'Motor 4.0 V8 Biturbo Híbrido de 802 cv e 145,8 kgfm de torque, com câmbio automático.',
+			exterior: 'Pintura Prata High-Tech Metálico. Blindado BSS com vidros Graphene Full Steel.',
+			interior: 'Interior preto e som Burmester. Travesseiros nos encostos de cabeça.',
+		})
+	})
+
+	it('rodas no Exterior, freios e desempenho no Overview; item que não é de fora nem de dentro fica de fora', () => {
+		const ficha = lerFichaDoAnuncio({
+			descricao: 'MOTOR: 3.8 Boxer Biturbo\nPOTÊNCIA: 650 cv\nCÂMBIO: PDK de 8 marchas\nTRAÇÃO: Integral\n'
+				+ 'FREIOS: De carbono-cerâmica\n0-100 KM/H: 2,7 s\nVELOCIDADE MÁXIMA: 330 km/h\nRODAS: Aro 21 forjadas\n'
+				+ 'DIFERENCIAIS:\nSport Chrono\nBancos concha\nFaróis Matrix LED\nLift dianteiro',
+		})!
+		const secoes = secoesPelaFicha({
+			...s63, brand: 'Porsche', model: '911', version: 'Turbo S', year_manufacture: 2024, year_model: 2025,
+			mileage: 0, is_new: true, color: 'Cinza', body_type: 'Cupê', horsepower: 650, options: [], ficha,
+		}, ficha)
+		expect(secoes).toEqual({
+			overview: 'Porsche 911 Turbo S 2024/2025, zero quilômetro. Motor 3.8 Boxer Biturbo de 650 cv, com câmbio '
+				+ 'PDK de 8 marchas, tração integral e freios de carbono-cerâmica. Acelera de 0 a 100 km/h em 2,7 s e chega a 330 km/h.',
+			exterior: 'Pintura cinza, com rodas aro 21 forjadas. Faróis Matrix LED.',
+			interior: 'Bancos concha.',
+		})
+	})
+
+	it('sem interior, som ou item de dentro, a seção Interior fica com o texto fixo do componente', () => {
+		const ficha = lerFichaDoAnuncio({ descricao: 'MOTOR: 4.0 V8\nPOTÊNCIA: 802 cv' })!
+		expect(secoesPelaFicha(s63, ficha).interior).toBeNull()
+	})
+
+	it('sem cor, rodas nem item de fora, o Exterior fica com a carroceria (SUV em maiúsculas)', () => {
+		const ficha = lerFichaDoAnuncio({ descricao: 'MOTOR: 4.0 V8\nPOTÊNCIA: 802 cv' })!
+		expect(secoesPelaFicha({ ...s63, color: null, body_type: 'SUV' } as unknown as Vehicle, ficha).exterior)
+			.toBe('Carroceria SUV.')
 	})
 })

@@ -154,7 +154,8 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	let vehicleSections = await getCachedVehicleSections(vehicle.id, photoCount)
 	if (!vehicleSections) {
 		vehicleSections = getFallbackVehicleSections(vehicle)
-		void generateAndCacheVehicleSections(vehicle).catch((err) => {
+		// Com a ficha do molde, o texto das seções vem dela, e o do Gemini não seria usado.
+		if (!vehicle.ficha) void generateAndCacheVehicleSections(vehicle).catch((err) => {
 			console.error('[vehicle-sections] background generation failed:', err)
 		})
 	}
