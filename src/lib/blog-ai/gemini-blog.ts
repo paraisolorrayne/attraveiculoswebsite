@@ -2,9 +2,12 @@
  * Gemini-powered long-form blog generators.
  *
  * Three flavours:
- *   - generateFromInstagram:  expands an IG caption into a full blog post
- *   - generateReview:         single-car deep review (> R$300k)
- *   - generateComparison:     head-to-head between two cars
+ *   - generateFromInstagram:   turns an IG caption into a short, fact-first post
+ *                              (the automatic one since 28/10/2026, 3x/week)
+ *   - generateReviewDoEstoque: short, fact-first review of a stock car from its
+ *                              ficha; automatic while Instagram has no token,
+ *                              and the manual ?strategy=review
+ *   - generateComparison:      head-to-head between two cars, manual only
  *
  * All return a structured payload ready to persist in `dual_blog_posts`.
  */
@@ -19,6 +22,8 @@ import type {
 import { GEMINI_TEXT_MODEL } from '@/lib/gemini-config'
 import { composeComparisonFeaturedImage } from './comparison-image'
 import { selecionarFotosFrontais } from './comparison-photo-selector'
+import { semTravessao } from '@/lib/sem-travessao'
+import { tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
 
 const GEMINI_MODEL = GEMINI_TEXT_MODEL
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -208,6 +213,10 @@ REFERENCIAL EDITORIAL (estude o padrão antes de escrever):
 - https://attraveiculos.com.br/blog/ferrari-812-gts-a-obra-prima-italiana-que-a-attra-veiculos-trouxe-para-o-brasil
 - https://attraveiculos.com.br/blog/ferrari-sf90-spider-quando-1-000cv-redefinem-o-conceito-de-performance
 
+PONTUAÇÃO: nunca use travessão (—) nem meia-risca como pontuação, em nenhum
+trecho (título, resumo, corpo, legendas). Use vírgula, dois-pontos, parênteses
+ou ponto. É regra da marca.
+
 TOM: híbrido luxury-aspiracional + técnico-específico. Em português do Brasil.
 Pode (e deve) usar superlativos editoriais ("obra-prima", "perfeição", "ápice
 da engenharia"), metáforas evocativas ("sinfonia visual", "rugido inconfundível"),
@@ -258,39 +267,6 @@ do aspecto comercial, use sempre "sob consulta", "condições exclusivas na
 Attra", "fale com nosso time" ou formulações equivalentes SEM cifras.
 Pode (e deve) falar de "potencial de valorização", "ativo de coleção",
 "oportunidade rara" — sem números.
-`.trim()
-
-const JSON_SCHEMA_REVIEW = `
-Retorne APENAS JSON válido, sem markdown, sem \`\`\`. Campos obrigatórios:
-{
-  "title": "string - SEO title, até 70 chars",
-  "slug_hint": "string - slug em kebab-case baseado no título",
-  "excerpt": "string - 2 frases, até 240 chars",
-  "content_html": "string - HTML completo do artigo (h2, h3, p, ul, li, strong, a). MÍNIMO 2.500 palavras, idealmente 2.800-3.200. Use <img src='IMAGEM_N'> como placeholder onde N é o índice 0,1,2... das imagens fornecidas — serão substituídos depois. NÃO inclua FAQ aqui — vai no campo separado.",
-  "reading_time": "string - ex: '8 min' (calcule baseado no tamanho real)",
-  "meta_title": "string - até 60 chars",
-  "meta_description": "string - até 160 chars",
-  "keywords": ["array de 5-8 strings"],
-  "specs": {
-    "engine": "string", "power": "string", "torque": "string",
-    "acceleration": "string", "top_speed": "string", "transmission": "string",
-    "drivetrain": "string opcional", "weight": "string opcional"
-  },
-  // REGRA DA FICHA TÉCNICA (specs): inclua um campo APENAS se souber o dado
-  // técnico OFICIAL real do veículo. Se não souber, OMITA o campo (não envie a
-  // chave, ou envie ""). NUNCA preencha uma spec técnica com "sob consulta",
-  // "consultar", "N/A", "não informado" ou similar — placeholder comercial não
-  // vale para dado técnico; campo desconhecido deve simplesmente sumir.
-  "faq": [{"question": "string", "answer": "string"}] (4-6 itens),
-  "highlights": [{"text": "string", "category": "performance|design|technology|exclusivity|comfort"}] (4-6 itens),
-  "optionals": ["strings"] (5-10 itens quando disponíveis),
-  "evaluation": {
-    "summary": "2-3 frases",
-    "highlights": ["3-5 bullets"],
-    "target_profile": "string",
-    "investment_potential": "alto|medio|estavel"
-  }
-}
 `.trim()
 
 const JSON_SCHEMA_EDUCATIVO = `
@@ -403,146 +379,7 @@ function toSeo(r: GeminiJsonResponse): BlogPostSEO {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy 1: Review (single car > R$300k)
-// ---------------------------------------------------------------------------
-
-export async function generateReview(vehicle: Vehicle): Promise<GeneratedBlog> {
-  const images = vehicle.photos ?? []
-
-  const prompt = `
-${BRAND_VOICE}
-
-MISSÃO: Produza um review aprofundado deste exemplar de ${vehicle.brand} ${vehicle.model}
-no mesmo padrão editorial dos posts de referência citados acima. O resultado
-final deve ter MÍNIMO 2.500 palavras, idealmente entre 2.800 e 3.200.
-
-ESTRUTURA OBRIGATÓRIA (8 a 10 seções H2 com subtítulo poético separado por
-dois pontos — exemplo: "Design Exterior: Uma Sinfonia Visual em Rosso Magma"):
-
-1. Parágrafo de abertura (SEM heading próprio) — lede aspiracional que já
-   ancora marca + modelo + ano + cor + característica distintiva nas duas
-   primeiras frases. 2-3 parágrafos antes do primeiro H2.
-
-2. H2: contexto da exclusividade — "A Arte de Conquistar o Extraordinário",
-   "Curadoria Attra: [subtítulo]" ou similar. Fala de como a Attra obtém
-   modelos raros, a rede de relacionamentos, o trabalho de curadoria.
-
-3. H2: ficha rápida do exemplar — título tipo "${vehicle.brand} ${vehicle.model} ${vehicle.year_model}: A Perfeição em Cada Detalhe"
-   ou similar. Logo abaixo do parágrafo de introdução da seção, inclua uma
-   <ul> com 6-8 bullets DESTACANDO o exemplar específico (modelo, ano,
-   km/0km, COR exata, INTERIOR exato, motorização, performance, tração).
-
-4. H2: "Design Exterior: [subtítulo evocativo mencionando a cor]" — proporções,
-   aerodinâmica, detalhes visuais, como a cor específica destaca o desenho.
-
-5. H2: "Interior [adjetivo + cor/material]: [subtítulo]" — materiais
-   específicos do exemplar (couro, alcântara, fibra de carbono), cockpit,
-   infoentretenimento, conforto.
-
-6. H2: "[Adjetivo de potência] [Motor]: [subtítulo]" (ex: "Potência Indomável:
-   O Lendário V12 Naturalmente Aspirado") — motor, números, sensações,
-   comportamento dinâmico, som.
-
-7. H2: "Tecnologia [adjetivo]: [subtítulo]" — eletrônica embarcada, modos de
-   condução, ADAS, conectividade.
-
-8. H3 (dentro de uma das seções acima ou separado): "Opcionais e Destaques"
-   — lista <ul> dos opcionais relevantes deste exemplar.
-
-9. H2: "Exclusividade Attra Veículos: Por Que Somos Referência em [Categoria]"
-   — diferencial Attra, garantia de procedência, suporte pós-venda,
-   relacionamentos com a marca.
-
-10. H2: "Uma Oportunidade Única que Não se Repetirá" (ou similar) — fechamento
-    de urgência elegante, CTA natural integrada em prosa para consultar a
-    Attra. Sem números, sem prazo cravado.
-
-INSTRUÇÕES ESPECÍFICAS:
-- Parágrafos de 60-150 palavras (densos, não listas disfarçadas).
-- Use <strong> para destacar cor exata, interior, especificações chave e
-  nomes de seções/features.
-- Cite "Attra" / "Attra Veículos" entre 12 e 20 vezes no total, integrado.
-- Foque na combinação ÚNICA cor + interior + opcionais deste exemplar.
-- A FAQ vai como campo JSON separado (4-6 perguntas — NÃO inclua dentro do
-  content_html, o template renderiza separadamente).
-
-DADOS DO VEÍCULO (use SOMENTE estes — não invente):
-- Marca: ${vehicle.brand}
-- Modelo: ${vehicle.model}${vehicle.version ? ' ' + vehicle.version : ''}
-- Ano: ${vehicle.year_manufacture}/${vehicle.year_model}
-- Cor exterior: ${vehicle.color}
-- KM: ${vehicle.mileage === 0 ? '0 km (zero quilômetro — exemplar novo)' : vehicle.mileage.toLocaleString('pt-BR') + ' km'}
-- Combustível: ${vehicle.fuel_type}
-- Câmbio: ${vehicle.transmission}
-- Potência: ${vehicle.horsepower ? vehicle.horsepower + ' cv' : 'não informada — não cite número se não souber oficial'}
-- Categoria: ${vehicle.category}
-- Preço: (NÃO MENCIONAR NO TEXTO — sempre use "sob consulta" quando falar do aspecto comercial)
-- Opcionais já catalogados: ${(vehicle.options ?? []).slice(0, 20).join(', ') || 'consulte o anúncio'}
-- Página do veículo (use como destino de âncora natural, NÃO escreva o link cru): https://attraveiculos.com.br/veiculo/${vehicle.slug}
-
-Imagens disponíveis (${images.length}): use placeholders <img src="IMAGEM_0">,
-<img src="IMAGEM_1"> etc dentro do content_html. Distribua 3-5 imagens ao
-longo do texto, intercaladas entre seções (não no início, não no fim — entre
-H2s, ilustrando o que foi descrito).
-
-${JSON_SCHEMA_REVIEW}
-`.trim()
-
-  const raw = await callGemini(prompt, 2000)
-  const content = sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))
-
-  const carReview: CarReviewFields = {
-    vehicle_id: vehicle.id,
-    brand: vehicle.brand,
-    model: vehicle.model,
-    year: vehicle.year_model,
-    version: vehicle.version ?? undefined,
-    status: vehicle.is_new ? '0km • Exclusivo Attra' : 'Seminovo • Exclusivo Attra',
-    color: vehicle.color,
-    specs: {
-      engine: raw.specs?.engine ?? vehicle.engine ?? 'Consultar',
-      power: raw.specs?.power ?? (vehicle.horsepower ? `${vehicle.horsepower} cv` : 'Consultar'),
-      torque: raw.specs?.torque ?? vehicle.torque ?? 'Consultar',
-      acceleration: raw.specs?.acceleration ?? vehicle.acceleration ?? 'Consultar',
-      top_speed: raw.specs?.top_speed ?? vehicle.top_speed ?? 'Consultar',
-      transmission: raw.specs?.transmission ?? vehicle.transmission ?? 'Consultar',
-      drivetrain: raw.specs?.drivetrain,
-      weight: raw.specs?.weight,
-    },
-    gallery_images: images,
-    availability: {
-      in_stock: vehicle.status === 'available',
-      // price propositalmente omitido — campanhas alteram valores dinamicamente
-      stock_url: `/veiculo/${vehicle.slug}`,
-    },
-    faq: raw.faq,
-    highlights: raw.highlights,
-    optionals: raw.optionals ?? vehicle.options ?? undefined,
-    evaluation: raw.evaluation,
-  }
-
-  return {
-    strategy: 'review',
-    post: {
-      post_type: 'car_review',
-      title: raw.title,
-      slug: buildSlug(raw.slug_hint ?? '', raw.title),
-      excerpt: raw.excerpt,
-      content,
-      featured_image: images[0] ?? '',
-      featured_image_alt: `${vehicle.brand} ${vehicle.model} ${vehicle.year_model}`,
-      author: { name: 'Attra Veículos', bio: 'Curadoria em superesportivos e alto padrão' },
-      published_date: new Date().toISOString(),
-      reading_time: raw.reading_time ?? '8 min',
-      is_published: true,
-      car_review: carReview,
-      seo: toSeo(raw),
-    },
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Strategy 2: Comparison
+// Comparativo (só à mão)
 // ---------------------------------------------------------------------------
 
 function vehicleBriefing(v: Vehicle): string {
@@ -640,106 +477,250 @@ ${JSON_SCHEMA_EDUCATIVO}
 
 
 // ---------------------------------------------------------------------------
-// Strategy 3: From Instagram caption + media
+// Posts curtos: do Instagram ou de um carro do estoque
 // ---------------------------------------------------------------------------
+
+/**
+ * Voz dos posts automáticos (28/10/2026): os do Instagram e, enquanto a Meta
+ * não tem token, os reviews de carro do estoque.
+ *
+ * A avaliação de SEO/GEO de 28/10 achou o blog com cara de IA em escala:
+ * reviews de 2.000 palavras, "Attra" a cada 48 palavras, superlativo sem
+ * número, nenhum post citado pelas IAs. O citado era o contrário: texto curto,
+ * caso real, número. Aqui a fonte (legenda ou ficha) manda; o texto organiza e
+ * explica, não enfeita. BRAND_VOICE fica para o comparativo, que só roda à mão.
+ */
+const VOZ_DO_BLOG = `
+Você escreve para o blog da Attra Veículos, loja de supercarros e carros premium em Uberlândia (MG) que vende para o Brasil inteiro. Quem lê tem dinheiro e entende de carro: quer fatos, não elogio.
+
+COMO ESCREVER:
+- O primeiro parágrafo responde, em 2 ou 3 frases, o que aconteceu ou o que é o carro: modelo, ano, cor e o fato principal da pauta. Nada de introdução sobre o mundo dos supercarros.
+- Frases curtas e diretas. Adjetivo só quando um fato sustenta.
+- Títulos de seção (h2) descritivos, do jeito que alguém pesquisaria: "O que este exemplar tem de diferente", "Para quem faz sentido", "O que olhar antes de comprar um [modelo]". Nada de subtítulo poético depois de dois-pontos.
+- "Attra" no máximo 4 vezes no texto inteiro.
+- Pode explicar o contexto conhecido e estável do modelo (geração, proposta, concorrentes diretos), sem número que não esteja nas fontes.
+- Não afirme garantia, procedência, histórico de revisões, único dono nem laudo: isso a loja comprova com documento, não o blog.
+- Não escreva preço, valor, "R$" nem faixa de preço: a página mostra ao lado do texto o preço do estoque de hoje, com aviso de atualização.
+- Proibido: "obra-prima", "sinfonia", "ápice", "redefine", "verdadeira joia", "experiência única", "no universo", "perfeita harmonia", "sem precedentes", "mais pura expressão", "rugido", "carro dos sonhos", "não é apenas", "mais do que um carro", "inigualável", "incomparável", "eleva o conceito".
+- Nunca use travessão (—) nem meia-risca (–) como pontuação. Use vírgula, dois-pontos ou ponto.
+- Link só como âncora em prosa natural, nunca URL crua nem "Link:".
+`.trim()
+
+const FONTES_DO_INSTAGRAM = `
+FONTES: a legenda do Instagram abaixo é a pauta e a fonte principal. Os dados do carro, quando houver, vêm da ficha do anúncio. Número (potência, torque, 0 a 100, quilometragem, prazo, ano) só entra se estiver na legenda ou na ficha. Se não está, não escreva.
+`.trim()
+
+const FONTES_DO_ESTOQUE = `
+FONTES: a ficha do anúncio abaixo é a única fonte de número (potência, torque, 0 a 100, quilometragem, ano). Se não está na ficha, não escreva. Não há história de entrega nem de cliente: não invente viagem, prazo, dono anterior nem motivo da venda.
+`.trim()
+
+function schemaDoPost(comCarro: boolean): string {
+  const camposDoCarro = comCarro
+    ? `,
+  "faq": [{"question": "pergunta que um comprador faz sobre este modelo", "answer": "resposta que se sustenta sozinha, só com fatos das fontes"}] (3 itens),
+  "evaluation": {"summary": "2 frases sobre o exemplar, só fatos", "highlights": ["3 ou 4 fatos do exemplar"], "target_profile": "para quem faz sentido, em uma frase"}`
+    : ''
+  return `
+Retorne APENAS JSON válido, sem markdown. Campos:
+{
+  "title": "até 60 caracteres: o modelo e o fato principal da pauta, sem 'Attra'",
+  "slug_hint": "kebab-case do título",
+  "excerpt": "até 200 caracteres, o fato principal em uma ou duas frases",
+  "content_html": "HTML (h2, h3, p, ul, li, strong, a) com 700 a 1.100 palavras. Use <img src='IMAGEM_N'> (N = 0, 1, 2...) entre as seções. Sem FAQ aqui.",
+  "reading_time": "ex.: '5 min'",
+  "meta_title": "até 60 caracteres, sem 'Attra'",
+  "meta_description": "até 155 caracteres, com o fato principal",
+  "keywords": ["4 a 6 buscas reais, ex.: 'lamborghini temerário à venda'"]${camposDoCarro}
+}`.trim()
+}
+
+/** Os dados do carro que o texto pode usar: cadastro + ficha do molde. */
+function briefingDoCarro(v: Vehicle): string {
+  const f = v.ficha
+  const linhas: Array<[string, string | null | undefined]> = [
+    ['Carro', tituloDoVeiculo(v)],
+    ['Quilometragem', v.mileage === 0 ? '0 km' : `${v.mileage.toLocaleString('pt-BR')} km`],
+    ['Cor', f?.cor ?? v.color],
+    ['Interior', f?.interior],
+    ['Motor', f?.motor ?? v.engine],
+    ['Potência', f?.potencia ?? (v.horsepower ? `${v.horsepower} cv` : null)],
+    ['Torque', f?.torque],
+    ['Câmbio', f?.cambio ?? v.transmission],
+    ['Tração', f?.tracao],
+    ['0 a 100 km/h', f?.aceleracao_0_100],
+    ['Velocidade máxima', f?.velocidade_maxima],
+    ['Rodas', f?.rodas],
+    ['Freios', f?.freios],
+    ['Som', f?.som],
+  ]
+  const itens = [...(f?.diferenciais ?? []), ...(f?.opcionais ?? [])].slice(0, 12)
+  return [
+    ...linhas.filter(([, valor]) => valor).map(([rotulo, valor]) => `- ${rotulo}: ${valor}`),
+    itens.length > 0 ? `- Itens do carro: ${itens.join('; ')}` : null,
+    `- Ficha do carro no site (use como âncora em prosa): https://attraveiculos.com.br/veiculo/${v.slug}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** Expressões que denunciam texto de IA (as mesmas proibidas na voz). */
+export const CLICHES = [
+  'obra-prima', 'sinfonia', 'ápice', 'redefine', 'verdadeira joia', 'experiência única', 'no universo',
+  'perfeita harmonia', 'sem precedentes', 'mais pura expressão', 'rugido', 'carro dos sonhos', 'não é apenas',
+  'mais do que um carro', 'inigualável', 'incomparável', 'eleva o conceito',
+]
+
+/**
+ * O que a revisão automática cobra antes de publicar. Lista vazia = pronto.
+ * Travessão e preço não entram: saem no pós-processamento.
+ */
+export function problemasDoTexto(r: Pick<GeminiJsonResponse, 'title' | 'content_html' | 'meta_title'>): string[] {
+  const texto = (r.content_html ?? '').replace(/<[^>]+>/g, ' ')
+  const problemas: string[] = []
+  const cliches = CLICHES.filter(c => `${r.title} ${texto}`.toLowerCase().includes(c))
+  if (cliches.length > 0) problemas.push(`expressões proibidas: ${cliches.join(', ')}`)
+  const attra = (texto.match(/\bAttra\b/gi) ?? []).length
+  if (attra > 5) problemas.push(`"Attra" aparece ${attra} vezes (máximo 4)`)
+  const palavras = countWords(r.content_html ?? '')
+  if (palavras < 650) problemas.push(`texto com ${palavras} palavras (mínimo 700)`)
+  if (palavras > 1400) problemas.push(`texto com ${palavras} palavras (máximo 1.100)`)
+  const titulo = r.meta_title || r.title || ''
+  if (titulo.length > 65) problemas.push(`título com ${titulo.length} caracteres (máximo 60)`)
+  return problemas
+}
+
+/** Gera, revisa e, se a revisão achar problema, pede uma segunda versão. Fica a melhor. */
+async function gerarComRevisao(prompt: string): Promise<GeminiJsonResponse> {
+  const primeira = await callGemini(prompt, 700)
+  const problemas = problemasDoTexto(primeira)
+  if (problemas.length === 0) return primeira
+
+  console.warn('[gemini-blog] post voltou para revisão:', problemas)
+  try {
+    const segunda = await callGemini(
+      `${prompt}\n\nA versão anterior saiu com estes problemas. Escreva de novo sem eles:\n- ${problemas.join('\n- ')}`,
+      700
+    )
+    return problemasDoTexto(segunda).length < problemas.length ? segunda : primeira
+  } catch (err) {
+    console.warn('[gemini-blog] segunda versão falhou, fica a primeira:', err instanceof Error ? err.message : err)
+    return primeira
+  }
+}
+
+/** Título, resumo, texto e SEO prontos para publicar: preço, rótulo de URL e travessão saem aqui. */
+function camposDoPost(raw: GeminiJsonResponse, images: string[], rodape = '') {
+  const title = semTravessao(raw.title)
+  return {
+    title,
+    slug: buildSlug(raw.slug_hint ?? '', title),
+    excerpt: semTravessao(raw.excerpt),
+    content: semTravessao(sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))) + rodape,
+    featured_image: images[0] ?? '',
+    author: { name: 'Attra Veículos', bio: 'Curadoria em superesportivos e alto padrão' },
+    published_date: new Date().toISOString(),
+    is_published: true,
+    seo: {
+      ...toSeo(raw),
+      meta_title: semTravessao(raw.meta_title || raw.title),
+      meta_description: semTravessao(raw.meta_description || raw.excerpt),
+    },
+  }
+}
+
+/** A tabela do review: só o que a ficha e o cadastro dizem; o que falta some. */
+function reviewDoExemplar(v: Vehicle, raw: GeminiJsonResponse, images: string[]): CarReviewFields {
+  const f = v.ficha
+  return {
+    vehicle_id: v.id,
+    brand: v.brand,
+    model: v.model,
+    year: v.year_model,
+    version: v.version ?? undefined,
+    status: v.is_new ? '0 km' : 'Seminovo',
+    color: f?.cor ?? v.color,
+    specs: {
+      engine: f?.motor ?? v.engine ?? '',
+      power: f?.potencia ?? (v.horsepower ? `${v.horsepower} cv` : ''),
+      torque: f?.torque ?? '',
+      acceleration: f?.aceleracao_0_100 ?? '',
+      top_speed: f?.velocidade_maxima ?? '',
+      transmission: f?.cambio ?? v.transmission ?? '',
+      drivetrain: f?.tracao ?? undefined,
+      brakes: f?.freios ?? undefined,
+    },
+    gallery_images: images,
+    availability: {
+      in_stock: v.status === 'available' || v.status === 'highlight',
+      // O preço sai ao vivo no quadro de disponibilidade, com asterisco.
+      stock_url: `/veiculo/${v.slug}`,
+    },
+    faq: raw.faq,
+    optionals: f && f.opcionais.length > 0 ? f.opcionais : undefined,
+    evaluation: raw.evaluation,
+  }
+}
+
+const IMAGENS_NO_TEXTO = (n: number) =>
+  `Imagens disponíveis (${n}): use de 2 a 4 placeholders <img src="IMAGEM_0">, <img src="IMAGEM_1"> etc., entre as seções.`
 
 export interface InstagramInput {
   caption: string
   permalink: string
   images: string[]
-  /** Vehicle from inventory when we could match one (video posts). */
+  /** Carro do estoque citado na legenda, já com a ficha do molde. */
   vehicle?: Vehicle | null
+  /**
+   * O carro já tem review no blog: o post sai como história (educativo),
+   * sem um segundo review do mesmo exemplar.
+   */
+  carroJaResenhado?: boolean
 }
 
 export async function generateFromInstagram(
   input: InstagramInput
 ): Promise<GeneratedBlog> {
-  const hasVehicle = Boolean(input.vehicle)
-  const images = input.images.length > 0
-    ? input.images
-    : input.vehicle?.photos ?? []
-
-  const vehicleBlock = input.vehicle
-    ? `DADOS DO VEÍCULO NO ESTOQUE:\n${vehicleBriefing(input.vehicle)}`
-    : 'Sem veículo vinculado — trabalhe apenas com o que estiver na caption.'
+  const v = input.vehicle ?? null
+  const comoReview = Boolean(v && !input.carroJaResenhado)
+  const images = input.images.length > 0 ? input.images : v?.photos ?? []
 
   const prompt = `
-${BRAND_VOICE}
+${VOZ_DO_BLOG}
 
-MISSÃO: Expandir um post do Instagram da Attra Veículos em um artigo de blog
-completo, mantendo a ideia original mas no formato longo e com SEO.
+${FONTES_DO_INSTAGRAM}
 
-CAPTION ORIGINAL DO INSTAGRAM:
+MISSÃO: transformar o post do Instagram abaixo num artigo do blog. O artigo conta o que a legenda conta, com mais contexto e organizado para quem pesquisa o modelo no Google ou pergunta a uma IA.
+
+LEGENDA DO INSTAGRAM:
 """
 ${input.caption}
 """
 
-Link original: ${input.permalink}
+${v ? `DADOS DO CARRO (ficha do anúncio; use só estes números):\n${briefingDoCarro(v)}` : 'Sem carro do estoque ligado à legenda: trabalhe só com o que a legenda diz.'}
 
-${vehicleBlock}
+ESTRUTURA:
+1. Abertura de 2 ou 3 frases com o fato principal (sem h2).
+${v ? '2. Uma lista curta (ul) com os dados do carro que estão nas fontes.\n3.' : '2.'} De 2 a 4 seções h2 que expliquem o que a legenda conta e o que um comprador precisa saber.
+${v ? 'Última seção: onde ver o carro, com âncora natural para a ficha do site.' : 'Última seção: como a Attra encontra um carro assim, em 2 ou 3 frases.'}
 
-Estrutura esperada:
-1. Lede que resgata a ideia principal da caption
-2. 3-4 seções (h2) expandindo o conteúdo com profundidade editorial
-3. ${hasVehicle ? 'Seção "Sobre o veículo" com specs do briefing' : 'Seção sobre o mercado/contexto'}
-4. CTA para o estoque da Attra no final
+${IMAGENS_NO_TEXTO(images.length)}
 
-Imagens disponíveis (${images.length}): use placeholders <img src="IMAGEM_0">,
-<img src="IMAGEM_1"> etc. Distribua 2-4 imagens.
-
-${hasVehicle ? JSON_SCHEMA_REVIEW : JSON_SCHEMA_EDUCATIVO}
+${schemaDoPost(comoReview)}
 `.trim()
 
-  const raw = await callGemini(prompt, hasVehicle ? 1200 : 800)
-  const content = sanitizeUrlLabels(sanitizePrices(injectImages(raw.content_html, images)))
+  const raw = await gerarComRevisao(prompt)
+  const fonte = `\n<p>Publicado primeiro no <a href="${input.permalink}" target="_blank" rel="noopener">Instagram da Attra</a>.</p>`
+  const comum = camposDoPost(raw, images, fonte)
 
-  if (hasVehicle && input.vehicle) {
-    const v = input.vehicle
-    const carReview: CarReviewFields = {
-      vehicle_id: v.id,
-      brand: v.brand,
-      model: v.model,
-      year: v.year_model,
-      version: v.version ?? undefined,
-      status: v.is_new ? '0km • Exclusivo Attra' : 'Seminovo • Exclusivo Attra',
-      color: v.color,
-      specs: {
-        engine: raw.specs?.engine ?? 'Consultar',
-        power: raw.specs?.power ?? (v.horsepower ? `${v.horsepower} cv` : 'Consultar'),
-        torque: raw.specs?.torque ?? 'Consultar',
-        acceleration: raw.specs?.acceleration ?? 'Consultar',
-        top_speed: raw.specs?.top_speed ?? 'Consultar',
-        transmission: raw.specs?.transmission ?? v.transmission ?? 'Consultar',
-        drivetrain: raw.specs?.drivetrain,
-      },
-      gallery_images: images,
-      availability: {
-        in_stock: v.status === 'available',
-        // price propositalmente omitido — campanhas alteram valores dinamicamente
-        stock_url: `/veiculo/${v.slug}`,
-      },
-      faq: raw.faq,
-      highlights: raw.highlights,
-      optionals: raw.optionals ?? v.options ?? undefined,
-      evaluation: raw.evaluation,
-    }
-
+  if (comoReview && v) {
     return {
       strategy: 'instagram',
       post: {
+        ...comum,
         post_type: 'car_review',
-        title: raw.title,
-        slug: buildSlug(raw.slug_hint ?? '', raw.title),
-        excerpt: raw.excerpt,
-        content,
-        featured_image: images[0] ?? '',
-        featured_image_alt: `${v.brand} ${v.model} ${v.year_model}`,
-        author: { name: 'Attra Veículos', bio: 'Curadoria em superesportivos e alto padrão' },
-        published_date: new Date().toISOString(),
-        reading_time: raw.reading_time ?? '6 min',
-        is_published: true,
-        car_review: carReview,
-        seo: toSeo(raw),
+        featured_image_alt: tituloDoVeiculo(v),
+        reading_time: raw.reading_time ?? '5 min',
+        car_review: reviewDoExemplar(v, raw, images),
       },
     }
   }
@@ -747,23 +728,58 @@ ${hasVehicle ? JSON_SCHEMA_REVIEW : JSON_SCHEMA_EDUCATIVO}
   return {
     strategy: 'instagram',
     post: {
+      ...comum,
       post_type: 'educativo',
-      title: raw.title,
-      slug: buildSlug(raw.slug_hint ?? '', raw.title),
-      excerpt: raw.excerpt,
-      content,
-      featured_image: images[0] ?? '',
-      featured_image_alt: raw.title,
-      author: { name: 'Attra Veículos', bio: 'Curadoria em superesportivos e alto padrão' },
-      published_date: new Date().toISOString(),
-      reading_time: raw.reading_time ?? '5 min',
-      is_published: true,
+      featured_image_alt: comum.title,
+      reading_time: raw.reading_time ?? '4 min',
       educativo: {
-        category: 'Lifestyle',
-        topic: raw.title,
-        seo_keyword: (raw.keywords ?? [])[0] ?? raw.title,
+        category: 'Bastidores',
+        topic: comum.title,
+        seo_keyword: (raw.keywords ?? [])[0] ?? comum.title,
       },
-      seo: toSeo(raw),
+    },
+  }
+}
+
+/**
+ * Review curto de um carro do estoque, na mesma voz do post do Instagram e
+ * com os números só da ficha do molde. É o post automático enquanto a Meta não
+ * tem token (ver runDailyBlogAi) e o do disparo manual ?strategy=review. Tomou
+ * o lugar do review de 2.500 palavras com "Attra" 12 a 20 vezes (28/10/2026).
+ */
+export async function generateReviewDoEstoque(v: Vehicle): Promise<GeneratedBlog> {
+  const images = v.photos ?? []
+
+  const prompt = `
+${VOZ_DO_BLOG}
+
+${FONTES_DO_ESTOQUE}
+
+MISSÃO: escrever o review deste ${tituloDoVeiculo(v)} à venda na Attra, para quem pesquisa o modelo no Google ou pergunta a uma IA: o que o carro é, o que este exemplar tem de diferente (cor, interior, itens da ficha), o que os números da ficha dizem e para quem ele faz sentido.
+
+DADOS DO CARRO (ficha do anúncio; use só estes números):
+${briefingDoCarro(v)}
+
+ESTRUTURA:
+1. Abertura de 2 ou 3 frases: modelo, ano, cor, quilometragem e o que distingue este exemplar (sem h2).
+2. Uma lista curta (ul) com os dados da ficha.
+3. De 3 a 4 seções h2, por exemplo: o que este exemplar tem de diferente, motor e desempenho (só com números da ficha), para quem faz sentido, o que olhar antes de comprar esse modelo.
+Última seção: onde ver o carro, com âncora natural para a ficha do site.
+
+${IMAGENS_NO_TEXTO(images.length)}
+
+${schemaDoPost(true)}
+`.trim()
+
+  const raw = await gerarComRevisao(prompt)
+  return {
+    strategy: 'review',
+    post: {
+      ...camposDoPost(raw, images),
+      post_type: 'car_review',
+      featured_image_alt: tituloDoVeiculo(v),
+      reading_time: raw.reading_time ?? '5 min',
+      car_review: reviewDoExemplar(v, raw, images),
     },
   }
 }

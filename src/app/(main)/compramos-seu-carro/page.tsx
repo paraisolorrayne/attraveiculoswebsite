@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { TradeInForm } from '@/components/forms/trade-in-form'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   description: 'A Attra Veículos compra seu carro premium com avaliação profissional. Processo seguro, transparente e sem burocracia. Avaliação gratuita para veículos de luxo em Uberlândia e todo o Brasil.',
   keywords: 'vender carro premium, compramos seu carro, avaliação de veículos de luxo, vender carro usado, Attra Veículos compra carro, vender BMW, vender Mercedes, vender Porsche',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Compramos seu Carro Premium | Attra Veículos',
     description: 'Venda seu veículo de luxo com segurança. Avaliação profissional e processo 100% transparente.',
     type: 'website',

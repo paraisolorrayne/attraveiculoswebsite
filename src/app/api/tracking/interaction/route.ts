@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { checkRateLimit, getClientIP, RATE_LIMIT_PRESETS } from '@/lib/rate-limit'
 import { atribuicaoPorSessaoDbId } from '@/lib/atribuicao-sessao-db'
 import { enviarAvisoDeClique, mensagemDoLinkWhatsApp, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
+import { lerCodigo } from '@/lib/codigo-whatsapp'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // É aqui que o whatsapp_click é gravado — a ponte de atribuição do WhatsApp
@@ -73,9 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Registro do clique de WhatsApp: quem clicou (a sessão, que carrega
-    // utm/campanha/termo) e quando. Sem código na mensagem do cliente, o CRM
-    // liga a conversa à origem pelo aviso abaixo (session_id, horário e o texto
-    // pré-preenchido).
+    // utm/campanha/termo) e quando. O CRM liga a conversa à origem pelo aviso
+    // abaixo: pelo código invisível da mensagem (desde 29/10/2026) e, sem ele,
+    // pelo texto pré-preenchido e o horário.
     if (type === 'whatsapp_click') {
       const veiculoId = typeof metadata?.vehicle_id === 'string' ? metadata.vehicle_id : null
       // Só grava se a mesma sessão não clicou nos últimos 3 s. Toque duplo (ou
@@ -102,6 +103,25 @@ export async function POST(request: NextRequest) {
           return undefined
         })
 
+      // O texto que vai pré-preenchido, com o código invisível dentro, e o
+      // código lido dele, não de um campo à parte: é o que a pessoa recebeu no
+      // WhatsApp (codigo-whatsapp.ts).
+      const mensagem = mensagemDoLinkWhatsApp(metadata?.href)
+      const codigo = lerCodigo(mensagem)
+
+      // Guarda o código no clique: quando a Fykos devolver o mesmo código no
+      // card, o card se liga a este clique (ligarPorCodigo). Num UPDATE à parte,
+      // e não no insert acima: se a migration 20261029 não tiver rodado, perde-se
+      // só o código, e o clique e o aviso continuam saindo.
+      if (clique && codigo !== null) {
+        await db
+          .updateTable('whatsapp_clicks')
+          .set({ codigo_whatsapp: codigo })
+          .where('id', '=', clique.id)
+          .execute()
+          .catch((e: unknown) => console.warn('[Tracking] código do clique não gravado:', e))
+      }
+
       // AVISO AO CRM, no mesmo instante do clique.
       //
       // Sem isto a origem só chega ao CRM se o lead virar card — e primeiro
@@ -121,9 +141,8 @@ export async function POST(request: NextRequest) {
               atribuicao,
               page_path ?? null,
               veiculoId,
-              // O texto que vai pré-preenchido: é por ele (e pelo horário) que o
-              // CRM casa o aviso com a 1ª mensagem, já que não há código nela.
-              mensagemDoLinkWhatsApp(metadata?.href),
+              mensagem,
+              codigo,
             ),
           )
         } catch (e) {

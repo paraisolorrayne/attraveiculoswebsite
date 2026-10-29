@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runDailyBlogAi, type ForceOptions } from '@/lib/jobs/daily-blog-ai'
 
-// Endpoint triggered by Supabase pg_cron (see migration 20260420_blog_ai_automation.sql).
+// Disparado por deploy/cron/cron.d/attra-blog-ai (seg, qua e sex): post a
+// partir do Instagram ou, sem token da Meta, review curto de um carro do
+// estoque. À mão: ?strategy=review (estoque) ou ?strategy=comparison.
 // Also callable manually for testing via:
 //   GET /api/cron/blog-ai?secret=<CRON_SECRET>
 //   POST /api/cron/blog-ai   (with Authorization: Bearer <CRON_SECRET>)

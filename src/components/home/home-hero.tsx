@@ -1,188 +1,215 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import { getImageProps } from 'next/image'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, MessageCircle, Volume2, VolumeX } from 'lucide-react'
 import { getWhatsAppUrl } from '@/lib/constants'
 
 const consultantWhatsAppMessage =
   'Olá, Attra. Gostaria de falar com um consultor sobre os veículos do acervo.'
 
-interface HomeHeroProps {
-  /**
-   * ID do vídeo mais recente do canal da Attra (via youtube-feed RSS).
-   * Quando presente, exibido em autoplay mudo/loop na coluna direita.
-   * Quando ausente (feed indisponível), a coluna de vídeo é omitida e o
-   * texto ocupa o hero inteiro — sem layout quebrado.
-   */
-  videoId?: string | null
+/**
+ * Filme próprio da Attra para o hero (22/10/2026), 30 s com trilha, em dois
+ * cortes: o do celular vem mais fechado, para o recorte em pé. O nome leva a
+ * versão porque o cache é de um ano (next.config.ts): vídeo novo, nome novo.
+ * A imagem inicial é o primeiro quadro de cada corte.
+ */
+const FILME = {
+  computador: { video: '/videos/hero-computador-v1.mp4', quadro: '/images/hero-computador-v1.jpg' },
+  celular: { video: '/videos/hero-celular-v1.mp4', quadro: '/images/hero-celular-v1.jpg' },
 }
 
-const MANIFESTO_ROTATION_MS = 7000
+// Tela em pé ou estreita usa o corte do celular, no vídeo e na imagem inicial.
+const MIDIA_CELULAR = '(max-width: 767px), (orientation: portrait)'
+
+const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celular : FILME.computador).video
 
 /**
- * Manifesto headline rotation — Attra é a MOLDURA, não o quadro.
- * Frases editoriais que curam, em vez de marca+modelo (que competiria
- * com Ferrari/Lambo).
+ * O título fixo da home. Até 29/10/2026 três frases se revezavam a cada 7 s
+ * ("Seleção, sem igual", "O lugar do extraordinário"): ninguém terminava de
+ * ler e o <h1> que o Google indexa mudava. A emoção fica com o vídeo.
  */
-const MANIFESTO_LINES = [
-  'Seleção,\nsem igual.',
-  'Critério.\nNão estoque.',
-  'O lugar\ndo extraordinário.',
-] as const
+const MANIFESTO = ['Critério.', 'Não estoque.'] as const
 
-// Wine sóbrio — vermelho dessaturado coerente com primary Attra (#9A1C1C).
-const WINE = '#A8302E'
-
-function buildEmbedUrl(videoId: string): string {
-  // Autoplay mudo + loop (loop exige playlist=mesmaId). controls=0 e
-  // modestbranding pra look de banner. youtube-nocookie é privacy-friendly
-  // e já está liberado no CSP do site.
-  const params = new URLSearchParams({
-    autoplay: '1',
-    mute: '1',
-    loop: '1',
-    playlist: videoId,
-    controls: '0',
-    modestbranding: '1',
-    playsinline: '1',
-    rel: '0',
-    disablekb: '1',
+/** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
+function QuadroInicial() {
+  // Os dois cortes abrem na fachada da loja.
+  const comum = { alt: 'Fachada da Attra Veículos em Uberlândia', sizes: '100vw', quality: 75 }
+  const { props: { srcSet: celular } } = getImageProps({ ...comum, src: FILME.celular.quadro, width: 1280, height: 720 })
+  const { props: { srcSet: computador, ...img } } = getImageProps({
+    ...comum, src: FILME.computador.quadro, width: 1920, height: 1080, loading: 'eager', fetchPriority: 'high',
   })
-  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`
+  return (
+    <picture>
+      <source media={MIDIA_CELULAR} srcSet={celular} sizes="100vw" />
+      <source srcSet={computador} sizes="100vw" />
+      <img {...img} alt={comum.alt} className="absolute inset-0 h-full w-full object-cover" />
+    </picture>
+  )
 }
 
-export function HomeHero({ videoId }: HomeHeroProps) {
-  const [lineIndex, setLineIndex] = useState(0)
+/**
+ * Vídeo de fundo: entra depois que a página carregou (o quadro inicial é o que
+ * pinta primeiro), aparece quando começa a tocar e pausa fora da tela ou com a
+ * aba escondida. Sem vídeo com movimento reduzido ou economia de dados: fica o
+ * quadro. O som é do hero (botão "Ligar som"), por isso o elemento é dele.
+ */
+function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
+  videoRef: RefObject<HTMLVideoElement | null>
+  tocando: boolean
+  setTocando: Dispatch<SetStateAction<boolean>>
+  setComSom: Dispatch<SetStateAction<boolean>>
+}) {
+  const [fonte, setFonte] = useState<string | null>(null)
 
-  // Rotaciona o manifesto (respeitando prefers-reduced-motion).
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) return
-    const interval = setInterval(() => {
-      setLineIndex((prev) => (prev + 1) % MANIFESTO_LINES.length)
-    }, MANIFESTO_ROTATION_MS)
-    return () => clearInterval(interval)
+    const conexao = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || conexao?.saveData) return
+    let espera: ReturnType<typeof setTimeout>
+    const comecar = () => { espera = setTimeout(() => setFonte(videoDaTela()), 600) }
+    if (document.readyState === 'complete') comecar()
+    else window.addEventListener('load', comecar, { once: true })
+    return () => { clearTimeout(espera); window.removeEventListener('load', comecar) }
   }, [])
 
-  const manifestoLine = MANIFESTO_LINES[lineIndex]
-  const embedUrl = videoId ? buildEmbedUrl(videoId) : null
+  useEffect(() => {
+    const video = videoRef.current
+    if (!fonte || !video) return
+    // O autoplay só é aceito mudo; no iOS a propriedade precisa estar ligada antes do play().
+    video.muted = true
+    const tocar = () => video.play().catch(() => {
+      // Com som, o navegador pode recusar sem um toque recente: volta ao mudo e
+      // segue tocando. Mudo e recusado (modo economia do iOS), fica o quadro.
+      if (video.muted) return
+      video.muted = true
+      setComSom(false)
+      video.play().catch(() => {})
+    })
+    let visivel = false
+    const atualizar = () => (visivel && !document.hidden ? tocar() : video.pause())
+    const io = new IntersectionObserver(([e]) => { visivel = e.isIntersecting; atualizar() })
+    io.observe(video)
+    document.addEventListener('visibilitychange', atualizar)
+    return () => { io.disconnect(); document.removeEventListener('visibilitychange', atualizar) }
+  }, [fonte, videoRef, setComSom])
 
-  // Bloco de texto editorial — reusado em mobile e desktop.
-  //
-  // `Titulo` muda por bloco: o mobile leva o ÚNICO <h1> do documento (é a
-  // viewport que o Googlebot e os crawlers de IA leem) e o desktop leva <h2>,
-  // como já se faz na ficha de veículo. Antes os dois blocos repetiam <h1> e a
-  // home saía com dois títulos principais — sinal ambíguo para buscador e LLM
-  // (avaliação AEO, 26/08/2026).
-  const editorialCopy = (Titulo: 'h1' | 'h2') => (
-    <>
-      {/* Eyebrow */}
-      <div className="flex items-center gap-4 mb-7 sm:mb-9">
-        <span aria-hidden className="block h-px w-12 sm:w-16" style={{ backgroundColor: WINE }} />
-        <span
-          className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] font-medium"
-          style={{ color: WINE }}
-        >
-          Attra · Coleção
-        </span>
-      </div>
+  if (!fonte) return null
 
-      {/* Manifesto headline */}
-      <Titulo
-        className="text-foreground font-normal tracking-tight leading-[1.05]
-                   text-[clamp(2.5rem,5.5vw,5rem)] mb-6 sm:mb-8"
-        style={{ fontFamily: 'var(--font-montserrat)' }}
-      >
-        {manifestoLine.split('\n').map((line, i) => (
-          <span key={i} className="block">
-            {line}
-          </span>
-        ))}
-      </Titulo>
-
-      {/* Subhead */}
-      <p className="text-foreground-secondary font-light text-sm sm:text-[15px] tracking-wide
-                    max-w-xl leading-relaxed mb-8 sm:mb-11">
-        Ferrari, Porsche, Mercedes AMG, Land Rover, BMW e Audi. Selecionados em
-        Uberlândia, entregues em todo o Brasil.
-      </p>
-
-      {/* CTAs */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-7">
-        <Link
-          href="/veiculos"
-          className="hero-cta-primary group inline-flex items-center justify-center gap-3
-                     text-white sm:text-foreground
-                     text-xs sm:text-sm font-medium tracking-[0.22em] uppercase
-                     px-9 sm:px-10 py-4 rounded-none transition-all duration-300
-                     bg-[#A8302E] sm:bg-[rgba(168,48,46,0.08)]
-                     border border-[#A8302E]"
-        >
-          Explorar Estoque
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
-        <a
-          href={getWhatsAppUrl(consultantWhatsAppMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group inline-flex items-center
-                     text-xs sm:text-sm font-semibold tracking-[0.18em] uppercase transition-colors"
-          style={{ color: WINE }}
-        >
-          <span className="border-b pb-1 transition-colors" style={{ borderColor: WINE }}>
-            Falar com consultor
-          </span>
-        </a>
-      </div>
-    </>
+  return (
+    <video
+      ref={videoRef}
+      src={fonte}
+      muted
+      loop
+      playsInline
+      // Só os dados do arquivo até o play(): o quadro inicial (AVIF/WebP pelo
+      // next/image) é o que pinta enquanto isso, também na rede do celular.
+      preload="metadata"
+      aria-hidden="true"
+      tabIndex={-1}
+      disablePictureInPicture
+      disableRemotePlayback
+      onPlaying={() => setTocando(true)}
+      className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-out ${tocando ? 'opacity-100' : 'opacity-0'}`}
+    />
   )
+}
 
-  // Player do vídeo — autoplay mudo loop, sem controles (look de banner).
-  const videoPlayer = embedUrl ? (
-    <div className="relative w-full aspect-video overflow-hidden rounded-2xl shadow-2xl shadow-black/30 border border-border/40 bg-black">
-      <iframe
-        src={embedUrl}
-        title="Attra Veículos — último vídeo"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        allowFullScreen
-        loading="lazy"
-        className="absolute inset-0 w-full h-full"
-      />
-    </div>
-  ) : null
+/**
+ * Hero da home em tela cheia, com o filme da Attra no fundo. Substitui o
+ * vídeo do YouTube enquadrado ao lado do texto, que dividia a atenção com o
+ * título e mostrava a barra do player ao passar o mouse.
+ */
+export function HomeHero() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [tocando, setTocando] = useState(false)
+  const [comSom, setComSom] = useState(false)
+
+  // No próprio clique: é o toque que autoriza o navegador a tocar com som.
+  const alternarSom = () => {
+    const video = videoRef.current
+    if (!video) return
+    video.muted = !video.muted
+    if (video.paused) video.play().catch(() => {})
+    setComSom(!video.muted)
+  }
 
   return (
     <section
       aria-label="Apresentação Attra Veículos"
-      className="home-hero-canvas relative w-full overflow-hidden"
+      // Altura em motion.css (.hero-tela): no celular desconta a barra de
+      // abas, para nada do hero ficar atrás dela.
+      className="hero-tela relative w-full overflow-hidden bg-black"
     >
-      {/* ============================================================
-          MOBILE LAYOUT (< lg) — texto em cima, vídeo embaixo.
-          ============================================================ */}
-      <div className="lg:hidden relative w-full bg-background pt-24 pb-12 px-6">
-        <div className="flex flex-col items-start text-left max-w-md mx-auto">
-          {editorialCopy('h1')}
-          {videoPlayer && <div className="w-full mt-10">{videoPlayer}</div>}
+      <div className="hero-fundo absolute inset-0" aria-hidden="true">
+        <QuadroInicial />
+        <VideoDeFundo videoRef={videoRef} tocando={tocando} setTocando={setTocando} setComSom={setComSom} />
+      </div>
+
+      {/* Escurecimento para o texto ler bem sobre qualquer quadro do vídeo */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/90 via-black/40 to-transparent" aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true" />
+
+      <div className="hero-conteudo relative z-10 flex h-full flex-col justify-end px-6 pb-10 sm:px-10 lg:px-[10%] lg:pb-16">
+        <div className="max-w-3xl">
+          {/* Único <h1> da home. Cada linha sobe por trás de uma máscara; na
+              primeira vez, depois da abertura (motion.css). */}
+          <h1
+            data-primeira
+            className="text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6"
+            style={{ fontFamily: 'var(--font-montserrat)' }}
+          >
+            {MANIFESTO.map((line, i) => (
+              <span key={i} className="hero-linha" style={{ ['--d' as string]: `${i * 0.12}s` }}>
+                <span>{line}</span>
+              </span>
+            ))}
+          </h1>
+
+          <p className="hero-entra max-w-xl text-[15px] font-light leading-relaxed tracking-wide text-white/75 sm:text-base mb-8 sm:mb-9">
+            {/* Sem a lista de marcas: a faixa logo abaixo já mostra as que têm
+                carro no estoque, com link (27/10/2026). */}
+            Supercarros e veículos premium selecionados em Uberlândia, entregues
+            em todo o Brasil.
+          </p>
+
+          <div className="hero-entra flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4" style={{ ['--d' as string]: '0.1s' }}>
+            <Link
+              href="/veiculos"
+              className="group inline-flex h-14 items-center justify-center gap-3 bg-white px-9 focus-visible:outline-white text-xs font-medium uppercase tracking-[0.22em] text-black transition-colors hover:bg-white/90 sm:text-sm"
+            >
+              Explorar estoque
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <a
+              href={getWhatsAppUrl(consultantWhatsAppMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-14 items-center justify-center gap-3 border border-white/40 px-8 focus-visible:outline-white text-xs font-medium uppercase tracking-[0.22em] text-white transition-colors hover:border-white hover:bg-white/10 sm:text-sm"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Falar com consultor
+            </a>
+          </div>
+
+          {/* Só aparece com o vídeo tocando; o espaço fica reservado para o
+              título não pular quando ele entra. */}
+          <button
+            type="button"
+            onClick={alternarSom}
+            aria-pressed={comSom}
+            aria-hidden={!tocando || undefined}
+            tabIndex={tocando ? undefined : -1}
+            className={`alvo-toque mt-7 inline-flex items-center gap-2.5 text-[13px] uppercase tracking-[0.2em] text-white/75 transition-[color,opacity] duration-700 hover:text-white ${tocando ? 'opacity-100' : 'invisible opacity-0'}`}
+          >
+            {comSom ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
+            {comSom ? 'Desligar som' : 'Ligar som'}
+          </button>
         </div>
       </div>
 
-      {/* ============================================================
-          DESKTOP LAYOUT (lg+) — split: texto à esquerda, vídeo à direita.
-          ============================================================ */}
-      <div className="hidden lg:grid grid-cols-[45fr_55fr] items-center gap-12 relative w-full
-                      min-h-[560px] py-16 xl:py-20 overflow-hidden px-[10%]">
-        {/* Coluna esquerda — texto */}
-        <div className="relative z-10 flex flex-col justify-center items-start text-left">
-          {editorialCopy('h2')}
-        </div>
-
-        {/* Coluna direita — vídeo (centralizado verticalmente) */}
-        <div className="relative z-10 flex items-center justify-center">
-          {videoPlayer}
-        </div>
-      </div>
     </section>
   )
 }

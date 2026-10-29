@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { X, SlidersHorizontal, ChevronDown, Search, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { avisarNavegacao } from '@/lib/navegacao'
 
 // Fixed premium brand list ordered by commercial priority
 const PREMIUM_BRANDS = [
@@ -77,7 +78,7 @@ function BrandCombobox({
           setTimeout(() => inputRef.current?.focus(), 100)
         }}
         className={cn(
-          'w-full px-3 py-2.5 text-sm rounded-lg border text-left flex items-center justify-between transition-all',
+          'w-full px-3 py-2 text-[13px] rounded-lg border text-left flex items-center justify-between transition-colors',
           value
             ? 'border-primary bg-primary/10 text-primary'
             : 'border-border text-foreground-secondary hover:border-primary/50'
@@ -148,15 +149,31 @@ interface FilterSection {
 
 export function AdvancedFilters() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const urlParams = useSearchParams()
   const [isOpen, setIsOpen] = useState(false)
 
-  // Separate sections - Brand is now a combobox, not in sections
-  const [sections, setSections] = useState<FilterSection[]>([
-    { title: 'Ano', key: 'ano', options: years, isOpen: true },
-    { title: 'Carroceria', key: 'carroceria', options: bodyStyles, isOpen: false },
-    { title: 'Combustível', key: 'combustivel', options: powertrains, isOpen: false },
-    { title: 'Blindagem', key: 'blindagem', options: ['Sim', 'Não'], isOpen: false },
+  // Filtro clicado aparece marcado na hora, antes de a página nova chegar
+  // (~1 s em /veiculos). Vale só enquanto o endereço é o de quando se clicou:
+  // quando o resultado chega, quem manda de novo é a URL.
+  const [otimista, setOtimista] = useState<{ base: string; params: string } | null>(null)
+  const searchParams = useMemo(
+    () => (otimista && otimista.base === urlParams.toString() ? new URLSearchParams(otimista.params) : urlParams),
+    [otimista, urlParams],
+  )
+
+  const navegar = (params: URLSearchParams) => {
+    const destino = params.toString() ? `/veiculos?${params.toString()}` : '/veiculos'
+    setOtimista({ base: urlParams.toString(), params: params.toString() })
+    avisarNavegacao(destino)
+    router.push(destino)
+  }
+
+  // Seções fechadas por padrão (a lateral fica curta); abre a que já tem filtro.
+  const [sections, setSections] = useState<FilterSection[]>(() => [
+    { title: 'Carroceria', key: 'carroceria', options: bodyStyles, isOpen: !!urlParams.get('carroceria') },
+    { title: 'Ano', key: 'ano', options: years, isOpen: !!urlParams.get('ano') },
+    { title: 'Combustível', key: 'combustivel', options: powertrains, isOpen: !!urlParams.get('combustivel') },
+    { title: 'Blindagem', key: 'blindagem', options: ['Sim', 'Não'], isOpen: !!urlParams.get('blindagem') },
   ])
 
   // Get active filters (excluding pagination params)
@@ -179,7 +196,7 @@ export function AdvancedFilters() {
       params.set(key, value)
     }
     params.delete('pagina') // Reset pagination when filtering
-    router.push(`/veiculos?${params.toString()}`)
+    navegar(params)
   }
 
   const handleBrandChange = (brand: string | null) => {
@@ -190,7 +207,7 @@ export function AdvancedFilters() {
       params.delete('marca')
     }
     params.delete('pagina') // Reset pagination
-    router.push(`/veiculos?${params.toString()}`)
+    navegar(params)
   }
 
   const applyPriceRange = (min: number, max: number | null) => {
@@ -208,17 +225,27 @@ export function AdvancedFilters() {
       else params.delete('precoMax')
     }
     params.delete('pagina')
-    router.push(`/veiculos?${params.toString()}`)
+    navegar(params)
   }
 
   const clearFilters = () => {
-    router.push('/veiculos')
+    navegar(new URLSearchParams())
   }
 
   const isRangeSelected = (min: number, max: number | null) => {
     const currentMin = searchParams.get('precoMin')
     const currentMax = searchParams.get('precoMax')
     return currentMin === min.toString() && (max === null ? !currentMax : currentMax === max?.toString())
+  }
+
+  // Filtros ativos com nome de gente: a faixa de preço vira um chip só
+  // ("R$ 300k - 500k"), em vez de "300000" e "500000" soltos.
+  const faixaAtiva = priceRanges.find((range) => isRangeSelected(range.min, range.max))
+  const rotuloDoFiltro = (key: string, value: string) => {
+    if (key === 'q') return `“${value}”`
+    if (key === 'precoMin') return `a partir de R$ ${Number(value).toLocaleString('pt-BR')}`
+    if (key === 'precoMax') return `até R$ ${Number(value).toLocaleString('pt-BR')}`
+    return value.replace(/-/g, ' ')
   }
 
   return (
@@ -258,43 +285,57 @@ export function AdvancedFilters() {
           isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
         )}>
           {/* Header */}
-          <div className="flex items-center justify-between mb-5 lg:mb-6">
-            <h3 className="text-lg font-bold text-foreground">Filtros</h3>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="lg:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.22em] text-foreground-secondary">Filtros</h3>
+            <div className="flex items-center gap-3">
+              {activeFilters.length > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-foreground-secondary underline-offset-4 hover:text-foreground hover:underline transition-colors"
+                >
+                  Limpar
+                </button>
+              )}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="lg:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Fechar filtros"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Active filters */}
           {activeFilters.length > 0 && (
-            <div className="mb-5 p-3 bg-background-soft rounded-lg">
-              <div className="flex flex-wrap gap-2 mb-2">
-                {activeFilters.map(([key, value]) => (
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {faixaAtiva && (
+                <button
+                  onClick={() => applyPriceRange(faixaAtiva.min, faixaAtiva.max)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/15 text-primary text-xs font-medium rounded-md hover:bg-primary/25 transition-colors"
+                >
+                  {faixaAtiva.label}
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              {activeFilters
+                .filter(([key]) => !(faixaAtiva && (key === 'precoMin' || key === 'precoMax')))
+                .map(([key, value]) => (
                   <button
                     key={key}
                     onClick={() => applyFilter(key, value)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/15 text-primary text-xs font-medium rounded-full hover:bg-primary/25 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/15 text-primary text-xs font-medium rounded-md hover:bg-primary/25 transition-colors"
                   >
-                    <span className="capitalize">{value}</span>
+                    <span className={key === 'q' ? undefined : 'capitalize'}>{rotuloDoFiltro(key, value)}</span>
                     <X className="w-3 h-3" />
                   </button>
                 ))}
-              </div>
-              <button
-                onClick={clearFilters}
-                className="text-xs text-foreground-secondary hover:text-primary transition-colors"
-              >
-                Limpar todos os filtros
-              </button>
             </div>
           )}
 
           {/* Brand Filter - Searchable Combobox */}
-          <div className="mb-4 pb-4 border-b border-border">
-            <label className="block py-2 text-foreground font-medium text-sm">
+          <div className="pb-4 border-b border-border/60">
+            <label className="block pb-2 text-foreground font-medium text-[13px]">
               Marca
             </label>
             <BrandCombobox
@@ -304,29 +345,53 @@ export function AdvancedFilters() {
             />
           </div>
 
+          {/* Faixa de preço — sempre aberta: é o filtro de quem está decidindo */}
+          <div className="py-4 border-b border-border/60">
+            <p className="pb-2 text-foreground font-medium text-[13px]">Faixa de preço</p>
+            <div className="flex flex-wrap gap-1.5">
+              {priceRanges.map((range) => (
+                <button
+                  key={range.label}
+                  onClick={() => applyPriceRange(range.min, range.max)}
+                  aria-pressed={isRangeSelected(range.min, range.max)}
+                  className={cn(
+                    'px-2.5 py-1 text-xs rounded-md border transition-colors',
+                    isRangeSelected(range.min, range.max)
+                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                      : 'border-border text-foreground-secondary hover:border-foreground/30 hover:text-foreground'
+                  )}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Other filter sections - compact */}
-          <div className="space-y-3">
+          <div>
             {sections.map((section, index) => (
-              <div key={section.key} className="border-b border-border pb-3">
+              <div key={section.key} className="border-b border-border/60 py-1 last:border-b-0">
                 <button
                   onClick={() => toggleSection(index)}
-                  className="flex items-center justify-between w-full py-2 text-foreground font-medium text-sm"
+                  aria-expanded={section.isOpen}
+                  className="flex items-center justify-between w-full py-2.5 text-foreground font-medium text-[13px]"
                 >
                   {section.title}
                   <ChevronDown className={cn('w-4 h-4 transition-transform', section.isOpen && 'rotate-180')} />
                 </button>
 
                 {section.isOpen && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
+                  <div className="flex flex-wrap gap-1.5 pb-3">
                     {section.options.map((option) => (
                       <button
                         key={option}
                         onClick={() => applyFilter(section.key, option.toLowerCase())}
+                        aria-pressed={searchParams.get(section.key) === option.toLowerCase()}
                         className={cn(
-                          'px-2.5 py-1.5 text-xs rounded-md border transition-all',
+                          'px-2.5 py-1 text-xs rounded-md border transition-colors',
                           searchParams.get(section.key) === option.toLowerCase()
                             ? 'border-primary bg-primary/10 text-primary font-medium'
-                            : 'border-border text-foreground-secondary hover:border-primary/50 hover:text-foreground'
+                            : 'border-border text-foreground-secondary hover:border-foreground/30 hover:text-foreground'
                         )}
                       >
                         {option}
@@ -338,26 +403,6 @@ export function AdvancedFilters() {
             ))}
           </div>
 
-          {/* Price range - compact */}
-          <div className="mt-3 pb-4">
-            <p className="py-2 text-foreground font-medium text-sm">Faixa de preço</p>
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {priceRanges.map((range) => (
-                <button
-                  key={range.label}
-                  onClick={() => applyPriceRange(range.min, range.max)}
-                  className={cn(
-                    'px-2.5 py-1.5 text-xs rounded-md border transition-all',
-                    isRangeSelected(range.min, range.max)
-                      ? 'border-primary bg-primary/10 text-primary font-medium'
-                      : 'border-border text-foreground-secondary hover:border-primary/50 hover:text-foreground'
-                  )}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </>

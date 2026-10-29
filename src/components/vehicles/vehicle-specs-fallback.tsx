@@ -8,117 +8,118 @@
  * dimensões e destaques do Carrera base. O catálogo segue nas páginas de
  * modelo, onde é apresentado como referência do modelo, não do exemplar.
  *
+ * Na prévia de 22/10/2026 ela absorveu os cards de "Ficha Técnica"
+ * (`vehicle-specs.tsx`) e o bloco "Performance", que repetiam combustível,
+ * câmbio, cor, carroceria, km e ano. Virou lista de rótulo e valor, sem ícone
+ * em caixa, e perdeu a "Categoria" (classificação do site, não dado do
+ * anúncio; saía "premium" em minúscula).
+ *
+ * Quando o marketing preenche a Descrição Customizada da AutoConf no molde
+ * (`ficha-do-anuncio.ts`), os campos dela vencem os do cadastro ("Prata
+ * High-Tech Metálico" no lugar de "Prata") e entram tração, freios, interior,
+ * rodas, som e os diferenciais. Sem molde, a ficha fica como era.
+ *
  * O subtítulo diz "dados do anúncio", e não "dados oficiais do fabricante",
  * porque os campos são preenchidos pela equipe no Autoconf.
+ *
+ * Desde 23/10/2026 é um bloco aberto (`SecaoDaFicha`), sem card. Mecânica,
+ * Exemplar e Diferenciais dividem a largura da coluna: um embaixo do outro
+ * no celular, dois lado a lado e, com a coluna bem larga, os três.
+ * No mesmo dia a letra cresceu (valor 15→17 px, rótulo 14→16 px, título do
+ * grupo 11→13 px): ao lado da referência da Shiftcar, a ficha lia pequena.
  */
 
-import {
-  Gauge, Zap, RotateCw, Fuel, Car, Shield, ArrowUpRight, Cog,
-  CircleGauge, BookOpen, Calendar, Palette,
-} from 'lucide-react'
 import type { Vehicle } from '@/types'
 import { formatMileage } from '@/lib/utils'
+import { SecaoDaFicha } from './secao-da-ficha'
 
 interface VehicleSpecsFallbackProps {
   vehicle: Vehicle
 }
 
 interface SpecItem {
-  icon: typeof Gauge
   label: string
   value: string
 }
 
+function preenchidos(itens: SpecItem[]): SpecItem[] {
+  return itens.filter((s) => s.value.trim().length > 0)
+}
+
 export function VehicleSpecsFallback({ vehicle }: VehicleSpecsFallbackProps) {
-  // Motor e Performance — campos técnicos do veículo. Filtra null/vazio
-  // pra não mostrar specs incompletos.
-  const primarySpecs: SpecItem[] = [
-    { icon: Cog, label: 'Motor', value: vehicle.engine ?? '' },
-    { icon: Zap, label: 'Potência', value: vehicle.horsepower ? `${vehicle.horsepower} cv` : '' },
-    { icon: RotateCw, label: 'Torque', value: vehicle.torque ? `${vehicle.torque} Nm` : '' },
-    { icon: Gauge, label: '0–100 km/h', value: vehicle.acceleration ? `${vehicle.acceleration} s` : '' },
-    { icon: ArrowUpRight, label: 'Velocidade máxima', value: vehicle.top_speed ? `${vehicle.top_speed} km/h` : '' },
-    { icon: Car, label: 'Transmissão', value: vehicle.transmission ?? '' },
-    { icon: Fuel, label: 'Combustível', value: vehicle.fuel_type ?? '' },
-    { icon: Shield, label: 'Carroceria', value: vehicle.body_type ?? '' },
-  ].filter((s) => s.value.trim().length > 0)
+  const ficha = vehicle.ficha
+  const mecanica = preenchidos([
+    { label: 'Motor', value: ficha?.motor ?? vehicle.engine ?? '' },
+    { label: 'Potência', value: ficha?.potencia ?? (vehicle.horsepower ? `${vehicle.horsepower} cv` : '') },
+    { label: 'Torque', value: ficha?.torque ?? (vehicle.torque ? `${vehicle.torque} Nm` : '') },
+    { label: '0–100 km/h', value: ficha?.aceleracao_0_100 ?? (vehicle.acceleration ? `${vehicle.acceleration} s` : '') },
+    { label: 'Velocidade máxima', value: ficha?.velocidade_maxima ?? (vehicle.top_speed ? `${vehicle.top_speed} km/h` : '') },
+    { label: 'Câmbio', value: ficha?.cambio ?? vehicle.transmission ?? '' },
+    { label: 'Tração', value: ficha?.tracao ?? '' },
+    { label: 'Combustível', value: vehicle.fuel_type ?? '' },
+    { label: 'Freios', value: ficha?.freios ?? '' },
+  ])
 
-  // Detalhes do anúncio — quilometragem, ano, cor.
-  const detailSpecs: SpecItem[] = [
-    {
-      icon: CircleGauge,
-      label: 'Quilometragem',
-      value: vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage),
-    },
-    {
-      icon: Calendar,
-      label: 'Ano',
-      value: `${vehicle.year_manufacture}/${vehicle.year_model}`,
-    },
-    { icon: Palette, label: 'Cor', value: vehicle.color ?? '' },
-  ].filter((s) => s.value.trim().length > 0)
+  const exemplar = preenchidos([
+    { label: 'Ano', value: `${vehicle.year_manufacture}/${vehicle.year_model}` },
+    { label: 'Quilometragem', value: vehicle.mileage === 0 ? '0 km' : formatMileage(vehicle.mileage) },
+    { label: 'Cor', value: ficha?.cor ?? vehicle.color ?? '' },
+    { label: 'Interior', value: ficha?.interior ?? '' },
+    { label: 'Rodas', value: ficha?.rodas ?? '' },
+    { label: 'Som', value: ficha?.som ?? '' },
+    { label: 'Carroceria', value: vehicle.body_type ?? '' },
+  ])
 
-  // Se não há sequer 1 dado válido, melhor não renderizar nada que
-  // não mostrar um card vazio (improvável mas defensivo).
-  if (primarySpecs.length === 0 && detailSpecs.length === 0) {
-    return null
-  }
+  const diferenciais = ficha?.diferenciais ?? []
+
+  if (mecanica.length === 0 && exemplar.length === 0 && diferenciais.length === 0) return null
 
   const modelName = `${vehicle.brand} ${vehicle.model}${vehicle.version ? ` ${vehicle.version}` : ''}`
+  const grupos = [
+    { titulo: 'Mecânica', itens: mecanica },
+    { titulo: 'Exemplar', itens: exemplar },
+  ].filter((g) => g.itens.length > 0)
 
   return (
-    <section className="bg-background-card border border-border rounded-xl overflow-hidden">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-primary" />
+    <SecaoDaFicha titulo="Ficha técnica" subtitulo={`${modelName}, dados do anúncio`}>
+      <div className="grid gap-x-12 gap-y-10 @xl:grid-cols-2 @[78rem]:grid-cols-3">
+        {grupos.map((grupo) => (
+          <div key={grupo.titulo}>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">
+              {grupo.titulo}
+            </h3>
+            <dl className="mt-2">
+              {grupo.itens.map((spec) => (
+                <div
+                  key={spec.label}
+                  className="flex items-baseline justify-between gap-6 border-b border-border/70 py-3.5 last:border-b-0"
+                >
+                  <dt className="text-base text-foreground-secondary">{spec.label}</dt>
+                  <dd className="text-right text-[17px] font-medium text-foreground">{spec.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+        ))}
+
+        {diferenciais.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Ficha Técnica</h2>
-            <p className="text-sm text-foreground-secondary">
-              {modelName} — dados do anúncio
-            </p>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">
+              Diferenciais
+            </h3>
+            <ul className="mt-2">
+              {diferenciais.map((item) => (
+                <li
+                  key={item}
+                  className="border-b border-border/70 py-3.5 text-[17px] font-medium text-foreground last:border-b-0"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        )}
       </div>
-
-      {primarySpecs.length > 0 && (
-        <div className="p-6 border-b border-border">
-          <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-            Motor e Performance
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {primarySpecs.map((spec) => (
-              <div key={spec.label} className="p-3 bg-background rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <spec.icon className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
-                  <span className="text-xs text-foreground-secondary">{spec.label}</span>
-                </div>
-                <p className="text-sm font-medium text-foreground">{spec.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {detailSpecs.length > 0 && (
-        <div className="p-6">
-          <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-            Detalhes do Veículo
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {detailSpecs.map((spec) => (
-              <div key={spec.label} className="p-3 bg-background rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <spec.icon className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
-                  <span className="text-xs text-foreground-secondary">{spec.label}</span>
-                </div>
-                <p className="text-sm font-medium text-foreground">{spec.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
+    </SecaoDaFicha>
   )
 }

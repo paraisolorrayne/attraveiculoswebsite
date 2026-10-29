@@ -217,7 +217,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '2 lugares',
 		warranty: 'Garantia de fábrica Lamborghini',
 		highlights: [
-			'Último V10 aspirado da Lamborghini — motor naturalmente aspirado',
+			'Último V10 aspirado da Lamborghini',
 			'Sistema LDVI (Lamborghini Dinamica Veicolo Integrata)',
 			'Modos de condução ANIMA: Strada, Sport, Corsa',
 			'Chassi híbrido alumínio-carbono',
@@ -252,7 +252,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 			'Modos ANIMA: Strada, Sport, Corsa, Neve, Terra, Sabbia',
 			'Suspensão pneumática adaptativa com altura variável',
 			'Torque vectoring traseiro ativo',
-			'Rodas de até 23" — as maiores oferecidas de fábrica',
+			'Rodas de até 23", as maiores oferecidas de fábrica',
 		],
 	},
 	{
@@ -397,7 +397,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '5+2 lugares',
 		warranty: 'Garantia de fábrica Land Rover',
 		highlights: [
-			'Construção monobloco D7x em alumínio — 3x mais rígido que body-on-frame',
+			'Construção monobloco D7x em alumínio, 3x mais rígida que body-on-frame',
 			'Terrain Response 2 com modo Wade automático',
 			'Ângulo de ataque 38°, saída 40°, rampa 28°',
 			'Capacidade de transposição de água de 900 mm',
@@ -429,7 +429,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		highlights: [
 			'Motor V8 aspirado de maior potência específica do mundo (121,5 cv/L)',
 			'Virabrequim flat-plane para resposta linear até 8.600 rpm',
-			'Motor central traseiro — arquitetura de superesportivo',
+			'Motor central traseiro, arquitetura de superesportivo',
 			'Chassis com perfil aerodinâmico derivado do Corvette C8.R de corrida',
 			'Z07 Performance Package com asa traseira de fibra de carbono',
 		],
@@ -456,7 +456,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '2 lugares',
 		warranty: 'Garantia de fábrica Chevrolet',
 		highlights: [
-			'Motor central traseiro — layout de superesportivo',
+			'Motor central traseiro, layout de superesportivo',
 			'V8 aspirado com som natural incomparável',
 			'Modo de condução personalizado com 12 opções de configuração',
 			'Teto removível Targa de série',
@@ -486,7 +486,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '5 lugares',
 		warranty: 'Garantia de fábrica Dodge',
 		highlights: [
-			'Motor HEMI supercharged — ícone do muscle car americano',
+			'Motor HEMI supercharged, ícone do muscle car americano',
 			'Supercharger IHI de 2.380 cc com intercooler',
 			'Launch Control e Line Lock de fábrica',
 			'SRT Power Chiller para refrigeração do ar de admissão',
@@ -515,11 +515,11 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '2+2 lugares',
 		warranty: 'Garantia de fábrica Mercedes-Benz',
 		highlights: [
-			'Motor V8 handcrafted — "One Man, One Engine"',
+			'Motor V8 handcrafted: "One Man, One Engine"',
 			'AMG RIDE CONTROL com suspensão adaptativa',
 			'AMG DYNAMIC SELECT com modos de condução',
 			'Saída de escapamento dupla AMG Performance com válvulas',
-			'AMG Track Pace — telemetria integrada de fábrica',
+			'AMG Track Pace: telemetria integrada de fábrica',
 		],
 	},
 	{
@@ -545,7 +545,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '2+2 lugares',
 		warranty: 'Garantia de fábrica Bentley',
 		highlights: [
-			'Motor W12 — o grand tourer mais potente da Bentley',
+			'Motor W12: o grand tourer mais potente da Bentley',
 			'Interior em couro artesanal com mais de 10 bilhões de combinações',
 			'Rotating Display com tela de 12,3" retrátil',
 			'Acabamento em madeira com embutimento diamante',
@@ -575,7 +575,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		seatingCapacity: '5 lugares',
 		warranty: 'Garantia de fábrica Rolls-Royce',
 		highlights: [
-			'Primeiro SUV da Rolls-Royce — "The Cullinan Diamond"',
+			'Primeiro SUV da Rolls-Royce: "The Cullinan Diamond"',
 			'Plataforma Architecture of Luxury em alumínio spaceframe',
 			'Magic Carpet Ride com suspensão pneumática e câmeras preditivas',
 			'Portas com mecanismo de fechamento elétrico (coach doors)',
@@ -606,7 +606,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 		highlights: [
 			'Sétima geração do pony car mais icônico do mundo',
 			'Motor V8 Coyote com resposta linear até 7.500 rpm',
-			'Remote Rev — ligar o motor e ouvir o ronco pelo controle remoto',
+			'Remote Rev: ligar o motor e ouvir o ronco pelo controle remoto',
 			'Drift Brake eletrônico integrado',
 			'Painel digital personalizável de 12,4"',
 		],
@@ -638,7 +638,7 @@ const DATASHEETS: VehicleDatasheet[] = [
 			'Chassi em fibra de carbono com portas borboleta',
 			'Aerodinâmica passiva sem asa traseira móvel',
 			'Centro de gravidade ultra-baixo (450 mm do solo)',
-			'Corsa, GT e Wet — modos de condução dedicados',
+			'Corsa, GT e Wet: modos de condução dedicados',
 		],
 	},
 ]

@@ -127,7 +127,7 @@ function buildSectionPrompt(vehicle: Vehicle, section: SectionKind): string {
   const sectionInstructions = {
     overview: 'Apresente o veículo em sua essência: marca, modelo, ano, quilometragem e segmento (esportivo, SUV, sedã, conversível etc.). Conecte as informações em frases fluidas, não enumere. Não detalhe especificações de motor.',
     exterior: 'Descreva o design exterior usando APENAS carroceria e cor. Conecte os elementos em uma observação visual coerente. Não cite motor, cilindros, materiais ou detalhes que não estejam nos dados.',
-    interior: 'Descreva o interior usando apenas o tipo de câmbio (se informado) e linguagem genérica do segmento — ex: "interior orientado a performance" pra esportivos, "interior espaçoso" pra SUVs. NÃO invente bancos, painel, materiais ou specs de motor.',
+    interior: 'Descreva o interior usando apenas o tipo de câmbio (se informado) e linguagem genérica do segmento. Ex.: "interior orientado a performance" pra esportivos, "interior espaçoso" pra SUVs. NÃO invente bancos, painel, materiais ou specs de motor.',
   }
 
   const km = vehicle.mileage === 0
@@ -164,6 +164,7 @@ REGRAS CRÍTICAS:
 7. PROIBIDO inventar especificações técnicas não fornecidas. NUNCA mencione: número de cilindros, tipo/configuração de motor (V6, V8, W12, turbo, aspirado, híbrido) a menos que conste no campo "Motor" acima; cilindrada; tempo 0-100 km/h; velocidade máxima; tração (4x4/AWD/RWD). Se o campo "Motor" diz "Não informado", NÃO descreva o motor de forma alguma.
 8. Se um dado não existir, omita (não escreva "informação não disponível").
 9. Mencione o nome completo "marca modelo" no máximo UMA vez.
+10. Não use travessão (—) nem meia-risca como pontuação. Use vírgula, dois-pontos ou ponto.
 
 Entregue APENAS o parágrafo. Sem título, sem aspas, sem listas, sem markdown. Ambas as frases COMPLETAS.`
 }

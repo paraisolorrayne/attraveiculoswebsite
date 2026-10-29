@@ -59,4 +59,18 @@ describe('resumoDoVeiculo', () => {
 			brand: 'Tesla', model: 'Cybertruck', year_model: 2024, mileage: 0, price: 1_200_000,
 		})).toBe('Tesla Cybertruck 2024 | zero quilômetro | R$ 1.200.000,00')
 	})
+
+	it('remove o modelo repetido no início da versão trazida pelo AutoConf', () => {
+		expect(resumoDoVeiculo({
+			brand: 'Land Rover', model: 'Range Rover', version: 'Range Rover VELAR SV Autob. Super.C V8',
+			year_model: 2020, mileage: 52_060, price: 439_000,
+		})).toBe('Land Rover Range Rover VELAR SV Autob. Super.C V8 2020 | 52.060 km | R$ 439.000,00')
+	})
+
+	it('não remove o modelo quando ele aparece no meio da versão', () => {
+		expect(resumoDoVeiculo({
+			brand: 'Land Rover', model: 'Range Rover', version: 'Edição Range Rover Collection',
+			year_model: 2020, mileage: 52_060, price: 439_000,
+		})).toContain('Range Rover Edição Range Rover Collection 2020')
+	})
 })

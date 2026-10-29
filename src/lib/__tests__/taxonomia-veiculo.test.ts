@@ -213,3 +213,32 @@ describe('categoria editorial', () => {
     expect(classificarCategoria({ marca: 'Pontiac', carrocerias: ['cupe'], preco: 90000 })).toBe('executive')
   })
 })
+
+describe('rótulo do combustível para exibir', () => {
+  it('gasolina e elétrico vira Híbrido', async () => {
+    const { rotuloDeCombustivel } = await import('../taxonomia-veiculo')
+    expect(rotuloDeCombustivel('Gasolina e Elétrico')).toBe('Híbrido')
+    expect(rotuloDeCombustivel('Diesel e Elétrico')).toBe('Híbrido')
+  })
+
+  it('o resto fica como a origem mandou', async () => {
+    const { rotuloDeCombustivel } = await import('../taxonomia-veiculo')
+    expect(rotuloDeCombustivel('Gasolina')).toBe('Gasolina')
+    expect(rotuloDeCombustivel('Elétrico')).toBe('Elétrico')
+    expect(rotuloDeCombustivel('Flex')).toBe('Flex')
+    expect(rotuloDeCombustivel('  ')).toBe('')
+    expect(rotuloDeCombustivel(null)).toBe('')
+  })
+
+  it('o filtro de híbrido continua achando o carro pelo rótulo novo', async () => {
+    const { classificarCombustivel } = await import('../taxonomia-veiculo')
+    expect(classificarCombustivel('Híbrido')).toBe('hibrido')
+  })
+
+  it('motorização concorda com híbrida e elétrica', async () => {
+    const { motorizacao } = await import('../taxonomia-veiculo')
+    expect(motorizacao('Híbrido')).toBe('híbrida')
+    expect(motorizacao('Elétrico')).toBe('elétrica')
+    expect(motorizacao('Gasolina')).toBe('gasolina')
+  })
+})

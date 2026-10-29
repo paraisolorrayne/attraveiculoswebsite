@@ -3,6 +3,8 @@ import {
   chaveTelefone,
   escolherSessaoDoCard,
   extrairRefSessao,
+  formaDaLigacao,
+  ligacaoCerta,
   ligarCardASessao,
   novoAgregado,
   origemCrmInfo,
@@ -76,6 +78,39 @@ describe('extrairRefSessao', () => {
 
   it('ignora valor que não tem cara de identificador', () => {
     expect(extrairRefSessao({ ref: 'não sei' })).toBeNull()
+  })
+
+  it('a sessão que o site gravou vem antes de lead_id do CRM', () => {
+    const uuid = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+    expect(
+      extrairRefSessao({ lead_id: 'crm-000123', site_session_id: uuid, site_session_origem: 'codigo_whatsapp' }),
+    ).toEqual({ valor: uuid, campo: 'site_session_id' })
+    // Sem a origem do site, a ordem da lista continua valendo.
+    expect(extrairRefSessao({ lead_id: 'crm-000123', site_session_id: uuid })?.campo).toBe('lead_id')
+  })
+})
+
+describe('formaDaLigacao', () => {
+  const uuid = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+
+  it('pelo código, pelo horário e carro, ou pelo identificador', () => {
+    expect(formaDaLigacao({ site_session_id: uuid, site_session_origem: 'codigo_whatsapp' })).toBe('codigo')
+    expect(formaDaLigacao({ site_session_id: uuid, site_session_origem: 'correlacao_clique_veiculo' })).toBe('horario_e_carro')
+    expect(formaDaLigacao({ site_session_id: '1721481234567-a1b2c3' })).toBe('identificador')
+    expect(formaDaLigacao({ mensagem: 'oi [ref: abc-123]' })).toBe('identificador')
+  })
+
+  it('vínculo descartado em 02/10 e card sem sessão: null', () => {
+    expect(formaDaLigacao({ site_session_id_descartado: uuid, site_session_origem: 'correlacao_horario_descartada' })).toBeNull()
+    expect(formaDaLigacao({})).toBeNull()
+    expect(formaDaLigacao(null)).toBeNull()
+  })
+
+  it('só código e identificador são certos', () => {
+    expect(ligacaoCerta('codigo')).toBe(true)
+    expect(ligacaoCerta('identificador')).toBe(true)
+    expect(ligacaoCerta('horario_e_carro')).toBe(false)
+    expect(ligacaoCerta('telefone')).toBe(false)
   })
 })
 

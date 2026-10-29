@@ -2,7 +2,7 @@
 
 Esta pasta é a fonte de verdade do canal editorial (`/blog` e `/news`), conforme a spec
 `docs/superpowers/specs/2026-07-24-attra-editorial-design.md`. É o que separa conteúdo
-que soa como a Attra de conteúdo que soa genérico — a diferença não está no modelo nem
+que soa como a Attra de conteúdo que soa genérico, a diferença não está no modelo nem
 no prompt, está aqui.
 
 ## Arquivos
@@ -30,4 +30,4 @@ no prompt, está aqui.
 
 **Fase 0 (fundação).** Os arquivos ainda **não** são carregados pelo pipeline de geração
 (`src/lib/blog-ai/`). A ligação com `gemini-blog.ts` acontece na Fase 2, depois da
-calibração manual da Fase 1. Calibrar antes de automatizar — a ordem não é negociável.
+calibração manual da Fase 1. Calibrar antes de automatizar, a ordem não é negociável.

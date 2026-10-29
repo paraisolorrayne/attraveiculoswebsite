@@ -6,7 +6,7 @@
 
 A origem da autoridade editorial é o critério de curadoria declarado: cada veículo em
 estoque poderia ser o carro pessoal de qualquer um dos três sócios. A voz escreve a
-partir desse lugar — de dono, não de vendedor.
+partir desse lugar: de dono, não de vendedor.
 
 ## Os três pilares
 
@@ -20,7 +20,7 @@ IA: voz genérica soa como IA porque não tem ninguém atrás dela.
 
 **3. Honestidade que custa.** Dizer o que é caro de manter, o que desvaloriza rápido,
 quando o seminovo é melhor negócio que o 0km. Em ticket de sete dígitos, a confiança
-fecha a venda — e ela se constrói exatamente onde o conteúdo abre mão de uma.
+fecha a venda, e ela se constrói exatamente onde o conteúdo abre mão de uma.
 
 ## O filtro do irmão
 
@@ -36,7 +36,7 @@ checagem humana (ver `regras.md`).
 - **Autoria institucional.** As peças assinam como Attra, não nominalmente pelos
   sócios. A história familiar aparece no tom e na página institucional.
 - **Crítica sem citar modelo.** Custos e armadilhas são tratados por categoria e
-  perfil de uso. Nunca "o modelo X é ruim" — sempre "para este uso, esta categoria não
+  perfil de uso. Nunca "o modelo X é ruim": sempre "para este uso, esta categoria não
   se encaixa". O problema é sempre o encaixe, nunca o carro.
 
 ## Referência de linguagem
@@ -44,16 +44,16 @@ checagem humana (ver `regras.md`).
 Do documento de posicionamento (`docs/ATTRA_BRAND_POSITIONING_CONTENT_TASK.md`):
 curadoria antes de catálogo; relação antes de transação; procedência antes de pressa;
 menos texto de apresentação, mais prova de critério. Marca madura, operação criteriosa,
-confiança conquistada — nunca folder institucional, nunca emocional demais. Evitar
+confiança conquistada: nunca folder institucional, nunca emocional demais. Evitar
 repetir "premium", "excelência" e "exclusividade" em excesso.
 
 ## Pares de exemplo
 
-O calibre da voz se dá por contraste. Esta frase sim, esta não — e por quê.
+O calibre da voz se dá por contraste. Esta frase sim, esta não, e por quê.
 
 **Custo**
 - ✅ "A revisão dos 20 mil km de um esportivo alemão desta faixa fica entre R$ X e
-  R$ Y (fonte, data — ver `custos.md`)."
+  R$ Y (fonte, data; ver `custos.md`)."
 - ❌ "A manutenção é surpreendentemente acessível."
 - Por quê: número verificável substitui opinião; "acessível" é vago e soa vendedor.
 
@@ -85,7 +85,7 @@ O calibre da voz se dá por contraste. Esta frase sim, esta não — e por quê.
 - Por quê: o ângulo é sempre o leitor que decide, não o produto que brilha.
 
 **Procedência**
-- ✅ "Histórico de leilão não é defeito escondido — é informação. O problema é quando
+- ✅ "Histórico de leilão não é defeito escondido, é informação. O problema é quando
   ele não aparece na negociação. Pergunte sempre; a resposta evasiva diz mais que o
   laudo."
 - ❌ "Cuidado com outras lojas: muitas escondem histórico de leilão."

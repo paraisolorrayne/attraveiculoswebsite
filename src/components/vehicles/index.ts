@@ -6,7 +6,6 @@ export * from './vehicle-grid'
 export * from './vehicle-info'
 export * from './vehicle-options'
 export * from './vehicle-pagination'
-export * from './vehicle-specs'
 export * from './related-vehicles'
 
 // Cinematic redesign components

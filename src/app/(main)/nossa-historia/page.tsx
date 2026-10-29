@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
-  title: 'Nossa História — De onde viemos, para onde vamos',
+  title: 'Nossa História: de onde viemos, para onde vamos',
   description: 'Conheça a evolução da Attra Veículos em imagens. Uma galeria documental que mostra o que éramos, o que construímos e o que estamos nos tornando.',
   keywords: ['história Attra Veículos', 'evolução Attra', 'galeria Attra', 'documentário Attra Veículos'],
   alternates: { canonical: canonicalUrl('/nossa-historia') },
@@ -38,7 +38,7 @@ export default function NossaHistoriaPage() {
               De onde viemos. <span className="text-metallic text-metallic-animate">Para onde vamos.</span>
             </h1>
             <p className="text-lg lg:text-xl text-foreground-secondary mb-8 max-w-3xl mx-auto leading-relaxed">
-              Uma galeria que documenta a evolução da Attra — do início familiar em Uberlândia
+              Uma galeria que documenta a evolução da Attra, do início familiar em Uberlândia
               à operação que hoje atende colecionadores de todo o Brasil.
             </p>
           </div>

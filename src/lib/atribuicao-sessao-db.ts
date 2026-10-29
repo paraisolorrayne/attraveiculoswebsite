@@ -200,6 +200,8 @@ export async function atribuicaoPorCard(cardId: string): Promise<ResultadoPorCar
 	// sai para o CRM como `correlacao_clique_whatsapp`, o valor que o contrato
 	// deles já conhece. Os vínculos antigos, só por horário, foram descartados na
 	// migration 20261002: perderam o `site_session_id` e nem chegam aqui.
+	// `codigo_whatsapp` (29/10/2026) sai como `marcador`: é o código que viajou na
+	// própria mensagem, a mesma ligação explícita do `[ref:]`, e o contrato não muda.
 	const ligacao: OrigemDaLigacao =
 		origem === 'correlacao_clique_veiculo' || origem === 'correlacao_clique_whatsapp'
 			? 'correlacao_clique_whatsapp'

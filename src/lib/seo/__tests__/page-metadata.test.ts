@@ -17,20 +17,24 @@ describe('pageTitle', () => {
     expect(pageTitle('Guia de compra - Attra Veiculos')).toBe('Guia de compra')
   })
 
-  it('preserva a marca quando ela não está no fim do título', () => {
-    expect(pageTitle('Sobre a Attra Veículos | Loja em Uberlândia')).toBe(
-      'Sobre a Attra Veículos | Loja em Uberlândia'
-    )
+  it('com a marca no meio, sai absoluto para o template não repetir a marca', () => {
+    expect(pageTitle('Sobre a Attra Veículos | Loja em Uberlândia')).toEqual({
+      absolute: 'Sobre a Attra Veículos | Loja em Uberlândia',
+    })
+    expect(pageTitle('Porsche 718 Boxster GTS 2024: zero km na Attra Veículos')).toEqual({
+      absolute: 'Porsche 718 Boxster GTS 2024: zero km na Attra Veículos',
+    })
   })
 
-  it('preserva sufixo de outra seção editorial', () => {
-    expect(pageTitle('PTS Paint to Sample | Manual Attra')).toBe(
-      'PTS Paint to Sample | Manual Attra'
+  it('tira o sufixo de seção (Manual Attra, Blog Attra), seguido ou não da marca', () => {
+    expect(pageTitle('PTS Paint to Sample | Manual Attra')).toBe('PTS Paint to Sample')
+    expect(pageTitle('BMW M2 2025: a nova geração | Blog Attra | Attra Veículos')).toBe(
+      'BMW M2 2025: a nova geração'
     )
   })
 
   it('não devolve título vazio quando o dado era só a marca', () => {
-    expect(pageTitle('Attra Veículos')).toBe('Attra Veículos')
+    expect(pageTitle('Attra Veículos')).toEqual({ absolute: 'Attra Veículos' })
   })
 })
 

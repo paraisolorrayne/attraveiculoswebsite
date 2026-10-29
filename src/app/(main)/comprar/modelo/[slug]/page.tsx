@@ -4,14 +4,19 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { MODELOS, findModelo } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Car, ShieldCheck, AlertTriangle, HelpCircle } from 'lucide-react'
-import { EstoqueAoVivo } from '@/components/vehicles/estoque-ao-vivo'
+import { EstoqueDoModelo } from '@/components/vehicles/estoque-do-modelo'
+import { estoqueDoModelo } from '@/lib/seo/estoque-do-modelo'
+import { formatarDataBR } from '@/lib/seo/frescor'
 
 interface PageProps {
 	params: Promise<{ slug: string }>
 }
+
+// As unidades e os preços saem no HTML (ver src/lib/seo/estoque-do-modelo.ts).
+export const revalidate = 900
 
 export async function generateStaticParams() {
 	return MODELOS.map(m => ({ slug: m.slug }))
@@ -28,6 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/modelo/${slug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: data.metaTitle,
 			description: data.metaDescription,
 			url: `${SITE_URL}/comprar/modelo/${slug}`,
@@ -40,6 +46,9 @@ export default async function ModeloPage({ params }: PageProps) {
 	const { slug } = await params
 	const data = findModelo(slug)
 	if (!data) notFound()
+
+	const veiculos = await estoqueDoModelo(data.brand, data.model)
+	const hoje = formatarDataBR(new Date().toISOString()) ?? ''
 
 	const breadcrumbItems = [
 		{ label: 'Comprar', href: '/comprar' },
@@ -188,7 +197,7 @@ export default async function ModeloPage({ params }: PageProps) {
 					<h2 className="text-2xl font-bold text-foreground mb-6">
 						{data.brand} {data.model} Disponíveis na Attra
 					</h2>
-					<EstoqueAoVivo brand={data.brand} model={data.model} limit={5} />
+					<EstoqueDoModelo veiculos={veiculos} marca={data.brand} modelo={data.model} conferidoEm={hoje} />
 				</Container>
 			</section>
 
@@ -300,8 +309,8 @@ export default async function ModeloPage({ params }: PageProps) {
 								{ '@type': 'ListItem', position: 3, name: `${data.brand} ${data.model}`, item: `${SITE_URL}/comprar/modelo/${slug}` },
 							],
 						},
-						// O modelo é o assunto da página, não um produto à venda: a página
-						// é estática e o estoque só chega no navegador (EstoqueAoVivo).
+						// O modelo é o assunto da página, não um produto à venda: a oferta
+						// de cada unidade, com preço, é a da ficha /veiculo.
 						// Antes era um Product com AggregateOffer "InStock" sem preço, que o
 						// Search Console acusava como erro crítico (out/2026). `Thing`, não
 						// `Vehicle`: Vehicle sem oferta também é erro crítico de produto.

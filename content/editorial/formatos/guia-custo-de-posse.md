@@ -4,7 +4,7 @@ Perene, texto longo, o formato que ranqueia. Responde ao que se digita no Google
 nenhum concorrente publica: quanto custa manter o carro por ano, no Brasil, em reais.
 
 **Regra dura do formato:** todo número tem fonte e data no `custos.md`. Sem número
-verificável, o trecho não entra — o guia encolhe, mas não inventa. (Regra 1 do
+verificável, o trecho não entra: o guia encolhe, mas não inventa. (Regra 1 do
 `regras.md`.)
 
 ## Estrutura fixa
@@ -21,7 +21,7 @@ verificável, o trecho não entra — o guia encolhe, mas não inventa. (Regra 1
 3. **Desvalorização observada.** O comportamento do segmento em reais/percentual nos
    últimos 24 meses, com janela e fonte.
 4. **Para quem esse custo faz sentido.** O perfil de uso e de patrimônio em que a conta
-   fecha — e o perfil em que não fecha (encaixe, nunca defeito).
+   fecha, e o perfil em que não fecha (encaixe, nunca defeito).
 5. **Estoque compatível.** Link para as unidades em estoque que se encaixam no perfil
    descrito.
 

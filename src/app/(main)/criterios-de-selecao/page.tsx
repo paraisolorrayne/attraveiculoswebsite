@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck, XCircle, FileCheck, Wrench } from 'lucide-react'
 
@@ -43,6 +43,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/criterios-de-selecao` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/criterios-de-selecao`,
@@ -60,7 +61,7 @@ const REPROVA = [
   {
     titulo: 'Histórico com qualquer caráter suspeito',
     porque:
-      'Documentação inconsistente, lacuna no histórico de proprietários, divergência entre o que o vendedor conta e o que os registros mostram. Na dúvida, o carro não entra — a dúvida não se resolve depois da venda.',
+      'Documentação inconsistente, lacuna no histórico de proprietários, divergência entre o que o vendedor conta e o que os registros mostram. Na dúvida, o carro não entra: a dúvida não se resolve depois da venda.',
   },
   {
     titulo: 'Motor com remap ou preparação (stage)',
@@ -70,7 +71,7 @@ const REPROVA = [
   {
     titulo: 'Repintura total',
     porque:
-      'Pintura integral refeita esconde o histórico de reparo do veículo — não há como distinguir retoque estético de correção de dano estrutural. Repintura de peça isolada é avaliada caso a caso; a total, não.',
+      'Pintura integral refeita esconde o histórico de reparo do veículo. Não há como distinguir retoque estético de correção de dano estrutural. Repintura de peça isolada é avaliada caso a caso; a total, não.',
   },
 ]
 
@@ -78,7 +79,7 @@ const REPROVA = [
 const VERIFICACAO = [
   {
     icone: FileCheck,
-    titulo: 'Documentação — o primeiro filtro',
+    titulo: 'Documentação: o primeiro filtro',
     itens: [
       'Conferência física e legal: chassi e motor contra os registros',
       'Gravame, débitos, multas e restrições',
@@ -105,7 +106,7 @@ const DUVIDAS = [
   },
   {
     p: 'Remap tira a garantia do carro?',
-    r: 'Sim. A alteração do mapa eletrônico é detectável pela rede autorizada e é motivo de recusa de garantia de fábrica. Além disso, o desgaste adicional de motor, câmbio e embreagem não aparece no hodômetro — quem compra assume um custo que não consegue estimar.',
+    r: 'Sim. A alteração do mapa eletrônico é detectável pela rede autorizada e é motivo de recusa de garantia de fábrica. Além disso, o desgaste adicional de motor, câmbio e embreagem não aparece no hodômetro, e quem compra assume um custo que não consegue estimar.',
   },
   {
     p: 'Carro repintado perde valor?',
@@ -113,7 +114,7 @@ const DUVIDAS = [
   },
   {
     p: 'Quantos pontos tem a inspeção?',
-    r: 'A Attra trabalha com critérios de aprovação e reprovação, não com uma contagem fechada de itens. Como referência de mercado, o programa oficial da Porsche para seminovos certificados usa uma verificação de 111 pontos, executada por técnicos credenciados pela fábrica. O que importa na prática é o que reprova um veículo — e isso está listado nesta página.',
+    r: 'A Attra trabalha com critérios de aprovação e reprovação, não com uma contagem fechada de itens. Como referência de mercado, o programa oficial da Porsche para seminovos certificados usa uma verificação de 111 pontos, executada por técnicos credenciados pela fábrica. O que importa na prática é o que reprova um veículo, e isso está listado nesta página.',
   },
 ]
 
@@ -146,7 +147,7 @@ export default function CriteriosDeSelecaoPage() {
                 extrai e cita. O contexto vem depois. */}
             <p className="text-lg text-foreground leading-relaxed mb-4">
               A Attra recusa veículo de leilão, com histórico suspeito, com motor remapeado
-              ou preparado (stage) e com repintura total — e só aceita o que passa pela
+              ou preparado (stage) e com repintura total, e só aceita o que passa pela
               documentação e chega com mecânica e funilaria íntegras. É esse filtro, e não um
               selo, que sustenta a palavra procedência quando ela aparece num anúncio nosso.
             </p>

@@ -129,6 +129,13 @@ export async function GET(request: NextRequest) {
 			/** Informativo: quantos trazem um campo candidato a identificador. Trazer não é casar. */
 			cards_com_candidato_de_sessao: ligacao.cardsComCandidato,
 			cards_por_chave_forte: 0,
+			/** Dentro de `cards_por_chave_forte`: pelo código invisível da mensagem do WhatsApp. */
+			cards_por_codigo: 0,
+			/**
+			 * Dentro de `cards_por_chave_forte`: a correlação do site (clique no mesmo carro, pouco
+			 * antes). Grava a sessão no card como o identificador, mas é provável, não certa.
+			 */
+			cards_por_horario_e_carro: 0,
 			cards_por_telefone: 0,
 			/** Sem ligação e sem telefone comparável no card: não havia por onde tentar. */
 			cards_sem_ligacao_sem_telefone: 0,
@@ -154,8 +161,12 @@ export async function GET(request: NextRequest) {
 			const { sessao, metodo, motivo } = ligacao.ligacoes.get(card.id)!
 
 			// Um `if` por card, um contador por card: é assim que a partição se mantém fechada.
-			if (metodo === 'chave_forte') cobertura.cards_por_chave_forte += 1
-			else if (metodo === 'telefone') cobertura.cards_por_telefone += 1
+			if (metodo === 'chave_forte') {
+				cobertura.cards_por_chave_forte += 1
+				const forma = ligacao.formaPorCard.get(card.id)
+				if (forma === 'codigo') cobertura.cards_por_codigo += 1
+				else if (forma === 'horario_e_carro') cobertura.cards_por_horario_e_carro += 1
+			} else if (metodo === 'telefone') cobertura.cards_por_telefone += 1
 			else if (motivo === 'sem_telefone') cobertura.cards_sem_ligacao_sem_telefone += 1
 			else if (motivo === 'telefone_sem_perfil') cobertura.cards_telefone_sem_perfil += 1
 			else cobertura.cards_telefone_sem_sessao += 1

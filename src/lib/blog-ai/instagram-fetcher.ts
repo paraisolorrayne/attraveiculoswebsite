@@ -62,13 +62,17 @@ export async function refreshLongLivedToken(shortToken: string): Promise<string 
   return data.access_token ?? null
 }
 
+/** As duas variáveis da Graph API estão no ambiente? Sem elas o blog não tem pauta. */
+export function instagramConfigurado(): boolean {
+  return Boolean(env('META_IG_BUSINESS_ACCOUNT_ID') && env('META_LONG_LIVED_TOKEN'))
+}
+
 /**
- * Fetch the most recent Instagram post from @attra.veiculos.
- * Returns null if no post was published in the window (default: last 24h).
+ * Os posts mais recentes de @attra.veiculos, do mais novo ao mais velho.
+ * Lista vazia quando a Graph API falha ou não está configurada (o motivo vai
+ * para o log).
  */
-export async function fetchLatestInstagramPost(
-  windowHours = 24
-): Promise<IGPost | null> {
+export async function fetchRecentInstagramPosts(limit = 25): Promise<IGPost[]> {
   const igBusinessId = env('META_IG_BUSINESS_ACCOUNT_ID')
   const token = env('META_LONG_LIVED_TOKEN')
 
@@ -76,7 +80,7 @@ export async function fetchLatestInstagramPost(
     console.warn(
       '[InstagramFetcher] META_IG_BUSINESS_ACCOUNT_ID or META_LONG_LIVED_TOKEN not set — skipping IG fetch.'
     )
-    return null
+    return []
   }
 
   const fields = [
@@ -92,7 +96,7 @@ export async function fetchLatestInstagramPost(
 
   const url = new URL(`${GRAPH_BASE}/${igBusinessId}/media`)
   url.searchParams.set('fields', fields)
-  url.searchParams.set('limit', '5')
+  url.searchParams.set('limit', String(limit))
   url.searchParams.set('access_token', token)
 
   const res = await fetch(url.toString(), { cache: 'no-store' })
@@ -102,18 +106,15 @@ export async function fetchLatestInstagramPost(
       `[InstagramFetcher] Graph API error ${res.status}:`,
       err.error?.message ?? res.statusText
     )
-    return null
+    return []
   }
 
   const data = (await res.json()) as {
     data?: Array<IGPost & { children?: { data?: IGMediaChild[] } }>
   }
 
-  const posts = data.data ?? []
-  if (posts.length === 0) return null
-
   // Normalise children shape (Graph returns { data: [...] })
-  const normalised: IGPost[] = posts.map((p) => ({
+  return (data.data ?? []).map((p) => ({
     id: p.id,
     permalink: p.permalink,
     caption: p.caption ?? '',
@@ -123,11 +124,6 @@ export async function fetchLatestInstagramPost(
     timestamp: p.timestamp,
     children: (p.children as { data?: IGMediaChild[] } | undefined)?.data,
   }))
-
-  // Find posts within the window
-  const cutoff = Date.now() - windowHours * 60 * 60 * 1000
-  const recent = normalised.find((p) => new Date(p.timestamp).getTime() >= cutoff)
-  return recent ?? null
 }
 
 /**

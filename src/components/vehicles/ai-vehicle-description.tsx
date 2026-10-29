@@ -1,6 +1,7 @@
 import { Vehicle } from '@/types'
 import { generateVehicleDescription } from '@/lib/vehicle-description-generator'
 import { CopyVehicleButton } from './copy-vehicle-button'
+import { SecaoDaFicha } from './secao-da-ficha'
 
 interface VehicleDescriptionProps {
   vehicle: Vehicle
@@ -16,17 +17,11 @@ export function VehicleDescription({ vehicle }: VehicleDescriptionProps) {
   const description = generateVehicleDescription(vehicle)
 
   return (
-    <div className="bg-background-card border border-border rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-foreground">
-          Sobre este veículo
-        </h2>
-        <CopyVehicleButton vehicle={vehicle} />
-      </div>
-      <p className="text-foreground-secondary leading-relaxed">
+    <SecaoDaFicha titulo="Sobre este veículo" acao={<CopyVehicleButton vehicle={vehicle} />}>
+      <p className="max-w-[70ch] text-lg leading-[1.75] text-foreground-secondary">
         {description}
       </p>
-    </div>
+    </SecaoDaFicha>
   )
 }
 
@@ -38,7 +33,7 @@ export async function AIVehicleDescription({ vehicle }: VehicleDescriptionProps)
 // Loading skeleton for Suspense fallback (simplified since generation is instant)
 export function AIVehicleDescriptionSkeleton() {
   return (
-    <div className="bg-background-card border border-border rounded-xl p-6">
+    <div>
       <div className="h-6 w-48 bg-foreground-secondary/10 rounded animate-pulse mb-4" />
       <div className="space-y-3">
         <div className="h-4 bg-foreground-secondary/10 rounded animate-pulse" />

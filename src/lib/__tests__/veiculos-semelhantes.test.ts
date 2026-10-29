@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { lerSlug, ordenarPorSemelhanca, semelhantesDoSlug } from '../veiculos-semelhantes'
+import { lerSlug, ordenarPorSemelhanca, semelhantesDoSlug, semelhantesDoVeiculo } from '../veiculos-semelhantes'
 import type { Vehicle } from '@/types'
 
 function v(brand: string, model: string, year: number, price: number, id = String(Math.abs(price))): Vehicle {
@@ -111,5 +111,39 @@ describe('semelhantes a partir do slug', () => {
     expect(r.marca).toBe('Mercedes')
     expect(r.modelo).toBe('GLC')
     expect(r.veiculos[0].model).toBe('GLC')
+  })
+})
+
+describe('similares de um veículo em estoque', () => {
+  // O caso de 23/10/2026: o S 63 mostrava Porsche, Ferrari e GWM com outros
+  // Mercedes no estoque.
+  const S63 = v('Mercedes', 'S-63', 2025, 1_690_000, '1142317')
+  const ESTOQUE_MB = [
+    v('Porsche', '911', 2026, 1_700_000, '1'),
+    v('Ferrari', '812', 2024, 3_900_000, '2'),
+    v('GWM', 'Tank', 2026, 300_000, '3'),
+    v('Mercedes-Benz', 'GT', 2025, 1_790_000, '4'),
+    v('Mercedes', 'G-63', 2021, 1_690_000, '5'),
+    v('Mercedes', 'SL-63', 2025, 1_650_000, '6'),
+    v('Mercedes', 'CLA-35', 2026, 420_000, '7'),
+    S63,
+  ]
+
+  it('a mesma marca vem antes, a de preço mais próximo primeiro', () => {
+    expect(semelhantesDoVeiculo(ESTOQUE_MB, S63, 4).map(x => x.model)).toEqual(['G-63', 'SL-63', 'GT', 'CLA-35'])
+  })
+
+  it('nunca sugere o próprio carro', () => {
+    expect(semelhantesDoVeiculo(ESTOQUE_MB, S63, 10).map(x => x.id)).not.toContain('1142317')
+  })
+
+  it('o mesmo modelo vem antes da mesma marca', () => {
+    const atual = v('Porsche', '911', 2023, 899_000, '899180')
+    expect(semelhantesDoVeiculo([...ESTOQUE, atual], atual, 2).map(x => x.model)).toEqual(['911', '911'])
+  })
+
+  it('sem outro carro da marca, vale o preço mais próximo', () => {
+    const atual = v('GMC', 'Sierra', 2024, 1_190_000, '958456')
+    expect(semelhantesDoVeiculo(ESTOQUE, atual, 2).map(x => x.price)).toEqual([1_150_000, 1_090_000])
   })
 })

@@ -9,14 +9,14 @@ import { YouTubePreview } from '@/components/videos/youtube-preview'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import { fetchAttraYouTubeFeed } from '@/lib/youtube'
 import { ANCHOR_POST_SLUGS, EDITORIAL_SECTION } from '@/lib/constants'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 export const revalidate = 1800
 
 const POSTS_PREVIEW_LIMIT = 6
 
 export const metadata: Metadata = {
-	title: 'Blog Attra | Insights sobre Superesportivos e Veículos Premium',
+	title: pageTitle('Blog Attra | Insights sobre Superesportivos e Veículos Premium'),
 	description: 'No Blog Attra você encontra Insights exclusivos sobre superesportivos, colecionáveis e mercado premium automotivo. Reviews, análises de especialistas e tendências do setor.',
 	keywords: ['blog attra', 'attra insights', 'superesportivos', 'carros premium', 'reviews automotivos', 'mercado de luxo'],
 	// Canonical fixo na versão limpa. As abas de categoria são estado de
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 	// índice. Canonical estático também preserva o ISR de 30 min desta rota.
 	alternates: { canonical: canonicalUrl(EDITORIAL_SECTION.route) },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: 'Blog Attra | Insights sobre Superesportivos e Veículos Premium',
 		description: 'Insights exclusivos sobre superesportivos, colecionáveis e mercado premium automotivo.',
 		url: canonicalUrl(EDITORIAL_SECTION.route),
@@ -96,7 +97,7 @@ export default async function BlogPage() {
 					<Container>
 						<h2 className="text-2xl lg:text-3xl font-bold text-foreground">Guias Attra: como comprar bem</h2>
 						<p className="mt-2 text-foreground-secondary max-w-2xl">
-							Procedência, curadoria e decisão patrimonial — o critério da Attra antes de qualquer compra.
+							Procedência, curadoria e decisão patrimonial: o critério da Attra antes de qualquer compra.
 						</p>
 						<div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 							{anchorPosts.map(post => <BlogCardStatic key={post.id} post={post} />)}

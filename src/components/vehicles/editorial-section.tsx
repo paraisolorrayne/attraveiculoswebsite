@@ -44,7 +44,7 @@ export function EditorialSection({ brand, model, year, description, isCollectibl
         {/* Editorial content */}
         <div className="space-y-6">
           <p className="text-3xl lg:text-4xl font-light text-foreground leading-relaxed">
-            O <span className="font-bold">{brand} {model} {year}</span> é mais que um automóvel — é {getEditorialContent()}.
+            O <span className="font-bold">{brand} {model} {year}</span> é mais que um automóvel: é {getEditorialContent()}.
           </p>
 
           {description && (

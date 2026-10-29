@@ -151,35 +151,15 @@
   will-change: transform, opacity;
 }
 
-/* ===== JORNADA HERO - Theme-aware overlays ===== */
-/* Light mode: solid base overlay — mobile full cover, desktop slightly less */
-:root .jornada-hero-overlay { background: rgba(255, 255, 255, 0.94); }
-@media (min-width: 768px) {
-  :root .jornada-hero-overlay { background: rgba(255, 255, 255, 0.84); }
+/* ===== JORNADA HERO (26/10/2026) ===== */
+/* Vídeo em pé do topo de /jornada. No computador a largura acompanha a tela e
+   também a altura dela: o vídeo inteiro (9:16) cabe abaixo do cabeçalho sem
+   rolar, entre 260 e 380 px de largura. */
+@media (min-width: 1024px) {
+  .jornada-hero-video {
+    width: clamp(260px, min(24vw, calc((100svh - 18rem) * 0.5625)), 380px);
+  }
 }
-/* Light mode: gradient — reinforces left (text) side, fades right to reveal photo */
-:root .jornada-hero-overlay-gradient {
-  background: linear-gradient(to right, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.4) 45%, rgba(255, 255, 255, 0.1) 70%, transparent 100%);
-}
-:root .jornada-hero-heading { color: var(--foreground); }
-:root .jornada-hero-text { color: var(--foreground-secondary); }
-:root .jornada-hero-text-strong { color: var(--foreground); }
-:root .jornada-hero-btn-outline { border-color: rgba(17, 17, 17, 0.3); color: var(--foreground); }
-:root .jornada-hero-btn-outline:hover { background: rgba(17, 17, 17, 0.1); }
-
-/* Dark mode: unchanged */
-.dark .jornada-hero-overlay { background: rgba(0, 0, 0, 0.7); }
-@media (min-width: 768px) {
-  .dark .jornada-hero-overlay { background: transparent; }
-}
-.dark .jornada-hero-overlay-gradient {
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3));
-}
-.dark .jornada-hero-heading { color: #FFFFFF; }
-.dark .jornada-hero-text { color: #D1D5DB; }
-.dark .jornada-hero-text-strong { color: #FFFFFF; }
-.dark .jornada-hero-btn-outline { border-color: rgba(255, 255, 255, 0.3); color: #FFFFFF; }
-.dark .jornada-hero-btn-outline:hover { background: rgba(255, 255, 255, 0.1); }
 
 /* ===== CINEMATIC HERO - Theme-aware gradients ===== */
 :root .hero-gradient-overlay {
@@ -349,11 +329,13 @@
    para a foto cobrir só a parte de baixo das letras: 1/5 no celular, 1/3 no
    computador. 0.145em vai da base da caixa (line-height 1) até a linha de base
    da Geist, e 0.72em é a altura das maiúsculas. O max() segura o topo das
-   letras 16px abaixo do cabeçalho fixo: 56px e 100px são a distância desse
-   limite até o topo da linha (cabeçalho de 80px + breadcrumb + margem). */
+   letras 12px abaixo do breadcrumb: 48px e 88px são a margem de cima da linha
+   (60px e 100px, no featured-vehicle-hero.tsx) menos esses 12px. Até
+   28/10/2026 o limite era o cabeçalho, e as letras passavam por trás do
+   "Início > Veículos". */
 .destaque-marca {
   font-size: min(6rem, calc((100cqw - 2rem) / var(--marca-em)));
-  translate: 0 calc(0.145em + max(0.144em, 0.72em - 56px));
+  translate: 0 calc(0.145em + max(0.144em, 0.72em - 48px));
 }
 
 /* Cor das letras: o vermelho da Attra bem fraco no topo, chegando na linha de
@@ -379,12 +361,19 @@
 @media (min-width: 1024px) {
   .destaque-marca {
     font-size: min(14rem, calc((100cqw - 4rem) / var(--marca-em)));
-    translate: 0 calc(0.145em + max(0.238em, 0.72em - 100px));
+    translate: 0 calc(0.145em + max(0.238em, 0.72em - 88px));
   }
   /* Nas fotos da loja o carro fica entre ~20% e ~80% da altura (o G 63 é o
      mais alto), com o chão sobrando embaixo: a foto em 2:1 com o recorte um
      pouco abaixo do meio mostra do teto ao pneu. */
   .destaque-foto {
     object-position: 50% 55%;
+  }
+  /* Largura da foto do destaque. 41cqw - 32px é a metade da área (82% da
+     seção, menos o padding): até ~1700 px a foto fica nisso, como era. Daí
+     em diante cresce mais rápido que a tela (60cqw - 350px) até 1120 px, e o
+     texto vem junto, em vez de ficar na outra ponta com um vão no meio. */
+  .destaque-foto-moldura {
+    width: clamp(calc(41cqw - 32px), calc(60cqw - 350px), 1120px);
   }
 }

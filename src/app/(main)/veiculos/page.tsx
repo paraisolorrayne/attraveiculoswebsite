@@ -4,10 +4,10 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { AdvancedFilters, CinematicVehicleCard, VehiclePagination, FeaturedVehicleHero, VehicleSearchBar, EditorialCategoryChips } from '@/components/vehicles'
 import { SortDropdown } from '@/components/vehicles/sort-dropdown'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton, VehicleGridCardSkeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
-import { listingCanonical, listingRobots } from '@/lib/seo/page-metadata'
+import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { findSEOBrand } from '@/lib/seo-brands'
 import { normalizarMarca } from '@/lib/marca-normalizacao'
 import { Vehicle } from '@/types'
@@ -84,12 +84,12 @@ export async function generateMetadata({ searchParams }: VeiculosPageProps): Pro
   return {
     // Título distinto por página: com o mesmo título, as páginas 2 a 6 se
     // apresentavam como cópia da 1ª.
-    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` — Página ${pagina}` : ''}`,
+    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` | Página ${pagina}` : ''}`,
     description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
     alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),
     // og:url apontava para a home, contradizendo o canonical.
-    openGraph: { url: canonical },
+    openGraph: { url: canonical, images: [IMAGEM_COMPARTILHAMENTO] },
   }
 }
 
@@ -113,15 +113,9 @@ interface VeiculosPageProps {
 
 function VehicleListSkeleton() {
   return (
-    <div className="space-y-6">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-background-card rounded-2xl overflow-hidden flex flex-col md:flex-row">
-          <Skeleton className="aspect-[4/3] md:w-[55%]" />
-          <div className="p-8 flex-1 space-y-4">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-8 w-48" />
-          </div>
-        </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-x-6 gap-y-12">
+      {[1, 2, 3, 4].map((i) => (
+        <VehicleGridCardSkeleton key={i} />
       ))}
     </div>
   )
@@ -453,14 +447,19 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
       <section className="pb-20">
         <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8">
-            <aside className="lg:w-96 xl:w-[26rem] shrink-0">
-              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                <AdvancedFilters />
-              </Suspense>
+            {/* Lateral estreita e fixa ao rolar: antes tinha 416 px, não
+                acompanhava a rolagem e ficava vazia depois dos filtros. */}
+            <aside className="lg:w-64 xl:w-72 shrink-0">
+              <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-3 [scrollbar-width:thin]">
+                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                  <AdvancedFilters />
+                </Suspense>
+              </div>
             </aside>
 
             <div className="flex-1">
-              <div className="flex items-center justify-between mb-6">
+              {/* Embaixo alinhado: o "Ordenar por" tem o rótulo em cima. */}
+              <div className="flex items-end justify-between gap-6 mb-6">
                 <p className="text-foreground-secondary">
                   <span className="text-foreground font-medium">{total}</span> veículos
                   <span className="text-sm"> · estoque conferido em {formatarDataBR(new Date().toISOString())}</span>
@@ -485,9 +484,9 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
                           Encontramos {suggestedVehicles.length} veículo{suggestedVehicles.length > 1 ? 's' : ''} que pode{suggestedVehicles.length > 1 ? 'm' : ''} te interessar
                         </p>
                       </div>
-                      <div className="space-y-6">
+                      <div data-lista-veiculos className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-x-6 gap-y-12">
                         {suggestedVehicles.map((vehicle) => (
-                          <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="horizontal" />
+                          <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="vertical" />
                         ))}
                       </div>
                     </div>
@@ -545,9 +544,12 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
                       termo={params.q}
                     />
                   )}
-                  <div className="space-y-4">
+                  {/* Grade: com a lateral estreita, cabem dois carros lado a lado
+                      (três em telas largas). `data-lista-veiculos` esmaece a
+                      lista enquanto o filtro carrega (motion.css). */}
+                  <div data-lista-veiculos className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-x-6 gap-y-12">
                     {vehicles.map((vehicle, index) => (
-                      <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="horizontal" priority={index === 0} />
+                      <CinematicVehicleCard key={vehicle.id} vehicle={vehicle} layout="vertical" priority={index === 0} />
                     ))}
                   </div>
                 </Suspense>

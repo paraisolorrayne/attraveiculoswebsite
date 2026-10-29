@@ -1,0 +1,141 @@
+/* ===== ESQUELETO DE FOTO COM A MARCA ===== */
+/* Lugar de foto carregando: "ATTRA" em cinza com um brilho passando pelas
+   letras e a cunha vermelha cruzando o "A" (entra pela esquerda e sai pela
+   direita, no ritmo do lazy_load da Avantgarde). Abaixo de 200px de largura
+   vira só o "A" com a cunha.
+
+   Uso: <PhotoSkeleton /> (components/ui/skeleton.tsx) ou a prop `esqueleto`
+   do <VehicleImage />. `data-loaded` some com ele; `--escuro` é para fundo
+   sempre preto (tela cheia da galeria).
+
+   Os desenhos vêm de public/images/logo-black.png, vetorizado. Em
+   @layer components para as utilities do Tailwind (absolute, aspect-*,
+   rounded-*) continuarem valendo por cima. */
+
+@layer components {
+  .esqueleto-attra {
+    --esq-fundo: var(--background-soft);
+    --esq-letras: color-mix(in srgb, var(--foreground-secondary) 15%, var(--background-soft));
+    --esq-brilho: var(--background);
+    --esq-cunha: #e42727; /* vermelho do logo-black.png */
+    --esq-ritmo: 2.2s;
+
+    /* geometria da logo: gerada, não editar à mão */
+    --_palavra: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2324 456'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 454C10 454 30 422 54 384L98 315L139 329C169 339 180 343 180 344C180 346 116 450 113 453C112 455 108 455 61 455C33 455 10 455 10 454ZM572 452C573 450 587 367 605 266C623 166 637 83 638 81L638 78L566 78C526 78 493 78 493 77C493 75 506 3 507 2C507 1 576 1 702 1C882 1 896 1 896 3C896 4 885 68 883 75L883 78L810 78C771 78 738 78 738 78C738 80 672 453 671 454C671 455 650 455 621 455L572 455L572 452ZM1034 454C1033 454 1048 370 1066 268C1084 165 1099 81 1099 80C1099 78 1095 78 1026 78C987 78 954 78 954 77C954 77 957 60 961 39L968 2L1162 1C1269 1 1357 1 1357 2C1357 2 1355 19 1351 40L1344 78L1272 78L1199 78L1167 264C1149 367 1134 452 1133 453L1133 455L1083 455C1056 455 1034 455 1034 454ZM1350 453C1350 452 1368 349 1390 226L1430 2L1550 2C1673 2 1688 2 1714 6C1759 12 1784 26 1799 54C1804 63 1810 80 1811 90C1815 119 1806 157 1788 184C1780 195 1761 214 1748 222C1727 237 1700 246 1669 252L1659 253L1668 259C1695 277 1711 295 1731 331C1740 347 1793 452 1793 454C1793 455 1778 455 1734 455L1675 454L1643 397C1598 315 1584 292 1572 281C1564 274 1553 268 1541 266C1530 265 1483 263 1483 265C1483 265 1475 308 1466 360L1450 454L1400 455L1350 455L1350 453ZM1830 454C1830 453 1891 351 1966 227L2101 1L2154 1L2206 2L2265 226C2297 350 2324 452 2324 453C2324 455 2321 455 2271 455L2217 455L2214 440C2212 432 2193 354 2172 267C2141 136 2134 108 2133 110C2133 110 2088 188 2034 281C1981 375 1936 452 1935 453C1934 455 1930 455 1882 455C1846 455 1830 455 1830 454ZM120 281C120 281 137 254 158 221C198 159 206 145 225 114C231 104 246 81 257 63C268 45 281 25 284 19C288 13 293 6 295 4L298 1L310 1C317 2 338 2 356 2L390 2L392 8C393 12 395 21 397 28C401 45 410 80 432 158C450 222 459 252 460 259L460 263L408 263L356 262L354 251C346 197 332 139 324 122L321 118L270 200L220 282L170 282C142 282 120 282 120 281ZM1618 191C1652 189 1663 187 1678 178C1685 173 1694 164 1698 157C1700 154 1702 148 1704 144C1706 137 1706 134 1706 123C1706 111 1706 110 1703 104C1697 92 1686 84 1670 80C1664 79 1653 79 1590 78L1516 78L1516 80C1515 83 1496 191 1496 191C1496 192 1595 192 1618 191Z'/%3E%3C/svg%3E");
+    --_a: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 513 455'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 454C10 454 30 422 54 384L98 315L139 329C169 339 180 343 180 344C180 346 116 450 113 453C112 455 108 455 61 455C33 455 10 455 10 454ZM120 281C120 281 137 254 158 221C198 159 206 145 225 114C231 104 246 81 257 63C268 45 281 25 284 19C288 13 293 6 295 4L298 1L310 1C317 2 338 2 356 2L390 2L392 8C393 12 395 21 397 28C401 45 410 80 432 158C450 222 459 252 460 259L460 263L408 263L356 262L354 251C346 197 332 139 324 122L321 118L270 200L220 282L170 282C142 282 120 282 120 281Z'/%3E%3C/svg%3E");
+    --_cunha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 513 172'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M348 117C258 87 143 48 93 31L1 0L234 0C362 0 467 0 467 0C467 1 513 169 513 171C513 171 513 172 512 172C512 172 438 147 348 117Z'/%3E%3C/svg%3E");
+    --_letras: var(--_palavra);
+    --_proporcao: 2324 / 456;
+    --_largura: min(44%, 300px);
+    --_k: 0.2207;
+    --_x: -226.51%;
+    --_y: 31.40%;
+
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    container-type: inline-size;
+    pointer-events: none;
+    background-color: var(--esq-fundo);
+    transition: opacity 0.45s ease, visibility 0s;
+  }
+
+  .dark .esqueleto-attra {
+    --esq-letras: color-mix(in srgb, var(--foreground-secondary) 14%, var(--background-soft));
+    --esq-brilho: color-mix(in srgb, var(--foreground-secondary) 32%, var(--background-soft));
+    --esq-cunha: #ff2223; /* vermelho do logo-white.png */
+  }
+
+  .esqueleto-attra.esqueleto-attra--escuro {
+    --esq-fundo: transparent;
+    --esq-letras: #1d1d20;
+    --esq-brilho: #3a3a3f;
+    --esq-cunha: #ff2223;
+  }
+
+  /* Foto chegou: o esqueleto some por baixo dela e para de animar */
+  .esqueleto-attra[data-loaded] {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.45s ease, visibility 0s 0.45s;
+  }
+
+  .esqueleto-attra::before,
+  .esqueleto-attra::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+  }
+
+  /* letras em cinza com o brilho passando */
+  .esqueleto-attra::before {
+    width: var(--_largura);
+    aspect-ratio: var(--_proporcao);
+    transform: translate(-50%, -50%);
+    background: linear-gradient(105deg, var(--esq-letras) 44%, var(--esq-brilho) 50%, var(--esq-letras) 56%) 100% 0 / 300% 100% no-repeat;
+    -webkit-mask: var(--_letras) center / 100% 100% no-repeat;
+    mask: var(--_letras) center / 100% 100% no-repeat;
+    animation: esqueleto-attra-brilho var(--esq-ritmo) linear infinite;
+  }
+
+  /* cunha vermelha */
+  .esqueleto-attra::after {
+    width: calc(var(--_largura) * var(--_k));
+    aspect-ratio: 513 / 172;
+    transform: translate(var(--_x), var(--_y));
+    background: var(--esq-cunha);
+    -webkit-mask: var(--_cunha) center / 100% 100% no-repeat;
+    mask: var(--_cunha) center / 100% 100% no-repeat;
+    animation: esqueleto-attra-cunha var(--esq-ritmo) cubic-bezier(0.5, 0, 0, 1) infinite;
+  }
+
+  .esqueleto-attra[data-loaded]::before,
+  .esqueleto-attra[data-loaded]::after {
+    animation-play-state: paused;
+  }
+
+  /* Só o "A": miniaturas e áreas estreitas */
+  .esqueleto-attra--a {
+    --_letras: var(--_a);
+    --_proporcao: 513 / 455;
+    --_largura: min(32%, 88px);
+    --_k: 1;
+    --_x: -50.00%;
+    --_y: 31.69%;
+  }
+
+  @container (max-width: 200px) {
+    .esqueleto-attra::before,
+    .esqueleto-attra::after {
+      --_letras: var(--_a);
+      --_proporcao: 513 / 455;
+      --_largura: min(32%, 88px);
+      --_k: 1;
+      --_x: -50.00%;
+      --_y: 31.69%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .esqueleto-attra::before {
+      animation: none;
+      background: var(--esq-letras);
+    }
+
+    .esqueleto-attra::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes esqueleto-attra-cunha {
+  0%       { clip-path: inset(0 100% 0 0); translate: -14% 0; }
+  36%, 58% { clip-path: inset(0 0 0 0);    translate: 0 0; }
+  100%     { clip-path: inset(0 0 0 100%); translate: 14% 0; }
+}
+
+@keyframes esqueleto-attra-brilho {
+  0%, 24% { background-position: 100% 0; animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1); }
+  100%    { background-position: 0 0; }
+}

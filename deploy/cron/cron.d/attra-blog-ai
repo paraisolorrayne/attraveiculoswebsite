@@ -5,4 +5,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Brasília. Era 04:00 local = 23:00 de Brasília do DIA ANTERIOR: como
 # published_date é a hora da geração, todo post nascia datado de ontem para o
 # leitor brasileiro e "o post de hoje" nunca aparecia (26/08/2026).
-0 10 * * * root /usr/local/bin/attra-blog-ai.sh >> /var/log/attra-blog.log 2>&1
+#
+# Seg, qua e sex (28/10/2026): o post sai de um post novo do Instagram, e sem
+# post novo não publica. Sem token da Meta no .env.production, sai um review
+# curto de um carro do estoque. Era todo dia, com review e comparativo longos.
+0 10 * * 1,3,5 root /usr/local/bin/attra-blog-ai.sh >> /var/log/attra-blog.log 2>&1

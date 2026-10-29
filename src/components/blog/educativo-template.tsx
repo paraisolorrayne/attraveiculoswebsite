@@ -9,6 +9,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/utils'
+import { anosDeMercado } from '@/lib/constants'
 import { ListenToContent } from './listen-to-content'
 import { BlogContentRenderer } from './blog-content-renderer'
 import { PillarTOC } from './pillar-toc'
@@ -153,7 +154,7 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
               </h3>
               <p className="text-foreground-secondary">
                 Nossa expertise em curadoria de veículos premium garante que cada cliente tenha acesso 
-                às melhores oportunidades do mercado. Com mais de 14 anos de experiência, sabemos 
+                às melhores oportunidades do mercado. Com {anosDeMercado()} anos de experiência, sabemos 
                 identificar valor onde outros não veem.
               </p>
             </div>

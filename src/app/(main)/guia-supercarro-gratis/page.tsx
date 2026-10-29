@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { LeadMagnetForm } from './lead-magnet-form'
 import { Shield, FileText, CheckCircle, Car, BookOpen, TrendingUp } from 'lucide-react'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: 'Guia Definitivo para Comprar Supercarros com Segurança',
     description: 'Baixe gratuitamente o guia completo com dicas exclusivas para comprar supercarros e veículos de luxo.',
     type: 'website',
-    images: ['/images/guia-supercarro-cover.jpg'],
+    images: [IMAGEM_COMPARTILHAMENTO],
   },
   alternates: { canonical: canonicalUrl('/guia-supercarro-gratis') },
 }

@@ -6,8 +6,9 @@ import {
   Truck,
   UserCheck,
 } from 'lucide-react'
-import { Container } from '@/components/ui/container'
+import { MONTSERRAT } from '@/components/ui/cabecalho-secao'
 import { anosDeMercado } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 
 const pillars = [
   { icon: Compass,     title: `${anosDeMercado()} anos`, line: 'curando veículos premium' },
@@ -18,32 +19,32 @@ const pillars = [
   { icon: UserCheck,   title: 'Consultor dedicado', line: 'do primeiro contato à entrega' },
 ]
 
-export function TrustStrip() {
+/**
+ * Os seis fatos do antigo "Por que confiar na Attra", em blocos abertos com um
+ * fio em cima. Desde 29/10/2026 não é mais uma seção: fecha a seção de
+ * Posicionamento (about-section-expanded.tsx), que juntou o "Por que confiar",
+ * o "Mais do que carros" e o "Um novo jeito de operar". As três diziam a mesma
+ * coisa (curadoria, relação, alcance nacional) em sequência.
+ */
+export function ProvasDaAttra({ className }: { className?: string }) {
   return (
-    <section className="py-10 md:py-14 border-y border-border/60 bg-background-card/40">
-      <Container size="2xl">
-        <p className="text-center text-[11px] uppercase tracking-[0.22em] text-foreground-secondary mb-6">
-          Por que confiar na Attra
-        </p>
-        <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-6">
-          {pillars.map(({ icon: Icon, title, line }) => (
-            <li
-              key={title}
-              className="flex flex-col items-center text-center px-2"
-            >
-              <div className="w-10 h-10 mb-2.5 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm font-semibold text-foreground leading-tight">
-                {title}
-              </p>
-              <p className="text-xs text-foreground-secondary mt-0.5 leading-snug">
-                {line}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </Container>
-    </section>
+    <ul className={cn('grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-3 lg:grid-cols-6', className)}>
+      {pillars.map(({ icon: Icon, title, line }, i) => (
+        <li
+          key={title}
+          data-revelar
+          style={{ ['--d' as string]: `${i * 50}ms` }}
+          className="border-t border-border pt-5"
+        >
+          <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+          <p className="mt-4 text-[17px] font-semibold text-foreground" style={MONTSERRAT}>
+            {title}
+          </p>
+          <p className="mt-1 text-[14px] leading-snug text-foreground-secondary">
+            {line}
+          </p>
+        </li>
+      ))}
+    </ul>
   )
 }

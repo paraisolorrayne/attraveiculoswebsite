@@ -5,15 +5,17 @@ import { Button } from '@/components/ui/button'
 import { ExternalLink, Youtube } from 'lucide-react'
 import { fetchAttraYouTubeFeed } from '@/lib/youtube'
 import { YouTubeGallery } from '@/components/videos/youtube-gallery'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Vídeos Attra | Reviews e bastidores em vídeo',
+  title: pageTitle('Vídeos Attra | Reviews e bastidores em vídeo'),
   description:
     'Reviews em vídeo, test drives, bastidores e shorts do canal oficial da Attra Veículos no YouTube. Superesportivos, carros premium e curadoria editorial em movimento.',
   keywords: ['vídeos attra', 'attra youtube', 'reviews em vídeo', 'test drive superesportivos', 'shorts attra'],
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Vídeos Attra | Reviews e bastidores em vídeo',
     description: 'Reviews em vídeo, test drives, bastidores e shorts do canal oficial da Attra Veículos.',
     type: 'website',

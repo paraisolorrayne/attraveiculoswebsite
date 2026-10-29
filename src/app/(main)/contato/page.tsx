@@ -1,11 +1,13 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MapPin, Phone, Mail, Clock, MessageCircle, Globe, CheckCircle, Star, Building2 } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { ContactForm } from '@/components/forms/contact-form'
-import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_NUMBER, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
+import { MapaAtendimento, CIDADES_ATENDIDAS } from '@/components/contato/mapa-atendimento'
+import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
@@ -47,11 +49,8 @@ const contactChannels = [
     icon: Phone,
     label: 'Telefone',
     value: PHONE_DISPLAY,
-    secondValue: PHONE_DISPLAY_2,
-    thirdValue: CELLPHONE_DISPLAY,
+    // Só o oficial: o celular é o WhatsApp, já na coluna ao lado.
     href: `tel:${PHONE_NUMBER}`,
-    secondHref: `tel:${PHONE_NUMBER_2}`,
-    thirdHref: `tel:${CELLPHONE_NUMBER}`,
     description: 'Atendimento comercial',
     primary: false,
   },
@@ -71,10 +70,6 @@ const contactChannels = [
     description: HORARIO_SABADO,
     primary: false,
   },
-]
-
-const nationalReach = [
-  'São Paulo', 'Rio de Janeiro', 'Brasília', 'Belo Horizonte', 'Curitiba', 'Porto Alegre', 'Salvador', 'Recife', 'Fortaleza', 'Goiânia',
 ]
 
 export default function ContatoPage() {
@@ -129,12 +124,6 @@ export default function ContatoPage() {
                 {item.href ? (
                   <div className="flex flex-col">
                     <a href={item.href} target={item.label === 'WhatsApp' ? '_blank' : undefined} className="font-medium hover:underline">{item.value}</a>
-                    {item.secondValue && item.secondHref && (
-                      <a href={item.secondHref} className="font-medium hover:underline text-sm mt-0.5">{item.secondValue}</a>
-                    )}
-                    {item.thirdValue && item.thirdHref && (
-                      <a href={item.thirdHref} className="font-medium hover:underline text-sm mt-0.5">{item.thirdValue}</a>
-                    )}
                   </div>
                 ) : (
                   <p className="font-medium">{item.value}</p>
@@ -146,31 +135,33 @@ export default function ContatoPage() {
         </Container>
       </section>
 
-      {/* National Reach */}
-      <section className="py-12 bg-background-soft">
+      {/* Atendimento nacional. Desde 23/10/2026 com o mapa do Story "Vendido"
+          (rotas saindo de Uberlândia); antes eram só as cidades em etiquetas. */}
+      <section className="py-16 lg:py-24 bg-background-soft overflow-hidden">
         <Container>
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <Globe className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Atendimento Nacional</span>
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
+            <div>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">Atendimento nacional</p>
+              <h2
+                className="mt-3 text-3xl font-semibold tracking-tight text-foreground lg:text-[40px] lg:leading-[1.15]"
+                style={{ fontFamily: 'var(--font-montserrat)' }}
+              >
+                Atendemos clientes de todos os estados do Brasil
+              </h2>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-foreground-secondary">
+                Com base em Uberlândia, a Attra oferece atendimento nacional com logística especializada para entrega em qualquer cidade.
+              </p>
+              <ul className="mt-8 grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3">
+                {CIDADES_ATENDIDAS.map((cidade) => (
+                  <li key={cidade.nome} className="flex items-center gap-2.5 text-[15px] text-foreground">
+                    <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    {cidade.nome}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 text-[15px] text-foreground-secondary">E todas as outras capitais e cidades.</p>
             </div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
-              Atendemos clientes de Todos os Estados do Brasil
-            </h2>
-            <p className="text-foreground-secondary max-w-2xl mx-auto">
-              Com base em Uberlândia, a Attra oferece atendimento nacional com logística especializada para entrega em qualquer cidade.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            {nationalReach.map((city) => (
-              <span key={city} className="inline-flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-full text-sm">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                {city}
-              </span>
-            ))}
-            <span className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm text-primary font-medium">
-              + Todas as capitais e cidades
-            </span>
+            <MapaAtendimento className="mx-auto w-full max-w-[560px]" />
           </div>
         </Container>
       </section>
@@ -181,11 +172,13 @@ export default function ContatoPage() {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Form */}
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-                <Mail className="w-4 h-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Formulário</span>
-              </div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-6">Envie uma Mensagem</h2>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">Formulário</p>
+              <h2
+                className="mt-3 mb-6 text-2xl font-semibold tracking-tight text-foreground lg:text-[32px]"
+                style={{ fontFamily: 'var(--font-montserrat)' }}
+              >
+                Envie uma mensagem
+              </h2>
               <p className="text-foreground-secondary mb-6">
                 Preencha o formulário abaixo e nossa equipe entrará em contato em até 24 horas úteis.
               </p>
@@ -194,59 +187,74 @@ export default function ContatoPage() {
 
             {/* Showroom */}
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-                <Building2 className="w-4 h-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">Showroom</span>
-              </div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-6">Visite Nosso Showroom</h2>
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">Showroom</p>
+              <h2
+                className="mt-3 mb-6 text-2xl font-semibold tracking-tight text-foreground lg:text-[32px]"
+                style={{ fontFamily: 'var(--font-montserrat)' }}
+              >
+                Visite nosso showroom
+              </h2>
               <div className="space-y-6">
                 {locations.map((location) => (
-                  <div key={location.name} className="bg-background-card border border-border rounded-2xl p-6">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                        <MapPin className="w-6 h-6 text-primary" />
+                  <div key={location.name} className="overflow-hidden bg-background-card border border-border rounded-2xl">
+                    {/* A fachada com o letreiro e Ferraris na frente. A foto é em pé
+                        (3:4); em 5:4, a 45% da altura, cabem o letreiro e os seis carros. */}
+                    <div className="relative aspect-[5/4] bg-background-soft">
+                      <Image
+                        src="/images/showroom-attra-fachada.jpg"
+                        alt="Fachada do showroom da Attra Veículos em Uberlândia, com Ferraris estacionadas na frente"
+                        fill
+                        sizes="(min-width: 1024px) 600px, 100vw"
+                        className="object-cover object-[50%_45%]"
+                      />
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                          <MapPin className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-semibold text-foreground">{location.name}</h3>
+                          <p className="text-sm text-primary font-medium">{location.subtitle}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-foreground">{location.name}</h3>
-                        <p className="text-sm text-primary font-medium">{location.subtitle}</p>
+                      <div className="space-y-3 text-foreground-secondary mb-6">
+                        <p className="flex items-start gap-2">
+                          <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <span>{location.address}, {location.city}</span>
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <Phone className="w-5 h-5 text-primary" />
+                          <a href={`tel:${PHONE_NUMBER}`} className="hover:text-primary">{location.phone}</a>
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <Clock className="w-5 h-5 text-primary" />
+                          <span>{location.hours}</span>
+                        </p>
                       </div>
-                    </div>
-                    <div className="space-y-3 text-foreground-secondary mb-6">
-                      <p className="flex items-start gap-2">
-                        <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <span>{location.address}, {location.city}</span>
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <Phone className="w-5 h-5 text-primary" />
-                        <a href={`tel:${location.phone.replace(/\D/g, '')}`} className="hover:text-primary">{location.phone}</a>
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-primary" />
-                        <span>{location.hours}</span>
-                      </p>
-                    </div>
-                    <div className="mb-6">
-                      <p className="text-sm font-medium text-foreground mb-3">Destaques:</p>
-                      <ul className="space-y-2">
-                        {location.features.map((feature) => (
-                          <li key={feature} className="flex items-center gap-2 text-sm text-foreground-secondary">
-                            <CheckCircle className="w-4 h-4 text-primary shrink-0" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button asChild className="flex-1">
-                        <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita ao showroom.')} target="_blank">
-                          <MessageCircle className="w-4 h-4 mr-2" />Agendar Visita
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" className="flex-1">
-                        <a href={location.mapUrl} target="_blank" rel="noopener noreferrer">
-                          <MapPin className="w-4 h-4 mr-2" />Ver no Mapa
-                        </a>
-                      </Button>
+                      <div className="mb-6">
+                        <p className="text-sm font-medium text-foreground mb-3">Destaques:</p>
+                        <ul className="space-y-2">
+                          {location.features.map((feature) => (
+                            <li key={feature} className="flex items-center gap-2 text-sm text-foreground-secondary">
+                              <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button asChild className="flex-1">
+                          <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita ao showroom.')} target="_blank">
+                            <MessageCircle className="w-4 h-4 mr-2" />Agendar Visita
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="flex-1">
+                          <a href={location.mapUrl} target="_blank" rel="noopener noreferrer">
+                            <MapPin className="w-4 h-4 mr-2" />Ver no Mapa
+                          </a>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

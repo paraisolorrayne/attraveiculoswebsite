@@ -1,16 +1,18 @@
-'use client'
-
-import { VehicleImage } from '@/components/ui/vehicle-image'
 import Link from 'next/link'
-import { ArrowRight, MessageCircle, Gauge, CalendarDays } from 'lucide-react'
+import { ArrowRight, MessageCircle } from 'lucide-react'
+import { VehicleImage } from '@/components/ui/vehicle-image'
 import { Container } from '@/components/ui/container'
-import { SectionKicker, SectionHeading } from '@/components/ui/brand'
+import { Button } from '@/components/ui/button'
+import { CabecalhoSecao, MONTSERRAT, SERIFADA } from '@/components/ui/cabecalho-secao'
 import { Vehicle } from '@/types'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { getWhatsAppUrl } from '@/lib/constants'
+import { anoDoVeiculo, versaoDoVeiculo } from '@/lib/identidade-do-veiculo'
 
 interface EditorialSelectionProps {
   vehicles?: Vehicle[]
+  /** Total do estoque (o mesmo número de /veiculos), no bloco "Ver todo o acervo". */
+  totalEstoque?: number
 }
 
 const SUPERCAR_BRANDS = ['ferrari', 'lamborghini', 'mclaren', 'bugatti', 'pagani', 'koenigsegg']
@@ -23,7 +25,7 @@ function curationReason(vehicle: Vehicle): string {
     return '0 km, pronto para entrega imediata'
   }
   if (vehicle.mileage > 0 && vehicle.mileage < 5000) {
-    return 'Baixíssima rodagem — praticamente novo'
+    return 'Baixíssima rodagem, praticamente novo'
   }
   if (vehicle.price >= 2_000_000) {
     return 'Peça de acervo, rara no mercado brasileiro'
@@ -40,6 +42,8 @@ function curationReason(vehicle: Vehicle): string {
   return 'Configuração rara selecionada à mão'
 }
 
+// Os botões levam `data-vehicle-id`: o rastreio global de cliques liga o
+// clique no WhatsApp ao carro (visitor-tracking-provider).
 function vehicleWhatsAppUrl(v: Vehicle) {
   const msg = `Olá, Attra. Tenho interesse no ${v.brand} ${v.model}${
     v.year_model ? ` ${v.year_model}` : ''
@@ -47,194 +51,205 @@ function vehicleWhatsAppUrl(v: Vehicle) {
   return getWhatsAppUrl(msg)
 }
 
-export function EditorialSelection({ vehicles = [] }: EditorialSelectionProps) {
+const km = (v: Vehicle) => (v.mileage === 0 ? '0 km' : formatMileage(v.mileage))
+// 14 px e o vermelho claro no escuro (text-rotulo): em 13 px, o vermelho da
+// marca sobre o preto não se lia ao ar livre (29/10/2026).
+const ROTULO = 'text-[14px] font-semibold uppercase tracking-[0.14em] text-rotulo'
+const atraso = (s: number) => ({ ['--d' as string]: `${s}s` })
+
+/**
+ * Seleção editorial da home (redesenhada em 27/10/2026, direção "Vitrine com
+ * ficha"): a foto do carro limpa, no 4:3 da AutoConf, e as informações ao
+ * lado ou embaixo, nunca por cima. As fotos da Attra trazem faixas gravadas
+ * no canto de baixo ("PPF FULL", "BLINDADO B5S"), e o nome e o preço escritos
+ * sobre a foto brigavam com elas. Um carro em destaque com ficha e os dois
+ * botões, dois secundários com o essencial, e o "Ver todo o acervo" como
+ * bloco grande no fim, com o total do estoque.
+ *
+ * Os carros são as posições 7 a 9 do estoque por preço (page.tsx): mudam com
+ * o estoque, não por semana. Por isso saiu o "Atualizada semanalmente".
+ */
+export function EditorialSelection({ vehicles = [], totalEstoque }: EditorialSelectionProps) {
   const [main, ...rest] = vehicles
   const secondary = rest.slice(0, 2)
 
   if (!main) return null
 
   return (
-    <section className="py-20 md:py-28 bg-background relative">
-      <Container size="2xl">
-        {/* Header */}
-        <div className="mb-12 md:mb-16 max-w-2xl">
-          <SectionKicker className="mb-4">
-            Seleção editorial · Atualizada semanalmente
-          </SectionKicker>
-          <SectionHeading as="h2" size="lg" className="mb-5">
-            Três peças do acervo que merecem sua atenção.
-          </SectionHeading>
-          <p className="text-foreground-secondary text-base md:text-lg leading-relaxed">
-            Curadoria feita à mão. Cada veículo entra por mérito —
-            raridade, estado, procedência ou oportunidade.
-          </p>
+    <section className="bg-background py-20 lg:py-28">
+      <Container>
+        <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <CabecalhoSecao
+              rotulo="Seleção editorial"
+              titulo={<>{vehicles.length >= 3 ? 'Três peças do acervo' : 'Peças do acervo'} <span className="text-foreground/65">que merecem sua atenção</span></>}
+            />
+            {/* Fora do celular: lá ele empurrava o preço do destaque para a terceira tela. */}
+            <p className="mt-5 hidden max-w-3xl text-lg leading-relaxed text-foreground-secondary sm:block">
+              Curadoria feita à mão. Cada veículo entra por mérito, raridade, estado, procedência ou oportunidade.
+            </p>
+          </div>
+          <Link
+            href="/veiculos"
+            className="hidden shrink-0 items-center gap-2 whitespace-nowrap text-[15px] font-medium text-foreground hover:text-primary lg:inline-flex"
+          >
+            Ver todo o acervo <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
-        {/* Asymmetric layout — items-stretch garante que a coluna direita
-            (2 cards empilhados) preencha toda a altura do principal. */}
-        <div className="grid gap-6 md:gap-8 lg:grid-cols-12 lg:items-stretch">
-          {/* Main — large */}
-          <article className="lg:col-span-7 group">
-            <Link
-              href={`/veiculo/${main.slug}`}
-              className="block relative rounded-2xl overflow-hidden bg-background-card border border-border shadow-lg shadow-black/5"
-            >
-              <div className="relative aspect-[5/4] md:aspect-[16/11] overflow-hidden">
-                <VehicleImage
-                  src={main.photos?.[0]}
-                  alt={`${main.brand} ${main.model}`}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  sizes="(max-width: 1024px) 100vw, 58vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                {/* Curation reason chip */}
-                <div className="absolute top-5 left-5 inline-flex items-center gap-2 bg-background-card/95 backdrop-blur-sm border border-border/60 rounded-full px-4 py-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground">
-                    Destaque da semana
-                  </span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                  <p className="text-white/70 text-xs uppercase tracking-[0.2em] font-semibold mb-1.5">
-                    {main.brand}
-                  </p>
-                  <h3 className="text-2xl md:text-4xl font-bold text-white mb-3 leading-tight">
-                    {main.model}
-                  </h3>
-                  <p className="text-white/85 text-sm md:text-base max-w-xl">
-                    {curationReason(main)}.
-                  </p>
-                </div>
+        {/* Destaque */}
+        <article className="mt-12 grid gap-8 lg:mt-16 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-14 xl:gap-16">
+          <Link
+            href={`/veiculo/${main.slug}`}
+            data-revelar="cortina"
+            className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-background-soft"
+          >
+            <VehicleImage
+              src={main.photos?.[0]}
+              alt={`${main.brand} ${main.model}`}
+              fill
+              esqueleto
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
+            />
+            {/* No alto à esquerda: a marca d'água fica no alto à direita e as faixas, embaixo. */}
+            <span className="absolute left-4 top-4 rounded-full bg-black/75 px-3 py-1.5 text-[14px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-sm">
+              Em destaque
+            </span>
+          </Link>
+
+          {/* No celular o preço e o botão sobem para logo abaixo do nome (a ordem
+              muda com `order`); a partir do lg volta a ficha completa antes do
+              preço. Embaixo da foto, nunca por cima: as fotos trazem faixas
+              gravadas no rodapé ("PPF FULL", "BLINDADO B5S"). */}
+          <div className="flex flex-col">
+            <p data-revelar className={`order-1 ${ROTULO}`}>{main.brand}</p>
+            <h3 data-revelar style={{ ...SERIFADA, ...atraso(0.05) }} className="order-2 mt-3 text-[44px] font-semibold leading-[1] lining-nums text-foreground lg:text-[58px]">
+              <Link href={`/veiculo/${main.slug}`} className="hover:text-primary">{main.model}</Link>
+            </h3>
+            {versaoDoVeiculo(main) && (
+              <p data-revelar style={atraso(0.05)} className="order-3 mt-2 text-lg text-foreground-secondary">{versaoDoVeiculo(main)}</p>
+            )}
+            <p data-revelar style={atraso(0.1)} className="order-6 mt-6 flex gap-3 text-[17px] leading-relaxed text-foreground lg:order-4">
+              <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
+              {curationReason(main)}.
+            </p>
+            <dl data-revelar style={atraso(0.15)} className="order-7 mt-6 grid grid-cols-2 border-t border-border lg:order-5 lg:mt-8">
+              <div className="py-4">
+                <dt className="text-[14px] uppercase tracking-[0.12em] text-foreground-secondary">Ano</dt>
+                <dd className="mt-1 font-semibold tabular-nums text-foreground">{anoDoVeiculo(main)}</dd>
               </div>
-            </Link>
-
-            {/* Main footer — specs + CTAs, styled as editorial footer, not listing card */}
-            <div className="mt-5 flex flex-wrap items-center gap-5 gap-y-4">
-              <MetaItem
-                icon={CalendarDays}
-                value={`${main.year_manufacture}/${main.year_model}`}
-              />
-              <MetaItem
-                icon={Gauge}
-                value={main.mileage === 0 ? '0 km' : formatMileage(main.mileage)}
-              />
-              <span className="text-foreground font-semibold text-lg md:text-xl tabular-nums">
-                {formatPrice(main.price)}
-              </span>
-
-              <div className="ml-auto flex gap-2">
-                <Link
-                  href={`/veiculo/${main.slug}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground border border-border hover:border-foreground/30 rounded-lg px-4 py-2.5 transition-colors"
-                >
-                  Ver veículo
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <a
-                  href={vehicleWhatsAppUrl(main)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg px-4 py-2.5 transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Solicitar atendimento
+              <div className="border-l border-border py-4 pl-5">
+                <dt className="text-[14px] uppercase tracking-[0.12em] text-foreground-secondary">Quilometragem</dt>
+                <dd className="mt-1 font-semibold tabular-nums text-foreground">{km(main)}</dd>
+              </div>
+            </dl>
+            <p data-revelar style={{ ...MONTSERRAT, ...atraso(0.1) }} className="order-4 mt-4 text-[28px] font-semibold tabular-nums tracking-tight text-foreground lg:order-6 lg:mt-0 lg:border-t lg:border-border lg:pt-5 lg:text-[32px]">
+              {formatPrice(main.price)}
+            </p>
+            {/* Em 1024 os dois botões não cabem lado a lado na coluna: empilham. */}
+            <div data-revelar style={atraso(0.15)} className="order-5 mt-5 flex flex-col gap-3 sm:flex-row lg:order-7 lg:mt-8 lg:flex-col xl:flex-row [&>*]:whitespace-nowrap">
+              <Button asChild size="lg" className="text-base">
+                <a href={vehicleWhatsAppUrl(main)} target="_blank" rel="noopener noreferrer" data-vehicle-id={main.id} className="inline-flex items-center justify-center gap-2">
+                  <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                  Falar com consultor
                 </a>
-              </div>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="text-base">
+                <Link href={`/veiculo/${main.slug}`} className="inline-flex items-center justify-center gap-2">
+                  Ver veículo <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-          </article>
+          </div>
+        </article>
 
-          {/* Secondary — stacked editorial cards (NOT listing grid) */}
-          <div className="lg:col-span-5 flex flex-col gap-6 md:gap-8">
-            {secondary.map((v) => (
-              <SecondaryPick key={v.id} vehicle={v} />
+        {secondary.length > 0 && (
+          <ul className="mt-16 grid gap-12 sm:grid-cols-2 sm:gap-8 lg:mt-24 lg:gap-14">
+            {secondary.map((v, i) => (
+              <li key={v.id}>
+                <SecondaryPick vehicle={v} atrasoFoto={i * 0.08} />
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        )}
 
-        {/* Closing — editorial, not "see all listings" */}
-        <div className="mt-14 md:mt-20 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/60 pt-8">
-          <p className="text-foreground-secondary text-sm md:text-base max-w-md">
-            Não encontrou a peça certa? Fazemos a busca personalizada na rede
-            nacional — fora do estoque visível.
-          </p>
-          <div className="flex gap-2">
-            <Link
-              href="#captacao"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground border border-border hover:border-foreground/30 rounded-lg px-5 py-3 transition-colors"
-            >
-              Solicitar um veículo
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/veiculos"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-background bg-foreground hover:bg-foreground/90 rounded-lg px-5 py-3 transition-colors"
-            >
+        {/* "Ver todo o acervo" em destaque: bloco largo com o total do estoque. */}
+        <Link href="/veiculos" className="group relative mt-16 flex items-center justify-between gap-6 border-y border-border py-8 lg:mt-24 lg:py-12">
+          <span aria-hidden="true" data-revelar="linha" className="absolute inset-x-0 -top-px h-px bg-primary" />
+          <span className="min-w-0">
+            <span className={`block ${ROTULO}`}>
+              {totalEstoque ? `${totalEstoque} ${totalEstoque === 1 ? 'veículo' : 'veículos'} em estoque` : 'Estoque completo'}
+            </span>
+            <span className="mt-2 block text-balance text-[32px] font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[64px]" style={MONTSERRAT}>
               Ver todo o acervo
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+            </span>
+          </span>
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-primary text-white transition-[transform,background-color] duration-500 group-hover:translate-x-1.5 group-hover:bg-primary-hover lg:h-20 lg:w-20">
+            <ArrowRight className="h-6 w-6 lg:h-7 lg:w-7" aria-hidden="true" />
+          </span>
+        </Link>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-md text-[15px] text-foreground-secondary">
+            Não encontrou a peça certa? Fazemos a busca personalizada na rede nacional, fora do estoque visível.
+          </p>
+          <Link href="#captacao" className="alvo-toque inline-flex items-center gap-2 whitespace-nowrap text-[15px] font-medium text-foreground hover:text-primary">
+            Solicitar um veículo <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </Container>
     </section>
   )
 }
 
-function SecondaryPick({ vehicle }: { vehicle: Vehicle }) {
+/**
+ * Card dos dois carros de baixo. Desde 29/10/2026 com o mesmo "Falar com
+ * consultor" do destaque, com a mensagem citando o carro: no celular, onde mais
+ * se clica no WhatsApp, eles só tinham um link de texto "Ver veículo".
+ */
+function SecondaryPick({ vehicle: v, atrasoFoto }: { vehicle: Vehicle; atrasoFoto: number }) {
+  const versao = versaoDoVeiculo(v)
   return (
-    <article className="group relative flex-1 min-h-[260px] rounded-2xl overflow-hidden bg-background-card border border-border hover:border-primary/30 transition-colors">
-      <Link
-        href={`/veiculo/${vehicle.slug}`}
-        className="block h-full"
-      >
-        {/* Imagem dominante — preenche o card todo. Info reduzida ao
-            essencial (marca + modelo + preço) sobreposta no rodapé sobre
-            gradient escuro, igual ao card principal. Foco visual fica
-            100% na foto do veículo. */}
-        <div className="relative h-full overflow-hidden">
+    <div className="group">
+      <Link href={`/veiculo/${v.slug}`} className="block">
+        <div data-revelar="cortina" style={atraso(atrasoFoto)} className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-background-soft">
           <VehicleImage
-            src={vehicle.photos?.[0]}
-            alt={`${vehicle.brand} ${vehicle.model}`}
+            src={v.photos?.[0]}
+            alt={`${v.brand} ${v.model}`}
             fill
-            className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-            sizes="(max-width: 1024px) 100vw, 42vw"
+            esqueleto
+            sizes="(min-width: 640px) 45vw, 100vw"
+            className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-
-          <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-            <p className="text-white/70 text-[10px] uppercase tracking-[0.22em] font-semibold mb-1.5">
-              {vehicle.brand}
-            </p>
-            <h3 className="text-xl md:text-2xl font-bold text-white leading-tight mb-3">
-              {vehicle.model}
-            </h3>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-white font-semibold text-base md:text-lg tabular-nums">
-                {formatPrice(vehicle.price)}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[12px] font-medium text-white/90 group-hover:gap-2 transition-all">
-                Ver
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </div>
-          </div>
         </div>
       </Link>
-    </article>
-  )
-}
-
-function MetaItem({
-  icon: Icon,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  value: string
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm text-foreground-secondary">
-      <Icon className="w-4 h-4 text-primary/80" />
-      <span className="text-foreground font-medium">{value}</span>
-    </span>
+      <p className={`mt-5 ${ROTULO}`}>{v.brand}</p>
+      {/* No celular o preço desce: ao lado ele espremia a versão. */}
+      <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+        <h3 className="text-[28px] font-semibold leading-tight lining-nums text-foreground lg:text-[34px]" style={SERIFADA}>
+          <Link href={`/veiculo/${v.slug}`} className="alvo-toque hover:text-primary">{v.model}</Link>
+        </h3>
+        <p className="text-lg font-semibold tabular-nums text-foreground lg:text-xl" style={MONTSERRAT}>{formatPrice(v.price)}</p>
+      </div>
+      {versao && <p className="mt-1 text-[15px] text-foreground-secondary">{versao}</p>}
+      <p className="mt-3 text-[15px] text-foreground-secondary">{[anoDoVeiculo(v), km(v)].filter(Boolean).join(' · ')}</p>
+      <p className="mt-3 flex gap-2.5 text-[15px] text-foreground">
+        <span aria-hidden="true" className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
+        {curationReason(v)}.
+      </p>
+      <div className="mt-5 flex flex-col gap-3 xl:flex-row [&>*]:whitespace-nowrap">
+        <Button asChild size="lg" className="text-base">
+          <a href={vehicleWhatsAppUrl(v)} target="_blank" rel="noopener noreferrer" data-vehicle-id={v.id} className="inline-flex items-center justify-center gap-2">
+            <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            Falar com consultor
+          </a>
+        </Button>
+        <Button asChild size="lg" variant="outline" className="text-base">
+          <Link href={`/veiculo/${v.slug}`} className="inline-flex items-center justify-center gap-2">
+            Ver veículo <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
+    </div>
   )
 }

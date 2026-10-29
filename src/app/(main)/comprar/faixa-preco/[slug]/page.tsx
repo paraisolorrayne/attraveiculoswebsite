@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FAIXAS_PRECO, findFaixaPreco } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Banknote } from 'lucide-react'
 
@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/faixa-preco/${slug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: data.metaTitle,
 			description: data.metaDescription,
 			url: `${SITE_URL}/comprar/faixa-preco/${slug}`,

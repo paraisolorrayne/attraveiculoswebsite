@@ -8,9 +8,32 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-foreground-secondary/10',
+        // Brilho que passa (`.esqueleto` em motion.css), não pisca-pisca.
+        'esqueleto rounded-md',
         className
       )}
+    />
+  )
+}
+
+interface PhotoSkeletonProps extends SkeletonProps {
+  /** Foto já chegou: o esqueleto some por baixo dela e para de animar. */
+  loaded?: boolean
+  /** Fundo sempre preto (tela cheia da galeria), independente do tema. */
+  dark?: boolean
+}
+
+/**
+ * Lugar de foto carregando: a marca Attra em cinza, com a cunha vermelha
+ * cruzando o "A" (`.esqueleto-attra` em esqueleto-attra.css). Em áreas com
+ * menos de 200px de largura (miniaturas) mostra só o "A".
+ */
+export function PhotoSkeleton({ className, loaded = false, dark = false }: PhotoSkeletonProps) {
+  return (
+    <div
+      className={cn('esqueleto-attra', dark && 'esqueleto-attra--escuro', className)}
+      data-loaded={loaded || undefined}
+      aria-hidden="true"
     />
   )
 }
@@ -18,7 +41,7 @@ export function Skeleton({ className }: SkeletonProps) {
 export function VehicleCardSkeleton() {
   return (
     <div className="bg-background-card border border-border rounded-xl overflow-hidden">
-      <Skeleton className="aspect-[16/10] rounded-none" />
+      <PhotoSkeleton className="aspect-[16/10]" />
       <div className="p-4 space-y-3">
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
@@ -45,7 +68,7 @@ export function VehicleGridSkeleton({ count = 12 }: { count?: number }) {
 export function VehicleHorizontalCardSkeleton() {
   return (
     <div className="bg-background-card rounded-2xl overflow-hidden flex flex-col md:flex-row">
-      <Skeleton className="aspect-[16/10] md:w-1/2 rounded-none" />
+      <PhotoSkeleton className="aspect-[16/10] md:w-1/2" />
       <div className="p-8 flex-1 space-y-4">
         <Skeleton className="h-4 w-20" />
         <Skeleton className="h-8 w-48" />
@@ -74,7 +97,7 @@ export function VehicleListSkeleton({ count = 6 }: { count?: number }) {
 export function BlogCardSkeleton() {
   return (
     <div className="bg-background-card border border-border rounded-xl overflow-hidden">
-      <Skeleton className="aspect-[16/10] rounded-none" />
+      <PhotoSkeleton className="aspect-[16/10]" />
       <div className="p-6 space-y-3">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-6 w-full" />
@@ -99,7 +122,7 @@ export function BlogPostSkeleton() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Featured image */}
-      <Skeleton className="w-full aspect-[16/9] rounded-2xl mb-8" />
+      <PhotoSkeleton className="w-full aspect-[16/9] rounded-2xl mb-8" />
       {/* Title */}
       <Skeleton className="h-10 w-3/4 mb-4" />
       <Skeleton className="h-10 w-1/2 mb-6" />
@@ -129,7 +152,7 @@ export function VehicleDetailSkeleton() {
   return (
     <div>
       {/* Gallery skeleton */}
-      <Skeleton className="h-[60vh] lg:h-[70vh] w-full rounded-none" />
+      <PhotoSkeleton className="h-[60vh] lg:h-[70vh] w-full" />
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8 lg:py-12">
@@ -215,12 +238,13 @@ export function VehicleDetailSkeleton() {
 
 export function RelatedVehiclesSkeleton() {
   return (
-    <div className="py-16 bg-background-soft">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="py-16 bg-background-soft mt-16">
+      {/* Mesma largura e grade de RelatedVehicles, para a troca não pular. */}
+      <div className="mx-auto w-full max-w-[max(80%,1280px)] px-4 sm:px-6 lg:px-8">
         <Skeleton className="h-8 w-48 mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-x-8">
           {Array.from({ length: 4 }).map((_, i) => (
-            <VehicleCardSkeleton key={i} />
+            <VehicleGridCardSkeleton key={i} />
           ))}
         </div>
       </div>
@@ -245,7 +269,7 @@ export function EngineSoundSkeleton() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="bg-background-card border border-border rounded-2xl overflow-hidden">
-              <Skeleton className="aspect-[4/3] rounded-none" />
+              <PhotoSkeleton className="aspect-[4/3]" />
               <div className="p-5 space-y-3">
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
@@ -270,6 +294,24 @@ export function FiltersSkeleton() {
         </div>
       ))}
       <Skeleton className="h-10 w-full rounded-lg" />
+    </div>
+  )
+}
+
+/** Card em grade de /veiculos (layout "vertical" do CinematicVehicleCard). */
+export function VehicleGridCardSkeleton() {
+  return (
+    <div>
+      <PhotoSkeleton className="aspect-[4/3] w-full rounded-xl" />
+      <div className="pt-4 space-y-2.5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4 mt-4">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
+      </div>
     </div>
   )
 }

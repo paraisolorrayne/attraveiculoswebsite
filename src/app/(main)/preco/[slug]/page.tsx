@@ -4,14 +4,20 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { PRECOS, findPreco } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, DollarSign, TrendingUp } from 'lucide-react'
-import { EstoqueAoVivo } from '@/components/vehicles/estoque-ao-vivo'
+import { EstoqueDoModelo } from '@/components/vehicles/estoque-do-modelo'
+import { estoqueDoModelo, fraseDoEstoque, resumoDoEstoque, AVISO_DE_PRECO } from '@/lib/seo/estoque-do-modelo'
+import { formatarDataBR } from '@/lib/seo/frescor'
 
 interface PageProps {
 	params: Promise<{ slug: string }>
 }
+
+// Os preços do estoque saem no HTML: a página se refaz a cada 15 min, e a
+// busca da AutoConf por baixo tem cache de 5.
+export const revalidate = 900
 
 export async function generateStaticParams() {
 	return PRECOS.map(p => ({ slug: p.slug }))
@@ -22,14 +28,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 	const data = findPreco(slug)
 	if (!data) return {}
 
+	// Com unidade à venda, a descrição já responde quanto custa.
+	const frase = fraseDoEstoque(`${data.brand} ${data.model}`, resumoDoEstoque(await estoqueDoModelo(data.brand, data.model)))
+	const description = frase
+		? `${frase.replace(/\*/g, '')} (sujeito a atualização). Diferença entre versões, o que pesa no preço e se vale a pena.`
+		: data.metaDescription
+
 	return {
 		title: pageTitle(data.metaTitle),
-		description: data.metaDescription,
+		description,
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/preco/${slug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: data.metaTitle,
-			description: data.metaDescription,
+			description,
 			url: `${SITE_URL}/preco/${slug}`,
 			type: 'article',
 		},
@@ -40,6 +53,10 @@ export default async function PrecoPage({ params }: PageProps) {
 	const { slug } = await params
 	const data = findPreco(slug)
 	if (!data) notFound()
+
+	const veiculos = await estoqueDoModelo(data.brand, data.model)
+	const frase = fraseDoEstoque(`${data.brand} ${data.model}`, resumoDoEstoque(veiculos))
+	const hoje = formatarDataBR(new Date().toISOString()) ?? ''
 
 	const breadcrumbItems = [
 		{ label: 'Preço' },
@@ -59,9 +76,19 @@ export default async function PrecoPage({ params }: PageProps) {
 						<h1 className="text-3xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
 							Preço do {data.brand} {data.model} no Brasil
 						</h1>
-						<p className="text-lg text-foreground-secondary leading-relaxed">
-							Análise de posicionamento de preço do {data.brand} {data.model} no mercado brasileiro, com diferença entre versões e fatores que impactam o valor.
-						</p>
+						{/* A resposta primeiro: quantos há e por quanto, com a data. */}
+						{frase ? (
+							<>
+								<p className="text-lg text-foreground leading-relaxed">
+									Em {hoje}: <strong>{frase}</strong>. Abaixo, as unidades, a diferença entre versões e o que pesa no valor.
+								</p>
+								<p className="mt-2 text-xs text-foreground-secondary">*{AVISO_DE_PRECO}</p>
+							</>
+						) : (
+							<p className="text-lg text-foreground-secondary leading-relaxed">
+								Sem {data.brand} {data.model} à venda na Attra em {hoje}. Abaixo, a diferença entre versões, o que pesa no valor e como encomendar.
+							</p>
+						)}
 					</div>
 				</Container>
 			</section>
@@ -88,7 +115,7 @@ export default async function PrecoPage({ params }: PageProps) {
 					<h2 className="text-2xl font-bold text-foreground mb-6">
 						Disponíveis na Attra Agora
 					</h2>
-					<EstoqueAoVivo brand={data.brand} model={data.model} limit={5} />
+					<EstoqueDoModelo veiculos={veiculos} marca={data.brand} modelo={data.model} conferidoEm={hoje} />
 				</Container>
 			</section>
 

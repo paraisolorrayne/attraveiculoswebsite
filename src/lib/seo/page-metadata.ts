@@ -22,6 +22,16 @@ const TITLE_SUFFIX = 'Attra Veículos'
 const TRAILING_BRAND = /\s*[|–—-]\s*Attra Ve[íi]culos\s*$/i
 
 /**
+ * Sufixo de seção ("| Manual Attra", "| Blog Attra"). Com o da marca que o
+ * template põe depois, os 99 verbetes do manual e os posts do blog saíam com
+ * 30 caracteres de marca no fim e cortados no Google (auditoria de 28/10/2026).
+ */
+const TRAILING_SECAO = /\s*[|–—-]\s*(?:Manual|Blog) Attra\s*$/i
+
+/** O título já diz "Attra": o sufixo do template seria a marca duas vezes. */
+const CITA_A_MARCA = /\bAttra\b/i
+
+/**
  * Normaliza um título de página removendo o sufixo de marca do fim.
  *
  * O layout raiz aplica `'%s | Attra Veículos'` por cima do que a página
@@ -33,15 +43,35 @@ const TRAILING_BRAND = /\s*[|–—-]\s*Attra Ve[íi]culos\s*$/i
  *
  * Normalizar aqui, na borda em que o dado vira `Metadata`, mantém o conserto
  * de pé para conteúdo publicado depois desta correção.
+ *
+ * Quando a marca está no meio ("Sobre a Attra Veículos | Loja em Uberlândia",
+ * "... na Attra Veículos" dos posts de IA), o título sai absoluto, sem o
+ * sufixo do template.
  */
-export function pageTitle(raw: string): string {
+export function pageTitle(raw: string): string | { absolute: string } {
   let title = raw.trim()
-  // Laço: houve caso de sufixo repetido duas vezes na mesma string.
-  while (TRAILING_BRAND.test(title)) {
-    title = title.replace(TRAILING_BRAND, '').trim()
+  // Laço: houve caso de sufixo repetido duas vezes na mesma string, e de
+  // seção seguida da marca ("| Blog Attra | Attra Veículos").
+  while (TRAILING_BRAND.test(title) || TRAILING_SECAO.test(title)) {
+    title = title.replace(TRAILING_BRAND, '').replace(TRAILING_SECAO, '').trim()
   }
-  // Um título que era só a marca perderia tudo; nesse caso o template resolve.
-  return title || TITLE_SUFFIX
+  // Um título que era só a marca perderia tudo; fica a marca, uma vez.
+  if (!title) return { absolute: TITLE_SUFFIX }
+  return CITA_A_MARCA.test(title) ? { absolute: title } : title
+}
+
+/**
+ * Imagem de compartilhamento das páginas sem foto própria: a fachada da loja
+ * com o letreiro, em 1200×630 (o recorte que WhatsApp, Facebook e LinkedIn
+ * usam). Vai no layout raiz e em toda página que declara `openGraph`, porque
+ * o Next troca o `openGraph` inteiro do pai pelo da página: sem repetir aqui,
+ * 222 páginas saíam sem imagem (auditoria de 28/10/2026).
+ */
+export const IMAGEM_COMPARTILHAMENTO = {
+  url: '/images/compartilhar-attra.jpg',
+  width: 1200,
+  height: 630,
+  alt: 'Fachada da Attra Veículos em Uberlândia',
 }
 
 /**

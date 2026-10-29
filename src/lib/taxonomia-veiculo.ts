@@ -250,6 +250,29 @@ export function rotuloDeCarroceria(
   return categorias.map(c => ROTULO_POR_CARROCERIA[c]).join(' / ')
 }
 
+/**
+ * Combustível para exibir na ficha, nos cards, no JSON-LD e nos feeds.
+ *
+ * O AutoConf escreve 'Gasolina e Elétrico' nos híbridos (26 dos 68 carros em
+ * 23/10/2026), e o site passou a mostrar "Híbrido". O resto fica como a origem
+ * mandou. Os filtros não mudam: `classificarCombustivel` já lia os dois.
+ */
+export function rotuloDeCombustivel(rotuloCru: string | null | undefined): string {
+  const cru = (rotuloCru ?? '').trim()
+  return classificarCombustivel(cru) === 'hibrido' ? 'Híbrido' : cru
+}
+
+/**
+ * O combustível depois de "motorização": "híbrida" e "elétrica" concordam com
+ * a palavra; gasolina, diesel e flex ficam como substantivo.
+ */
+export function motorizacao(combustivel: string): string {
+  const categoria = classificarCombustivel(combustivel)
+  if (categoria === 'hibrido') return 'híbrida'
+  if (categoria === 'eletrico') return 'elétrica'
+  return combustivel.toLowerCase()
+}
+
 /** Traduz o valor que veio do seletor para a categoria canônica. */
 export function carroceriaDoFiltro(valor: string | null | undefined): Carroceria | null {
   return CARROCERIA_POR_CHAVE[chaveDeComparacao(valor)] ?? null

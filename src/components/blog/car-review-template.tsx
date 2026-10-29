@@ -507,7 +507,7 @@ function CTASection({ brand, model, isPrimary = false, vendido = false }: {
 }) {
   const whatsappNumber = '5534991530174'
   const whatsappMessage = encodeURIComponent(vendido
-    ? `Olá! Li o review do ${brand} ${model} no blog da Attra. Esse já foi vendido — vocês têm algo parecido?`
+    ? `Olá! Li o review do ${brand} ${model} no blog da Attra. Esse já foi vendido. Vocês têm algo parecido?`
     : `Olá! Vi o ${brand} ${model} no blog da Attra e gostaria de mais informações.`
   )
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
@@ -701,7 +701,7 @@ export function CarReviewTemplate({ post, disponibilidade, vendido = false }: Ca
               className="-mt-4 mb-10 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background-card text-sm text-foreground hover:border-primary/40 transition-colors"
             >
               <Clock className="w-4 h-4 text-foreground-secondary" />
-              Este exemplar já foi vendido — veja os similares disponíveis
+              Este exemplar já foi vendido. Veja os similares disponíveis
               <ArrowRight className="w-4 h-4" />
             </a>
           )}

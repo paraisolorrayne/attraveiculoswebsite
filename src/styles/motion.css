@@ -178,3 +178,296 @@
   50% { height: 100%; }
 }
 
+
+/* ── Prévia 22/10/2026: faixa de marcas e barra da ficha ────────────────── */
+
+/* Faixa de marcas. Duas cópias da lista lado a lado; andar metade da largura
+   fecha o laço sem emenda. Só anda no computador e para com o mouse ou o
+   foco em cima: no celular, um toque para parar a faixa vira clique errado,
+   então lá ela é uma fileira que se arrasta com o dedo. */
+.faixa-marcas__janela {
+  /* relative: o texto "N carros em estoque" é sr-only (position: absolute) e,
+     sem isso, escapa da rolagem da faixa e alarga a página no celular. */
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+.faixa-marcas__janela::-webkit-scrollbar { display: none; }
+.faixa-marcas__trilho { display: flex; width: max-content; }
+.faixa-marcas__copia { display: none; }
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .faixa-marcas__janela {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  }
+  .faixa-marcas__copia { display: flex; }
+  .faixa-marcas__trilho { animation: faixa-marcas 60s linear infinite; }
+  .faixa-marcas__trilho:hover,
+  .faixa-marcas__trilho:focus-within { animation-play-state: paused; }
+}
+@keyframes faixa-marcas {
+  to { transform: translateX(-50%); }
+}
+
+/* Celular: o WhatsApp mora na barra de abas, então o círculo verde sai. Na
+   ficha, quando a barra de preço aparece, a barra de abas desce e dá lugar a
+   ela — um botão de ação por vez no polegar. */
+@media (max-width: 1023.98px) {
+  [data-whatsapp-flutuante] { display: none !important; }
+  .tab-bar-celular { transition: transform 0.3s ease-out; }
+  html[data-barra-ficha] .tab-bar-celular { transform: translateY(100%); }
+}
+
+/* ── Retorno de carregamento (prévia 22/10/2026) ─────────────────────────── */
+
+/* Linha de progresso do topo (racing-progress.tsx). Anda rápido no começo e
+   desacelera perto do fim sem nunca chegar sozinha; fecha quando a página
+   nova entra. */
+@keyframes navegando {
+  from { transform: scaleX(0.04); }
+  to { transform: scaleX(0.86); }
+}
+.progresso-navegacao { transform-origin: left center; transform: scaleX(0); }
+.progresso-navegacao[data-fase="andando"] {
+  animation: navegando 9s cubic-bezier(0.08, 0.7, 0.2, 1) forwards;
+}
+.progresso-navegacao[data-fase="chegando"] {
+  transform: scaleX(1);
+  opacity: 0;
+  transition: transform 0.2s ease-out, opacity 0.3s ease 0.15s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progresso-navegacao[data-fase="andando"] { animation: none; transform: scaleX(0.6); }
+  .progresso-navegacao[data-fase="chegando"] { transition: opacity 0.2s ease; }
+}
+
+/* Listagem esmaece enquanto o resultado do filtro carrega: o clique responde
+   na hora, mesmo com a página nova levando um segundo para chegar. */
+[data-lista-veiculos] { transition: opacity 0.25s ease; }
+html[data-navegando] [data-lista-veiculos] { opacity: 0.4; pointer-events: none; }
+
+/* Esqueleto de carregamento: um brilho que passa devagar, no lugar do
+   pisca-pisca do animate-pulse. */
+@keyframes brilho-carregando {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+.esqueleto {
+  background-color: color-mix(in srgb, var(--color-foreground-secondary) 9%, transparent);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-foreground) 7%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: brilho-carregando 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto { animation: none; background-image: none; }
+}
+
+/* Foto do card em grade nasce transparente e entra quando carrega; sem
+   JavaScript, aparece direto. */
+@media (scripting: none) {
+  .foto-card { opacity: 1 !important; }
+}
+
+/* ── Abertura e hero da home (prévia 22/10/2026) ───────────────────────── */
+
+/* Abertura (abertura-attra.tsx): só aparece com data-abertura-agora. */
+.abertura { display: none; }
+html[data-abertura-agora] .abertura {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 28px;
+  background: #050505;
+  animation: abertura-sobe 0.8s cubic-bezier(0.76, 0, 0.24, 1) 1.15s forwards;
+}
+.abertura__logo {
+  width: min(220px, 52vw);
+  opacity: 0;
+  animation: abertura-logo 1s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+}
+.abertura__linha {
+  position: relative;
+  display: block;
+  width: min(220px, 52vw);
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+}
+.abertura__linha > span {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: abertura-linha 1s cubic-bezier(0.65, 0, 0.35, 1) 0.15s forwards;
+}
+@keyframes abertura-logo {
+  from { opacity: 0; filter: blur(6px); transform: translateY(12px); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes abertura-linha { to { transform: scaleX(1); } }
+@keyframes abertura-sobe { to { transform: translateY(-100%); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-abertura-agora] .abertura { display: none; }
+}
+
+/* Hero: cada linha do título sobe por trás de uma máscara; o resto entra
+   logo depois. Na primeira vez com abertura, espera a tela subir. */
+.hero-linha { display: block; overflow: hidden; padding-bottom: 0.08em; }
+.hero-linha > span {
+  display: block;
+  animation: hero-linha-sobe 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0s) + 0.1s);
+}
+.hero-entra {
+  animation: hero-entra 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0s) + 0.45s);
+}
+html[data-abertura-agora] [data-primeira] .hero-linha > span { animation-delay: calc(var(--d, 0s) + 1.45s); }
+html[data-abertura-agora] .hero-entra { animation-delay: calc(var(--d, 0s) + 1.8s); }
+@keyframes hero-linha-sobe { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes hero-entra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* Altura do hero: tela cheia; no celular desconta a barra de abas. */
+.hero-tela { --alto: 100svh; height: var(--alto); min-height: 560px; max-height: 1000px; }
+@media (max-width: 1023.98px) {
+  .hero-tela { --alto: calc(100svh - 4rem - env(safe-area-inset-bottom)); min-height: 520px; }
+}
+
+/* Ao rolar, o fundo desce mais devagar e o texto sobe e some: profundidade
+   sem script, onde o navegador suporta animação ligada à rolagem. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-fundo { animation: hero-fundo-desce linear both; animation-timeline: scroll(root); animation-range: 0 100svh; }
+    .hero-conteudo { animation: hero-conteudo-sobe linear both; animation-timeline: scroll(root); animation-range: 0 80svh; }
+  }
+}
+@keyframes hero-fundo-desce { to { transform: translateY(22%) scale(1.06); } }
+@keyframes hero-conteudo-sobe { to { transform: translateY(-12%); opacity: 0; } }
+/* Topo mais alto que a tela do celular (/jornada com o vídeo, /sobre com os
+   números): lá o conteúdo não some ao rolar, senão o que fica embaixo do topo
+   apagaria antes de chegar à vista. */
+@media (max-width: 1023.98px) {
+  .hero-conteudo.hero-conteudo-alto { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-linha > span, .hero-entra { animation: none; }
+}
+
+
+/* Entrada ao rolar (revelar-ao-rolar.tsx). Só esconde depois que o script
+   ligou (html[data-revelar]) e só o que estava abaixo da primeira tela.
+   Usa animation, não transition: não mexe nas transições de hover dos cards,
+   e sem `forwards` o elemento volta aos próprios estilos quando termina.
+
+   Curta (29/10/2026): era 0,95 s subindo 36 px, e a foto em cortina levava
+   1,5 s para abrir e só acompanhava a rolagem até cobrir 42% da tela. Quem
+   rolava via buracos escuros de quase uma tela antes do card e da foto do
+   Thiago. Agora 300 ms, 12 px, e o script dispara antes de o bloco entrar. */
+html[data-revelar] [data-revelar]:not([data-revelado]) { opacity: 0; }
+html[data-revelar] [data-revelar][data-revelado] {
+  animation: revelar-sobe 0.3s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
+}
+@keyframes revelar-sobe {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Cortina: a foto se abre de baixo para cima e assenta de um zoom leve. */
+html[data-revelar] [data-revelar="cortina"][data-revelado] {
+  animation: revelar-cortina 0.45s cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s) backwards;
+}
+html[data-revelar] [data-revelar="cortina"][data-revelado] img {
+  animation: revelar-assenta 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
+}
+@keyframes revelar-cortina {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes revelar-assenta {
+  from { transform: scale(1.06); }
+  to { transform: scale(1); }
+}
+
+/* No celular as fotos não animam: entram direto, no espaço já reservado. Com a
+   rolagem rápida de dedo, a cortina deixava quase uma tela preta entre um
+   card e outro e parecia que o site tinha quebrado (29/10/2026). */
+@media (max-width: 767px) {
+  html[data-revelar] [data-revelar="cortina"]:not([data-revelado]) { opacity: 1; }
+  html[data-revelar] [data-revelar="cortina"][data-revelado],
+  html[data-revelar] [data-revelar="cortina"][data-revelado] img { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-revelar] [data-revelar]:not([data-revelado]) { opacity: 1; }
+  html[data-revelar] [data-revelar][data-revelado],
+  html[data-revelar] [data-revelar="cortina"][data-revelado] img { animation: none; }
+}
+
+
+/* Mapa de /contato (mapa-atendimento.tsx): quando ele entra na tela, as rotas
+   saem de Uberlândia uma a uma e o ponto de cada destino aparece no fim da
+   sua. Sem o script (ou com movimento reduzido) o mapa já vem desenhado. */
+html[data-revelar] [data-revelar="mapa"] .mapa-rota { stroke-dasharray: 1; stroke-dashoffset: 1; }
+html[data-revelar] [data-revelar="mapa"][data-revelado] .mapa-rota {
+  animation: mapa-rota 1.1s cubic-bezier(0.65, 0, 0.35, 1) calc(0.35s + var(--i) * 0.12s) forwards;
+}
+html[data-revelar] [data-revelar="mapa"] .mapa-destino { opacity: 0; }
+html[data-revelar] [data-revelar="mapa"][data-revelado] .mapa-destino {
+  animation: mapa-destino 0.4s ease-out calc(1.3s + var(--i) * 0.12s) forwards;
+}
+@keyframes mapa-rota { to { stroke-dashoffset: 0; } }
+@keyframes mapa-destino { to { opacity: 1; } }
+
+/* ── /jornada (23/10/2026) ──────────────────────────────────────────────── */
+
+/* Linha entre os números das etapas: se desenha da esquerda para a direita. */
+html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { opacity: 1; transform: scaleX(0); }
+html[data-revelar] [data-revelar="linha"][data-revelado] {
+  transform-origin: left center;
+  animation: jornada-linha 1.6s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+}
+@keyframes jornada-linha { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Linha do tempo: um fio vermelho cresce por cima do cinza conforme a rolagem
+   (só onde o navegador liga animação à rolagem; nos outros fica o cinza). A
+   posição acompanha a coluna do ano (4.5rem + 1.5rem; 7rem + 2.5rem). */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .linha-do-tempo::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 3rem;
+      left: 6rem;
+      width: 1px;
+      background: var(--primary);
+      transform-origin: top center;
+      animation: linha-do-tempo-cresce linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 70%;
+    }
+    @media (min-width: 640px) { .linha-do-tempo::after { left: 9.5rem; } }
+  }
+}
+@keyframes linha-do-tempo-cresce { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Carrossel dos carros icônicos no celular: sem a barra de rolagem. */
+.jornada-carrossel { scrollbar-width: none; }
+.jornada-carrossel::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-revelar] [data-revelar="linha"]:not([data-revelado]) { transform: none; }
+}

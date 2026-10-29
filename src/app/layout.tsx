@@ -1,31 +1,21 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Outfit, Cormorant_Garamond, Montserrat } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Geist_Mono, Cormorant_Garamond, Montserrat } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { ToastProvider } from '@/components/ui/toast'
 import { VisitorTrackingProvider } from '@/components/providers/visitor-tracking-provider'
 import { AnalyticsProvider, AnalyticsNoScript } from '@/components/analytics'
 import { buildOrganizationSchema, buildWebsiteSchema } from '@/lib/blog-schema'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
+import { IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
 
-const outfit = Outfit({
-  variable: '--font-outfit',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
-
-// Editorial display serif — Cormorant Garamond carries the "Ferrari Beverly
-// Hills" editorial tone in headlines. High contrast, atemporal, free.
+// Serifada dos títulos de destaque (o nome do carro na home; SERIFADA em
+// cabecalho-secao.tsx). O resto do site é Montserrat, desde 29/10/2026: a Geist
+// e a Outfit saíram (nunca chegavam a aparecer, ver globals.css).
 const cormorant = Cormorant_Garamond({
   variable: '--font-editorial',
   subsets: ['latin'],
@@ -39,6 +29,15 @@ const montserrat = Montserrat({
   weight: ['300', '400', '500', '600', '700'],
   display: 'swap',
 })
+
+// viewport-fit=cover: sem ele o env(safe-area-inset-*) vale 0 no iPhone e a
+// barra de abas ficava colada no indicador de início (29/10/2026). As laterais
+// do celular deitado são tratadas no globals.css.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://attraveiculos.com.br'),
@@ -79,20 +78,17 @@ export const metadata: Metadata = {
     ],
   },
   manifest: '/site.webmanifest',
+  // Sem título, descrição e url aqui: a página que não declara os seus herda
+  // os do próprio metadata. Com eles, /sobre, /contato e as demais saíam no
+  // WhatsApp com o título e o link da home.
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://attraveiculos.com.br',
     siteName: 'Attra Veículos',
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
-    description:
-      'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
+    images: [IMAGEM_COMPARTILHAMENTO],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
-    description:
-      'Curadoria e comercialização de supercarros, importados e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz, McLaren e Audi. Entrega em todo o Brasil.',
   },
   robots: {
     index: true,
@@ -119,7 +115,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebsiteSchema()) }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${cormorant.variable} ${montserrat.variable} antialiased`}>
+      <body className={`${geistMono.variable} ${cormorant.variable} ${montserrat.variable} antialiased`}>
         {/* GTM NoScript fallback for users without JavaScript */}
         <AnalyticsNoScript />
         <ThemeProvider>

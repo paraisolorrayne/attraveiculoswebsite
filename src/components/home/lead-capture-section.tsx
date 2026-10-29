@@ -24,12 +24,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
+// Da maior para a menor: quem procura um carro de R$ 2 milhões vê a faixa
+// dele primeiro. Nenhuma vem marcada (ver o placeholder do Select).
 const budgetOptions = [
-  { value: 'ate-300k',   label: 'Até R$ 300 mil' },
-  { value: '300-500k',   label: 'R$ 300 a 500 mil' },
-  { value: '500k-1m',    label: 'R$ 500 mil a 1 milhão' },
-  { value: '1m-2m',      label: 'R$ 1 a 2 milhões' },
   { value: 'acima-2m',   label: 'Acima de R$ 2 milhões' },
+  { value: '1m-2m',      label: 'R$ 1 a 2 milhões' },
+  { value: '500k-1m',    label: 'R$ 500 mil a 1 milhão' },
+  { value: '300-500k',   label: 'R$ 300 a 500 mil' },
+  { value: 'ate-300k',   label: 'Até R$ 300 mil' },
   { value: 'indefinida', label: 'Prefiro conversar' },
 ]
 
@@ -123,7 +125,7 @@ export function LeadCaptureSection() {
           </SectionHeading>
           <p className="text-foreground-secondary text-base md:text-lg leading-relaxed">
             Busca discreta em rede nacional de procedência. Sem pressão e sem
-            vitrine — só o carro certo, no momento certo.
+            vitrine. Só o carro certo, no momento certo.
           </p>
         </div>
 
@@ -164,7 +166,7 @@ export function LeadCaptureSection() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Nome
                 </label>
                 <Input
@@ -175,7 +177,7 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   WhatsApp
                 </label>
                 <Input
@@ -186,7 +188,7 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Veículo desejado
                 </label>
                 <Input
@@ -197,7 +199,7 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Faixa de valor
                 </label>
                 <Select
@@ -235,7 +237,7 @@ export function LeadCaptureSection() {
                   href={getWhatsAppUrl(whatsappMessage)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-foreground-secondary hover:text-foreground text-sm font-medium transition-colors"
+                  className="alvo-toque inline-flex items-center gap-2 text-foreground-secondary hover:text-foreground text-sm font-medium transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span className="border-b border-foreground-secondary/40 hover:border-foreground/60 pb-0.5 transition-colors">
@@ -243,7 +245,7 @@ export function LeadCaptureSection() {
                   </span>
                 </a>
               </div>
-              <p className="text-[11px] text-foreground-secondary uppercase tracking-wider">
+              <p className="text-[13px] text-foreground-secondary uppercase tracking-wider">
                 Confidencial · Rede nacional · Sem compromisso
               </p>
             </div>

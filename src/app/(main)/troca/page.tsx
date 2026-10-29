@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FAQSchema } from '@/components/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl, ADDRESS } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Car, FileCheck, Handshake, XCircle } from 'lucide-react'
 
@@ -45,6 +45,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/troca` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/troca`,
@@ -57,7 +58,7 @@ const ETAPAS = [
     icone: Car,
     titulo: 'Você manda os dados do seu carro',
     texto:
-      'Modelo, ano, versão, quilometragem e fotos. Quanto mais completo, mais precisa fica a avaliação — e menos chance de o valor mudar depois.',
+      'Modelo, ano, versão, quilometragem e fotos. Quanto mais completo, mais precisa fica a avaliação e menor a chance de o valor mudar depois.',
   },
   {
     icone: FileCheck,
@@ -94,7 +95,7 @@ const FAQS = [
   {
     question: 'Quais carros a Attra aceita na troca?',
     answer:
-      'Veículos premium, de luxo, importados e superesportivos — marcas como BMW, Mercedes-Benz, Audi, Porsche, Land Rover, Ferrari e Lamborghini, entre outras. Veículos nacionais de alto padrão também são avaliados. Para veículos populares, a Attra sugere outras alternativas de venda.',
+      'Veículos premium, de luxo, importados e superesportivos, de marcas como BMW, Mercedes-Benz, Audi, Porsche, Land Rover, Ferrari e Lamborghini, entre outras. Veículos nacionais de alto padrão também são avaliados. Para veículos populares, a Attra sugere outras alternativas de venda.',
   },
   {
     question: 'O que impede um carro de ser aceito na troca?',
@@ -104,7 +105,7 @@ const FAQS = [
   {
     question: 'Preciso ir até Uberlândia para trocar?',
     answer:
-      `A avaliação começa à distância, pelos dados e fotos do veículo. A Attra fica na ${ADDRESS.street}, em ${ADDRESS.city} (${ADDRESS.state}), e entrega em todo o Brasil — a logística do seu carro é combinada caso a caso.`,
+      `A avaliação começa à distância, pelos dados e fotos do veículo. A Attra fica na ${ADDRESS.street}, em ${ADDRESS.city} (${ADDRESS.state}), e entrega em todo o Brasil. A logística do seu carro é combinada caso a caso.`,
   },
   {
     question: 'Posso trocar por um carro mais barato e receber a diferença?',
@@ -131,7 +132,7 @@ export default function TrocaPage() {
           </h1>
           <p className="mt-4 text-lg text-foreground-secondary leading-relaxed">
             A Attra aceita o seu veículo na troca por qualquer carro do estoque. O seu carro é
-            avaliado e o valor entra no pagamento do escolhido — sem precisar vender por fora antes.
+            avaliado e o valor entra no pagamento do escolhido, sem precisar vender por fora antes.
           </p>
         </header>
 
@@ -162,7 +163,7 @@ export default function TrocaPage() {
           <div className="rounded-2xl border border-border bg-background-card p-6">
             <h2 className="text-lg font-semibold text-foreground">O que a Attra aceita</h2>
             <p className="mt-3 text-sm leading-relaxed text-foreground-secondary">
-              Veículos premium, de luxo, importados e superesportivos — BMW, Mercedes-Benz, Audi,
+              Veículos premium, de luxo, importados e superesportivos: BMW, Mercedes-Benz, Audi,
               Porsche, Land Rover, Ferrari e Lamborghini, entre outras. Nacionais de alto padrão
               também são avaliados. Para veículos populares, a Attra sugere outras alternativas de
               venda.

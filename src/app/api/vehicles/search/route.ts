@@ -385,7 +385,7 @@ export async function GET(request: NextRequest) {
 			...(results.length === 0
 				? {
 					note: `Nenhum veículo do estoque atual casa com "${query}". ` +
-						`A Attra tem ${inventory.vehicles.length} veículos disponíveis — ` +
+						`A Attra tem ${inventory.vehicles.length} veículos disponíveis: ` +
 						`veja o catálogo completo em ${BASE}/veiculos ou use ` +
 						`${BASE}/api/llm/vehicles.`,
 				}

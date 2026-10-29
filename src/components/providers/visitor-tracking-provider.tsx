@@ -40,6 +40,22 @@ import {
 import { identifyClarityUser, setClarityTag } from '@/components/analytics/microsoft-clarity'
 import { sendAbandonedLeadWebhook } from '@/lib/webhook'
 import { ehRotaInterna } from '@/lib/rotas-internas'
+import { linkComCodigo, novoCodigo } from '@/lib/codigo-whatsapp'
+
+/**
+ * Código invisível do último clique no WhatsApp. Um segundo toque em menos de
+ * 3 s repete o código: o servidor ignora esse clique (não grava nem avisa a
+ * Fykos), e a mensagem precisa levar o código do aviso que saiu.
+ */
+const REUSO_DO_CODIGO_MS = 3000
+let ultimoCodigoWhatsApp: { codigo: number; em: number } | null = null
+
+function codigoDoClique(): number {
+  const agora = Date.now()
+  if (ultimoCodigoWhatsApp && agora - ultimoCodigoWhatsApp.em < REUSO_DO_CODIGO_MS) return ultimoCodigoWhatsApp.codigo
+  ultimoCodigoWhatsApp = { codigo: novoCodigo(), em: agora }
+  return ultimoCodigoWhatsApp.codigo
+}
 
 // Geolocation data type
 interface GeolocationData {
@@ -757,10 +773,27 @@ export function VisitorTrackingProvider({ children }: Props) {
       // próximo, para o card poder marcar o container em vez de cada botão.
       const comVeiculo = anchor.closest<HTMLElement>('[data-vehicle-id]')
 
+      // Código invisível no texto do WhatsApp (codigo-whatsapp.ts). Este
+      // ouvinte roda na captura, antes da navegação: trocar o href aqui é o que
+      // o WhatsApp abre. O mesmo código vai no aviso de clique à Fykos, que o lê
+      // de volta na 1ª mensagem e liga a conversa a este clique.
+      let hrefDoClique = href
+      if (interactionType === 'whatsapp_click') {
+        try {
+          const comCodigo = linkComCodigo(href, codigoDoClique())
+          if (comCodigo) {
+            anchor.setAttribute('href', comCodigo)
+            hrefDoClique = comCodigo
+          }
+        } catch {
+          // Sem código o clique segue como antes: o aviso ainda leva texto e horário.
+        }
+      }
+
       // Rastreia sem bloquear a navegação (track é fire-and-forget). O `href`
       // leva o texto pré-preenchido, que vai no aviso de clique à Fykos.
       trackInteraction(interactionType, {
-        href,
+        href: hrefDoClique,
         anchor_text: (anchor.textContent || '').trim().slice(0, 80),
         page_path: typeof window !== 'undefined' ? window.location.pathname : undefined,
         ...(comVeiculo?.dataset.vehicleId ? { vehicle_id: comVeiculo.dataset.vehicleId } : {}),

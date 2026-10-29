@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Search, HeartHandshake, MapPin, Users } from 'lucide-react'
 import { Container } from '@/components/ui/container'
@@ -16,12 +15,12 @@ const pillars = [
   {
     icon: HeartHandshake,
     title: 'Relacionamento contínuo',
-    description: 'Um relacionamento de longo prazo conecta cada etapa — da escolha ao pós-entrega — para que você tenha sempre alguém ao lado nas grandes decisões.',
+    description: 'Um relacionamento de longo prazo conecta cada etapa, da escolha ao pós-entrega, para que você tenha sempre alguém ao lado nas grandes decisões.',
   },
   {
     icon: MapPin,
     title: 'Alcance nacional estruturado',
-    description: 'De Uberlândia para o Brasil: operação própria, logística especializada, seguro total e histórico de entregas em 27 estados — incluindo a entrega de um veículo em Manaus.',
+    description: 'De Uberlândia para o Brasil: operação própria, logística especializada, seguro total e histórico de entregas em 27 estados, incluindo a entrega de um veículo em Manaus.',
   },
   {
     icon: Users,
@@ -31,32 +30,13 @@ const pillars = [
 ]
 
 export function ExperienceSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const [isVisible, setIsVisible] = useState(true)
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true)
-      },
-      { threshold: 0.15 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
-
-    // Fallback: garante que o conteúdo aparece mesmo sem scroll (mobile)
-    const timeout = setTimeout(() => setIsVisible(true), 1500)
-
-    return () => {
-      observer.disconnect()
-      clearTimeout(timeout)
-    }
-  }, [])
 
   return (
-    <section ref={sectionRef} className="py-24 bg-background relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden">
       <Container size="2xl">
         {/* Section Header */}
-        <div className={`text-center mb-16 opacity-0 ${isVisible ? 'animate-fade-in-up' : ''}`}>
+        <div className={`text-center mb-16`}>
           <SectionKicker className="mb-4">Operação</SectionKicker>
           <SectionHeading as="h2" size="lg" className="mb-4">
             Um novo jeito de operar
@@ -64,19 +44,18 @@ export function ExperienceSection() {
           <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
             Com o tempo, a Attra evoluiu. O que começou como uma visão clara sobre curadoria cresceu para
             uma operação própria de atendimento, relacionamento contínuo com o cliente e alcance nacional
-            estruturado. Hoje, a empresa combina sensibilidade automotiva com uma operação robusta —
+            estruturado. Hoje, a empresa combina sensibilidade automotiva com uma operação robusta,
             ampliando atendimento em todo o país sem perder proximidade, confiança e atenção aos detalhes.
           </p>
         </div>
 
         {/* Pillars Grid */}
         <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-          {pillars.map((pillar, index) => (
+          {pillars.map((pillar) => (
             <div
               key={pillar.title}
               className={`group institutional-card overflow-hidden
-                transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5
-                opacity-0 ${isVisible ? `animate-fade-in-up stagger-${index + 1}` : ''}`}
+                transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5`}
             >
               <div className="p-5 sm:p-6">
                 <div className="flex gap-4">
@@ -100,7 +79,7 @@ export function ExperienceSection() {
         </div>
 
         {/* CTA */}
-        <div className={`mt-12 text-center opacity-0 ${isVisible ? 'animate-fade-in-up stagger-5' : ''}`}>
+        <div className={`mt-12 text-center`}>
           <Button asChild size="lg">
             <Link href="/jornada" className="flex items-center gap-2">
               Ver a Jornada Attra em Detalhes <ArrowRight className="w-5 h-5" />

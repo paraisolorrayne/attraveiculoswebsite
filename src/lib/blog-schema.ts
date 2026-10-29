@@ -1,6 +1,6 @@
 import type { CarReviewFields, DualBlogPost } from '@/types'
 import {
-  SITE_URL, ADDRESS, PHONE_NUMBER, PHONE_NUMBER_2, CELLPHONE_NUMBER,
+  SITE_URL, ADDRESS, PHONE_NUMBER, CELLPHONE_NUMBER,
   EMAIL, OPENING_HOURS, PERFIS_OFICIAIS, GEO, MAPA_URL,
 } from './constants'
 
@@ -37,20 +37,12 @@ function organization(baseUrl: string) {
       postalCode: ADDRESS.postalCode,
       addressCountry: ADDRESS.country === 'Brasil' ? 'BR' : ADDRESS.country,
     },
-    // Os três números que o rodapé publica: `telephone` fica com o comercial
-    // principal e os outros dois entram como pontos de contato, para nenhum se
-    // perder nem competir pelo mesmo campo.
+    // Os dois números que o site publica: `telephone` fica com o oficial e o
+    // WhatsApp entra como ponto de contato de vendas (29/10/2026).
     contactPoint: [
       {
         '@type': 'ContactPoint',
         contactType: 'sales',
-        telephone: PHONE_NUMBER_2,
-        areaServed: 'BR',
-        availableLanguage: 'Portuguese',
-      },
-      {
-        '@type': 'ContactPoint',
-        contactType: 'customer support',
         telephone: CELLPHONE_NUMBER,
         areaServed: 'BR',
         availableLanguage: 'Portuguese',
@@ -85,6 +77,11 @@ function organization(baseUrl: string) {
   }
 }
 
+/** Sem autor, ou assinado como a própria loja ("Attra Veículos", "Equipe Attra"). */
+function autorDaLoja(nome: string | undefined): boolean {
+  return !nome?.trim() || /\battra\b/i.test(nome)
+}
+
 export function buildArticleSchema(post: DualBlogPost) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/blog/${post.slug}`
@@ -100,11 +97,16 @@ export function buildArticleSchema(post: DualBlogPost) {
     inLanguage: 'pt-BR',
     datePublished: post.published_date,
     dateModified: post.updated_date || post.published_date,
-    author: {
-      '@type': 'Person',
-      name: post.author?.name || 'Attra Veículos',
-      ...(post.author?.bio ? { description: post.author.bio } : {}),
-    },
+    // Post assinado pela loja é da organização, não de uma pessoa chamada
+    // "Attra Veículos" (era Person nos 158 posts, out/2026). Autor com nome
+    // de gente continua Person.
+    author: autorDaLoja(post.author?.name)
+      ? { '@id': `${baseUrl}/${ORGANIZATION_ID}` }
+      : {
+          '@type': 'Person',
+          name: post.author?.name,
+          ...(post.author?.bio ? { description: post.author.bio } : {}),
+        },
     // Referência por @id, não o nó inteiro: inlinar a organização aqui fazia o
     // post sair com dois blocos AutoDealer (este e o do layout raiz).
     publisher: { '@id': `${baseUrl}/${ORGANIZATION_ID}` },

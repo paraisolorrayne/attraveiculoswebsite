@@ -14,6 +14,7 @@ import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 import { ModelLandingPage, resolverModelo } from '@/components/brand/model-landing-page'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
@@ -36,11 +37,12 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 
 	const { model } = result
 	return {
-		title: model.metaTitle,
+		title: pageTitle(model.metaTitle),
 		description: model.metaDescription,
 		keywords: model.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: model.metaTitle,
 			description: model.metaDescription,
 			url: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}`,

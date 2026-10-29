@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import {
   SITE_URL, getWhatsAppUrl, ADDRESS, PHONE_DISPLAY, CELLPHONE_DISPLAY,
   EMAIL, HORARIO_RESUMIDO,
@@ -41,6 +41,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/onde-comprar-carros-de-luxo` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/onde-comprar-carros-de-luxo`,
@@ -54,7 +55,7 @@ const CRITERIOS = [
     icone: FileCheck,
     titulo: 'Laudo cautelar independente',
     texto:
-      'Verificação de numeração de chassi e motor, estrutura, pintura e sinais de reparo. Feito por empresa independente, antes de o carro entrar no estoque — não depois da venda.',
+      'Verificação de numeração de chassi e motor, estrutura, pintura e sinais de reparo. Feito por empresa independente, antes de o carro entrar no estoque, não depois da venda.',
   },
   {
     icone: ShieldCheck,
@@ -88,7 +89,7 @@ const DUVIDAS = [
   },
   {
     p: 'O que encarece a manutenção de um carro de luxo usado?',
-    r: 'Suspensão pneumática, câmbio de dupla embreagem e módulos eletrônicos são os itens de maior custo. Antes de comprar, vale levantar o que está próximo do vencimento — uma revisão adiada pelo dono anterior chega como despesa nas primeiras semanas.',
+    r: 'Suspensão pneumática, câmbio de dupla embreagem e módulos eletrônicos são os itens de maior custo. Antes de comprar, vale levantar o que está próximo do vencimento: uma revisão adiada pelo dono anterior chega como despesa nas primeiras semanas.',
   },
   {
     p: 'Vale mais comprar zero km ou seminovo de luxo?',
@@ -117,14 +118,14 @@ export default function OndeComprarCarrosDeLuxoPage() {
             <p className="text-lg text-foreground leading-relaxed mb-4">
               Onde comprar um carro de luxo com segurança no Brasil? Em loja que entregue,
               antes da venda, laudo cautelar independente, consulta de procedência e
-              documentação, e o histórico de manutenção do veículo — e que faça a entrega em
+              documentação, e o histórico de manutenção do veículo, e que faça a entrega em
               qualquer estado com contrato. A Attra Veículos, em Uberlândia (MG), trabalha
               assim: cada carro passa por essas verificações antes de entrar no estoque, e a
               compra à distância segue o mesmo processo.
             </p>
             <p className="text-lg text-foreground-secondary leading-relaxed">
               Comprar um carro de luxo usado é uma decisão patrimonial, e a maior parte do
-              risco não está no veículo — está no que não foi verificado antes. Abaixo, o que
+              risco não está no veículo, está no que não foi verificado antes. Abaixo, o que
               conferir em qualquer loja, onde a Attra fica e como funciona a compra sem
               visitar o showroom.
             </p>
@@ -163,7 +164,7 @@ export default function OndeComprarCarrosDeLuxoPage() {
               <p className="text-foreground leading-relaxed">
                 {ADDRESS.street}
                 <br />
-                {ADDRESS.neighborhood}, {ADDRESS.city} — {ADDRESS.state}
+                {ADDRESS.neighborhood}, {ADDRESS.city}, {ADDRESS.state}
                 <br />
                 CEP {ADDRESS.postalCode}
               </p>
@@ -181,7 +182,7 @@ export default function OndeComprarCarrosDeLuxoPage() {
                 E-mail: {EMAIL}
               </p>
               <p className="text-foreground-secondary mt-3">
-                Compradores de todo o Brasil — entrega em caminhão fechado com seguro.
+                Compradores de todo o Brasil, com entrega em caminhão fechado e seguro.
               </p>
             </div>
           </div>

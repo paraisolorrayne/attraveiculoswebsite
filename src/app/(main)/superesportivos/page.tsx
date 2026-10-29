@@ -15,6 +15,7 @@ import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
+import { IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 /**
  * Hub da categoria — /superesportivos.
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
 	],
 	alternates: { canonical: `${SITE_URL}/superesportivos` },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: 'Superesportivos à Venda no Brasil | Attra Veículos',
 		description:
 			'Ferrari, Lamborghini, McLaren, Porsche e Aston Martin com procedência verificada. Veja o estoque disponível ou solicite sob encomenda.',
@@ -170,7 +172,7 @@ export default async function SuperesportivosPage() {
 						<p className="mt-5 text-lg text-foreground-secondary">
 							Ferrari, Lamborghini, McLaren, Porsche e Aston Martin com procedência
 							verificada. Veja o que está disponível agora ou diga qual modelo você
-							procura — a Attra localiza no Brasil e no exterior.
+							procura: a Attra localiza no Brasil e no exterior.
 						</p>
 						<div className="mt-8 flex flex-wrap gap-3">
 							<Link
@@ -240,7 +242,7 @@ export default async function SuperesportivosPage() {
 					<div className="space-y-12">
 						<BlocoDeMarcas
 							titulo="Superesportivos"
-							descricao="Marcas cuja linha inteira é construída em torno de desempenho — carros de dois lugares, motor central ou dianteiro longitudinal, produção limitada."
+							descricao="Marcas cuja linha inteira é construída em torno de desempenho: carros de dois lugares, motor central ou dianteiro longitudinal, produção limitada."
 							marcas={superesportivos}
 						/>
 						<BlocoDeMarcas
@@ -263,7 +265,7 @@ export default async function SuperesportivosPage() {
 							<div>
 								<h3 className="font-semibold text-foreground">Estoque e encomenda</h3>
 								<p className="mt-2">
-									Nem todo superesportivo está em estoque a qualquer momento — são
+									Nem todo superesportivo está em estoque a qualquer momento. São
 									carros de produção limitada e giro baixo. Quando o modelo que você
 									procura não está disponível, a Attra faz a busca: no mercado
 									nacional e, quando faz sentido, no exterior.
@@ -274,7 +276,7 @@ export default async function SuperesportivosPage() {
 								<p className="mt-2">
 									Em carros desta faixa, histórico vale mais do que quilometragem. A
 									Attra verifica origem, documentação e manutenção antes de colocar
-									qualquer veículo à venda — e o mesmo critério vale para os veículos
+									qualquer veículo à venda, e o mesmo critério vale para os veículos
 									localizados sob encomenda.
 								</p>
 							</div>
@@ -284,7 +286,7 @@ export default async function SuperesportivosPage() {
 									Um superesportivo seminovo com procedência verificada costuma ser a
 									decisão mais racional: a maior perda de valor já aconteceu, e o
 									carro continua entregando a mesma experiência. Consulte-nos sobre o
-									modelo específico — a resposta muda conforme o carro.
+									modelo específico: a resposta muda conforme o carro.
 								</p>
 							</div>
 						</div>

@@ -5,9 +5,11 @@ import { Globe, Wallet, Shield, Truck, ArrowRight, CheckCircle, Star, Crown, Hel
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
+import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
+import { VideoEmPe } from '@/components/ui/video-em-pe'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -21,6 +23,7 @@ export const metadata: Metadata = {
   description: 'Serviços premium para veículos nacionais, importados, seminovos premium e supercarros: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
   keywords: 'serviços automotivos premium, importação de carros de luxo, financiamento de veículos premium, consignado de carros, venda consignada veículos, Attra Veículos Uberlândia',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Serviços Automotivos Premium | Attra Veículos Uberlândia',
     description: 'Soluções completas para veículos premium: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
     type: 'website',
@@ -207,7 +210,7 @@ export default function ServicosPage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full mb-6">
               <Crown className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Loja de Veículos Premium em Uberlândia</span>
+              <span className="text-sm font-medium text-primary">Loja de Veículos Exclusivos em Uberlândia</span>
             </div>
 
             {/* SEO Optimized H1 - Hub Focus */}
@@ -224,15 +227,15 @@ export default function ServicosPage() {
             {/* Stats */}
             <div className="flex flex-wrap justify-center gap-8 lg:gap-12 mb-10">
               <div className="text-center">
-                <p className="text-3xl lg:text-4xl font-bold text-primary">500+</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary"><NumeroQueSobe valor={500} sufixo="+" /></p>
                 <p className="text-sm text-foreground-secondary">Veículos/Ano</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl lg:text-4xl font-bold text-primary">{anosDeMercado()}</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary"><NumeroQueSobe valor={anosDeMercado()} /></p>
                 <p className="text-sm text-foreground-secondary">Anos de Mercado</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl lg:text-4xl font-bold text-primary">27</p>
+                <p className="text-3xl lg:text-4xl font-bold text-primary"><NumeroQueSobe valor={27} /></p>
                 <p className="text-sm text-foreground-secondary">Estados Atendidos</p>
               </div>
             </div>
@@ -391,7 +394,8 @@ export default function ServicosPage() {
       {/* Transporte Especializado - Imagem do caminhão Attra */}
       <section className="py-16 lg:py-20 bg-background-soft">
         <Container>
-          <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden">
+          {/* Abre em cortina ao rolar, como a foto do fundador na home. */}
+          <div data-revelar="cortina" className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden">
             <Image
               src="/about/attra-caminhao-transporte.jpeg"
               alt="Caminhão da Attra Veículos preparado para embarque e desembarque seguro de veículos premium"
@@ -443,6 +447,49 @@ export default function ServicosPage() {
                 <p className="text-sm text-foreground-secondary leading-relaxed">{item.description}</p>
               </div>
             ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* ATENDIMENTO NO SHOWROOM: o vídeo em pé, em faixa escura nos dois temas. */}
+      <section className="py-16 lg:py-24 bg-[#0a0b0c] text-white overflow-hidden" id="atendimento">
+        <Container>
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-20">
+            <div className="max-w-xl">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-[#e04848]">Atendimento</p>
+              <h2
+                className="mt-3 text-3xl font-semibold tracking-tight lg:text-[44px] lg:leading-[1.1]"
+                style={{ fontFamily: 'var(--font-montserrat)' }}
+              >
+                Não é só sobre carros
+              </h2>
+              <p className="mt-5 text-xl leading-relaxed text-white/90">
+                Sabe aquele momento em que você entra na loja e sente que está no lugar certo?
+              </p>
+              <p className="mt-4 text-lg leading-relaxed text-white/70">
+                É isso que acontece na Attra. Aqui, cada carro tem uma história e talvez a próxima seja a sua. São máquinas que vão além: despertam desejo, traduzem estilo e viram parte da sua jornada.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg">
+                  <Link href={getWhatsAppUrl('Olá! Gostaria de agendar uma visita ao showroom.')} target="_blank">
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Agendar visita
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="border-white/25 bg-transparent text-white hover:bg-white/10">
+                  <Link href="/veiculos">Ver o estoque</Link>
+                </Button>
+              </div>
+            </div>
+            {/* Largura fixa no computador: a coluna do vídeo se mede pelo conteúdo, e
+                com w-full (tudo lá dentro é absoluto) a caixa ficava com 0 px. */}
+            <VideoEmPe
+              video="/videos/atendimento-showroom.mp4"
+              quadro="/images/atendimento-showroom-quadro.jpg"
+              alt="Atendimento no showroom da Attra Veículos, em Uberlândia"
+              assunto="do atendimento"
+              className="mx-auto w-full max-w-[360px] lg:w-[380px] lg:max-w-none"
+            />
           </div>
         </Container>
       </section>

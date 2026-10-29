@@ -17,10 +17,11 @@
  * por aqui e outra pela entrada real do WhatsApp. O aviso é uma NOTA lateral,
  * guardada à espera da conversa; quem cria o lead continua sendo o WhatsApp.
  *
- * A ligação entre a nota e a conversa continua sendo por TEMPO — é a única
- * chave que existe, porque quem entra pelo WhatsApp nunca se identificou no
- * site. A diferença é quem guarda a nota: antes era o site, esperando o card;
- * agora é o CRM, esperando a mensagem.
+ * A ligação entre a nota e a conversa era só por TEMPO e texto, porque quem
+ * entra pelo WhatsApp nunca se identificou no site. Desde 29/10/2026 o aviso
+ * leva também `codigo_whatsapp`, o mesmo código que vai invisível na mensagem
+ * (codigo-whatsapp.ts): a Fykos lê o código na 1ª mensagem e liga os dois sem
+ * adivinhar pelo horário. Tempo e texto ficam para quando o código não vier.
  */
 import type { RespostaAtribuicao, Toque } from './atribuicao-sessao'
 
@@ -65,10 +66,19 @@ export interface AvisoDeClique {
 	last_touch: ToqueDoAviso | null
 	/**
 	 * O texto exato que o site deixou pré-preenchido no WhatsApp (traz o carro e
-	 * a cidade). Sem código na mensagem, é o que deixa o CRM casar este aviso
-	 * com a 1ª mensagem da conversa: texto igual + mesmo minuto. Desde 05/10/2026.
+	 * a cidade), com o código invisível dentro desde 29/10/2026. Sem o código,
+	 * é o que deixa o CRM casar este aviso com a 1ª mensagem da conversa: texto
+	 * igual + mesmo minuto. Desde 05/10/2026.
 	 */
 	mensagem: string | null
+	/**
+	 * O código invisível que o site pôs na mensagem (codigo-whatsapp.ts), já
+	 * lido: inteiro de 0 a 4.294.967.295. A Fykos lê o mesmo código na 1ª
+	 * mensagem da conversa e liga os dois sem depender do horário. null quando o
+	 * link não levava código. Desde 29/10/2026; `mensagem` continua vindo com o
+	 * código dentro, então o casamento por texto igual segue funcionando.
+	 */
+	codigo_whatsapp: number | null
 }
 
 /**
@@ -102,6 +112,7 @@ export function montarAvisoDeClique(
 	pagina: string | null,
 	veiculoId: string | null,
 	mensagem: string | null = null,
+	codigoWhatsapp: number | null = null,
 ): AvisoDeClique | null {
 	if (!atribuicao) return null
 
@@ -116,6 +127,7 @@ export function montarAvisoDeClique(
 		first_touch: toqueDoAviso(atribuicao.first_touch),
 		last_touch: toqueDoAviso(atribuicao.last_touch),
 		mensagem,
+		codigo_whatsapp: codigoWhatsapp,
 	}
 }
 

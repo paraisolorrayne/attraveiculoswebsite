@@ -1,23 +1,19 @@
 import type { Metadata } from 'next'
 import {
-  ExperienceSection,
   LocationSection,
   FAQSection,
-  FeaturedEditorial,
   JourneyPreview,
   AboutSectionExpanded,
   HomeHero,
   LeadCaptureSection,
-  TrustStrip,
   EditorialSelection,
+  FaixaDeMarcas,
+  marcasDaFaixa,
 } from '@/components/home'
 import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
-import { getLatestAttraVideo } from '@/lib/youtube-feed'
-import { getBlogPostsPreview } from '@/lib/blog-api'
-import type { ArtigoEmDestaque } from '@/components/home/featured-editorial'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { Vehicle } from '@/types'
 
 // Pool mínimo de R$500k. Veículos abaixo disso nunca entram no hero,
@@ -44,9 +40,12 @@ function selectBiweeklyHeroSlice(pool: Vehicle[], count: number): Vehicle[] {
 }
 
 export const metadata: Metadata = {
-  title: 'Comprar Carros de Luxo e Supercarros no Brasil',
+  // Era o mesmo título de /comprar ("Comprar Carros de Luxo e Supercarros no
+  // Brasil"), e as duas disputavam a mesma busca. /comprar fica com a compra;
+  // a home, com a loja.
+  title: { absolute: 'Attra Veículos | Loja de Supercarros e Carros de Luxo no Brasil' },
   description:
-    'Supercarros, veículos premium e importados com curadoria e procedência verificada. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini, McLaren e Audi. Entrega em todo o Brasil — Attra Veículos.',
+    'Supercarros, veículos premium e importados com curadoria e procedência verificada. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini, McLaren e Audi. Entrega em todo o Brasil. Attra Veículos.',
   keywords: [
     'comprar carro de luxo brasil',
     'comprar supercarro brasil',
@@ -63,8 +62,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: canonicalUrl('/') },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     url: canonicalUrl('/'),
-    title: 'Attra Veículos — Supercarros e Veículos Premium no Brasil',
+    title: 'Attra Veículos | Loja de Supercarros e Carros de Luxo no Brasil',
     description:
       'Curadoria de supercarros e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz e mais. Entrega nacional.',
   },
@@ -110,58 +110,50 @@ export default async function Home() {
     console.error('Failed to fetch featured vehicles:', error)
   }
 
-  // Hero exibe o vídeo mais recente do canal da Attra (RSS, sem API key).
-  const latestVideo = await getLatestAttraVideo()
-
-  // Destaque editorial: os três posts mais recentes do blog.
-  let artigos: ArtigoEmDestaque[] = []
+  // Faixa de marcas: estoque inteiro (sem o piso de preço do hero), para a
+  // contagem por marca bater com a página de cada marca.
+  let estoque: Vehicle[] = []
+  let totalEstoque: number | undefined
   try {
-    artigos = (await getBlogPostsPreview({ limit: 3 })).map(p => ({
-      slug: p.slug,
-      title: p.title,
-      excerpt: p.excerpt,
-      category: p.car_review ? 'Review' : p.educativo?.category || 'Artigo',
-      readTime: p.reading_time,
-      image: p.featured_image,
-    }))
+    const resultado = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
+    estoque = resultado.vehicles
+    totalEstoque = resultado.total
   } catch (error) {
-    console.error('Failed to fetch blog posts for the home:', error)
+    console.error('Failed to fetch stock for the brand strip:', error)
   }
 
   return (
     <>
-      {/* 1. Hero — texto editorial + último vídeo do YouTube em autoplay */}
-      <HomeHero videoId={latestVideo?.videoId ?? null} />
+      {/* 1. Hero em tela cheia com o vídeo da Attra no fundo (fixo, escolhido
+             por ela). A abertura de marca fica no layout (abertura-attra.tsx). */}
+      <HomeHero />
 
-      {/* 2. Prova de confiança — antes da curadoria para reforçar a marca
-             antes de pedir os dados do visitante. */}
-      <TrustStrip />
+      {/* 2. Marcas com carro no estoque — atalho para a página de cada marca. */}
+      <FaixaDeMarcas marcas={marcasDaFaixa(estoque)} />
 
-      {/* 3. Seleção editorial curada — substitui a antiga grade "Destaques" */}
-      <EditorialSelection vehicles={editorialVehicles} />
+      {/* 3. Acervo: seleção editorial curada. */}
+      <EditorialSelection vehicles={editorialVehicles} totalEstoque={totalEstoque} />
 
-      {/* 4. Posicionamento — rosto da marca (Thiago) + pilares narrativos.
-             Também carrega os números de autoridade (16+ / 500 / 27 / 5.0). */}
+      {/* Ordem desde 29/10/2026: Hero, Acervo, Prova social, Formulário,
+          Jornada resumida, FAQ e Localização. O "Por que confiar", o "Mais do
+          que carros" e o "Um novo jeito de operar" viraram uma seção só (a 4),
+          e o blog saiu da home: os títulos cortavam na segunda linha, e o
+          menu (Insights) leva a ele. */}
+
+      {/* 4. Prova social: Thiago, os três princípios e os seis fatos. */}
       <AboutSectionExpanded />
 
-      {/* 5. Captação consultiva — form imediatamente antes da Operação,
-             quando o visitante já consumiu prova social + curadoria + marca. */}
+      {/* 5. Captação consultiva, logo depois da prova. */}
       <LeadCaptureSection />
 
-      {/* 6. Diferenciais da operação */}
-      <ExperienceSection />
-
-      {/* 7. Jornada Attra */}
+      {/* 6. Jornada Attra, resumida. */}
       <JourneyPreview />
 
-      {/* 8. Conteúdo editorial */}
-      <FeaturedEditorial artigos={artigos} />
-
-      {/* 9. FAQ */}
+      {/* 7. FAQ */}
       <FAQSection faqs={homepageFAQs} />
       <FAQSchema faqs={homepageFAQs} />
 
-      {/* 10. Localização e contato */}
+      {/* 8. Localização e contato */}
       <LocationSection />
 
       {/* A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o

@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react'
 import { matchOptionToManualTerm } from '@/lib/manual-attra-data'
 import { GlossaryTooltip } from './glossary-tooltip'
+import { SecaoDaFicha } from './secao-da-ficha'
 
 interface VehicleOptionsProps {
   options: string[]
@@ -9,20 +10,19 @@ interface VehicleOptionsProps {
 export function VehicleOptions({ options }: VehicleOptionsProps) {
   if (!options || options.length === 0) return null
 
+  // Lista em fios, como a ficha técnica, em colunas conforme a largura.
   return (
-    <div className="bg-background-card border border-border rounded-xl p-6">
-      <h2 className="text-xl font-semibold text-foreground mb-6">Opcionais</h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <SecaoDaFicha titulo="Opcionais">
+      <ul className="grid gap-x-12 @xl:grid-cols-2 @[78rem]:grid-cols-3">
         {options.map((option, index) => {
           const matchedTerm = matchOptionToManualTerm(option)
 
           return (
-            <div
+            <li
               key={index}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-background transition-colors"
+              className="flex items-center gap-3 border-b border-border/70 py-3.5 text-[17px]"
             >
-              <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+              <Check className="w-[18px] h-[18px] text-primary flex-shrink-0" />
               {matchedTerm ? (
                 <GlossaryTooltip term={matchedTerm}>
                   <span className="text-foreground">{option}</span>
@@ -30,11 +30,10 @@ export function VehicleOptions({ options }: VehicleOptionsProps) {
               ) : (
                 <span className="text-foreground">{option}</span>
               )}
-            </div>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ul>
+    </SecaoDaFicha>
   )
 }
-

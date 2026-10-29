@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { HORARIO_UMA_LINHA } from '@/lib/constants'
+import { HORARIO_UMA_LINHA, PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, getWhatsAppUrl } from '@/lib/constants'
 import Image from 'next/image'
-import { MapPin, Phone, Clock, ArrowRight } from 'lucide-react'
+import { MapPin, Phone, Clock, ArrowRight, MessageCircle } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,12 +9,15 @@ import { cn } from '@/lib/utils'
 const locations = [
   {
     id: '1',
-    name: 'Attra Veículos – Showroom',
+    name: 'Attra Veículos | Showroom',
     address: 'Av. Rondon Pacheco, 1670',
     city: 'Uberlândia',
     state: 'MG',
     cep: '38408-343',
-    phone: '(34) 3256-3200',
+    // O número oficial e o WhatsApp, os mesmos do rodapé. Aqui ficava um
+    // (34) 3256-3200 que o resto do site não publicava (29/10/2026).
+    phone: PHONE_DISPLAY,
+    tel: PHONE_NUMBER,
     hours: HORARIO_UMA_LINHA,
   },
 ]
@@ -22,7 +25,8 @@ const locations = [
 export function LocationSection() {
   return (
     <section id="localizacao" className="py-16 lg:py-24 bg-background-soft">
-      <Container size="2xl">
+      {/* Largura cheia até o lg, como o FAQ (29/10/2026). */}
+      <Container size="2xl" className="w-full lg:w-4/5">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
             Localização
@@ -42,7 +46,7 @@ export function LocationSection() {
             {locations.map((location) => (
               <div
                 key={location.id}
-                className="bg-background border border-border rounded-xl p-8 hover:border-primary transition-colors"
+                className="bg-background border border-border rounded-xl p-5 sm:p-8 hover:border-primary transition-colors"
               >
                 <h3 className="text-2xl lg:text-3xl font-semibold text-foreground mb-6">
                   {location.name}
@@ -62,10 +66,22 @@ export function LocationSection() {
                   <div className="flex items-center gap-3">
                     <Phone className="w-6 h-6 text-primary flex-shrink-0" />
                     <a
-                      href={`tel:${location.phone.replace(/\D/g, '')}`}
-                      className="text-lg lg:text-xl text-foreground hover:text-primary transition-colors font-medium"
+                      href={`tel:${location.tel}`}
+                      className="alvo-toque text-lg lg:text-xl text-foreground hover:text-primary transition-colors font-medium"
                     >
                       {location.phone}
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="w-6 h-6 text-primary flex-shrink-0" />
+                    <a
+                      href={getWhatsAppUrl('Olá! Gostaria de mais informações sobre os veículos disponíveis.')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="alvo-toque text-lg lg:text-xl text-foreground hover:text-primary transition-colors font-medium"
+                    >
+                      WhatsApp {CELLPHONE_DISPLAY}
                     </a>
                   </div>
 
@@ -80,7 +96,7 @@ export function LocationSection() {
                     href="https://maps.app.goo.gl/q8RmVwZpLo7n7W8B8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-lg text-primary hover:text-primary-hover font-semibold transition-colors"
+                    className="alvo-toque inline-flex items-center text-lg text-primary hover:text-primary-hover font-semibold transition-colors"
                   >
                     Ver no mapa <ArrowRight className="w-5 h-5 ml-1" />
                   </a>
@@ -102,9 +118,10 @@ export function LocationSection() {
         </div>
 
         <div className="text-center">
-          <Button variant="outline" asChild>
-            <Link href="/contato" className="flex items-center gap-2">
-              Todas as formas de contato <ArrowRight className="w-4 h-4" />
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/contato" className="flex items-center gap-2 text-base">
+              {/* "Todas as formas de contato" quebrava em duas linhas no celular. */}
+              Ver contatos <ArrowRight className="w-4 h-4" />
             </Link>
           </Button>
         </div>

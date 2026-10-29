@@ -1,17 +1,22 @@
 /**
- * Daily Blog AI Job
+ * Blog AI Job
  *
- * Runs once a day (triggered by Supabase pg_cron → /api/cron/blog-ai).
+ * Desde 28/10/2026 roda 3 vezes por semana (seg, qua e sex; ver
+ * deploy/cron/cron.d/attra-blog-ai) e escreve a partir do Instagram:
  *
- * Strategy:
- *   1. Is there an IG post from @attra.veiculos in the last 24h?
- *      → Yes: expand it into a blog post.
- *        - If post has images, use them.
- *        - If post is a video, extract car name from caption and pull photos
- *          from AutoConf inventory.
- *   2. No IG post today:
- *      → Alternate between 'review' (car > R$300k) and 'comparison' based on
- *        what was generated yesterday.
+ *   1. Pega o post mais recente de @attra.veiculos (até 21 dias) que ainda
+ *      não virou artigo e cuja legenda rende artigo (escolher-post-instagram).
+ *   2. Procura na legenda o carro do estoque; achou, o texto usa a ficha do
+ *      molde (números) e o post sai como review, com o preço ao vivo no
+ *      quadro de disponibilidade. Carro que já tem review sai como história.
+ *   3. Sem post novo, não publica: o blog espera o próximo post em vez de
+ *      inventar pauta.
+ *
+ * Enquanto a Meta não tem token (META_* fora do .env.production), o post sai
+ * de um carro do estoque que ainda não tem review, na mesma voz curta e com os
+ * números da ficha (generateReviewDoEstoque). O review longo e o comparativo
+ * diários (80 e 62 posts até 28/10) acabaram; o comparativo fica só à mão
+ * (?strategy=comparison), e ?strategy=review dispara o review do estoque.
  *
  * Idempotency: if a row already exists in `blog_ai_generations` for today,
  * the job returns early without generating.
@@ -23,10 +28,14 @@ import { snapshotExternalImages } from '@/lib/supabase/storage'
 // DB migrado supabase-js → Kysely; storage segue no Supabase (Fase 6).
 import type { CarReviewFields, CarReviewGalleryImage } from '@/types'
 import {
-  fetchLatestInstagramPost,
+  fetchRecentInstagramPosts,
   extractImageUrls,
   guessCarNameFromCaption,
+  instagramConfigurado,
 } from '@/lib/blog-ai/instagram-fetcher'
+import { escolherPostDoInstagram, textoDaLegenda } from '@/lib/blog-ai/escolher-post-instagram'
+import { getVehicleBySlug } from '@/lib/autoconf-api'
+import type { Vehicle } from '@/types'
 import {
   pickVehicleForReview,
   pickVehiclesForComparison,
@@ -36,7 +45,7 @@ import {
   vehicleKey,
 } from '@/lib/blog-ai/vehicle-picker'
 import {
-  generateReview,
+  generateReviewDoEstoque,
   generateComparison,
   generateFromInstagram,
   type BlogAiStrategy,
@@ -57,8 +66,8 @@ export interface BlogAiRunResult {
  * Options to override default orchestration behavior. Used for manual testing
  * (e.g. forcing the comparison strategy or bypassing the once-per-day guard).
  *
- * `strategy` only supports fallback strategies (review/comparison) — 'instagram'
- * requires a real IG post in the last 24h and can't be forced without one.
+ * `strategy` dispara o review do estoque ou o comparativo à mão; sem ela,
+ * Instagram (ou o review do estoque, sem token da Meta).
  */
 export interface ForceOptions {
   strategy?: 'review' | 'comparison'
@@ -86,19 +95,6 @@ async function alreadyRanToday(): Promise<boolean> {
     console.error('[DailyBlogAI] idempotency check failed:', error instanceof Error ? error.message : error)
     return false // fail-open: try to generate
   }
-}
-
-async function lastStrategy(): Promise<BlogAiStrategy | null> {
-  const data = await db.selectFrom('blog_ai_generations')
-    .select('strategy')
-    .where('success', '=', true)
-    .where('strategy', 'in', ['review', 'comparison'])
-    .orderBy('run_at', 'desc')
-    .limit(1)
-    .execute()
-
-  const s = data[0]?.strategy as BlogAiStrategy | undefined
-  return s ?? null
 }
 
 async function logRun(params: {
@@ -234,6 +230,119 @@ async function persistPost(generated: GeneratedBlog): Promise<{
 // Public entrypoint
 // ---------------------------------------------------------------------------
 
+/** Ids dos posts do Instagram que já viraram artigo. */
+async function postsDoInstagramJaUsados(): Promise<Set<string>> {
+  const linhas = await db.selectFrom('blog_ai_generations')
+    .select('source')
+    .where('strategy', '=', 'instagram')
+    .where('success', '=', true)
+    .execute()
+  const ids = linhas.map((l) => (l.source as { ig_post_id?: string } | null)?.ig_post_id)
+  return new Set(ids.filter((id): id is string => Boolean(id)))
+}
+
+/** O carro do estoque citado na legenda, com a ficha do molde (só a busca da ficha a traz). */
+async function carroDaLegenda(legenda: string): Promise<Vehicle | null> {
+  const nome = guessCarNameFromCaption(legenda)
+  if (!nome) return null
+  const achado = await findVehicleByName(nome)
+  if (!achado) return null
+  return (await getVehicleBySlug(achado.slug)) ?? achado
+}
+
+async function runInstagram(): Promise<BlogAiRunResult> {
+  try {
+    const posts = await fetchRecentInstagramPosts(25)
+    // A conta tem centenas de posts: lista vazia é a Graph API recusando
+    // (token vencido, permissão), não falta de pauta.
+    if (posts.length === 0) throw new Error('Graph API não devolveu nenhum post (token vencido ou sem permissão?)')
+
+    const ig = escolherPostDoInstagram(posts, await postsDoInstagramJaUsados())
+    if (!ig) {
+      console.log('[DailyBlogAI] nenhum post novo do Instagram que renda artigo — sem post hoje')
+      return { success: true, strategy: 'skipped', debug: { motivo: 'sem post novo do Instagram que renda artigo' } }
+    }
+    console.log('[DailyBlogAI] IG post escolhido:', ig.permalink)
+
+    const vehicle = await carroDaLegenda(ig.caption)
+    const carroJaResenhado = vehicle ? jaResenhado(vehicle, await exemplaresJaResenhados()) : false
+    // Fotos do post primeiro (são as que o leitor viu); as do anúncio completam.
+    const images = [...extractImageUrls(ig), ...(vehicle?.photos ?? [])].slice(0, 10)
+
+    const generated = await generateFromInstagram({
+      caption: textoDaLegenda(ig.caption),
+      permalink: ig.permalink,
+      images,
+      vehicle,
+      carroJaResenhado,
+    })
+    const saved = await persistPost(generated)
+    await logRun({
+      strategy: 'instagram',
+      blogPostId: saved.id,
+      source: { ig_post_id: ig.id, permalink: ig.permalink, vehicle_id: vehicle?.id, como: generated.post.post_type },
+      success: true,
+    })
+    return { success: true, strategy: 'instagram', blogPostId: saved.id, blogPostSlug: saved.slug }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[DailyBlogAI] Instagram strategy failed:', msg)
+    await logRun({ strategy: 'instagram', source: {}, success: false, errorMessage: msg })
+    return { success: false, strategy: 'instagram', error: msg }
+  }
+}
+
+/** Review de um carro do estoque que ainda não tem review (ver generateReviewDoEstoque). */
+async function runReviewDoEstoque(): Promise<BlogAiRunResult> {
+  try {
+    const escolhido = await pickVehicleForReview()
+    if (!escolhido) {
+      console.log('[DailyBlogAI] todo carro elegível já tem review — sem post hoje')
+      return { success: true, strategy: 'skipped', debug: { motivo: 'todo carro elegível já tem review' } }
+    }
+    // Só a busca da ficha traz o molde (interior, torque, 0 a 100).
+    const vehicle = (await getVehicleBySlug(escolhido.slug)) ?? escolhido
+    const generated = await generateReviewDoEstoque(vehicle)
+    const saved = await persistPost(generated)
+    await logRun({
+      strategy: 'review',
+      blogPostId: saved.id,
+      source: { vehicle_id: vehicle.id, vehicle_slug: vehicle.slug },
+      success: true,
+    })
+    return { success: true, strategy: 'review', blogPostId: saved.id, blogPostSlug: saved.slug }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[DailyBlogAI] review do estoque falhou:', msg)
+    await logRun({ strategy: 'review', source: {}, success: false, errorMessage: msg })
+    return { success: false, strategy: 'review', error: msg }
+  }
+}
+
+async function runComparison(): Promise<BlogAiRunResult> {
+  try {
+    const pair = await pickVehiclesForComparison()
+    if (!pair) throw new Error('Nothing new to write: every comparison pair was published')
+    const [a, b] = pair
+    const generated = await generateComparison(a, b)
+    const saved = await persistPost(generated)
+    await logRun({
+      strategy: 'comparison',
+      blogPostId: saved.id,
+      // As chaves marca|modelo deixam o par reconhecível mesmo se a AutoConf
+      // trocar o id de um dos carros (ver paresJaFeitos).
+      source: { vehicle_a_id: a.id, vehicle_b_id: b.id, vehicle_a_key: vehicleKey(a), vehicle_b_key: vehicleKey(b) },
+      success: true,
+    })
+    return { success: true, strategy: 'comparison', blogPostId: saved.id, blogPostSlug: saved.slug }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[DailyBlogAI] comparison failed:', msg)
+    await logRun({ strategy: 'comparison', source: {}, success: false, errorMessage: msg })
+    return { success: false, strategy: 'comparison', error: msg }
+  }
+}
+
 export async function runDailyBlogAi(force: ForceOptions = {}): Promise<BlogAiRunResult> {
   console.log('[DailyBlogAI] starting run for', todayInSaoPaulo(), force)
 
@@ -242,141 +351,10 @@ export async function runDailyBlogAi(force: ForceOptions = {}): Promise<BlogAiRu
     return { success: true, strategy: 'skipped' }
   }
 
-  // ---- 1. Try Instagram first (unless overridden) -------------------------
-  if (!force.strategy) {
-  try {
-    const igPost = await fetchLatestInstagramPost(24)
+  if (force.strategy === 'comparison') return runComparison()
+  if (force.strategy === 'review') return runReviewDoEstoque()
 
-    if (igPost) {
-      console.log('[DailyBlogAI] IG post found:', igPost.permalink)
-
-      let images = extractImageUrls(igPost)
-      let vehicle = null
-
-      // Video posts usually have no usable images → try to enrich from stock.
-      const looksLikeVideo = igPost.media_type === 'VIDEO' || images.length === 0
-      if (looksLikeVideo) {
-        const carName = guessCarNameFromCaption(igPost.caption)
-        if (carName) {
-          vehicle = await findVehicleByName(carName)
-          if (vehicle && (vehicle.photos?.length ?? 0) > 0) {
-            images = vehicle.photos ?? []
-          }
-        }
-      }
-
-      // Vídeo de carro que já tem review viraria um segundo review do mesmo
-      // exemplar (ver chavesDoExemplar). Cai para review/comparativo.
-      if (vehicle && jaResenhado(vehicle, await exemplaresJaResenhados())) {
-        throw new Error(`IG post about ${vehicle.brand} ${vehicle.model} (${vehicle.id}), which already has a review`)
-      }
-
-      const generated = await generateFromInstagram({
-        caption: igPost.caption,
-        permalink: igPost.permalink,
-        images,
-        vehicle,
-      })
-      const saved = await persistPost(generated)
-      await logRun({
-        strategy: 'instagram',
-        blogPostId: saved.id,
-        source: { ig_post_id: igPost.id, permalink: igPost.permalink, vehicle_id: vehicle?.id },
-        success: true,
-      })
-
-      return {
-        success: true,
-        strategy: 'instagram',
-        blogPostId: saved.id,
-        blogPostSlug: saved.slug,
-      }
-    }
-
-    console.log('[DailyBlogAI] no IG post in last 24h, falling back to review/comparison')
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[DailyBlogAI] IG strategy failed, falling back:', msg)
-    // don't return — we still try review/comparison below
-  }
-  } // end of if (!force.strategy)
-
-  // ---- 2. Fallback: alternate review vs comparison ------------------------
-  let nextStrategy: BlogAiStrategy
-  if (force.strategy) {
-    nextStrategy = force.strategy
-    console.log('[DailyBlogAI] strategy forced to', nextStrategy)
-  } else {
-    const last = await lastStrategy()
-    nextStrategy = last === 'review' ? 'comparison' : 'review'
-  }
-
-  try {
-    // Sem carro inédito para review, tenta o comparativo no mesmo dia (e
-    // vice-versa). Antes o job falhava e, como `lastStrategy` só conta sucesso,
-    // tentaria a mesma estratégia todo dia.
-    const ordem: Array<'review' | 'comparison'> = force.strategy
-      ? [force.strategy]
-      : nextStrategy === 'review' ? ['review', 'comparison'] : ['comparison', 'review']
-
-    for (const estrategia of ordem) {
-      nextStrategy = estrategia
-      if (estrategia === 'review') {
-        const vehicle = await pickVehicleForReview()
-        if (!vehicle) {
-          console.log('[DailyBlogAI] no car without a review yet — skipping review')
-          continue
-        }
-        const generated = await generateReview(vehicle)
-        const saved = await persistPost(generated)
-        await logRun({
-          strategy: 'review',
-          blogPostId: saved.id,
-          source: { vehicle_id: vehicle.id, vehicle_slug: vehicle.slug },
-          success: true,
-        })
-        return {
-          success: true,
-          strategy: 'review',
-          blogPostId: saved.id,
-          blogPostSlug: saved.slug,
-        }
-      }
-
-      const pair = await pickVehiclesForComparison()
-      if (!pair) {
-        console.log('[DailyBlogAI] no comparison pair left that was never published — skipping comparison')
-        continue
-      }
-      const [a, b] = pair
-      const generated = await generateComparison(a, b)
-      const saved = await persistPost(generated)
-      await logRun({
-        strategy: 'comparison',
-        blogPostId: saved.id,
-        // As chaves marca|modelo deixam o par reconhecível mesmo se a AutoConf
-        // trocar o id de um dos carros (ver paresJaFeitos).
-        source: { vehicle_a_id: a.id, vehicle_b_id: b.id, vehicle_a_key: vehicleKey(a), vehicle_b_key: vehicleKey(b) },
-        success: true,
-      })
-      return {
-        success: true,
-        strategy: 'comparison',
-        blogPostId: saved.id,
-        blogPostSlug: saved.slug,
-      }
-    }
-
-    throw new Error('Nothing new to write: every eligible car has a review and every comparison pair was published')
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[DailyBlogAI] fallback strategy failed:', msg)
-    await logRun({
-      strategy: nextStrategy,
-      source: {},
-      success: false,
-      errorMessage: msg,
-    })
-    return { success: false, strategy: nextStrategy, error: msg }
-  }
+  if (instagramConfigurado()) return runInstagram()
+  console.log('[DailyBlogAI] Instagram sem token da Meta — post do estoque')
+  return runReviewDoEstoque()
 }

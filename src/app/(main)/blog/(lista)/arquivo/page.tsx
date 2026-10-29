@@ -7,6 +7,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { BlogCardStatic } from '@/components/blog'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import { cn } from '@/lib/utils'
+import { pageTitle } from '@/lib/seo/page-metadata'
 
 // Rota é dinâmica (searchParams); o cache fica na camada de dados
 // (getBlogPostsPreview usa unstable_cache com revalidate de 30 min)
@@ -42,7 +43,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Archive
   // enviado (streaming) e vira soft-404. A busca é cacheada (unstable_cache).
   if (pagina > await totalPagesFor(tipo)) notFound()
   return {
-    title: 'Arquivo do Blog Attra | Todos os artigos',
+    title: pageTitle('Arquivo do Blog Attra | Todos os artigos'),
     description:
       'Acervo completo de artigos, reviews e análises da Attra Veículos. Explore todo o conteúdo editorial sobre superesportivos e carros premium.',
     alternates: { canonical: archiveHref(tipo, pagina) },

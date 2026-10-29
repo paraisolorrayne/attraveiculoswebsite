@@ -191,6 +191,38 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
     }
   })
 
+  it('interaction whatsapp_click: o aviso leva o código invisível que o site pôs na mensagem', async () => {
+    const s = await newSession()
+    const { linkComCodigo, lerCodigo } = await import('@/lib/codigo-whatsapp')
+    const href = linkComCodigo('https://wa.me/5534999444747?text=Ol%C3%A1!%20Tenho%20interesse%20no%20911', 1630495827)!
+    const corpos: Array<Record<string, unknown>> = []
+    process.env.FYKOS_AVISO_CLIQUE_URL = 'https://crm.exemplo/avisos'
+    vi.resetModules()
+    vi.stubGlobal('fetch', (_u: string, init: RequestInit) => {
+      corpos.push(JSON.parse(String(init.body)))
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    })
+    try {
+      const { POST } = await import('@/app/api/tracking/interaction/route')
+      const r = await POST(req('/api/tracking/interaction', {
+        fingerprint_db_id: s.fingerprint_db_id, session_db_id: s.session_db_id, type: 'whatsapp_click', page_path: '/',
+        metadata: { href },
+      }))
+      expect(r.status).toBe(200)
+      expect(corpos).toHaveLength(1)
+      expect(corpos[0]).toMatchObject({ tipo: 'aviso_clique_site', codigo_whatsapp: 1630495827 })
+      // A mensagem segue com o código dentro, igual à que chega no WhatsApp.
+      expect(lerCodigo(corpos[0].mensagem as string)).toBe(1630495827)
+      // E o clique guarda o código, para o card da Fykos se ligar a ele.
+      const clique = await db.selectFrom('whatsapp_clicks').select('codigo_whatsapp')
+        .where('session_db_id', '=', s.session_db_id).executeTakeFirstOrThrow()
+      expect(clique.codigo_whatsapp).toBe('1630495827')
+    } finally {
+      delete process.env.FYKOS_AVISO_CLIQUE_URL
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('page-time: atualiza tempo/scroll e heartbeat (ended_at no exit)', async () => {
     const { fingerprint_db_id, session_db_id } = await newSession()
     await pageviewPOST(req('/api/tracking/pageview', {

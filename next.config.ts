@@ -317,6 +317,12 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
+        // Vídeos do hero: o nome leva a versão (hero-computador-v1.mp4), então
+        // ficam um ano no cache do navegador; vídeo novo entra com nome novo.
+        source: '/videos/:arquivo*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
         // Extra strict headers for admin routes
         source: '/admin/:path*',
         headers: [

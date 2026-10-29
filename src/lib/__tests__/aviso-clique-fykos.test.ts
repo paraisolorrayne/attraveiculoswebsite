@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mensagemDoLinkWhatsApp, montarAvisoDeClique } from '@/lib/aviso-clique-fykos'
+import { lerCodigo, linkComCodigo } from '@/lib/codigo-whatsapp'
 import type { RespostaAtribuicao } from '@/lib/atribuicao-sessao'
 
 const COM_ORIGEM: RespostaAtribuicao = {
@@ -57,6 +58,16 @@ describe('montarAvisoDeClique', () => {
 		const a = montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null, texto)
 		expect(a?.mensagem).toBe(texto)
 		expect(montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null)?.mensagem).toBeNull()
+	})
+
+	it('leva o código invisível da mensagem, lido do próprio texto do link', () => {
+		const href = linkComCodigo('https://wa.me/5534999444747?text=Ol%C3%A1!%20Tenho%20interesse%20no%20911', 1630495827)!
+		const mensagem = mensagemDoLinkWhatsApp(href)
+		const a = montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null, mensagem, lerCodigo(mensagem))
+		expect(a?.codigo_whatsapp).toBe(1630495827)
+		// O texto segue com o código dentro: o casamento por texto igual da Fykos continua valendo.
+		expect(lerCodigo(a?.mensagem)).toBe(1630495827)
+		expect(montarAvisoDeClique('c1', new Date(), COM_ORIGEM, '/', null, 'Olá! Oi')?.codigo_whatsapp).toBeNull()
 	})
 
 	it('avisa também quando não há origem, com os toques nulos', () => {

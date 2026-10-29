@@ -3,8 +3,8 @@
 import { MessageCircle, Phone, Mail, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Vehicle } from '@/types'
-import { formatPrice } from '@/lib/utils'
 import { getWhatsAppUrl, PHONE_NUMBER } from '@/lib/constants'
+import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
 
 interface VehicleContactProps {
   vehicle: Vehicle
@@ -14,10 +14,7 @@ interface VehicleContactProps {
 export function VehicleContact({ vehicle, compact = false }: VehicleContactProps) {
   const isSold = vehicle.status === 'sold'
 
-  const whatsappMessage = isSold
-    ? `Olá! Vi que o ${vehicle.brand} ${vehicle.model} ${vehicle.year_model} já foi vendido. Gostaria de saber se há algum similar disponível.`
-    : `Olá! Tenho interesse no ${vehicle.brand} ${vehicle.model} ${vehicle.year_model}. Valor: ${formatPrice(vehicle.price)}. Gostaria de mais informações.`
-  const whatsappUrl = getWhatsAppUrl(whatsappMessage)
+  const whatsappUrl = getWhatsAppUrl(mensagemWhatsAppDoVeiculo(vehicle))
 
   // Compact mode for sidebar
   if (compact) {

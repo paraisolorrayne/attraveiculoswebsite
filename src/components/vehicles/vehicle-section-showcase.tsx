@@ -13,6 +13,9 @@
  *
  * Quando uma section.copy é null (cache sem copy gerada ainda), mostra
  * descrição estática de fallback baseada nos dados do veículo.
+ *
+ * Desde 28/10/2026, anúncio com a ficha do molde da AutoConf usa o texto
+ * montado dela (`secoesPelaFicha`), como o "Sobre este veículo".
  */
 
 import Image from 'next/image'
@@ -21,6 +24,9 @@ import { SectionKicker } from '@/components/ui/brand'
 import { Vehicle } from '@/types'
 import { formatMileage, cn } from '@/lib/utils'
 import type { VehicleSections } from '@/lib/vehicle-sections'
+import { motorizacao } from '@/lib/taxonomia-veiculo'
+import { semTravessao } from '@/lib/sem-travessao'
+import { secoesPelaFicha } from '@/lib/vehicle-description-generator'
 
 interface VehicleSectionShowcaseProps {
   vehicle: Vehicle
@@ -63,19 +69,25 @@ function buildFallbackCopy(vehicle: Vehicle, kind: 'overview' | 'exterior' | 'in
   // interior
   const parts: string[] = []
   if (vehicle.transmission) parts.push(`Câmbio ${vehicle.transmission.toLowerCase()}.`)
-  if (vehicle.fuel_type) parts.push(`Motorização ${vehicle.fuel_type.toLowerCase()}.`)
+  if (vehicle.fuel_type) parts.push(`Motorização ${motorizacao(vehicle.fuel_type)}.`)
   parts.push(`Acabamento original ${vehicle.brand}.`)
   return parts.join(' ')
 }
 
 export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShowcaseProps) {
+  // Com a ficha do molde, o texto vem dela (secoesPelaFicha) e o do Gemini,
+  // escrito pelo cadastro, fica de fora: os dois brigavam na cor e na potência.
+  const daFicha = vehicle.ficha ? secoesPelaFicha(vehicle, vehicle.ficha) : null
+  const texto = (kind: 'overview' | 'exterior' | 'interior') =>
+    semTravessao(daFicha ? daFicha[kind] : sections[kind].copy) ?? buildFallbackCopy(vehicle, kind)
+
   const items: Array<{ key: 'overview' | 'exterior' | 'interior' } & SectionConfig> = [
     {
       key: 'overview',
       kicker: 'Overview',
       title: `${vehicle.brand} ${vehicle.model}`,
       photo: sections.overview.photo_url,
-      copy: sections.overview.copy ?? buildFallbackCopy(vehicle, 'overview'),
+      copy: texto('overview'),
       photoSide: 'right',
       aspectClass: 'aspect-[16/10]',
     },
@@ -86,7 +98,7 @@ export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShow
         ? `${vehicle.body_type.charAt(0).toUpperCase()}${vehicle.body_type.slice(1).toLowerCase()}`
         : 'Design',
       photo: sections.exterior.photo_url,
-      copy: sections.exterior.copy ?? buildFallbackCopy(vehicle, 'exterior'),
+      copy: texto('exterior'),
       photoSide: 'left',
       aspectClass: 'aspect-[16/10]',
     },
@@ -95,7 +107,7 @@ export function VehicleSectionShowcase({ vehicle, sections }: VehicleSectionShow
       kicker: 'Interior',
       title: 'Acabamento',
       photo: sections.interior.photo_url,
-      copy: sections.interior.copy ?? buildFallbackCopy(vehicle, 'interior'),
+      copy: texto('interior'),
       photoSide: 'right',
       aspectClass: 'aspect-[16/10]',
     },

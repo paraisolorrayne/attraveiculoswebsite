@@ -17,7 +17,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'porsche-911-brasil',
 		brand: 'Porsche', model: '911',
-		metaTitle: 'Preço Porsche 911 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Porsche 911 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Porsche 911 no Brasil atualizado. Faixa de preço novo e seminovo, diferença entre versões e fatores que impactam o valor. Attra Veículos.',
 		keywords: ['preço porsche 911', 'porsche 911 preço brasil', 'quanto custa porsche 911', 'porsche 911 valor'],
 		faixaGeral: 'O 911 tem faixa ampla: a versão Carrera base representa a entrada do segmento, enquanto as versões GT e Turbo S posicionam-se no topo de linha, com variação significativa entre zero km e seminovos bem conservados. Consulte valores atualizados diretamente no estoque.',
@@ -30,7 +30,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'bmw-m3-brasil',
 		brand: 'BMW', model: 'M3',
-		metaTitle: 'Preço BMW M3 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do BMW M3 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do BMW M3 no Brasil atualizado. Faixa de preço novo e seminovo, versões e fatores que impactam o valor. Attra Veículos.',
 		keywords: ['preço bmw m3', 'bmw m3 preço brasil', 'quanto custa bmw m3', 'bmw m3 valor'],
 		faixaGeral: 'O M3 posiciona-se no segmento intermediário de sedans esportivos. A versão Standard é a entrada; Competition e CS elevam consideravelmente o valor. Seminovos da geração anterior oferecem excelente relação custo-performance. Consulte valores atualizados no estoque.',
@@ -43,7 +43,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'mercedes-c63-amg-brasil',
 		brand: 'Mercedes-Benz', model: 'C63 AMG',
-		metaTitle: 'Preço Mercedes C63 AMG no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Mercedes C63 AMG no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Mercedes C63 AMG no Brasil. Faixa de preço V8 e híbrido, diferença entre versões. Attra Veículos.',
 		keywords: ['preço mercedes c63 amg', 'c63 amg preço brasil', 'quanto custa c63 amg', 'mercedes amg c63 valor'],
 		// REVISAR ANUALMENTE — referência a "nova geração" envelhece com lançamentos
@@ -57,7 +57,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'audi-rs6-brasil',
 		brand: 'Audi', model: 'RS6',
-		metaTitle: 'Preço Audi RS6 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Audi RS6 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Audi RS6 Avant no Brasil. Faixa de preço, versões e análise de valor. Attra Veículos.',
 		keywords: ['preço audi rs6', 'audi rs6 preço brasil', 'quanto custa audi rs6', 'audi rs6 avant valor'],
 		faixaGeral: 'O RS6 Avant é posicionado no topo do segmento de peruas esportivas. A exclusividade e o motor V8 biturbo mantêm alto valor de revenda. Seminovos recentes depreciam moderadamente. Consulte valores atualizados no estoque.',
@@ -70,7 +70,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'porsche-cayenne-brasil',
 		brand: 'Porsche', model: 'Cayenne',
-		metaTitle: 'Preço Porsche Cayenne no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Porsche Cayenne no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Porsche Cayenne no Brasil. Todas as versões, faixa de preço novo e seminovo. Attra Veículos.',
 		keywords: ['preço porsche cayenne', 'cayenne preço brasil', 'quanto custa porsche cayenne', 'cayenne valor'],
 		faixaGeral: 'O Cayenne varia bastante conforme versão: a base é a entrada do portfólio SUV Porsche, enquanto Turbo GT representa o topo. O formato Coupé tem posicionamento ligeiramente acima do SUV convencional. Consulte valores atualizados no estoque.',
@@ -83,7 +83,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'porsche-macan-brasil',
 		brand: 'Porsche', model: 'Macan',
-		metaTitle: 'Preço Porsche Macan no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Porsche Macan no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Porsche Macan no Brasil. Faixa de preço novo e seminovo, versões disponíveis. Attra Veículos.',
 		keywords: ['preço porsche macan', 'macan preço brasil', 'quanto custa porsche macan', 'macan valor'],
 		faixaGeral: 'O Macan é a forma mais acessível de entrar no universo Porsche. A versão base é competitiva no segmento de SUVs compactos premium, enquanto o GTS e Turbo elevam o posicionamento. Seminovos oferecem desconto significativo sobre o zero km. Consulte valores atualizados no estoque.',
@@ -96,7 +96,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'bmw-x5-brasil',
 		brand: 'BMW', model: 'X5',
-		metaTitle: 'Preço BMW X5 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do BMW X5 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do BMW X5 no Brasil. Faixa de preço, versões e comparação novo vs seminovo. Attra Veículos.',
 		keywords: ['preço bmw x5', 'bmw x5 preço brasil', 'quanto custa bmw x5', 'bmw x5 valor'],
 		faixaGeral: 'O X5 posiciona-se no centro do segmento de SUVs premium. O xDrive40i é o mais equilibrado, enquanto o M50i e M Competition ocupam patamares superiores. Seminovos de 3 a 5 anos oferecem ótimo custo-benefício. Consulte valores atualizados no estoque.',
@@ -109,7 +109,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'bmw-x6-brasil',
 		brand: 'BMW', model: 'X6',
-		metaTitle: 'Preço BMW X6 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do BMW X6 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do BMW X6 no Brasil. SUV coupé com preço, versões e análise de valor. Attra Veículos.',
 		keywords: ['preço bmw x6', 'bmw x6 preço brasil', 'quanto custa bmw x6', 'bmw x6 valor'],
 		faixaGeral: 'O X6 tem posicionamento ligeiramente acima do X5 pelo perfil coupé. O xDrive40i é a versão principal, M50i e X6 M Competition representam o topo. Deprecia um pouco mais que o X5 nos primeiros anos. Consulte valores atualizados no estoque.',
@@ -122,7 +122,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'audi-q7-brasil',
 		brand: 'Audi', model: 'Q7',
-		metaTitle: 'Preço Audi Q7 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Audi Q7 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Audi Q7 no Brasil. SUV 7 lugares com preço, versões e análise. Attra Veículos.',
 		keywords: ['preço audi q7', 'audi q7 preço brasil', 'quanto custa audi q7', 'audi q7 valor'],
 		faixaGeral: 'O Q7 posiciona-se na faixa intermediária dos SUVs premium de 7 lugares. O 45 TFSI é a entrada, enquanto o SQ7 eleva significativamente o valor. Seminovos de 3 a 5 anos depreciam consideravelmente, criando oportunidades. Consulte valores atualizados no estoque.',
@@ -135,7 +135,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'audi-q8-brasil',
 		brand: 'Audi', model: 'Q8',
-		metaTitle: 'Preço Audi Q8 no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Audi Q8 no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Audi Q8 no Brasil. SUV coupé de luxo com preço, versões e análise. Attra Veículos.',
 		keywords: ['preço audi q8', 'audi q8 preço brasil', 'quanto custa audi q8', 'audi q8 valor'],
 		faixaGeral: 'O Q8 posiciona-se no segmento alto dos SUVs coupé. O 55 TFSI é a versão principal, SQ8 adiciona performance, e o RS Q8 é o topo absoluto da linha. Versões RS mantêm valor acima da média pela exclusividade. Consulte valores atualizados no estoque.',
@@ -148,7 +148,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'range-rover-sport-brasil',
 		brand: 'Land Rover', model: 'Range Rover Sport',
-		metaTitle: 'Preço Range Rover Sport no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Range Rover Sport no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Range Rover Sport no Brasil. Faixa de preço, versões e comparação. Attra Veículos.',
 		keywords: ['preço range rover sport', 'range rover sport preço brasil', 'quanto custa range rover sport', 'range rover sport valor'],
 		faixaGeral: 'O Range Rover Sport tem variação ampla conforme motorização: P360 e P400 são as versões mais acessíveis, enquanto SVR com V8 supercharged ocupa o topo. Deprecia consideravelmente nos primeiros anos, criando boas oportunidades em seminovos. Consulte valores atualizados no estoque.',
@@ -161,7 +161,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'land-rover-defender-brasil',
 		brand: 'Land Rover', model: 'Defender',
-		metaTitle: 'Preço Land Rover Defender no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Land Rover Defender no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Land Rover Defender no Brasil. Versões 90, 110, 130 e V8. Faixa de preço e análise. Attra Veículos.',
 		keywords: ['preço land rover defender', 'defender preço brasil', 'quanto custa defender', 'defender valor'],
 		faixaGeral: 'O Defender tem alta demanda e filas de espera, mantendo valores de seminovos próximos aos de zero km nos primeiros anos. O 90 é o mais compacto, o 110 o mais equilibrado, e o V8 é a versão de performance. Consulte valores atualizados no estoque.',
@@ -174,7 +174,7 @@ export const PRECOS: PrecoPage[] = [
 	{
 		slug: 'mercedes-gle-brasil',
 		brand: 'Mercedes-Benz', model: 'GLE',
-		metaTitle: 'Preço Mercedes GLE no Brasil | Tabela Atualizada | Attra Veículos',
+		metaTitle: 'Preço do Mercedes GLE no Brasil Hoje | Attra Veículos',
 		metaDescription: 'Preço do Mercedes GLE no Brasil. Faixa de preço, versões e comparação novo vs seminovo. Attra Veículos.',
 		keywords: ['preço mercedes gle', 'mercedes gle preço brasil', 'quanto custa mercedes gle', 'mercedes gle valor'],
 		faixaGeral: 'O GLE posiciona-se no centro do segmento de SUVs premium. O GLE 450 é a versão mais equilibrada, AMG 53 adiciona esportividade, e o AMG 63 S é o topo com performance extrema. Versões AMG mantêm valor acima da média. Consulte valores atualizados no estoque.',

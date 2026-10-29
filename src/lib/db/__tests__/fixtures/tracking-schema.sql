@@ -116,5 +116,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_clicks (
   page_path     text,
   vehicle_id    text,
   consumido_em  timestamptz,
-  card_id       text
+  card_id       text,
+  -- supabase/migrations/20261029_whatsapp_clicks_codigo.sql
+  codigo_whatsapp bigint
 );

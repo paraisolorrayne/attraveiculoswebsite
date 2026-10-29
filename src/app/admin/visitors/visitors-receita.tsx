@@ -24,6 +24,10 @@ interface Cobertura {
 	cards_com_telefone: number
 	cards_com_candidato_de_sessao: number
 	cards_por_chave_forte: number
+	/** Dentro de `cards_por_chave_forte`. */
+	cards_por_codigo: number
+	/** Dentro de `cards_por_chave_forte`, mas provável: a correlação do site por clique no mesmo carro. */
+	cards_por_horario_e_carro: number
 	cards_por_telefone: number
 	cards_sem_ligacao_sem_telefone: number
 	cards_telefone_sem_perfil: number
@@ -126,6 +130,9 @@ function SemValor({ quantos }: { quantos: number }) {
 function BlocoCobertura({ dados }: { dados: AtribuicaoReceita }) {
 	const c = dados.cobertura
 	const ligados = c.cards_por_chave_forte + c.cards_por_telefone
+	// As três formas da chave forte: código, identificador devolvido e a correlação do site.
+	const porIdentificador = c.cards_por_chave_forte - c.cards_por_codigo - c.cards_por_horario_e_carro
+	const candidatosSemVisita = Math.max(0, c.cards_com_candidato_de_sessao - c.cards_por_chave_forte)
 	// A outra metade da mesma partição: ligados + naoLigados = c.cards, sempre.
 	const naoLigados =
 		c.cards_sem_ligacao_sem_telefone + c.cards_telefone_sem_perfil + c.cards_telefone_sem_sessao
@@ -177,18 +184,26 @@ function BlocoCobertura({ dados }: { dados: AtribuicaoReceita }) {
 
 			<ul className="mt-2 space-y-1 pl-6 list-disc marker:text-foreground-secondary">
 				<li>
-					Ligação certa (o CRM devolveu o identificador da visita):{' '}
-					<strong>{fmtNum(c.cards_por_chave_forte)}</strong>
-					{c.cards_com_candidato_de_sessao > 0 && (
+					Ligação certa, pelo código da mensagem do WhatsApp:{' '}
+					<strong>{fmtNum(c.cards_por_codigo)}</strong>. A Fykos lê o código invisível da primeira
+					mensagem e o devolve no lead; o código aponta o clique exato.
+				</li>
+				<li>
+					Ligação certa, pelo identificador da visita (formulário do site ou campo do CRM):{' '}
+					<strong>{fmtNum(porIdentificador)}</strong>
+					.
+					{candidatosSemVisita > 0 && (
 						<>
 							{' '}
-							— {fmtNum(c.cards_com_candidato_de_sessao)} leads trazem um campo com esse nome, mas só
-							os acima correspondem a uma visita real.
+							Outros {fmtNum(candidatosSemVisita)} leads trazem um campo com esse nome que não
+							corresponde a visita nenhuma.
 						</>
 					)}
-					{c.cards_com_candidato_de_sessao === 0 && (
-						<> — hoje o CRM não devolve esse identificador, por isso a ligação certa é zero.</>
-					)}
+				</li>
+				<li>
+					Ligação provável, pelo clique no mesmo carro pouco antes da conversa:{' '}
+					<strong>{fmtNum(c.cards_por_horario_e_carro)}</strong>. Vale quando o lead não traz o
+					código.
 				</li>
 				<li>
 					Ligação provável, pelo telefone (DDD + 8 últimos dígitos):{' '}
@@ -200,7 +215,7 @@ function BlocoCobertura({ dados }: { dados: AtribuicaoReceita }) {
 					{fmtNum(c.cards_sem_ligacao_sem_telefone)} sem telefone no lead,{' '}
 					{fmtNum(c.cards_telefone_sem_perfil)} com telefone que nunca se identificou no site,{' '}
 					{fmtNum(c.cards_telefone_sem_sessao)} identificados mas sem visita nesse prazo. Com os
-					ligados das duas linhas acima, fecham os {fmtNum(c.cards)} leads do período. Para
+					ligados das linhas acima, fecham os {fmtNum(c.cards)} leads do período. Para
 					comparação: {fmtNum(c.perfis_com_telefone)} pessoas deixaram telefone no site.
 				</li>
 			</ul>

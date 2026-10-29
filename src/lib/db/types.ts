@@ -468,6 +468,11 @@ export interface WhatsappClicksTable {
   /** Marcado quando uma conversa é atribuída a este clique — um clique, uma conversa. */
   consumido_em: Timestamp | null
   card_id: string | null
+  /**
+   * O código invisível que foi na mensagem deste clique (codigo-whatsapp.ts), desde 29/10/2026.
+   * bigint: o driver devolve como texto.
+   */
+  codigo_whatsapp: ColumnType<string | null, number | string | null, number | string | null>
 }
 
 export interface CampaignVehiclesTable {

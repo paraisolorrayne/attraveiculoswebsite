@@ -5,7 +5,6 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CinematicGallery } from '@/components/vehicles/cinematic-gallery'
 import { VehicleInfo } from '@/components/vehicles/vehicle-info'
-import { VehicleSpecs } from '@/components/vehicles/vehicle-specs'
 import { VehicleOptions } from '@/components/vehicles/vehicle-options'
 import { VehicleContact } from '@/components/vehicles/vehicle-contact'
 import { RelatedVehicles } from '@/components/vehicles/related-vehicles'
@@ -15,74 +14,24 @@ import { VehicleSectionShowcase } from '@/components/vehicles/vehicle-section-sh
 import { RelatedVehiclesSkeleton } from '@/components/ui/skeleton'
 import { VehicleContextSetter } from '@/components/vehicles/vehicle-context-setter'
 import { VehicleSpecsFallback } from '@/components/vehicles/vehicle-specs-fallback'
+import { TituloDaFicha } from '@/components/vehicles/titulo-da-ficha'
+import { BarraPrecoFicha } from '@/components/vehicles/barra-preco-ficha'
 import { FAQSection } from '@/components/home'
 import { getVehicleBySlug } from '@/lib/autoconf-api'
 import { getCachedVehicleSections, getFallbackVehicleSections, generateAndCacheVehicleSections } from '@/lib/vehicle-sections'
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
-import { formatPrice, formatMileage } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import { buildVehiclePageSchemas, trilhaDoVeiculo } from '@/lib/vehicle-schema'
-import { nomeDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { tituloDistintoDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { loadListedInventory } from '@/app/api/llm/_inventory'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
-import { SITE_URL } from '@/lib/constants'
+import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
+import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
+import { opcionaisDoVeiculo } from '@/lib/ficha-do-anuncio'
+import { perguntasDoVeiculo } from '@/lib/faq-do-veiculo'
 import { pageTitle } from '@/lib/seo/page-metadata'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
-
-/**
- * FAQ da ficha, montada só com o que o anúncio informa.
- *
- * Nada de ficha técnica de referência aqui. Até 20/10/2026 a FAQ completava o
- * anúncio com a tabela de `vehicle-datasheet.ts`, que tem uma versão por modelo
- * e casa por palavra-chave: o 911 Carrera GTS Cabriolet 2026 saía com "2.981 cc
- * e 385 cv" (o Carrera base da geração anterior), e o mesmo acontecia em 20
- * das 68 fichas. A FAQ vira FAQPage no JSON-LD, que é o texto que
- * buscadores e assistentes citam — dado errado ali vira resposta errada.
- * Atributo que o anúncio não traz fica de fora; não se infere pelo nome.
- */
-function generateVehicleFAQs(vehicle: Vehicle) {
-	const name = nomeDoVeiculo(vehicle) || 'veículo'
-	const faqs: { question: string; answer: string }[] = []
-
-	faqs.push({
-		question: `Qual o preço do ${name} na Attra Veículos?`,
-		answer: `O ${name} ${vehicle.year_model} está disponível por ${formatPrice(vehicle.price)} na Attra Veículos. ${vehicle.mileage === 0 ? 'Este veículo é 0 km.' : `Este veículo possui ${formatMileage(vehicle.mileage)} rodados.`} Entre em contato para condições de financiamento e formas de pagamento.`,
-	})
-
-	// Sem "garantia integral" nem prazo: o feed não informa a garantia de cada
-	// carro (e importado 0 km nem sempre tem garantia de fábrica no Brasil).
-	faqs.push({
-		question: `O ${name} possui garantia?`,
-		answer: `As condições de garantia deste ${name} são informadas pelo consultor da Attra junto com a documentação do veículo. Todos os veículos da Attra passam por curadoria técnica antes de serem disponibilizados para venda.`,
-	})
-
-	const specsParts = joinNonEmpty([
-		vehicle.fuel_type ? `motor ${vehicle.fuel_type}` : '',
-		vehicle.transmission ? `câmbio ${vehicle.transmission}` : '',
-		vehicle.color ? `cor ${vehicle.color}` : '',
-		vehicle.horsepower ? `${vehicle.horsepower} cv de potência` : '',
-		vehicle.torque ? `${vehicle.torque} Nm de torque` : '',
-	], ', ')
-	if (specsParts) {
-		faqs.push({
-			question: `Quais as especificações do ${name} ${vehicle.year_model}?`,
-			answer: `O ${name} ${vehicle.year_model} possui ${specsParts}.`,
-		})
-	}
-
-	faqs.push({
-		question: `A Attra entrega o ${name} em todo o Brasil?`,
-		answer: `Sim, a Attra Veículos realiza entrega nacional com logística especializada para veículos de alto valor. O ${name} pode ser entregue em qualquer cidade do Brasil com transporte em caminhão fechado, seguro completo e rastreamento em tempo real.`,
-	})
-
-	if (vehicle.mileage > 0) {
-		faqs.push({
-			question: `Qual a quilometragem do ${name}?`,
-			answer: `Este ${name} ${vehicle.year_model} possui ${formatMileage(vehicle.mileage)} rodados. O veículo passou por inspeção da equipe técnica da Attra antes de ser anunciado.`,
-		})
-	}
-
-	return faqs
-}
 
 interface VehiclePageProps {
 	params: Promise<{ slug: string }>
@@ -125,10 +74,19 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	const url = `${baseUrl}/veiculo/${vehicle.slug}`
 	const ogImages = (vehicle.photos ?? []).slice(0, 4).map(u => ({ url: u, alt: fullName }))
 
+	// Outro carro do estoque com o mesmo nome e ano: o título leva a cor (a
+	// mesma busca da AutoConf da página, em cache de 5 min).
+	let titulo = fullName
+	try {
+		titulo = tituloDistintoDoVeiculo(vehicle, (await loadListedInventory()).vehicles)
+	} catch (error) {
+		console.error('ficha: estoque indisponível para distinguir o título', error)
+	}
+
 	return {
 		// Marca + modelo + versão + ano. O `seo_title` do feed é o mesmo texto;
 		// `pageTitle` só garante que o sufixo de marca não saia duplicado.
-		title: pageTitle(fullName),
+		title: pageTitle(titulo),
 		description: summary,
 		keywords: [
 			vehicle.brand,
@@ -206,14 +164,15 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	let vehicleSections = await getCachedVehicleSections(vehicle.id, photoCount)
 	if (!vehicleSections) {
 		vehicleSections = getFallbackVehicleSections(vehicle)
-		void generateAndCacheVehicleSections(vehicle).catch((err) => {
+		// Com a ficha do molde, o texto das seções vem dela, e o do Gemini não seria usado.
+		if (!vehicle.ficha) void generateAndCacheVehicleSections(vehicle).catch((err) => {
 			console.error('[vehicle-sections] background generation failed:', err)
 		})
 	}
 
 	const breadcrumbItems = trilhaDoVeiculo(vehicle)
 
-	const vehicleFaqs = generateVehicleFAQs(vehicle)
+	const vehicleFaqs = perguntasDoVeiculo(vehicle)
 
 	// Frescor: a ficha é montada lendo o estoque ao vivo, então "conferido em"
 	// é a data desta renderização — verdade verificável, não um carimbo fixo.
@@ -226,6 +185,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	const mostrarPublicado = publicadoEmBR && publicadoEmBR !== conferidoEmBR
 
 	const schemas = buildVehiclePageSchemas(vehicle, vehicleFaqs, conferidoEm)
+	const opcionais = opcionaisDoVeiculo(vehicle)
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -248,7 +208,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				vehicleCategory={vehicle.category}
 			/>
 
-			{/* Hero Gallery - 60-70% viewport */}
+			{/* Hero Gallery - 60-80% viewport */}
 			{vehicle.photos && vehicle.photos.length > 0 ? (
 				<CinematicGallery
 					photos={vehicle.photos}
@@ -261,121 +221,76 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				</div>
 			)}
 
-			{/* Vehicle Details Section */}
-			<Container className="py-8 lg:py-12">
-				{/* Breadcrumb - afterHero because it comes after full-screen gallery */}
-				<Breadcrumb items={breadcrumbItems} afterHero />
+			{/* Vehicle Details Section. Em tela larga acompanha a largura das
+			    seções de baixo (Container size="2xl", 80% da tela) sem ficar
+			    mais estreita que os 1280 px de antes: presa em 1280 px, a ficha
+			    ocupava menos da metade de um monitor de 2560 px. */}
+			<Container className="py-8 lg:py-12 max-w-[max(80%,1280px)]">
+				{/* Main content grid. A lateral tem largura fixa e a coluna principal
+				    fica com o resto; cada bloco é uma seção aberta, separada da
+				    próxima por um fio, sem caixa em volta. O fio vai em cima de cada
+				    bloco (não divide-y, que no Tailwind 4 põe embaixo e riscava
+				    "Opcionais" por causa do contato do celular, escondido aqui).
+				    A coluna é contêiner (@container) para os blocos se arrumarem
+				    pela largura que têm. */}
+				<div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-16 2xl:grid-cols-[minmax(0,1fr)_400px] 2xl:gap-20">
+					{/* Coluna principal. No alto, o título (TituloDaFicha), a trilha e a
+					    data, nessa ordem também no celular; ao lado, a lateral abre com o
+					    preço na altura do título. */}
+					<div className="min-w-0">
+						<TituloDaFicha vehicle={vehicle} />
 
-				{/* Frescor — visível para quem lê e para quem cita */}
-				<p className="mt-4 text-sm text-foreground-secondary">
-					{mostrarPublicado && <>Anúncio publicado em {publicadoEmBR} · </>}
-					Preço e disponibilidade conferidos em {conferidoEmBR}
-				</p>
+						{/* Breadcrumb - afterHero because it comes after full-screen gallery */}
+						<Breadcrumb items={breadcrumbItems} afterHero className="mt-6" />
 
-				{/* Main content grid */}
-				<div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-					{/* Left column - Main info */}
-					<div className="lg:col-span-2 space-y-8">
-						{/* Título e preço - visível no mobile.
-						    Este é o ÚNICO h1 do documento (o título da sidebar desktop virou h2).
-						    Marca, modelo, versão e ano ficam DENTRO do h1, em spans que herdam o
-						    estilo que antes estava nos <p> irmãos: o texto do h1 passa a
-						    identificar o veículo inteiro em vez do modelo curto ("911"), que era
-						    sinal de entidade ambíguo para buscador e LLM. O Tailwind zera
-						    font-size/weight de h1 no preflight, então o render fica idêntico.
-						    O Googlebot renderiza em viewport mobile: é este bloco que ele lê. */}
-						<div className="lg:hidden">
-							<h1 className="mb-4">
-								{vehicle.brand && (
-									<span className="block text-primary text-sm font-medium uppercase tracking-wider mb-1">
-										{vehicle.brand}
-									</span>
-								)}
-								<span className="block text-3xl font-bold text-foreground mb-2">
-									{vehicle.model || vehicle.brand || 'Veículo premium'}
-								</span>
-								<span className="block text-foreground-secondary">
-									{vehicle.version && `${vehicle.version} • `}
-									{vehicle.year_manufacture}/{vehicle.year_model}
-								</span>
-							</h1>
-							<p className="text-3xl font-bold text-foreground">
-								{formatPrice(vehicle.price)}
-							</p>
-						</div>
+						{/* Frescor — visível para quem lê e para quem cita */}
+						<p className="mt-4 text-sm text-foreground-secondary">
+							{mostrarPublicado && <>Anúncio publicado em {publicadoEmBR} · </>}
+							Preço e disponibilidade conferidos em {conferidoEmBR}
+						</p>
 
-						{/* Engine Audio Player - shows if vehicle has sound configured in admin */}
-						{vehicleSound && (
-							<EngineAudioPlayer
-								audioUrl={vehicleSound.sound_file_url}
-								vehicleName={joinNonEmpty([vehicle.brand, vehicle.model]) || 'Veículo'}
-								isElectric={vehicleSound.is_electric}
-							/>
-						)}
-
-						{/* AI-Generated Description */}
-						<Suspense fallback={<AIVehicleDescriptionSkeleton />}>
-							<AIVehicleDescription vehicle={vehicle} />
-						</Suspense>
-
-						{/* Specs */}
-						<VehicleSpecs vehicle={vehicle} />
-
-						{/* Options */}
-						{vehicle.options && vehicle.options.length > 0 && (
-							<VehicleOptions options={vehicle.options} />
-						)}
-
-						{/* Performance specs (if available) */}
-						{(vehicle.horsepower || vehicle.torque || vehicle.acceleration || vehicle.top_speed) && (
-							<div className="bg-background-card border border-border rounded-xl p-6">
-								<h2 className="text-xl font-semibold text-foreground mb-6">
-									Performance
-								</h2>
-								<div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-									{vehicle.horsepower && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.horsepower}</p>
-											<p className="text-sm text-foreground-secondary">cv</p>
-										</div>
-									)}
-									{vehicle.torque && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.torque}</p>
-											<p className="text-sm text-foreground-secondary">Nm</p>
-										</div>
-									)}
-									{vehicle.acceleration && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.acceleration}</p>
-											<p className="text-sm text-foreground-secondary">0-100 km/h</p>
-										</div>
-									)}
-									{vehicle.top_speed && (
-										<div className="text-center p-4 bg-background rounded-xl">
-											<p className="text-3xl font-bold text-primary">{vehicle.top_speed}</p>
-											<p className="text-sm text-foreground-secondary">km/h máx</p>
-										</div>
-									)}
+						<div className="@container mt-10 border-t border-border pt-10 *:border-border *:py-10 *:not-first:border-t *:first:pt-0">
+							{/* Engine Audio Player - shows if vehicle has sound configured in admin */}
+							{/* Envolto num div: o espaçamento da coluna (*:py-10) vai no
+							    div, sem mexer no padding da caixa do player. */}
+							{vehicleSound && (
+								<div>
+									<EngineAudioPlayer
+										audioUrl={vehicleSound.sound_file_url}
+										vehicleName={joinNonEmpty([vehicle.brand, vehicle.model]) || 'Veículo'}
+										isElectric={vehicleSound.is_electric}
+									/>
 								</div>
+							)}
+
+							{/* AI-Generated Description */}
+							<Suspense fallback={<AIVehicleDescriptionSkeleton />}>
+								<AIVehicleDescription vehicle={vehicle} />
+							</Suspense>
+
+							{/* Ficha técnica só com o que o anúncio traz. A tabela de
+							    referência por modelo (vehicle-datasheet.ts) dava ao 911
+							    GTS as dimensões, o peso e os destaques do Carrera base;
+							    ela continua só nas páginas de modelo, como referência.
+							    É a única ficha: os cards de VehicleSpecs e o bloco
+							    "Performance" repetiam os mesmos campos. */}
+							<VehicleSpecsFallback vehicle={vehicle} />
+
+							{/* Opcionais: os do molde da AutoConf antes dos do catálogo fixo */}
+							{opcionais.length > 0 && (
+								<VehicleOptions options={opcionais} />
+							)}
+
+							{/* Contact - Mobile. O id é onde a barra fixa de preço some. */}
+							<div className="lg:hidden" id="contato-ficha">
+								<VehicleContact vehicle={vehicle} />
 							</div>
-						)}
-
-						{/* Ficha técnica só com o que o anúncio traz. A tabela de
-						    referência por modelo (vehicle-datasheet.ts) dava ao 911
-						    GTS as dimensões, o peso e os destaques do Carrera base;
-						    ela continua só nas páginas de modelo, como referência. */}
-						<VehicleSpecsFallback vehicle={vehicle} />
-
-						{/* Contact - Mobile */}
-						<div className="lg:hidden">
-							<VehicleContact vehicle={vehicle} />
 						</div>
 					</div>
 
 					{/* Right column - Sidebar */}
 					<div className="hidden lg:block">
-						<div className="sticky top-24 space-y-6">
+						<div className="sticky top-28 space-y-8">
 							<VehicleInfo vehicle={vehicle} />
 							<VehicleContact vehicle={vehicle} compact />
 						</div>
@@ -392,11 +307,7 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 
 			{/* Related Vehicles */}
 			<Suspense fallback={<RelatedVehiclesSkeleton />}>
-				<RelatedVehicles
-					currentVehicleId={vehicle.id}
-					brand={vehicle.brand}
-					category={vehicle.category}
-				/>
+				<RelatedVehicles vehicle={vehicle} />
 			</Suspense>
 
 			{/* Vehicle FAQ — visible accordion. JSON-LD FAQ schema is rendered above. */}
@@ -405,6 +316,12 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 				title={`Perguntas sobre o ${joinNonEmpty([vehicle.brand, vehicle.model]) || 'veículo'}`}
 				subtitle={`Dúvidas frequentes sobre este ${joinNonEmpty([vehicle.brand, vehicle.model, vehicle.year_model]) || 'veículo'}`}
 				className="mt-0"
+			/>
+
+			<BarraPrecoFicha
+				titulo={joinNonEmpty([vehicle.brand, vehicle.model, vehicle.year_model]) || 'Veículo'}
+				preco={formatPrice(vehicle.price)}
+				whatsappUrl={getWhatsAppUrl(mensagemWhatsAppDoVeiculo(vehicle))}
 			/>
 		</main>
 	)

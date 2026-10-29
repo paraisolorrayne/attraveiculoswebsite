@@ -7,16 +7,17 @@ import {
   manualAttraCategories,
   type ManualAttraCategory,
 } from '@/lib/manual-attra-data'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 import { BookOpen, ArrowRight, Wrench } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Manual Attra: Engenharia e Performance | Guia de Excelência Automotiva',
+  title: pageTitle('Manual Attra: Engenharia e Performance Automotiva'),
   description:
-    'Curadoria técnica de termos e tecnologias do universo automotivo premium. PTS Porsche, Ad Personam Lamborghini, suspensão ativa, PDK/DSG e mais — explicados para quem entende de carros.',
+    'Curadoria técnica de termos e tecnologias do universo automotivo premium. PTS Porsche, Ad Personam Lamborghini, suspensão ativa, PDK/DSG e mais, explicados para quem entende de carros.',
   keywords:
     'manual attra, glossário premium, PTS Porsche, Ad Personam Lamborghini, suspensão ativa, PDK, DSG, dupla embreagem, vistoria cautelar, carros premium',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Manual Attra: Engenharia e Performance',
     description:
       'Curadoria técnica de termos e tecnologias do universo automotivo premium.',
@@ -59,7 +60,7 @@ export default function ManualAttraIndexPage() {
             <p className="text-lg text-foreground-secondary leading-relaxed">
               Curadoria técnica dos termos, tecnologias e certificações que definem um veículo
               de alto valor. Cada verbete foi elaborado para quem toma decisões de compra
-              informadas — e exige contexto, não simplificação.
+              informadas, e exige contexto, não simplificação.
             </p>
           </div>
         </Container>
