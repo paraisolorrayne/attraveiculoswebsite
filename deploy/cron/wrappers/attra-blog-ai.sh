@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera o post diário do blog via IA chamando o endpoint /api/cron/blog-ai.
+# Gera o post do blog (seg, qua e sex) chamando /api/cron/blog-ai: do Instagram, ou do estoque sem token da Meta.
 # Disparado por /etc/cron.d/attra-blog-ai. Log: /var/log/attra-blog.log
 set -e
 cd /var/www/attra
