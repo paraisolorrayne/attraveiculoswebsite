@@ -64,6 +64,16 @@ export function lerCodigo(texto: string | null | undefined): number | null {
 	return null
 }
 
+/**
+ * O código que a Fykos devolve no card (`codigo_whatsapp`), já lido da
+ * mensagem. Aceita número ou texto só de dígitos, porque JSON de outro sistema
+ * pode trazer o inteiro entre aspas. Qualquer outra coisa é null.
+ */
+export function codigoDoCampo(valor: unknown): number | null {
+	const n = typeof valor === 'string' && /^\d{1,10}$/.test(valor.trim()) ? Number(valor.trim()) : valor
+	return codigoValido(n) ? n : null
+}
+
 /** O texto sem códigos (e sem sobras deles): para trocar um código por outro. */
 export function semCodigo(texto: string): string {
 	return texto.replace(/[\u200c\u200d]{8,}/g, '')

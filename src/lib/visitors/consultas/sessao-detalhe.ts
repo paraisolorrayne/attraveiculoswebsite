@@ -2,6 +2,7 @@ import { sql } from 'kysely'
 import { db } from '@/lib/db'
 import { classificarCanal, corCanal, normalizarFonte, rotuloCampanha, rotuloCanal, rotuloFonte } from '@/lib/traffic-channel'
 import { escopoDaAgencia, naAgencia, type Escopo } from '@/lib/visitors/escopo'
+import { conversasDaSessao } from '@/lib/visitors/consultas/conversas-da-sessao'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
@@ -205,6 +206,14 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
     group by pv.vehicle_slug
   `.execute(db)
 
+  // ── Step 5c: do clique à conversa no CRM ──
+  // Enriquecimento: se falhar (a migration 20261029 ainda não rodou, por exemplo),
+  // a sessão abre sem esta parte.
+  const whatsappCrm = await conversasDaSessao(sessionDbId, session.session_id, ehAgencia).catch((e: unknown) => {
+    console.warn('[Sessão] cliques e leads do CRM não carregados:', e)
+    return null
+  })
+
   // ── Step 6: Build summary ──
   const likelyOrigin = determineLikelyOrigin(session as unknown as Record<string, unknown>, extractedParams)
 
@@ -257,6 +266,7 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
     data: {
       outras_sessoes: outrasSessoes,
       veiculos: veiculos.rows,
+      whatsapp_crm: whatsappCrm,
       session_summary: {
         fingerprint_id: session.fingerprint_id,
         device_type: null as string | null,

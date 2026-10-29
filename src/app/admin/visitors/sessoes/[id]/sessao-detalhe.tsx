@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, MessageCircle, Phone, FileText, Volume2 } from 'lucide-react'
 import type { CanalTrafego } from '@/lib/traffic-channel'
+import type { ConversasDaSessao, LeadDaSessao } from '@/lib/visitors/consultas/conversas-da-sessao'
 import { papeisDaPlataforma, plataformaDaMarcacao } from '@/lib/visitors/marcacao-plataforma'
 import { Secao } from '../../visitors-tabelas'
 import { fmtDuracao, nomeDoSlug } from '../../visitors-metrics'
@@ -75,7 +76,15 @@ interface Dados {
 	events: { type: string; event_type?: string; event_name?: string; created_at: string; page_path?: string }[]
 	outras_sessoes: OutraSessao[]
 	veiculos: { slug: string; marca: string | null; modelo: string | null }[]
+	/** null quando a consulta falhou: a tela abre sem a seção. */
+	whatsapp_crm: ConversasDaSessao | null
 	likely_origin: { origin: string; confidence: string }
+}
+
+const LIGACAO: Record<LeadDaSessao['ligacao'], { rotulo: string; cor: string }> = {
+	codigo: { rotulo: 'pelo código · certa', cor: 'bg-emerald-500/10 text-emerald-500' },
+	identificador: { rotulo: 'pelo identificador · certa', cor: 'bg-blue-500/10 text-blue-500' },
+	horario_e_carro: { rotulo: 'pelo horário e carro · provável', cor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
 }
 
 function dataHora(iso: string | null): string {
@@ -215,6 +224,10 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 						</Secao>
 					</div>
 
+					{dados.whatsapp_crm && (dados.whatsapp_crm.cliques.length > 0 || dados.whatsapp_crm.leads.length > 0) && (
+						<DoCliqueAoCrm conversas={dados.whatsapp_crm} />
+					)}
+
 					<Secao
 						titulo={`Jornada da visita — ${dados.navigation_timeline.length} páginas`}
 						dica="Cada página aberta na ordem, com o tempo de leitura, até onde a pessoa rolou e onde clicou. É a leitura de como a visita andou até (ou sem) virar conversa."
@@ -314,6 +327,51 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 				</>
 			)}
 		</div>
+	)
+}
+
+function DoCliqueAoCrm({ conversas }: { conversas: ConversasDaSessao }) {
+	const { cliques, leads } = conversas
+	return (
+		<Secao
+			titulo="Do clique à conversa no CRM"
+			dica="Os cliques no WhatsApp desta visita e o lead do CRM ligado a ela. Desde 29/10/2026 o clique leva um código invisível na mensagem; quando a Fykos devolve esse código no lead, a ligação é certa. Sem o código, o site liga pelo clique no mesmo carro pouco antes da conversa, e a ligação é provável."
+		>
+			<ul className="divide-y divide-border">
+				{leads.length === 0 && (
+					<li className="px-4 py-2.5 text-sm text-foreground-secondary">Nenhum lead do CRM ligado a esta visita.</li>
+				)}
+				{leads.map((l, i) => (
+					<li key={`lead-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
+						<span className="font-medium">Lead no CRM</span>
+						<span className="tabular-nums text-foreground-secondary">entrou {dataHora(l.entrada)}</span>
+						<span>{l.veiculo}</span>
+						<span className="text-xs text-foreground-secondary">{l.situacao}</span>
+						<Badge cor={LIGACAO[l.ligacao].cor}>{LIGACAO[l.ligacao].rotulo}</Badge>
+					</li>
+				))}
+				{cliques.map((c, i) => {
+					const lead = c.lead !== null ? leads[c.lead] : undefined
+					return (
+						<li key={`clique-${i}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-sm">
+							<span className="w-12 shrink-0 tabular-nums text-foreground-secondary">{hora(c.clicked_at)}</span>
+							<span className="min-w-0 flex-1">
+								<span className="block">
+									<MessageCircle className="mr-1 inline w-3.5 h-3.5 text-emerald-500" />
+									Clique no WhatsApp
+								</span>
+								{c.page_path && <span className={`${CRU} block truncate`}>{c.page_path}</span>}
+							</span>
+							<span className="shrink-0 text-xs text-foreground-secondary">
+								{c.com_codigo ? 'com código' : 'sem código'}
+								{' · '}
+								{lead ? `virou o lead de ${dataHora(lead.entrada)}` : 'nenhum lead ligado'}
+							</span>
+						</li>
+					)
+				})}
+			</ul>
+		</Secao>
 	)
 }
 

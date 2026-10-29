@@ -87,6 +87,16 @@ export function pareceUuid(valor: string): boolean {
   return UUID.test(valor)
 }
 
+/**
+ * Valores de `site_session_origem` que o site grava no card ao ligá-lo a um clique:
+ *   - `codigo_whatsapp`: a Fykos devolveu o código invisível da mensagem e ele casou com o
+ *     clique (`ligarPorCodigo`, desde 29/10/2026). Certa.
+ *   - `correlacao_clique_veiculo`: clique no MESMO carro, minutos antes da conversa
+ *     (`ligarCliqueAoCard`, desde 02/10/2026). Provável: a auditoria de 02/10 mostrou que a
+ *     correlação por horário erra, e o carro só reduz o erro.
+ */
+const ORIGENS_GRAVADAS_PELO_SITE = new Set(['codigo_whatsapp', 'correlacao_clique_veiculo'])
+
 export interface RefSessao {
   /** O identificador encontrado. */
   valor: string
@@ -95,7 +105,8 @@ export interface RefSessao {
 }
 
 /**
- * Procura um identificador de sessão nos extras do card, em duas passadas:
+ * Procura um identificador de sessão nos extras do card. Primeiro a sessão que o próprio site
+ * gravou (`ORIGENS_GRAVADAS_PELO_SITE`); sem ela, em duas passadas:
  *   1. os campos nomeados de `CAMPOS_REF_SESSAO`;
  *   2. o marcador `[ref: ...]` dentro de QUALQUER texto dos extras — é assim que o id viaja
  *      quando o cliente clica no WhatsApp, embutido na mensagem que ele mesmo envia.
@@ -103,6 +114,13 @@ export interface RefSessao {
  */
 export function extrairRefSessao(dados: Record<string, unknown> | null | undefined): RefSessao | null {
   if (!dados || typeof dados !== 'object') return null
+
+  // A sessão que o próprio site gravou no card (pelo código ou pela correlação) vem antes de
+  // qualquer campo do emissor: `lead_id` é o primeiro da lista e pode ser o id interno do CRM.
+  const nossa = ORIGENS_GRAVADAS_PELO_SITE.has(String(dados.site_session_origem)) ? dados.site_session_id : null
+  if (typeof nossa === 'string' && REF_PLAUSIVEL.test(nossa.trim())) {
+    return { valor: nossa.trim(), campo: 'site_session_id' }
+  }
 
   for (const campo of CAMPOS_REF_SESSAO) {
     const valor = dados[campo]
@@ -132,6 +150,33 @@ function refEmTexto(valor: unknown): string | null {
     }
   }
   return null
+}
+
+// ──────────────────────────── Forma da ligação ────────────────────────────
+
+/**
+ * Como a sessão chegou ao card, do mais ao menos certo:
+ *   - `codigo`: pelo código invisível da mensagem do WhatsApp;
+ *   - `identificador`: o card trouxe o id da sessão (formulário, `[ref:]` antigo ou campo do CRM);
+ *   - `horario_e_carro`: correlação do site, pelo clique no mesmo carro pouco antes.
+ * O telefone não aparece aqui porque não grava nada no card: é decidido na hora da leitura.
+ */
+export type FormaDaLigacao = 'codigo' | 'identificador' | 'horario_e_carro'
+
+/** A forma da ligação de um card que tem identificador de sessão; null se não tiver. */
+export function formaDaLigacao(dados: Record<string, unknown> | null | undefined): FormaDaLigacao | null {
+  const ref = extrairRefSessao(dados)
+  if (!ref) return null
+  if (ref.campo === 'site_session_id') {
+    if (dados?.site_session_origem === 'codigo_whatsapp') return 'codigo'
+    if (dados?.site_session_origem === 'correlacao_clique_veiculo') return 'horario_e_carro'
+  }
+  return 'identificador'
+}
+
+/** Só código e identificador afirmam a visita; horário e telefone são palpites bem informados. */
+export function ligacaoCerta(forma: FormaDaLigacao | 'telefone'): boolean {
+  return forma === 'codigo' || forma === 'identificador'
 }
 
 // ──────────────────────────── Escolha da sessão ────────────────────────────

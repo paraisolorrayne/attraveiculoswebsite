@@ -213,6 +213,10 @@ describe.skipIf(!TEST_DB)('tracking routes (Kysely) — integração', () => {
       expect(corpos[0]).toMatchObject({ tipo: 'aviso_clique_site', codigo_whatsapp: 1630495827 })
       // A mensagem segue com o código dentro, igual à que chega no WhatsApp.
       expect(lerCodigo(corpos[0].mensagem as string)).toBe(1630495827)
+      // E o clique guarda o código, para o card da Fykos se ligar a ele.
+      const clique = await db.selectFrom('whatsapp_clicks').select('codigo_whatsapp')
+        .where('session_db_id', '=', s.session_db_id).executeTakeFirstOrThrow()
+      expect(clique.codigo_whatsapp).toBe('1630495827')
     } finally {
       delete process.env.FYKOS_AVISO_CLIQUE_URL
       vi.unstubAllGlobals()

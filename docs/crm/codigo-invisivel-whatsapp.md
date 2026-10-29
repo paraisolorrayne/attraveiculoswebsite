@@ -69,7 +69,11 @@ São 44 caracteres seguidos, colocados logo depois da saudação:
    - Tirar o código do texto antes de passar ao Luís, ao vendedor e aos relatórios, com `sem_codigo` (seção 4).
    - Ela remove só sequências de 8 ou mais desses caracteres. Não removam os isolados, porque emojis compostos (👨‍👩‍👧) usam `U+200D`.
    - O texto bruto fica onde for auditoria.
-7. **Opcional:** no card que vocês mandam para `/api/webhook/fykos-crm`, incluir o `codigo_whatsapp` lido e como a ligação foi feita (`codigo` ou `horario`). Ainda não usamos isso aqui, mas deixa a conferência possível dos dois lados.
+7. **No card que vocês mandam para `/api/webhook/fykos-crm`:** incluir `codigo_whatsapp`, o número lido da primeira mensagem (inteiro; texto só de dígitos também é aceito).
+   - É com ele que o painel do site liga o lead à visita. O site procura o clique com esse código nos 7 dias antes do contato, grava a visita no card e marca a ligação como **por código**.
+   - Pode vir na criação do card ou numa atualização depois. Se vier depois, substitui a ligação por horário que o site tenha feito sozinho.
+   - Conversa sem código lido: não mandar o campo.
+   - Se quiserem, mandem também `ligacao_whatsapp` (`codigo` ou `horario`) para conferência. Ele só fica guardado no card.
 
 ## 4. Código de referência (Python)
 
@@ -134,11 +138,13 @@ Para montar uma mensagem de teste: `"Olá!" + bits trocados pelos caracteres + "
 3. **Texto reescrito:** apagar o texto e escrever outro. Sem código, cai na regra **por horário**.
 4. **Texto limpo:** o Luís e o vendedor veem o texto sem os caracteres. O banco guarda o bruto.
 5. **Android:** clique e envio por um Android. Esse é o teste que falta.
+6. **Card com código:** o card da conversa do teste 1 chega a `/api/webhook/fykos-crm` com o `codigo_whatsapp`. No painel do site, a sessão do clique mostra o lead "pelo código · certa".
 
 ## Do lado do site (referência)
 
 - Geração e leitura: `src/lib/codigo-whatsapp.ts`.
 - O código entra no link no clique, pelo ouvinte global de `visitor-tracking-provider.tsx`.
-- No servidor, `src/app/api/tracking/interaction/route.ts` lê o código do próprio texto do link e o põe no aviso (`aviso-clique-fykos.ts`).
+- No servidor, `src/app/api/tracking/interaction/route.ts` lê o código do próprio texto do link, guarda no clique (`whatsapp_clicks.codigo_whatsapp`) e o põe no aviso (`aviso-clique-fykos.ts`).
+- O card que chega com `codigo_whatsapp` é ligado ao clique em `src/lib/whatsapp-correlacao-db.ts` (`ligarPorCodigo`), antes da correlação por horário.
 - Um segundo toque em menos de 3 s repete o código, porque o servidor ignora esse clique e não manda segundo aviso.
 - A política de privacidade explica o código (seção "Atendimento via WhatsApp").

@@ -13,9 +13,11 @@ import type { SessaoAtribuicao } from '@/lib/traffic-channel'
 import {
 	chaveTelefone,
 	extrairRefSessao,
+	formaDaLigacao,
 	ligarCardASessao,
 	pareceUuid,
 	perfisParaFallbackPorTelefone,
+	type FormaDaLigacao,
 	type ResultadoLigacao,
 } from '@/lib/atribuicao-receita'
 
@@ -103,9 +105,14 @@ export async function ligarCardsASessoes(cards: CardParaLigar[]) {
 	// sessão". `lead_id` com o id interno do CRM é o caso esperado (campo desconhecido cai no
 	// JSONB `dados`, ver src/lib/crm-webhook.ts) e não é ligação nenhuma.
 	const sessaoForteDoCard = new Map<string, SessaoOrigem>()
+	// Por onde a chave forte chegou ao card: código, identificador ou a correlação do site.
+	const formaPorCard = new Map<string, FormaDaLigacao>()
+	const dadosPorCard = new Map(cards.map(c => [c.id, c.dados]))
 	for (const [cardId, ref] of refsPorCard) {
 		const sessao = sessoesPorRef.get(ref.valor)
-		if (sessao) sessaoForteDoCard.set(cardId, sessao)
+		if (!sessao) continue
+		sessaoForteDoCard.set(cardId, sessao)
+		formaPorCard.set(cardId, formaDaLigacao(dadosPorCard.get(cardId)) ?? 'identificador')
 	}
 
 	// ---- Passada 3: telefone do card ↔ perfil identificado no site ----
@@ -195,6 +202,8 @@ export async function ligarCardsASessoes(cards: CardParaLigar[]) {
 
 	return {
 		ligacoes,
+		/** Só dos cards ligados por chave forte: código, identificador ou horário e carro. */
+		formaPorCard,
 		/** Cards com telefone comparável (ligados ou não). */
 		cardsComTelefone: new Set(chavesTelefone.keys()),
 		/** Quantos cards TRAZEM cada campo candidato a identificador (trazer não é casar). */

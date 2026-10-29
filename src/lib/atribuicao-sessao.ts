@@ -30,7 +30,10 @@
 
 /** Como a visita foi ligada ao lead — e, portanto, o quanto confiar nela. */
 export type OrigemDaLigacao =
-	/** O cliente mandou `[ref: ...]` na mensagem. Ligação explícita. */
+	/**
+	 * O identificador viajou na mensagem do cliente: `[ref: ...]` (até 05/10/2026) ou o código
+	 * invisível (desde 29/10/2026). Ligação explícita.
+	 */
 	| 'marcador'
 	/** Clique e conversa casados por janela de tempo. Menos certo. */
 	| 'correlacao_clique_whatsapp'

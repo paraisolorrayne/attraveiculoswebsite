@@ -1,15 +1,20 @@
 /**
- * Liga a decisão de `whatsapp-correlacao.ts` ao banco.
+ * Liga o card do CRM ao clique de WhatsApp que o originou, por dois caminhos:
  *
- * A função pura decide QUAL clique originou uma conversa; aqui buscamos os
- * candidatos, reivindicamos o clique e gravamos a sessão no card. A separação
- * existe para que a regra — que é onde se erra — fique testável sem banco.
+ *   - `ligarPorCodigo`: o card traz o código invisível da mensagem (desde
+ *     29/10/2026). Ligação certa; vale mais que a outra.
+ *   - `ligarCliqueAoCard`: sem código, a decisão de `whatsapp-correlacao.ts`
+ *     (mesmo carro, pouco antes). A função pura decide QUAL clique originou a
+ *     conversa; aqui buscamos os candidatos, reivindicamos o clique e gravamos a
+ *     sessão no card. A separação existe para que a regra, que é onde se erra,
+ *     fique testável sem banco.
  */
 
 import { sql, type Transaction } from 'kysely'
 import type { Database } from './db/types'
 import { correlacionarClique, JANELA_CORRELACAO_MS, type ResultadoCorrelacao } from './whatsapp-correlacao'
 import { extrairRefSessao } from './atribuicao-receita'
+import { codigoDoCampo } from './codigo-whatsapp'
 
 /**
  * Origens que declaram outro canal de entrada.
@@ -146,24 +151,109 @@ export async function ligarCliqueAoCard(
 
   if (Number(reivindicacao.numUpdatedRows ?? 0) === 0) return { tipo: 'clique_tomado' }
 
-  const dadosAtuais = (card.dados && typeof card.dados === 'object' ? card.dados : {}) as Record<string, unknown>
-  await trx
-    .updateTable('crm_cards')
-    .set({
-      dados: JSON.stringify({
-        ...dadosAtuais,
-        site_session_id: decisao.sessionId,
-        // Marca COMO a referência chegou. Uma correlação por tempo é menos
-        // certa que um id devolvido pelo CRM, e o relatório precisa saber a
-        // diferença em vez de tratar as duas como o mesmo fato.
-        // `_veiculo`: ligado por clique no MESMO carro (regra de 02/10/2026).
-        // O valor antigo, `correlacao_clique_whatsapp`, era só por horário e foi
-        // descartado na migration 20261002 — não confundir os dois.
-        site_session_origem: 'correlacao_clique_veiculo',
-      }) as unknown as Database['crm_cards']['dados'],
-    })
-    .where('id', '=', cardId)
-    .execute()
+  // Marca COMO a referência chegou. Uma correlação por tempo é menos certa que
+  // um id devolvido pelo CRM, e o relatório precisa saber a diferença em vez de
+  // tratar as duas como o mesmo fato.
+  // `_veiculo`: ligado por clique no MESMO carro (regra de 02/10/2026).
+  // O valor antigo, `correlacao_clique_whatsapp`, era só por horário e foi
+  // descartado na migration 20261002 — não confundir os dois.
+  await gravarSessaoNoCard(trx, cardId, decisao.sessionId, 'correlacao_clique_veiculo')
 
   return { tipo: 'ligado', sessionId: decisao.sessionId, cliqueId: decisao.cliqueId }
+}
+
+/**
+ * Acrescenta a sessão aos `dados` que o card JÁ tem no banco.
+ *
+ * O merge é no próprio banco (`||`), não a partir do payload: até 29/10/2026 a
+ * correlação regravava `dados` a partir de `card.dados` do payload, que o CRM
+ * não manda, e apagava os extras que o insert acabara de gravar.
+ */
+async function gravarSessaoNoCard(
+  trx: Transaction<Database>,
+  cardId: string,
+  sessionId: string,
+  origem: 'codigo_whatsapp' | 'correlacao_clique_veiculo',
+): Promise<void> {
+  const sessao = JSON.stringify({ site_session_id: sessionId, site_session_origem: origem })
+  await sql`
+    update crm_cards set dados = coalesce(dados, '{}'::jsonb) || ${sessao}::jsonb
+    where id = ${cardId}
+  `.execute(trx)
+}
+
+/**
+ * Até quanto tempo antes do contato o clique do código ainda vale. O mesmo
+ * prazo combinado com a Fykos para o aviso (docs/crm/codigo-invisivel-whatsapp.md).
+ */
+export const JANELA_CODIGO_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Folga depois do contato, para relógio adiantado no CRM ou card mandado em lote. */
+const FOLGA_CODIGO_MS = 60 * 60 * 1000
+
+export type ResultadoPorCodigo =
+  | { tipo: 'ligado'; sessionId: string; cliqueId: string }
+  /** O card não trouxe `codigo_whatsapp` válido. */
+  | { tipo: 'sem_codigo' }
+  /** Trouxe, mas nenhum clique gravado tem esse código: clique perdido ou de antes do deploy. */
+  | { tipo: 'codigo_sem_clique'; codigo: number }
+
+/**
+ * Liga o card ao clique pelo código invisível que a Fykos leu na primeira
+ * mensagem e devolveu no card (`codigo_whatsapp`).
+ *
+ * É a ligação determinística: o código saiu deste clique e de nenhum outro, então
+ * não precisa das recusas da correlação por horário (carro, ambiguidade). Por
+ * isso roda também em card que já existia: o código pode chegar numa
+ * atualização, e aí substitui a correlação por horário, se houver, e devolve o
+ * clique que ela tinha tomado.
+ *
+ * Um clique já tomado por OUTRO card fica com ele: o card atual se liga do
+ * mesmo jeito (o código é a prova), mas sem tirar o registro de quem chegou antes.
+ *
+ * Nunca lança por regra de negócio; erro de banco sobe para o chamador, que
+ * trata como best-effort, igual à correlação.
+ */
+export async function ligarPorCodigo(
+  trx: Transaction<Database>,
+  cardId: string,
+  card: Record<string, unknown>,
+): Promise<ResultadoPorCodigo> {
+  const codigo = codigoDoCampo(card.codigo_whatsapp)
+  if (codigo === null) return { tipo: 'sem_codigo' }
+
+  const quando = instanteDoContato(card)
+  const clique = (
+    await sql<{ id: string; session_db_id: string }>`
+      select w.id, w.session_db_id
+      from whatsapp_clicks w
+      where w.codigo_whatsapp = ${String(codigo)}::bigint
+        and w.clicked_at >= ${new Date(quando.getTime() - JANELA_CODIGO_MS)}
+        and w.clicked_at <= ${new Date(quando.getTime() + FOLGA_CODIGO_MS)}
+      order by w.clicked_at desc
+      limit 1
+    `.execute(trx)
+  ).rows[0]
+
+  if (!clique) return { tipo: 'codigo_sem_clique', codigo }
+  const cliqueId = String(clique.id)
+
+  // Devolve o clique que a correlação por horário tinha dado a este card.
+  await trx
+    .updateTable('whatsapp_clicks')
+    .set({ consumido_em: null, card_id: null })
+    .where('card_id', '=', cardId)
+    .where('id', '<>', cliqueId)
+    .execute()
+
+  await trx
+    .updateTable('whatsapp_clicks')
+    .set({ consumido_em: new Date(), card_id: cardId })
+    .where('id', '=', cliqueId)
+    .where('consumido_em', 'is', null)
+    .execute()
+
+  await gravarSessaoNoCard(trx, cardId, clique.session_db_id, 'codigo_whatsapp')
+
+  return { tipo: 'ligado', sessionId: clique.session_db_id, cliqueId }
 }

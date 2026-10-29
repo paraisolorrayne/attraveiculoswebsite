@@ -118,7 +118,7 @@ Os dois `404` são separados de propósito: apontam para lados diferentes do pro
 - definir `SITE_ATRIBUICAO_API_KEY` na VPS (sem ela: 503);
 - ~~`wbraid` / `gbraid`~~ — **capturados desde 27/09/2026.** Precisa rodar a migration `20260927_visitor_sessions_wbraid_gbraid.sql` na VPS.
 
-**Fykos:** receber o aviso de clique numa tabela lateral e casá-lo com a conversa por tempo. Os endpoints de consulta ficam para backfill e para o card.
+**Fykos:** receber o aviso de clique numa tabela lateral e casá-lo com a conversa pelo código (por tempo só sem código), e devolver o `codigo_whatsapp` lido no card mandado para `/api/webhook/fykos-crm`: é com ele que o painel do site liga o lead à visita (ver o documento do código invisível). Os endpoints de consulta ficam para backfill e para o card.
 
 ## Critério de aceite
 

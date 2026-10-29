@@ -103,6 +103,25 @@ export async function POST(request: NextRequest) {
           return undefined
         })
 
+      // O texto que vai pré-preenchido, com o código invisível dentro, e o
+      // código lido dele, não de um campo à parte: é o que a pessoa recebeu no
+      // WhatsApp (codigo-whatsapp.ts).
+      const mensagem = mensagemDoLinkWhatsApp(metadata?.href)
+      const codigo = lerCodigo(mensagem)
+
+      // Guarda o código no clique: quando a Fykos devolver o mesmo código no
+      // card, o card se liga a este clique (ligarPorCodigo). Num UPDATE à parte,
+      // e não no insert acima: se a migration 20261029 não tiver rodado, perde-se
+      // só o código, e o clique e o aviso continuam saindo.
+      if (clique && codigo !== null) {
+        await db
+          .updateTable('whatsapp_clicks')
+          .set({ codigo_whatsapp: codigo })
+          .where('id', '=', clique.id)
+          .execute()
+          .catch((e: unknown) => console.warn('[Tracking] código do clique não gravado:', e))
+      }
+
       // AVISO AO CRM, no mesmo instante do clique.
       //
       // Sem isto a origem só chega ao CRM se o lead virar card — e primeiro
@@ -115,7 +134,6 @@ export async function POST(request: NextRequest) {
       if (clique) {
         try {
           const atribuicao = await atribuicaoPorSessaoDbId(session_db_id)
-          const mensagem = mensagemDoLinkWhatsApp(metadata?.href)
           await enviarAvisoDeClique(
             montarAvisoDeClique(
               String(clique.id),
@@ -123,11 +141,8 @@ export async function POST(request: NextRequest) {
               atribuicao,
               page_path ?? null,
               veiculoId,
-              // O texto que vai pré-preenchido, com o código invisível dentro.
               mensagem,
-              // O código lido do próprio texto, não de um campo à parte: é o
-              // que a pessoa recebeu no WhatsApp (codigo-whatsapp.ts).
-              lerCodigo(mensagem),
+              codigo,
             ),
           )
         } catch (e) {

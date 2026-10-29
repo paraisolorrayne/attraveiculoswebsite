@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
 	codificarCodigo,
+	codigoDoCampo,
 	lerCodigo,
 	textoComCodigo,
 	linkComCodigo,
@@ -117,5 +118,20 @@ describe('novoCodigo', () => {
 	it('dá um inteiro de 32 bits', () => {
 		const c = novoCodigo()
 		expect(Number.isInteger(c) && c >= 0 && c <= 0xffffffff).toBe(true)
+	})
+})
+
+describe('codigoDoCampo', () => {
+	it('número ou texto de dígitos, como a Fykos pode mandar no card', () => {
+		expect(codigoDoCampo(TESTE_IPHONE)).toBe(TESTE_IPHONE)
+		expect(codigoDoCampo(String(TESTE_WEB))).toBe(TESTE_WEB)
+		expect(codigoDoCampo(' 0 ')).toBe(0)
+		expect(codigoDoCampo('4294967295')).toBe(0xffffffff)
+	})
+
+	it('o resto é null', () => {
+		for (const v of [null, undefined, '', 'abc', '12a', '-1', '1.5', 1.5, -1, 2 ** 32, '4294967296', {}, []]) {
+			expect(codigoDoCampo(v)).toBeNull()
+		}
 	})
 })

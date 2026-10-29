@@ -5,9 +5,12 @@ import { db } from '@/lib/db'
 import { configuracaoRetornoCrm } from '@/lib/crm-retorno'
 import {
   extrairRefSessao,
+  formaDaLigacao,
+  ligacaoCerta,
   pareceUuid,
   chaveTelefone,
   escolherSessaoDoCard,
+  type FormaDaLigacao,
 } from '@/lib/atribuicao-receita'
 import { classificarCanal, rotuloCampanha, rotuloCanal } from '@/lib/traffic-channel'
 
@@ -36,16 +39,21 @@ interface OrigemDoCard {
   campanha: string
   canal: string
   metodo: MetodoOrigem
+  /** Por onde: o card mostra isso ao passar o mouse. */
+  ligacao: FormaDaLigacao | 'telefone'
 }
 
 /**
  * Origem (campanha + canal) de cada lead.
  *
- * Dois caminhos, em ordem de confiança:
- *   1. CERTA — o CRM devolveu o identificador da visita (marcador `[ref: ...]`
- *      da conversa de WhatsApp ou campo próprio). Liga a visita exata.
- *   2. PROVÁVEL — casamento por telefone entre o card e um visitante
- *      identificado no site, escolhendo a visita mais próxima do card.
+ * Em ordem de confiança:
+ *   1. CERTA — o card traz a visita exata: pelo código invisível da mensagem
+ *      do WhatsApp, pelo `[ref: ...]` antigo ou por um campo próprio do CRM.
+ *   2. PROVÁVEL — a visita que a correlação do site gravou no card (clique no
+ *      mesmo carro, pouco antes da conversa: `formaDaLigacao`), ou o casamento
+ *      por telefone entre o card e um visitante identificado no site, escolhendo
+ *      a visita mais próxima do card. Até 29/10/2026 a correlação saía como
+ *      certa, porque grava a sessão no mesmo campo que o identificador.
  *
  * O caminho por telefone só usa dispositivos com identificador ALEATÓRIO. O
  * esquema antigo derivava o id do aparelho e colidia em massa (um "dispositivo"
@@ -158,20 +166,21 @@ async function origensDosCards(
     const quando = card.criado_em ?? card.atualizado_em
 
     let sessao: SessaoOrigem | null = forte ?? null
-    let metodo: MetodoOrigem = 'certa'
+    let ligacao: FormaDaLigacao | 'telefone' = formaDaLigacao(card.dados as Record<string, unknown> | null) ?? 'identificador'
 
     if (!sessao) {
       const tel = telefonePorCard.get(card.id)
       const candidatas = tel ? (sessoesPorTelefone.get(tel) ?? []) : []
       sessao = escolherSessaoDoCard(candidatas, quando)
-      metodo = 'provavel'
+      ligacao = 'telefone'
     }
     if (!sessao) continue
 
     saida.set(card.id, {
       campanha: rotuloCampanha(sessao.utm_campaign, sessao.utm_id),
       canal: rotuloCanal(classificarCanal(sessao)),
-      metodo,
+      metodo: ligacaoCerta(ligacao) ? 'certa' : 'provavel',
+      ligacao,
     })
   }
 

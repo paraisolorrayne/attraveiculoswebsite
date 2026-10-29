@@ -35,7 +35,12 @@ export interface CrmCard {
 	atualizado_em: string
 	dados: Record<string, unknown> | null
 	/** Campanha que trouxe o lead ao site; null quando não dá para afirmar. */
-	origem_campanha?: { campanha: string; canal: string; metodo: 'certa' | 'provavel' } | null
+	origem_campanha?: {
+		campanha: string
+		canal: string
+		metodo: 'certa' | 'provavel'
+		ligacao?: 'codigo' | 'identificador' | 'horario_e_carro' | 'telefone'
+	} | null
 }
 
 /* ---------- formatadores compartilhados ---------- */
@@ -90,6 +95,14 @@ export const motivoDoCard = (c: CrmCard): string | null => {
 
 /** Slot de identificação vazio — o dado não veio do webhook. */
 const Traco = () => <span className="text-foreground-secondary/60">–</span>
+
+/** Como a visita foi ligada ao lead, para o título da linha de campanha. */
+const COMO_LIGOU: Record<NonNullable<NonNullable<CrmCard['origem_campanha']>['ligacao']>, string> = {
+	codigo: 'Ligação certa, pelo código da mensagem do WhatsApp',
+	identificador: 'Ligação certa, pelo identificador da visita',
+	horario_e_carro: 'Ligação provável, pelo clique no mesmo carro pouco antes da conversa',
+	telefone: 'Ligação provável, feita pelo telefone do lead',
+}
 
 /**
  * Link de conversa a partir do telefone do card.
@@ -239,13 +252,16 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 			{c.origem_campanha && (
 				<div className="mt-1 flex items-center gap-1.5 text-xs text-foreground-secondary">
 					<Megaphone className="w-3.5 h-3.5 flex-shrink-0" />
-					<span className="truncate min-w-0" title={`${c.origem_campanha.canal} · ${c.origem_campanha.campanha}`}>
+					<span
+						className="truncate min-w-0"
+						title={`${c.origem_campanha.canal} · ${c.origem_campanha.campanha}\n${COMO_LIGOU[c.origem_campanha.ligacao ?? (c.origem_campanha.metodo === 'certa' ? 'identificador' : 'telefone')]}`}
+					>
 						{c.origem_campanha.campanha}
 					</span>
 					{c.origem_campanha.metodo === 'provavel' && (
 						<span
 							className="text-[10px] text-foreground-secondary/70 flex-shrink-0"
-							title="Ligação provável, feita pelo telefone do lead"
+							title={COMO_LIGOU[c.origem_campanha.ligacao ?? 'telefone']}
 						>
 							(provável)
 						</span>
