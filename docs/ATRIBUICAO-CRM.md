@@ -27,14 +27,18 @@ O site avisa **no momento do clique**, antes de a conversa chegar. É um `POST` 
   "pagina": "/veiculo/mercedes-g-63-2021-988095",
   "veiculo_id": "988095",
   "first_touch": { "gclid": "g1", "wbraid": null, "gbraid": null, "utm_campaign": null, "utm_content": null, "landing": "/", "ts": "..." },
-  "last_touch":  { "source": "linktr.ee", "landing": "/comprar", "ts": "..." }
+  "last_touch":  { "source": "linktr.ee", "landing": "/comprar", "ts": "..." },
+  "mensagem": "Olá!<44 caracteres invisíveis> Tenho interesse no Mercedes G 63 2021. Gostaria de mais informações.",
+  "codigo_whatsapp": 1630495827
 }
 ```
+
+`codigo_whatsapp` existe desde 29/10/2026: é o código que o site esconde na mensagem e que liga a conversa ao clique sem depender do horário. O formato, o código de referência em Python e o que implementar estão em [`docs/crm/codigo-invisivel-whatsapp.md`](crm/codigo-invisivel-whatsapp.md).
 
 ### Três regras, por favor
 
 1. **Isto não é um lead.** O `tipo` está aí para isso. Se o aviso criar usuário ou card, o mesmo lead entra duas vezes — uma por aqui e outra pela entrada real do WhatsApp. Guardem numa tabela lateral; quem cria o lead continua sendo o WhatsApp.
-2. **A ligação é por tempo.** Quando a conversa chegar, casem com o aviso mais recente dentro de uma janela (usamos 10 min do nosso lado). Mais de um candidato → não escolher, como já fazemos aqui: atribuir a campanha errada contamina um lead real, e ausente é recuperável.
+2. **A ligação é pelo código; o tempo é a reserva.** Desde 29/10/2026, leiam o `codigo_whatsapp` na 1ª mensagem e casem com o aviso de mesmo código (ver o documento do código invisível). Sem código, casem com o aviso mais recente dentro de uma janela (usamos 10 min do nosso lado). Mais de um candidato: não escolher, como já fazemos aqui, porque atribuir a campanha errada contamina um lead real, e ausente é recuperável.
 3. **`clique_id` é estável.** Reentrega do mesmo aviso não deve virar duas notas.
 
 Todo clique do site gera aviso. Quando não há origem conhecida, `first_touch` e `last_touch` seguem como `null`; `session_id`, horário, página e mensagem continuam disponíveis para o CRM casar a conversa.

@@ -37,6 +37,7 @@ const sections = [
 
 • As informações compartilhadas serão utilizadas para agilizar seu atendimento.
 • Podemos enviar atualizações sobre o veículo de seu interesse, salvo se você solicitar a interrupção do contato.
+• **Origem do contato:** quando você abre o WhatsApp por um botão do site, a mensagem leva um código de referência que não aparece no texto. Ele associa a sua visita ao site (página, veículo e campanha de origem) ao atendimento, para que o consultor saiba o que você estava vendo e para medirmos quais anúncios trazem contatos. O código em si não traz nome, telefone ou outro dado seu: ele só liga esses dois registros.
 • **Segurança:** Nunca solicitaremos senhas ou códigos de confirmação via chat. Documentos sensíveis devem ser enviados apenas para nossos números oficiais.`
   },
   {
@@ -62,7 +63,7 @@ const sections = [
     title: '6. Alterações nesta Política',
     content: `Reservamo-nos o direito de atualizar esta política periodicamente para refletir mudanças em nosso estoque ou em regulamentações legais. Recomendamos a leitura regular desta página.
 
-**Última atualização**: Fevereiro de 2026`
+**Última atualização**: Outubro de 2026`
   },
 ]
 
