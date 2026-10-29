@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { GUIAS_OPERACIONAIS, findGuiaOperacional } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
 
@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/guia/${slug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: data.metaTitle,
 			description: data.metaDescription,
 			url: `${SITE_URL}/guia/${slug}`,

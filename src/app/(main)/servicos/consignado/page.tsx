@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: 'Venda seu veículo de luxo em consignação com a Attra. Exposição em showroom premium, avaliação profissional, precificação competitiva e zero burocracia. Atendemos todo o Brasil.',
   keywords: 'consignado automotivo, venda consignada de carros, consignação de veículos de luxo, vender carro premium, consignado Uberlândia',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Consignado Automotivo | Attra Veículos',
     description: 'Venda seu veículo premium com segurança e praticidade. A Attra cuida de toda a negociação.',
     type: 'website',

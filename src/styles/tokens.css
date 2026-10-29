@@ -10,6 +10,9 @@
   --foreground-secondary: #666666;
   --primary: #9A1C1C;
   --primary-hover: #B82424;
+  /* Vermelho de texto pequeno (rótulos, numeração). No claro é o da marca; no
+     escuro clareia, porque o #9A1C1C sobre o preto dá 2,4:1 (29/10/2026). */
+  --rotulo: #9A1C1C;
   --border: #E5E7EB;
 
   /* Shadow tokens */
@@ -17,9 +20,10 @@
   --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 
   /* Typography tokens */
-  --font-display: var(--font-outfit), 'Outfit', sans-serif;
-  --font-ui: var(--font-geist-sans), 'Geist', sans-serif;
-  --font-reading: var(--font-geist-sans), 'Geist', sans-serif;
+  /* Valem a partir do body, onde as fontes do next/font existem (globals.css). */
+  --font-display: var(--font-montserrat), 'Montserrat', sans-serif;
+  --font-ui: var(--font-montserrat), 'Montserrat', sans-serif;
+  --font-reading: var(--font-montserrat), 'Montserrat', sans-serif;
 
   /* Motion tokens */
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
@@ -43,6 +47,7 @@
   --foreground-secondary: #A8ABB2;
   --primary: #9A1C1C;
   --primary-hover: #CF2E2E;
+  --rotulo: #E5534B;
   --border: #2A2D32;
 
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);

@@ -25,22 +25,17 @@ const MIDIA_CELULAR = '(max-width: 767px), (orientation: portrait)'
 
 const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celular : FILME.computador).video
 
-const ROTACAO_MS = 7000
-
 /**
- * Manifesto headline rotation — Attra é a MOLDURA, não o quadro.
- * Frases editoriais que curam, em vez de marca+modelo (que competiria
- * com Ferrari/Lambo).
+ * O título fixo da home. Até 29/10/2026 três frases se revezavam a cada 7 s
+ * ("Seleção, sem igual", "O lugar do extraordinário"): ninguém terminava de
+ * ler e o <h1> que o Google indexa mudava. A emoção fica com o vídeo.
  */
-const MANIFESTO_LINES = [
-  'Seleção,\nsem igual.',
-  'Critério.\nNão estoque.',
-  'O lugar\ndo extraordinário.',
-] as const
+const MANIFESTO = ['Critério.', 'Não estoque.'] as const
 
 /** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
 function QuadroInicial() {
-  const comum = { alt: '', sizes: '100vw', quality: 75 }
+  // Os dois cortes abrem na fachada da loja.
+  const comum = { alt: 'Fachada da Attra Veículos em Uberlândia', sizes: '100vw', quality: 75 }
   const { props: { srcSet: celular } } = getImageProps({ ...comum, src: FILME.celular.quadro, width: 1280, height: 720 })
   const { props: { srcSet: computador, ...img } } = getImageProps({
     ...comum, src: FILME.computador.quadro, width: 1920, height: 1080, loading: 'eager', fetchPriority: 'high',
@@ -49,7 +44,7 @@ function QuadroInicial() {
     <picture>
       <source media={MIDIA_CELULAR} srcSet={celular} sizes="100vw" />
       <source srcSet={computador} sizes="100vw" />
-      <img {...img} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <img {...img} alt={comum.alt} className="absolute inset-0 h-full w-full object-cover" />
     </picture>
   )
 }
@@ -108,7 +103,9 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
       muted
       loop
       playsInline
-      preload="auto"
+      // Só os dados do arquivo até o play(): o quadro inicial (AVIF/WebP pelo
+      // next/image) é o que pinta enquanto isso, também na rede do celular.
+      preload="metadata"
       aria-hidden="true"
       tabIndex={-1}
       disablePictureInPicture
@@ -125,7 +122,6 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
  * título e mostrava a barra do player ao passar o mouse.
  */
 export function HomeHero() {
-  const [passo, setPasso] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [tocando, setTocando] = useState(false)
   const [comSom, setComSom] = useState(false)
@@ -138,15 +134,6 @@ export function HomeHero() {
     if (video.paused) video.play().catch(() => {})
     setComSom(!video.muted)
   }
-
-  // Rotaciona o manifesto (respeitando prefers-reduced-motion).
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const intervalo = setInterval(() => setPasso((p) => p + 1), ROTACAO_MS)
-    return () => clearInterval(intervalo)
-  }, [])
-
-  const manifestoLine = MANIFESTO_LINES[passo % MANIFESTO_LINES.length]
 
   return (
     <section
@@ -170,12 +157,11 @@ export function HomeHero() {
           {/* Único <h1> da home. Cada linha sobe por trás de uma máscara; na
               primeira vez, depois da abertura (motion.css). */}
           <h1
-            key={manifestoLine}
-            data-primeira={passo === 0 || undefined}
+            data-primeira
             className="text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6"
             style={{ fontFamily: 'var(--font-montserrat)' }}
           >
-            {manifestoLine.split('\n').map((line, i) => (
+            {MANIFESTO.map((line, i) => (
               <span key={i} className="hero-linha" style={{ ['--d' as string]: `${i * 0.12}s` }}>
                 <span>{line}</span>
               </span>
@@ -192,7 +178,7 @@ export function HomeHero() {
           <div className="hero-entra flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4" style={{ ['--d' as string]: '0.1s' }}>
             <Link
               href="/veiculos"
-              className="group inline-flex h-14 items-center justify-center gap-3 bg-white px-9 text-xs font-medium uppercase tracking-[0.22em] text-black transition-colors hover:bg-white/90 sm:text-sm"
+              className="group inline-flex h-14 items-center justify-center gap-3 bg-white px-9 focus-visible:outline-white text-xs font-medium uppercase tracking-[0.22em] text-black transition-colors hover:bg-white/90 sm:text-sm"
             >
               Explorar estoque
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -201,7 +187,7 @@ export function HomeHero() {
               href={getWhatsAppUrl(consultantWhatsAppMessage)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-14 items-center justify-center gap-3 border border-white/40 px-8 text-xs font-medium uppercase tracking-[0.22em] text-white transition-colors hover:border-white hover:bg-white/10 sm:text-sm"
+              className="inline-flex h-14 items-center justify-center gap-3 border border-white/40 px-8 focus-visible:outline-white text-xs font-medium uppercase tracking-[0.22em] text-white transition-colors hover:border-white hover:bg-white/10 sm:text-sm"
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
               Falar com consultor
@@ -216,7 +202,7 @@ export function HomeHero() {
             aria-pressed={comSom}
             aria-hidden={!tocando || undefined}
             tabIndex={tocando ? undefined : -1}
-            className={`mt-7 inline-flex items-center gap-2.5 text-[11px] uppercase tracking-[0.24em] text-white/70 transition-[color,opacity] duration-700 hover:text-white ${tocando ? 'opacity-100' : 'invisible opacity-0'}`}
+            className={`alvo-toque mt-7 inline-flex items-center gap-2.5 text-[13px] uppercase tracking-[0.2em] text-white/75 transition-[color,opacity] duration-700 hover:text-white ${tocando ? 'opacity-100' : 'invisible opacity-0'}`}
           >
             {comSom ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
             {comSom ? 'Desligar som' : 'Ligar som'}

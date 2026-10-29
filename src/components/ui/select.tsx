@@ -10,6 +10,11 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, error, options, placeholder, ...props }, ref) => {
+    // Sem valor inicial, o navegador pula a opção desabilitada e marca a
+    // primeira de verdade: o "Selecione" nunca aparecia e o formulário da home
+    // já vinha com "Até R$ 300 mil" (29/10/2026). Com o placeholder, ele é o inicial.
+    const inicial =
+      placeholder && props.value === undefined && props.defaultValue === undefined ? { defaultValue: '' } : {}
     return (
       <div className="relative w-full">
         <select
@@ -19,6 +24,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             error && 'border-primary ring-1 ring-primary',
             className
           )}
+          {...inicial}
           {...props}
         >
           {placeholder && (

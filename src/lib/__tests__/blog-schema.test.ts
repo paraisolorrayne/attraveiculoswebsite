@@ -64,3 +64,19 @@ describe('buildBlogPostSchemas — avaliação de carro', () => {
 		expect(item).not.toHaveProperty('offers')
 	})
 })
+
+describe('buildBlogPostSchemas — autor', () => {
+	const autorDe = (post: DualBlogPost) =>
+		(buildBlogPostSchemas(post).find(s => s['@type'] === 'Review' || s['@type'] === 'Article') as Node).author as Node
+
+	it('post assinado pela loja aponta para a organização, não para uma pessoa', () => {
+		const autor = autorDe(review)
+		expect(autor['@type']).toBeUndefined()
+		expect(String(autor['@id'])).toMatch(/#organization$/)
+	})
+
+	it('autor com nome de gente continua Person', () => {
+		const autor = autorDe({ ...review, author: { name: 'Maria Souza', bio: 'Consultora' } } as DualBlogPost)
+		expect(autor).toEqual({ '@type': 'Person', name: 'Maria Souza', description: 'Consultora' })
+	})
+})

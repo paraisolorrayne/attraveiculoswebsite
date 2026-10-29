@@ -1,98 +1,47 @@
-'use client'
-
 import Link from 'next/link'
-import { ArrowRight, Search, FileCheck, Truck, CheckCircle } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
-import { Button } from '@/components/ui/button'
-import { anosDeMercado } from '@/lib/constants'
+import { CabecalhoSecao, MONTSERRAT } from '@/components/ui/cabecalho-secao'
 
 const journeySteps = [
-  {
-    number: '1',
-    icon: Search,
-    title: 'Seleção Personalizada',
-    description: 'Consultoria dedicada para encontrar o veículo perfeito conforme seu perfil e necessidades.',
-  },
-  {
-    number: '2',
-    icon: FileCheck,
-    title: 'Inspeção Rigorosa',
-    description: 'Análise técnica de 200+ itens, verificação documental completa e histórico checado.',
-  },
-  {
-    number: '3',
-    icon: Truck,
-    title: 'Logística Nacional',
-    description: 'Transporte seguro em caminhão fechado com seguro premium até a porta da sua casa.',
-  },
-  {
-    number: '4',
-    icon: CheckCircle,
-    title: 'Entrega das Chaves',
-    description: 'Atendimento final com orientações sobre o veículo e suporte pós-venda exclusivo.',
-  },
+  { title: 'Seleção personalizada', line: 'Um consultor encontra o carro certo para o seu perfil.' },
+  { title: 'Inspeção rigorosa', line: '200+ itens, documentação e histórico verificados.' },
+  { title: 'Logística nacional', line: 'Caminhão fechado e seguro até a sua porta.' },
+  { title: 'Entrega das chaves', line: 'Orientação na entrega e suporte depois da venda.' },
 ]
 
+/**
+ * Jornada Attra na home, resumida (29/10/2026): as quatro etapas numa linha,
+ * com o fio em cima como os fatos do Posicionamento, e o link para /jornada.
+ * Antes eram cards com ícone, um parágrafo de abertura e dois CTAs, logo
+ * depois do "Um novo jeito de operar", que dizia quase o mesmo.
+ */
 export function JourneyPreview() {
-
-
   return (
-    <section
-      className="py-24 lg:py-32 bg-gradient-to-br from-primary/5 via-background to-background"
-      id="jornada-attra"
-    >
-      <Container size="2xl">
-        {/* Section Header */}
-        <div className={`text-center mb-16`}>
-          <span className="text-primary font-medium tracking-wide uppercase text-sm">Jornada Attra</span>
-          <h2 className="text-4xl lg:text-5xl font-bold text-foreground mt-4 mb-6">
-            Da Seleção à Entrega na Sua Garagem
-          </h2>
-          <p className="text-foreground-secondary text-lg max-w-3xl mx-auto">
-            Uma experiência completa e personalizada onde cada detalhe é pensado para colecionadores exigentes.
-            Atendimento nacional a partir de Uberlândia.
-          </p>
+    <section className="bg-background py-16 lg:py-24" id="jornada-attra">
+      <Container>
+        <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <CabecalhoSecao
+            rotulo="Jornada Attra"
+            titulo={<>Da seleção à entrega <span className="text-foreground/65">na sua garagem</span></>}
+          />
+          <Link
+            href="/jornada"
+            className="alvo-toque inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-[15px] font-medium text-foreground hover:text-primary"
+          >
+            Conheça a jornada completa <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
 
-        {/* Journey Steps */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
-          {journeySteps.map((step) => (
-            <div
-              key={step.number}
-              className={`group bg-background-card border border-border rounded-2xl p-6 lg:p-7
-                hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all`}
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="flex-shrink-0">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <step.icon className="w-6 h-6 text-primary" />
-                  </div>
-                </div>
-                <div className="flex-shrink-0 text-3xl font-bold text-primary/30 group-hover:text-primary/50 transition-colors">
-                  {step.number}
-                </div>
-              </div>
-              <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                {step.title}
-              </h3>
-              <p className="text-sm text-foreground-secondary leading-relaxed">
-                {step.description}
-              </p>
-            </div>
+        <ol className="mt-10 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:mt-14 lg:grid-cols-4">
+          {journeySteps.map((step, i) => (
+            <li key={step.title} className="border-t border-border pt-5">
+              <p className="text-[13px] font-semibold tracking-[0.16em] text-rotulo">{String(i + 1).padStart(2, '0')}</p>
+              <p className="mt-2 text-xl font-semibold text-foreground" style={MONTSERRAT}>{step.title}</p>
+              <p className="mt-1 text-[15px] leading-snug text-foreground-secondary">{step.line}</p>
+            </li>
           ))}
-        </div>
-
-        {/* CTA */}
-        <div className={`text-center`}>
-          <Button asChild size="lg">
-            <Link href="/jornada" className="flex items-center gap-2">
-              Conheça a Jornada Completa <ArrowRight className="w-5 h-5" />
-            </Link>
-          </Button>
-          <p className="text-foreground-secondary text-sm mt-4">
-            Explore cada etapa em detalhes, históricos de clientes e nossa trajetória de {anosDeMercado()} anos
-          </p>
-        </div>
+        </ol>
       </Container>
     </section>
   )

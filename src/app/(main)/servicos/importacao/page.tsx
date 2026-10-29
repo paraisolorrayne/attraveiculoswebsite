@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 // SEO Optimized Metadata
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: 'Importação sob medida de veículos de luxo e superesportivos da Europa, EUA e Oriente Médio. Processo 100% legal com desembaraço aduaneiro, homologação e entrega em todo Brasil.',
   keywords: 'importação de carros de luxo, importar veículos premium, importação de superesportivos, importar Ferrari, importar Porsche, importar Lamborghini',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Importação de Veículos Premium | Attra Veículos',
     description: 'Importe seu veículo de luxo ou superesportivo com a Attra. Processo completo, legal e transparente.',
     type: 'website',

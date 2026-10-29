@@ -16,8 +16,8 @@ import { usePathname } from 'next/navigation'
  * O que está à vista quando a página abre nunca é marcado: não pode esperar o
  * JavaScript para aparecer. Com movimento reduzido, nada é escondido.
  */
-const ATRASO_MS = 90
-const MAX_ESCALONADOS = 6
+const ATRASO_MS = 50
+const MAX_ESCALONADOS = 5
 
 function ehLista(el: Element): boolean {
   if (el.children.length < 3) return false
@@ -46,6 +46,8 @@ export function RevelarAoRolar() {
     const dobra = () => window.innerHeight * 0.92
 
     const revelar = (el: Element) => { (el as HTMLElement).dataset.revelado = '' }
+    // Dispara um quinto de tela ANTES de o bloco aparecer: quando ele entra, a
+    // animação curta já terminou ou está terminando (29/10/2026).
     const io = new IntersectionObserver((entradas) => {
       for (const e of entradas) {
         if (e.isIntersecting) {
@@ -53,7 +55,7 @@ export function RevelarAoRolar() {
           io.unobserve(e.target)
         }
       }
-    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 })
+    }, { rootMargin: '0px 0px 20% 0px', threshold: 0 })
 
     const abaixoDaDobra = (el: Element) => el.getBoundingClientRect().top > dobra()
 

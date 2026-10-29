@@ -9,7 +9,7 @@ import {
   manualAttraCategories,
   manualAttraTerms,
 } from '@/lib/manual-attra-data'
-import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
+import { canonicalUrl, pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { ArrowLeft, ArrowRight, Wrench } from 'lucide-react'
 
 interface ManualAttraTermPageProps {
@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: ManualAttraTermPageProps): Pr
     title: pageTitle(term.seo.title),
     description: term.seo.metaDescription,
     openGraph: {
+      images: [IMAGEM_COMPARTILHAMENTO],
       title: term.seo.title,
       description: term.seo.metaDescription,
       type: 'article',

@@ -2,9 +2,9 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import {
-  SITE_URL, getWhatsAppUrl, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2,
+  SITE_URL, getWhatsAppUrl, ADDRESS, PHONE_DISPLAY,
   CELLPHONE_DISPLAY, EMAIL, HORARIO_RESUMIDO, GEO, MAPA_URL,
 } from '@/lib/constants'
 import { ArrowRight, MessageCircle, MapPin, Clock, Phone } from 'lucide-react'
@@ -39,6 +39,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/carros-de-luxo-uberlandia` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/carros-de-luxo-uberlandia`,
@@ -147,8 +148,6 @@ export default function CarrosDeLuxoUberlandiaPage() {
               <h2 className="text-lg font-semibold text-foreground mb-2">Contato</h2>
               <p className="text-foreground-secondary leading-relaxed">
                 {PHONE_DISPLAY}
-                <br />
-                {PHONE_DISPLAY_2}
                 <br />
                 WhatsApp {CELLPHONE_DISPLAY}
                 <br />

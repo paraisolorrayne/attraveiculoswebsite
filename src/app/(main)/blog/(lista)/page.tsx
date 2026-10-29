@@ -9,14 +9,14 @@ import { YouTubePreview } from '@/components/videos/youtube-preview'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import { fetchAttraYouTubeFeed } from '@/lib/youtube'
 import { ANCHOR_POST_SLUGS, EDITORIAL_SECTION } from '@/lib/constants'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 export const revalidate = 1800
 
 const POSTS_PREVIEW_LIMIT = 6
 
 export const metadata: Metadata = {
-	title: 'Blog Attra | Insights sobre Superesportivos e Veículos Premium',
+	title: pageTitle('Blog Attra | Insights sobre Superesportivos e Veículos Premium'),
 	description: 'No Blog Attra você encontra Insights exclusivos sobre superesportivos, colecionáveis e mercado premium automotivo. Reviews, análises de especialistas e tendências do setor.',
 	keywords: ['blog attra', 'attra insights', 'superesportivos', 'carros premium', 'reviews automotivos', 'mercado de luxo'],
 	// Canonical fixo na versão limpa. As abas de categoria são estado de
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 	// índice. Canonical estático também preserva o ISR de 30 min desta rota.
 	alternates: { canonical: canonicalUrl(EDITORIAL_SECTION.route) },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: 'Blog Attra | Insights sobre Superesportivos e Veículos Premium',
 		description: 'Insights exclusivos sobre superesportivos, colecionáveis e mercado premium automotivo.',
 		url: canonicalUrl(EDITORIAL_SECTION.route),

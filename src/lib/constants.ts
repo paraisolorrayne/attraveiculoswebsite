@@ -3,13 +3,11 @@
 // Número de WhatsApp oficial da Attra
 export const WHATSAPP_NUMBER = '5534999444747'
 
-// Número de telefone comercial
+// Telefone oficial. Desde 29/10/2026 o site publica só ele e o WhatsApp: o
+// rodapé mostrava três números e a Localização um quarto, (34) 3256-3200, e
+// no luxo isso lê como descuido. Link de ligação sempre com o +55.
 export const PHONE_NUMBER = '+553430143232'
 export const PHONE_DISPLAY = '(34) 3014-3232'
-
-// Telefone secundário (não WhatsApp)
-export const PHONE_NUMBER_2 = '+553432260202'
-export const PHONE_DISPLAY_2 = '(34) 3226-0202'
 
 // Celular
 export const CELLPHONE_NUMBER = '+5534999444747'

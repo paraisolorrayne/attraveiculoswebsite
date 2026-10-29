@@ -7,7 +7,7 @@ import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton, VehicleGridCardSkeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
-import { listingCanonical, listingRobots } from '@/lib/seo/page-metadata'
+import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { findSEOBrand } from '@/lib/seo-brands'
 import { normalizarMarca } from '@/lib/marca-normalizacao'
 import { Vehicle } from '@/types'
@@ -89,7 +89,7 @@ export async function generateMetadata({ searchParams }: VeiculosPageProps): Pro
     alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),
     // og:url apontava para a home, contradizendo o canonical.
-    openGraph: { url: canonical },
+    openGraph: { url: canonical, images: [IMAGEM_COMPARTILHAMENTO] },
   }
 }
 

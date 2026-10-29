@@ -370,46 +370,50 @@ html[data-abertura-agora] .hero-entra { animation-delay: calc(var(--d, 0s) + 1.8
 /* Entrada ao rolar (revelar-ao-rolar.tsx). Só esconde depois que o script
    ligou (html[data-revelar]) e só o que estava abaixo da primeira tela.
    Usa animation, não transition: não mexe nas transições de hover dos cards,
-   e sem `forwards` o elemento volta aos próprios estilos quando termina. */
+   e sem `forwards` o elemento volta aos próprios estilos quando termina.
+
+   Curta (29/10/2026): era 0,95 s subindo 36 px, e a foto em cortina levava
+   1,5 s para abrir e só acompanhava a rolagem até cobrir 42% da tela. Quem
+   rolava via buracos escuros de quase uma tela antes do card e da foto do
+   Thiago. Agora 300 ms, 12 px, e o script dispara antes de o bloco entrar. */
 html[data-revelar] [data-revelar]:not([data-revelado]) { opacity: 0; }
 html[data-revelar] [data-revelar][data-revelado] {
-  animation: revelar-sobe 0.95s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
+  animation: revelar-sobe 0.3s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
 }
 @keyframes revelar-sobe {
-  from { opacity: 0; transform: translateY(36px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
 }
 
-/* Cortina: a foto se abre de baixo para cima e assenta do zoom. */
+/* Cortina: a foto se abre de baixo para cima e assenta de um zoom leve. */
 html[data-revelar] [data-revelar="cortina"][data-revelado] {
-  animation: revelar-cortina 1.5s cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s) backwards;
+  animation: revelar-cortina 0.45s cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s) backwards;
 }
 html[data-revelar] [data-revelar="cortina"][data-revelado] img {
-  animation: revelar-assenta 2.2s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
+  animation: revelar-assenta 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) backwards;
 }
 @keyframes revelar-cortina {
   from { clip-path: inset(100% 0 0 0); }
   to { clip-path: inset(0 0 0 0); }
 }
 @keyframes revelar-assenta {
-  from { transform: scale(1.22); }
+  from { transform: scale(1.06); }
   to { transform: scale(1); }
 }
 
-/* Onde dá, a cortina acompanha a rolagem: a foto vai se revelando conforme a
-   pessoa desce, em vez de abrir sozinha de uma vez. */
-@supports (animation-timeline: view()) {
-  html[data-revelar] .cortina-na-rolagem[data-revelar="cortina"] {
-    opacity: 1;
-    animation: revelar-cortina linear both;
-    animation-timeline: view();
-    animation-range: entry 5% cover 42%;
-  }
-  html[data-revelar] .cortina-na-rolagem[data-revelar="cortina"] img {
-    animation: revelar-assenta linear both;
-    animation-timeline: view();
-    animation-range: entry 0% cover 60%;
-  }
+/* No celular as fotos não animam: entram direto, no espaço já reservado. Com a
+   rolagem rápida de dedo, a cortina deixava quase uma tela preta entre um
+   card e outro e parecia que o site tinha quebrado (29/10/2026). */
+@media (max-width: 767px) {
+  html[data-revelar] [data-revelar="cortina"]:not([data-revelado]) { opacity: 1; }
+  html[data-revelar] [data-revelar="cortina"][data-revelado],
+  html[data-revelar] [data-revelar="cortina"][data-revelado] img { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-revelar] [data-revelar]:not([data-revelado]) { opacity: 1; }
+  html[data-revelar] [data-revelar][data-revelado],
+  html[data-revelar] [data-revelar="cortina"][data-revelado] img { animation: none; }
 }
 
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FAQSchema } from '@/components/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl, ADDRESS } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Car, FileCheck, Handshake, XCircle } from 'lucide-react'
 
@@ -45,6 +45,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/troca` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/troca`,

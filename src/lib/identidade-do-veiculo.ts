@@ -63,3 +63,28 @@ export function nomeDoVeiculo(v: VeiculoIdentificavel): string {
 export function tituloDoVeiculo(v: VeiculoIdentificavel): string {
 	return [nomeDoVeiculo(v), anoDoVeiculo(v)].filter(Boolean).join(' ') || 'Veículo premium'
 }
+
+interface VeiculoDoEstoque extends VeiculoIdentificavel {
+	id: string
+	color?: string | null
+	mileage?: number | null
+}
+
+/**
+ * O título da ficha quando o estoque tem outro carro com o mesmo nome e ano:
+ * as duas Temerário 2026 e os dois 296 GTB 2025 tinham <title> idêntico e
+ * disputavam a mesma busca (auditoria de 28/10/2026). A cor resolve quase
+ * sempre; com a cor também igual, entra a quilometragem.
+ */
+export function tituloDistintoDoVeiculo(v: VeiculoDoEstoque, estoque: VeiculoDoEstoque[]): string {
+	const titulo = tituloDoVeiculo(v)
+	const irmaos = estoque.filter(o => o.id !== v.id && tituloDoVeiculo(o) === titulo)
+	if (irmaos.length === 0) return titulo
+
+	const cor = limpar(v.color)
+	const mesmaCor = (o: VeiculoDoEstoque) => limpar(o.color).toLowerCase() === cor.toLowerCase()
+	if (cor && !irmaos.some(mesmaCor)) return `${titulo} ${cor}`
+
+	const km = v.mileage ? `${v.mileage.toLocaleString('pt-BR')} km` : '0 km'
+	return `${[titulo, cor].filter(Boolean).join(' ')}, ${km}`
+}

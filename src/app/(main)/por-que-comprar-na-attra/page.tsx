@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { findConfianca } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck } from 'lucide-react'
 
@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 	keywords: data.keywords,
 	alternates: { canonical: `${SITE_URL}/por-que-comprar-na-attra` },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: data.metaTitle,
 		description: data.metaDescription,
 		url: `${SITE_URL}/por-que-comprar-na-attra`,

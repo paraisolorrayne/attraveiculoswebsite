@@ -7,7 +7,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { ContactForm } from '@/components/forms/contact-form'
 import { MapaAtendimento, CIDADES_ATENDIDAS } from '@/components/contato/mapa-atendimento'
-import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, PHONE_NUMBER_2, PHONE_DISPLAY_2, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
+import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = {
@@ -49,10 +49,8 @@ const contactChannels = [
     icon: Phone,
     label: 'Telefone',
     value: PHONE_DISPLAY,
-    // Sem o celular: ele é o número do WhatsApp, já na coluna ao lado.
-    secondValue: PHONE_DISPLAY_2,
+    // Só o oficial: o celular é o WhatsApp, já na coluna ao lado.
     href: `tel:${PHONE_NUMBER}`,
-    secondHref: `tel:${PHONE_NUMBER_2}`,
     description: 'Atendimento comercial',
     primary: false,
   },
@@ -126,9 +124,6 @@ export default function ContatoPage() {
                 {item.href ? (
                   <div className="flex flex-col">
                     <a href={item.href} target={item.label === 'WhatsApp' ? '_blank' : undefined} className="font-medium hover:underline">{item.value}</a>
-                    {item.secondValue && item.secondHref && (
-                      <a href={item.secondHref} className="font-medium hover:underline text-sm mt-0.5">{item.secondValue}</a>
-                    )}
                   </div>
                 ) : (
                   <p className="font-medium">{item.value}</p>
@@ -230,7 +225,7 @@ export default function ContatoPage() {
                         </p>
                         <p className="flex items-center gap-2">
                           <Phone className="w-5 h-5 text-primary" />
-                          <a href={`tel:${location.phone.replace(/\D/g, '')}`} className="hover:text-primary">{location.phone}</a>
+                          <a href={`tel:${PHONE_NUMBER}`} className="hover:text-primary">{location.phone}</a>
                         </p>
                         <p className="flex items-center gap-2">
                           <Clock className="w-5 h-5 text-primary" />

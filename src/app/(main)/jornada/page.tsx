@@ -14,7 +14,7 @@ import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -23,7 +23,7 @@ import { anosDeMercado } from '@/lib/constants'
 export const revalidate = 86400
 
 export const metadata: Metadata = {
-  title: 'Jornada Attra | Curadoria de Supercarros, Acervo Icônico e Entrega Nacional',
+  title: pageTitle('Jornada Attra | Curadoria de Supercarros e Entrega Nacional'),
   description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra: Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
   keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil', 'carros icônicos Attra', 'histórico supercarros'],
   alternates: { canonical: canonicalUrl('/jornada') },
@@ -182,7 +182,7 @@ export default function JornadaPage() {
                 className="hero-entra mt-4 text-[40px] font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[clamp(44px,4.2vw,64px)]"
                 style={{ ...MONTSERRAT, ['--d' as string]: '0.08s' }}
               >
-                Da seleção ao desembarque <span className="text-foreground/45">na sua garagem</span>
+                Da seleção ao desembarque <span className="text-foreground/65">na sua garagem</span>
               </h1>
               <p className="hero-entra mt-6 max-w-xl text-lg leading-relaxed text-foreground-secondary" style={{ ['--d' as string]: '0.16s' }}>
                 Uma jornada exclusiva de compra de veículos premium, com curadoria completa de supercarros,

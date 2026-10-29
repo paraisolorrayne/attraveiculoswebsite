@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Calendar, Newspaper, Trophy, Car, BookOpen, Search } from 'lucide-react'
 import { EDITORIAL_SECTION } from '@/lib/constants'
 import { db } from '@/lib/db'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 // Primary refresh comes from revalidatePath('/news') inside the weekly ingestion job;
 // this 1h ISR window is just a safety net in case the cron-triggered revalidate fails.
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: 'Notícias | Mercado Automotivo Premium e Formula 1',
   description: 'Acompanhe as últimas notícias do mercado automotivo de luxo, supercarros e Formula 1. Curadoria semanal da Attra Veículos.',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Notícias | Attra Veículos',
     description: 'Curadoria semanal de notícias do mercado automotivo premium e Formula 1.',
   },

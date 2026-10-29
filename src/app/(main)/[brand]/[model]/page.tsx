@@ -15,6 +15,7 @@ import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 import { ModelLandingPage, resolverModelo } from '@/components/brand/model-landing-page'
 import { MARCAS_NA_RAIZ_NO_AR } from '@/lib/seo/marcas-na-raiz'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
@@ -58,11 +59,12 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 	// outro endereço. Quando o modelo ganhar editorial próprio, este canonical
 	// passa a apontar para si mesmo.
 	return {
-		title: model.metaTitle,
+		title: pageTitle(model.metaTitle),
 		description: model.metaDescription,
 		keywords: model.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: model.metaTitle,
 			description: model.metaDescription,
 			url: `${SITE_URL}/${brandSlug}/${modelSlug}`,

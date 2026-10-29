@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { CinematicVehicleCard } from '@/components/vehicles/cinematic-vehicle-card'
 import type { SituacaoDoReview } from '@/lib/blog-disponibilidade'
 import type { Vehicle } from '@/types'
+import { formatPrice } from '@/lib/utils'
+import { AVISO_DE_PRECO } from '@/lib/seo/estoque-do-modelo'
 
 interface DisponibilidadeReviewProps {
 	situacao: SituacaoDoReview
@@ -36,6 +38,13 @@ export function DisponibilidadeReview({ situacao, brand, model, semelhantes }: D
 						<p className="text-sm text-foreground-secondary">
 							Este exemplar está à venda na Attra Veículos, em Uberlândia-MG.
 						</p>
+						{/* Preço do estoque de agora, não do dia em que o post foi escrito. */}
+						{situacao.veiculo.price > 0 && (
+							<>
+								<p className="mt-3 text-2xl font-bold text-foreground">{formatPrice(situacao.veiculo.price)}*</p>
+								<p className="mt-1 text-xs text-foreground-secondary">*{AVISO_DE_PRECO}</p>
+							</>
+						)}
 					</div>
 					<Button asChild size="lg" className="min-h-[52px]">
 						<Link href={`/veiculo/${situacao.veiculo.slug}`}>

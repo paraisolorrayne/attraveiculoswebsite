@@ -5,7 +5,7 @@ import { buildBlogPostSchemas } from '@/lib/blog-schema'
 import { EducativoTemplate, CarReviewTemplate } from '@/components/blog'
 import { InstagramEmbedProvider } from '@/components/blog/instagram-embed-provider'
 import { DisponibilidadeReview } from '@/components/blog/disponibilidade-review'
-import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 import { loadListedInventory } from '@/app/api/llm/_inventory'
 import { corrigirLinksInternos, pedidoDoReview, situacaoDoReview, slugDaFicha } from '@/lib/blog-disponibilidade'
 import { ordenarPorSemelhanca } from '@/lib/veiculos-semelhantes'
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 			description: post.excerpt,
 			url,
 			type: 'article',
-			images: post.featured_image ? [post.featured_image] : [],
+			images: post.featured_image ? [post.featured_image] : [IMAGEM_COMPARTILHAMENTO],
 			publishedTime: post.published_date,
 		},
 		alternates: {

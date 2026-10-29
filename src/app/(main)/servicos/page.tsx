@@ -9,7 +9,7 @@ import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { VideoEmPe } from '@/components/ui/video-em-pe'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description: 'Serviços premium para veículos nacionais, importados, seminovos premium e supercarros: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
   keywords: 'serviços automotivos premium, importação de carros de luxo, financiamento de veículos premium, consignado de carros, venda consignada veículos, Attra Veículos Uberlândia',
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Serviços Automotivos Premium | Attra Veículos Uberlândia',
     description: 'Soluções completas para veículos premium: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
     type: 'website',
@@ -394,7 +395,7 @@ export default function ServicosPage() {
       <section className="py-16 lg:py-20 bg-background-soft">
         <Container>
           {/* Abre em cortina ao rolar, como a foto do fundador na home. */}
-          <div data-revelar="cortina" className="cortina-na-rolagem relative w-full aspect-[21/9] rounded-2xl overflow-hidden">
+          <div data-revelar="cortina" className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden">
             <Image
               src="/about/attra-caminhao-transporte.jpeg"
               alt="Caminhão da Attra Veículos preparado para embarque e desembarque seguro de veículos premium"

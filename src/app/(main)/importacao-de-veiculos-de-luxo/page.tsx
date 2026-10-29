@@ -6,7 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { SectionKicker, SectionHeading } from '@/components/ui/brand'
 import { IMPORTACAO_MAIN, IMPORTACAO_MARCAS } from '@/lib/seo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, ChevronDown, MessageCircle, Globe, Check, ShieldCheck } from 'lucide-react'
 import { anosDeMercado } from '@/lib/constants'
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 	keywords: data.keywords,
 	alternates: { canonical: `${SITE_URL}/importacao-de-veiculos-de-luxo` },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: data.metaTitle,
 		description: data.metaDescription,
 		url: `${SITE_URL}/importacao-de-veiculos-de-luxo`,

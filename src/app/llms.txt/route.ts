@@ -3,7 +3,7 @@ import { getBlogPosts } from '@/lib/blog-api'
 import { situacaoDoReview } from '@/lib/blog-disponibilidade'
 import type { Vehicle } from '@/types'
 import {
-  SITE_URL, ADDRESS, PHONE_DISPLAY, PHONE_DISPLAY_2, CELLPHONE_DISPLAY,
+  SITE_URL, ADDRESS, PHONE_DISPLAY, CELLPHONE_DISPLAY,
   EMAIL, OPENING_HOURS, GEO, MAPA_URL,
 } from '@/lib/constants'
 import { ICONIC_CARS } from '@/lib/iconic-cars'
@@ -202,7 +202,6 @@ ${postsBlock}
 - Nome: Attra Veículos
 - Endereço: ${ADDRESS.street} - ${ADDRESS.neighborhood}, ${ADDRESS.city} - ${ADDRESS.state}, CEP ${ADDRESS.postalCode}, ${ADDRESS.country}
 - Telefone: ${PHONE_DISPLAY}
-- Telefone 2: ${PHONE_DISPLAY_2}
 - WhatsApp: ${CELLPHONE_DISPLAY}
 - Email: ${EMAIL}
 - Horário de atendimento: ${horarioLegivel}

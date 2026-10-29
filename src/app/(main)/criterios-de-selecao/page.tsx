@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck, XCircle, FileCheck, Wrench } from 'lucide-react'
 
@@ -43,6 +43,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/criterios-de-selecao` },
   openGraph: {
+    images: [IMAGEM_COMPARTILHAMENTO],
     title: META_TITLE,
     description: META_DESC,
     url: `${SITE_URL}/criterios-de-selecao`,

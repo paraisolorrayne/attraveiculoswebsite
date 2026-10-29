@@ -25,7 +25,7 @@ export function AberturaAttra() {
       <div className="abertura" aria-hidden="true">
         <Image
           src="/images/logo-white.png"
-          alt=""
+          alt="Attra Veículos"
           width={140}
           height={40}
           unoptimized

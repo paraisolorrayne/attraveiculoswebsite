@@ -27,13 +27,16 @@ export function FAQSection({
 
   return (
     <section className={`py-16 lg:py-24 bg-background-soft ${className}`}>
-      <Container size="2xl">
+      {/* Largura cheia até o lg (com o px-4 do Container): nos 80% do size
+          "2xl", mais o padding do card, a pergunta ficava com ~230 de 390 px
+          e quebrava em 4 ou 5 linhas (29/10/2026). */}
+      <Container size="2xl" className="w-full lg:w-4/5">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full mb-4">
-              <HelpCircle className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">FAQ</span>
+              <HelpCircle className="w-4 h-4 text-rotulo" />
+              <span className="text-[13px] font-semibold text-rotulo uppercase tracking-wider">FAQ</span>
             </div>
             <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
               {title}
@@ -52,7 +55,7 @@ export function FAQSection({
               >
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-background-soft/50 transition-colors"
+                  className="w-full px-4 py-5 sm:px-6 flex items-center justify-between text-left hover:bg-background-soft/50 transition-colors"
                 >
                   <h3 className="text-base lg:text-lg font-semibold text-foreground pr-4">
                     {faq.question}
@@ -70,7 +73,7 @@ export function FAQSection({
                     openIndex === index ? "max-h-96" : "max-h-0"
                   )}
                 >
-                  <p className="px-6 pb-5 text-foreground-secondary leading-relaxed">
+                  <p className="px-4 pb-5 sm:px-6 text-foreground-secondary leading-relaxed">
                     {faq.answer}
                   </p>
                 </div>

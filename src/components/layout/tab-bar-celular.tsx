@@ -2,22 +2,24 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { House, CarFront, MessageCircle, Building2, Menu } from 'lucide-react'
-import { getWhatsAppUrl } from '@/lib/constants'
+import { Phone, CarFront, Building2, Menu } from 'lucide-react'
+import { IconeWhatsApp } from '@/components/ui/icone-whatsapp'
+import { getWhatsAppUrl, PHONE_NUMBER } from '@/lib/constants'
 import { useVehicleContext } from '@/contexts/vehicle-context'
 import { getContextMessage } from '@/components/layout/whatsapp-button'
 import { cn } from '@/lib/utils'
 import { EVENTO_ABRIR_MENU } from '@/lib/navegacao'
 
 const ABAS = [
-  { rotulo: 'Início', href: '/', icone: House, ativa: (p: string) => p === '/' },
   { rotulo: 'Estoque', href: '/veiculos', icone: CarFront, ativa: (p: string) => p.startsWith('/veiculos') || p.startsWith('/veiculo/') || p.startsWith('/comprar') },
   { rotulo: 'Sobre', href: '/sobre', icone: Building2, ativa: (p: string) => p.startsWith('/sobre') },
 ] as const
 
 /**
- * Barra de abas do celular, como num aplicativo: Início, Estoque, WhatsApp
- * (no centro, em destaque), Sobre e Menu. Substitui no celular o círculo
+ * Barra de abas do celular, como num aplicativo: Ligar, Estoque, WhatsApp
+ * (no centro, em destaque), Sobre e Menu. O "Ligar" ocupa o lugar do "Início"
+ * desde 29/10/2026: na home ele não fazia nada, o logo já leva ao início, e
+ * quem compra um carro de R$ 2 milhões muitas vezes prefere voz a WhatsApp. Substitui no celular o círculo
  * verde flutuante e os botões "Estoque" e ☰ do cabeçalho.
  *
  * A aba do WhatsApp usa a mesma mensagem do círculo (com o carro, na ficha) e
@@ -30,7 +32,7 @@ export function TabBarCelular() {
   const { vehicle } = useVehicleContext()
   const mensagem = getContextMessage(pathname, vehicle?.vehicleBrand, vehicle?.vehicleModel).message
 
-  const [inicio, estoque, sobre] = ABAS
+  const [estoque, sobre] = ABAS
 
   const aba = (item: (typeof ABAS)[number]) => {
     const ativa = item.ativa(pathname)
@@ -60,7 +62,13 @@ export function TabBarCelular() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex h-16 max-w-md items-stretch px-2">
-        {aba(inicio)}
+        <a
+          href={`tel:${PHONE_NUMBER}`}
+          className="flex flex-1 flex-col items-center justify-center gap-1 pt-2 pb-1.5 text-[10px] tracking-wide text-foreground-secondary transition-colors active:text-foreground"
+        >
+          <Phone className="h-[22px] w-[22px]" strokeWidth={1.6} aria-hidden="true" />
+          Ligar
+        </a>
         {aba(estoque)}
         <a
           href={getWhatsAppUrl(mensagem)}
@@ -72,8 +80,8 @@ export function TabBarCelular() {
         >
           {/* Dentro da barra, sem saltar para cima: o círculo saliente cobria
               o conteúdo logo acima (o preço do card, na home). */}
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-green-500 text-white shadow-md shadow-black/30 transition-transform active:scale-95">
-            <MessageCircle className="h-[22px] w-[22px]" aria-hidden="true" />
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-950 text-white ring-1 ring-white/15 shadow-md shadow-black/30 transition-transform active:scale-95">
+            <IconeWhatsApp className="h-[22px] w-[22px]" />
           </span>
         </a>
         {aba(sobre)}

@@ -5,6 +5,7 @@ import { MARCAS_EDITORIAL, editorialDaMarca, flexao } from '@/lib/seo/marcas-edi
 import { seNoAr } from '@/lib/seo/marcas-na-raiz'
 import { SITE_URL } from '@/lib/constants'
 import { BrandEditorialPage } from '@/components/brand/brand-editorial-page'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 /**
  * Página de marca na raiz: /ferrari, /lamborghini, /porsche…
@@ -57,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const description = `${editorial.resumo} Veja a história ${g.def === 'o' ? 'do' : 'da'} ${nome} e o que verificar antes de comprar ${g.indef} ${g.usado}.`
 
 	return {
-		title: editorial.titulo,
+		title: pageTitle(editorial.titulo),
 		description,
 		keywords: [
 			`${nome} história`,
@@ -67,6 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 		],
 		alternates: { canonical: `${SITE_URL}/${slug}` },
 		openGraph: {
+			images: [IMAGEM_COMPARTILHAMENTO],
 			title: editorial.titulo,
 			description,
 			url: `${SITE_URL}/${slug}`,

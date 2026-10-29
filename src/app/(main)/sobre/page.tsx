@@ -12,7 +12,7 @@ import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
 import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { PostInstagram } from '@/components/attra/post-instagram'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -21,7 +21,7 @@ import { anosDeMercado } from '@/lib/constants'
 export const revalidate = 86400
 
 export const metadata: Metadata = {
-  title: 'Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia',
+  title: pageTitle('Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia'),
   description: 'Conheça a Attra Veículos. Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
   keywords: ['Attra Veículos Uberlândia', 'loja de veículos premium', 'supercarros Minas Gerais', 'loja de carros de luxo', 'referência em veículos premium'],
   alternates: { canonical: canonicalUrl('/sobre') },
@@ -283,7 +283,7 @@ export default function SobrePage() {
                 ))}
               </ul>
             </div>
-            <div data-revelar="cortina" className="cortina-na-rolagem relative aspect-[4/5] overflow-hidden rounded-2xl bg-background-soft lg:aspect-[5/6]">
+            <div data-revelar="cortina" className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-background-soft lg:aspect-[5/6]">
               <Image
                 src="/images/showroom-attra-fachada.jpg"
                 alt="Fachada do showroom da Attra Veículos em Uberlândia, com Ferraris estacionadas na frente"

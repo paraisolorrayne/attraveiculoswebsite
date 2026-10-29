@@ -21,10 +21,11 @@
   --color-foreground-secondary: var(--foreground-secondary);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-rotulo: var(--rotulo);
   --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-outfit);
+  --font-display: var(--font-montserrat);
   /* Editorial serif — used in luxury headlines (e.g. HomeHero manifesto).
      Backed by Cormorant Garamond (Google Fonts). */
   --font-editorial: var(--font-editorial);
@@ -48,10 +49,22 @@
   }
 }
 
+/* Montserrat no site inteiro (29/10/2026). As variáveis das fontes do
+   next/font nascem no <body> (classes em layout.tsx), e o que as referencia no
+   :root não as enxerga: o texto corrido e os títulos com var(--font-display)
+   saíam na fonte do sistema, misturados aos títulos em Montserrat. Por isso
+   os papéis de fonte são definidos de novo aqui, no body, onde elas existem. */
 body {
+  /* Com viewport-fit=cover (layout.tsx), o celular deitado põe o entalhe sobre
+     a página: as laterais recuam o que ele ocupa. Em pé, vale 0. */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  --font-display: var(--font-montserrat), Arial, Helvetica, sans-serif;
+  --font-ui: var(--font-montserrat), Arial, Helvetica, sans-serif;
+  --font-reading: var(--font-montserrat), Arial, Helvetica, sans-serif;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -76,10 +89,25 @@ body {
   background: var(--foreground-secondary);
 }
 
-/* Focus styles */
+/* Foco do teclado na cor do texto (branco no escuro, preto no claro): o
+   vermelho da marca sobre o preto não chegava a 3:1 e sumia em volta dos
+   botões vermelhos (29/10/2026). */
 *:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--foreground);
   outline-offset: 2px;
+}
+
+/* Alvo de toque de 44 px em link de texto sem mexer no desenho (29/10/2026):
+   uma camada invisível acima e abaixo do link aumenta a área tocável. Havia
+   35 alvos abaixo de 44 px no celular, alguns com 23 px. */
+.alvo-toque { position: relative; }
+.alvo-toque::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: max(100%, 44px);
+  transform: translateY(-50%);
 }
 
 /* Selection styles */

@@ -67,6 +67,9 @@ export function StickyContactForm() {
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
+    // Na ficha quase todo contato é de compra: "Comprar" já vem marcado, como
+    // vinha antes do placeholder do Select passar a aparecer (29/10/2026).
+    defaultValues: { interestType: 'comprar' },
   })
 
   const pageMode = getPageMode(pathname)

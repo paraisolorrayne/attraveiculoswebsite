@@ -15,6 +15,7 @@ import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
+import { IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 
 /**
  * Hub da categoria — /superesportivos.
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
 	],
 	alternates: { canonical: `${SITE_URL}/superesportivos` },
 	openGraph: {
+		images: [IMAGEM_COMPARTILHAMENTO],
 		title: 'Superesportivos à Venda no Brasil | Attra Veículos',
 		description:
 			'Ferrari, Lamborghini, McLaren, Porsche e Aston Martin com procedência verificada. Veja o estoque disponível ou solicite sob encomenda.',

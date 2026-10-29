@@ -22,7 +22,8 @@ import { getCachedVehicleSections, getFallbackVehicleSections, generateAndCacheV
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
 import { formatPrice } from '@/lib/utils'
 import { buildVehiclePageSchemas, trilhaDoVeiculo } from '@/lib/vehicle-schema'
-import { tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { tituloDistintoDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { loadListedInventory } from '@/app/api/llm/_inventory'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
@@ -73,10 +74,19 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	const url = `${baseUrl}/veiculo/${vehicle.slug}`
 	const ogImages = (vehicle.photos ?? []).slice(0, 4).map(u => ({ url: u, alt: fullName }))
 
+	// Outro carro do estoque com o mesmo nome e ano: o título leva a cor (a
+	// mesma busca da AutoConf da página, em cache de 5 min).
+	let titulo = fullName
+	try {
+		titulo = tituloDistintoDoVeiculo(vehicle, (await loadListedInventory()).vehicles)
+	} catch (error) {
+		console.error('ficha: estoque indisponível para distinguir o título', error)
+	}
+
 	return {
 		// Marca + modelo + versão + ano. O `seo_title` do feed é o mesmo texto;
 		// `pageTitle` só garante que o sufixo de marca não saia duplicado.
-		title: pageTitle(fullName),
+		title: pageTitle(titulo),
 		description: summary,
 		keywords: [
 			vehicle.brand,
