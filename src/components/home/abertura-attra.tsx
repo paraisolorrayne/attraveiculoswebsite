@@ -7,8 +7,8 @@ import Image from 'next/image'
  * desde 23/10/2026) — quem chega numa ficha (anúncio, Google) vai direto ao
  * carro.
  *
- * Fica no layout, fora do <main>: o <main> tem transform (page-enter), e com
- * ele o `fixed` cobriria só o <main>, por baixo do cabeçalho. O script vem
+ * Fica no layout, fora do <main>: até 30/10/2026 o <main> tinha transform
+ * (page-enter), e com ele o `fixed` cobria só o <main>, por baixo do cabeçalho. O script vem
  * antes de todo o resto da página e só liga a abertura nas PAGINAS_COM_ABERTURA: se a
  * visita já viu a abertura, ela nem é desenhada. Ele marca `data-abertura-agora` no <html> só durante a
  * animação e tira depois, para que voltar à home por um link (sem recarregar)

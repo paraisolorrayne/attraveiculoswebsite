@@ -66,7 +66,7 @@ function QuadroInicial() {
 /**
  * Vídeo de fundo: entra depois que a página carregou (o quadro inicial é o que
  * pinta primeiro), aparece quando começa a tocar e pausa fora da tela ou com a
- * aba escondida. Sem vídeo com movimento reduzido ou economia de dados: fica o
+ * aba escondida. Sem vídeo com movimento reduzido, economia de dados ou rede 2G/3G: fica o
  * quadro. O som é do hero (botão "Ligar som"), por isso o elemento é dele.
  */
 function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
@@ -78,8 +78,10 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
   const [fonte, setFonte] = useState<string | null>(null)
 
   useEffect(() => {
-    const conexao = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || conexao?.saveData) return
+    const conexao = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+    // Em 2G/3G o filme (MBs) disputaria a rede com as fotos dos carros: fica o quadro.
+    const redeLenta = /2g|3g/.test(conexao?.effectiveType ?? '')
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || conexao?.saveData || redeLenta) return
     let espera: ReturnType<typeof setTimeout>
     const comecar = () => { espera = setTimeout(() => setFonte(videoDaTela()), 600) }
     if (document.readyState === 'complete') comecar()

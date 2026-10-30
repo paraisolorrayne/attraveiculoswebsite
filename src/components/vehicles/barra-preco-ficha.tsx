@@ -27,10 +27,11 @@ interface BarraPrecoFichaProps {
  * O link é um <a> comum para wa.me: o rastreio global de cliques
  * (visitor-tracking-provider) registra o clique como qualquer outro botão.
  *
- * Vai por portal para o <body>: o <main> do layout tem a animação
- * `page-enter`, que deixa um transform aplicado, e com ele `position: fixed`
- * passa a valer para o <main> e não para a tela — a barra ficava no fim da
- * página em vez de embaixo da tela.
+ * Vai por portal para o <body>: até 30/10/2026 o <main> do layout tinha a
+ * animação `page-enter`, que deixava um transform aplicado, e com ele
+ * `position: fixed` valia para o <main> e não para a tela (a barra ficava no
+ * fim da página em vez de embaixo da tela). O portal continua protegendo
+ * contra qualquer transform num ancestral.
  */
 export function BarraPrecoFicha({ titulo, preco, whatsappUrl }: BarraPrecoFichaProps) {
   const [visivel, setVisivel] = useState(false)
