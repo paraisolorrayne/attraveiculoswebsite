@@ -370,7 +370,10 @@ export async function fetchAutoConfVehicleById(vehicleId: number): Promise<AutoC
   }
 
   const data = await response.json()
-  const veiculo = (data.veiculo || null) as AutoConfVehicle | null
+  // Até out/2026 vinha { veiculo: {...} }; em 29/10/2026 o carro vem direto.
+  // Lendo só o envelope, o site recebia null sem erro, caía na lista (sem a
+  // Descrição Customizada) e a ficha do molde saía vazia em todo carro.
+  const veiculo = (data?.veiculo ?? (data?.id != null ? data : null)) as AutoConfVehicle | null
   if (veiculo) {
     void appendVehicleToSnapshot(vehicleId, veiculo)
   }
@@ -665,33 +668,16 @@ export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
 }
 
 /**
- * Get related/similar vehicles using the sugestoes IDs from the current vehicle
+ * "Veículos Similares" da ficha: os mais parecidos do estoque (ver
+ * semelhantesDoVeiculo), aprovados em 23/10/2026.
+ *
+ * Não usa mais as `sugestoes` da AutoConf. Elas pareciam vazias em 23/10, mas
+ * era a busca por id que falhava (ver fetchAutoConfVehicleById); voltando a
+ * funcionar, o bloco trocaria sozinho os parecidos pelas sugestões, com mais
+ * cinco buscas na AutoConf por ficha.
  */
 export async function getRelatedVehicles(current: Vehicle, limit = 4): Promise<Vehicle[]> {
   try {
-    const numericId = parseInt(current.id, 10)
-
-    // First, get the current vehicle to access its sugestoes
-    if (!isNaN(numericId)) {
-      const currentVehicle = await fetchAutoConfVehicleById(numericId)
-
-      if (currentVehicle && currentVehicle.sugestoes && currentVehicle.sugestoes.length > 0) {
-        // Fetch each suggested vehicle by ID (limit to requested amount)
-        const suggestedIds = currentVehicle.sugestoes.slice(0, limit)
-        const suggestedVehicles = await Promise.all(
-          suggestedIds.map(id => fetchAutoConfVehicleById(id))
-        )
-
-        // Filter out null results and map to Vehicle interface
-        return suggestedVehicles
-          .filter((v): v is AutoConfVehicle => v !== null)
-          .map(mapAutoConfToVehicle)
-      }
-    }
-
-    // Sem sugestões (o caso do estoque inteiro em 23/10/2026): os mais
-    // parecidos do estoque. Antes eram os primeiros da lista, os mesmos
-    // quatro carros em toda ficha (ver semelhantesDoVeiculo).
     const { vehicles } = await getVehicles({ tipo: 'carros', registros_por_pagina: 100 })
     return semelhantesDoVeiculo(vehicles, current, limit)
   } catch (error) {

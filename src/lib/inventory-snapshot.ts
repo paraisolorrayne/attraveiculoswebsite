@@ -85,11 +85,23 @@ export function loadLatestVehicleSnapshot(
   )
 }
 
+// O jsonb devolve as chaves em outra ordem que a da AutoConf.
+function semOrdem(valor: unknown): string | undefined {
+  return JSON.stringify(valor, (_chave, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  )
+}
+
 export async function appendVehicleToSnapshot(
   vehicleId: number,
   vehicle: AutoConfVehicle,
 ): Promise<void> {
   const existing = await loadLatestSnapshot<Record<string, AutoConfVehicle>>(SOURCE_VEHICLE)
+  // Uma ficha busca vários carros por id; sem isto, cada visita gravava uma
+  // linha nova com o estoque inteiro mesmo sem nada mudar.
+  if (existing && semOrdem(existing[String(vehicleId)]) === semOrdem(vehicle)) return
   const next = { ...(existing || {}), [String(vehicleId)]: vehicle }
   try {
     await db.insertInto('inventory_snapshots')
