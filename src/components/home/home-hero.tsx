@@ -14,27 +14,26 @@ const consultantWhatsAppMessage =
  * cortes. O nome leva a versão porque o cache é de um ano (next.config.ts):
  * vídeo novo, nome novo. A imagem inicial é o primeiro quadro de cada corte.
  *
- * O do celular (v2, 29/10/2026) é em pé, 1080x1920: o corte "mais fechado"
- * que veio era 16:9, e o celular em pé mostrava só o terço do meio (o ATTRA
- * da fachada saía cortado). Na v2 o quadro 16:9 inteiro fica no alto, a 220
- * px do topo (logo abaixo do cabeçalho), e o resto é o próprio vídeo
- * desfocado; os 110 px de baixo do quadro se fundem no desfoque. Montado com
- * ffmpeg a partir da v1 (mascara.png: branco, com degradê nos 110 px de baixo):
- *   [0:v]split=2[f][b];
- *   [b]scale=-2:640,crop=360:640,boxblur=24:3,scale=1080:1920,eq=brightness=-0.05:saturation=1.1[bg];
- *   [f]scale=1080:608,format=yuva420p[fg0];[1:v]format=gray[m];[fg0][m]alphamerge[fg];
- *   [bg][fg]overlay=0:220   (libx264 -crf 25, áudio copiado)
+ * O do celular (v3, 30/10/2026) é um filme próprio em pé, 1080x1920, 28,6 s,
+ * montado só com cenas gravadas na vertical (Reels e stories da Attra) e
+ * recortes dos vídeos 4K: abre no Aston Martin chegando à fachada, corta seco
+ * no escapamento quando o motor ronca na trilha (a mesma do computador) e
+ * segue em Ferrari e Lamborghini. Até a v2 era o quadro 16:9 no alto com o
+ * próprio vídeo desfocado embaixo, e os carros ficavam pequenos no celular.
+ * Recomprimido para o site (11,5 → 7,8 MB, sem diferença visível a 100%):
+ *   libx264 -preset slow -crf 28 -movflags +faststart, aac 128k 48 kHz
  */
 const FILME = {
   computador: { video: '/videos/hero-computador-v1.mp4', quadro: '/images/hero-computador-v1.jpg' },
-  celular: { video: '/videos/hero-celular-v2.mp4', quadro: '/images/hero-celular-v2.jpg' },
+  celular: { video: '/videos/hero-celular-v3.mp4', quadro: '/images/hero-celular-v3.jpg' },
 }
 
 // Tela em pé ou estreita usa o corte do celular, no vídeo e na imagem inicial.
 const MIDIA_CELULAR = '(max-width: 767px), (orientation: portrait)'
 
-// No corte em pé, a sobra de altura sai de baixo (só desfoque): o quadro
-// nítido fica sempre logo abaixo do cabeçalho. Mesmas condições de MIDIA_CELULAR.
+// No corte em pé, se a tela for mais larga que 9:16 (tablet em pé), a sobra
+// de altura sai de baixo, que fica sob o texto: o letreiro e os carros, no
+// alto do quadro, continuam inteiros. Mesmas condições de MIDIA_CELULAR.
 const ENQUADRAMENTO = 'object-cover max-md:object-top portrait:object-top'
 
 const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celular : FILME.computador).video
@@ -48,7 +47,8 @@ const MANIFESTO = ['Critério.', 'Não estoque.'] as const
 
 /** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
 function QuadroInicial() {
-  // Os dois cortes abrem na fachada da loja.
+  // Os dois cortes abrem na loja: o do computador na fachada, o do celular
+  // na avenida, com o totem da Attra ao fundo.
   const comum = { alt: 'Fachada da Attra Veículos em Uberlândia', sizes: '100vw', quality: 75 }
   const { props: { srcSet: celular } } = getImageProps({ ...comum, src: FILME.celular.quadro, width: 1080, height: 1920 })
   const { props: { srcSet: computador, ...img } } = getImageProps({
@@ -200,13 +200,17 @@ export function HomeHero() {
       <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/90 via-black/40 to-transparent" aria-hidden="true" />
       <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true" />
 
-      <div className="hero-conteudo relative z-10 flex h-full flex-col justify-end px-6 pb-6 sm:px-10 sm:pb-10 lg:px-[10%] lg:pb-16">
+      {/* No celular o filme em pé (v3) ocupa o topo inteiro e o texto fica por
+          cima dele, como no computador. Com a v2 (quadro 16:9 no alto) o
+          título encolhia para 36 px e o bloco descia para começar abaixo do
+          quadro; isso saiu em 30/10/2026. */}
+      <div className="hero-conteudo relative z-10 flex h-full flex-col justify-end px-6 pb-10 sm:px-10 lg:px-[10%] lg:pb-16">
         <div className="max-w-3xl">
           {/* Único <h1> da home. Cada linha sobe por trás de uma máscara; na
               primeira vez, depois da abertura (motion.css). */}
           <h1
             data-primeira
-            className="text-white font-normal tracking-tight leading-[1.02] text-[2.25rem] mb-4 sm:text-[clamp(2.75rem,6.4vw,6rem)] sm:mb-6"
+            className="text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6"
             style={{ fontFamily: 'var(--font-montserrat)' }}
           >
             {MANIFESTO.map((line, i) => (
@@ -216,7 +220,7 @@ export function HomeHero() {
             ))}
           </h1>
 
-          <p className="hero-entra max-w-xl text-sm font-light leading-relaxed tracking-wide text-white/75 sm:text-base mb-6 sm:mb-9">
+          <p className="hero-entra max-w-xl text-[15px] font-light leading-relaxed tracking-wide text-white/75 sm:text-base mb-8 sm:mb-9">
             {/* Sem a lista de marcas: a faixa logo abaixo já mostra as que têm
                 carro no estoque, com link (27/10/2026). */}
             Supercarros e veículos premium selecionados em Uberlândia, entregues
@@ -224,10 +228,9 @@ export function HomeHero() {
           </p>
 
           {/* Até o computador: "Explorar estoque" no tamanho do texto, o som
-              como ícone na mesma linha e o consultor como link. Os dois botões
-              de largura cheia, o título de 44 px e a linha do "Ligar som"
-              cobriam o vídeo no celular (29/10/2026); lado a lado os botões só
-              cabem a partir de ~770 px, antes disso quebravam em duas linhas. */}
+              como ícone na mesma linha e o consultor como link (29/10/2026).
+              Lado a lado os dois botões cheios só cabem a partir de ~770 px;
+              antes disso quebravam em duas linhas. */}
           <div className="hero-entra flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:gap-4" style={{ ['--d' as string]: '0.1s' }}>
             <div className="flex w-full items-center justify-between lg:contents">
             <Link
