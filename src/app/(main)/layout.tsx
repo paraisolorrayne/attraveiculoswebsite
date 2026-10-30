@@ -25,7 +25,7 @@ export default function MainLayout({
       {/* Folga embaixo no celular para a barra de abas não cobrir o rodapé. */}
       <div className="flex flex-col min-h-screen pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         <Header />
-        <main className="flex-1 page-enter">{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
       </div>
       <WhatsAppButton />

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { useTheme } from 'next-themes'
 import { Container } from '@/components/ui/container'
@@ -22,10 +23,20 @@ const navigation = [
   { name: 'Contato', href: '/contato' },
 ]
 
+// No celular o menu abre pela aba "Menu" e cobre a tela inteira, barra de abas
+// junto: o "Início" entra como primeira linha, para voltar sem depender do
+// logo (30/10/2026). No computador o logo fica à vista e cumpre esse papel.
+const navegacaoCelular = [{ name: 'Início', href: '/' }, ...navigation]
+
+/** Item do menu que corresponde à página aberta (o "Início" só na home). */
+function estaAtiva(href: string, pathname: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [activeSection] = useState('')
+  const pathname = usePathname()
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const { resolvedTheme } = useTheme()
 
@@ -222,8 +233,9 @@ export function Header() {
                     isScrolled && isLightMode
                       ? 'site-header__nav-link--dark'
                       : 'site-header__nav-link--light',
-                    activeSection === item.href && 'active'
+                    estaAtiva(item.href, pathname) && 'active'
                   )}
+                  aria-current={estaAtiva(item.href, pathname) ? 'page' : undefined}
                 >
                   {item.name}
                 </Link>
@@ -398,16 +410,19 @@ export function Header() {
 
           <Container className="py-8 px-6">
             <nav className="flex flex-col gap-0" aria-label="Menu principal">
-              {navigation.map((item, index) => (
+              {navegacaoCelular.map((item, index) => {
+                const ativa = estaAtiva(item.href, pathname)
+                return (
                 <Link
                   key={item.name}
-                  ref={index === 0 ? firstLinkRef : index === navigation.length - 1 ? lastLinkRef : undefined}
+                  ref={index === 0 ? firstLinkRef : index === navegacaoCelular.length - 1 ? lastLinkRef : undefined}
                   href={item.href}
+                  aria-current={ativa ? 'page' : undefined}
                   className={cn(
-                    'text-xl sm:text-2xl font-semibold py-4 sm:py-5 transition-all duration-200',
+                    'flex items-center text-xl sm:text-2xl font-semibold py-4 sm:py-5 transition-all duration-200',
                     'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                     // Add border-b only if not the last item
-                    index < navigation.length - 1 && (isLightMode ? 'border-b border-gray-200' : 'border-b border-white/10'),
+                    index < navegacaoCelular.length - 1 && (isLightMode ? 'border-b border-gray-200' : 'border-b border-white/10'),
                     isLightMode
                       ? 'text-gray-900 hover:text-primary active:text-primary'
                       : 'text-white hover:text-primary active:text-primary',
@@ -418,12 +433,28 @@ export function Header() {
                   style={{
                     transitionDelay: mobileMenuOpen ? `${index * 40 + 50}ms` : '0ms'
                   }}
-                  onClick={closeMenu}
+                  onClick={() => {
+                    // Ao fechar, o menu devolve a página à rolagem de antes.
+                    // Quem toca num item vai para o topo da página escolhida,
+                    // inclusive a que já está aberta (o "Início" na home).
+                    scrollPositionRef.current = 0
+                    closeMenu()
+                  }}
                   tabIndex={mobileMenuOpen ? 0 : -1}
                 >
                   {item.name}
+                  {/* Página aberta: o losango da faixa de marcas. O texto não
+                      fica vermelho: o --primary sobre o painel escuro dá
+                      1,75:1; o losango usa um vermelho mais claro lá (3,8:1). */}
+                  {ativa && (
+                    <span
+                      aria-hidden="true"
+                      className={cn('ml-3 block h-2 w-2 rotate-45', isLightMode ? 'bg-primary' : 'bg-[#EF4444]')}
+                    />
+                  )}
                 </Link>
-              ))}
+                )
+              })}
             </nav>
 
             {/* Additional info in menu */}

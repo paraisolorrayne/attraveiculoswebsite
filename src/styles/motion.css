@@ -110,12 +110,11 @@
 .animate-fade-in-up { animation: reveal 0.8s var(--ease-premium) forwards; }
 .animate-fade-in-scale { animation: reveal-scale var(--duration-slow) var(--ease-premium) forwards; }
 .animate-slide-in-right { animation: focus-shift 0.8s var(--ease-premium) forwards; }
-/* Sem `forwards`: o fim da animação é o estado normal do <main>, e com ela
-   presa no fim ele guardava um transform (mesmo `none` no último quadro vira
-   translateY(0) na interpolação). Com qualquer transform, os elementos `fixed`
-   da página ficam presos ao <main> e não à tela: o painel de filtros fechado
-   alargava /veiculos para 760 px num celular de 440. */
-.page-enter { animation: section-enter 0.4s var(--ease-decelerate) backwards; }
+/* O <main> não tem animação de entrada desde 30/10/2026. A antiga (.page-enter,
+   de opacity 0 a 1 em 0,4 s) fazia o Chrome descartar no LCP tudo que pintava
+   nesse intervalo: a imagem do topo da home nunca contava, o vídeo virava o
+   LCP e o celular media 12 s no Lighthouse. Nada que esteja na primeira tela
+   deve nascer com opacity 0. */
 
 /* Smooth zoom on image hover */
 .image-hover-zoom { overflow: hidden; }
@@ -182,9 +181,12 @@
 /* ── Prévia 22/10/2026: faixa de marcas e barra da ficha ────────────────── */
 
 /* Faixa de marcas. Duas cópias da lista lado a lado; andar metade da largura
-   fecha o laço sem emenda. Só anda no computador e para com o mouse ou o
-   foco em cima: no celular, um toque para parar a faixa vira clique errado,
-   então lá ela é uma fileira que se arrasta com o dedo. */
+   fecha o laço sem emenda. Anda sozinha também no celular desde 30/10/2026
+   (antes lá era uma fileira parada, de arrastar com o dedo, e parecia
+   quebrada perto da do computador). Para com o mouse ou o foco em cima; no
+   celular não para no toque: o toque já é o clique na marca, e a faixa anda
+   devagar o bastante para o dedo acertar. Com movimento reduzido, volta a
+   ser a fileira de arrastar. */
 .faixa-marcas__janela {
   /* relative: o texto "N carros em estoque" é sr-only (position: absolute) e,
      sem isso, escapa da rolagem da faixa e alarga a página no celular. */
@@ -197,16 +199,21 @@
 .faixa-marcas__janela::-webkit-scrollbar { display: none; }
 .faixa-marcas__trilho { display: flex; width: max-content; }
 .faixa-marcas__copia { display: none; }
-@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   .faixa-marcas__janela {
     overflow: hidden;
     -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
     mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
   }
   .faixa-marcas__copia { display: flex; }
-  .faixa-marcas__trilho { animation: faixa-marcas 60s linear infinite; }
-  .faixa-marcas__trilho:hover,
+  /* No celular a lista é mais curta (letra menor): 40 s dá a mesma
+     velocidade na tela que os 60 s do computador. */
+  .faixa-marcas__trilho { animation: faixa-marcas 40s linear infinite; }
   .faixa-marcas__trilho:focus-within { animation-play-state: paused; }
+}
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .faixa-marcas__trilho { animation-duration: 60s; }
+  .faixa-marcas__trilho:hover { animation-play-state: paused; }
 }
 @keyframes faixa-marcas {
   to { transform: translateX(-50%); }
