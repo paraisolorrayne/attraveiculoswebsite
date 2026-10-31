@@ -113,7 +113,7 @@ export function LeadCaptureSection() {
       id="captacao"
       className="py-16 md:py-20 bg-gradient-to-br from-background-soft via-background to-background-soft"
     >
-      <Container size="xl">
+      <Container className="max-w-[max(80%,1280px)]">
         {/* Header centralizado em uma única coluna no topo — substitui o
             antigo split 2-col "narrative à esquerda + card à direita"
             (padrão LP de SaaS). Aqui a narrativa abre a seção em largura

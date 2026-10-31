@@ -9,7 +9,7 @@ import { Container } from '@/components/ui/container'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 import { EDITORIAL_SECTION } from '@/lib/constants'
-import { EVENTO_ABRIR_MENU } from '@/lib/navegacao'
+import { EVENTO_ABRIR_MENU, LARGURA_LARGA, paginaLarga } from '@/lib/navegacao'
 import { X } from 'lucide-react'
 
 // Minimal navigation for premium boutique feel
@@ -186,7 +186,7 @@ export function Header() {
             : 'site-header--overlay'
         )}
       >
-        <Container>
+        <Container className={cn(paginaLarga(pathname) && LARGURA_LARGA)}>
           <nav className="flex items-center justify-between h-20 py-4">
             {/* Logo - always white when not scrolled (dark header), theme-aware when scrolled */}
             <Link href="/" className="site-header__logo group">

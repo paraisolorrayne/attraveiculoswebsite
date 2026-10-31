@@ -77,7 +77,10 @@ export function EditorialSelection({ vehicles = [], totalEstoque }: EditorialSel
 
   return (
     <section className="bg-background py-20 lg:py-28">
-      <Container>
+      {/* Em tela larga, 80% da tela como o texto do topo, o FAQ e a ficha.
+          Presa em 1280 px, a seleção virava uma caixa no meio de um monitor
+          grande ou do Safari com zoom reduzido (31/10/2026). */}
+      <Container className="max-w-[max(80%,1280px)]">
         <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <CabecalhoSecao
