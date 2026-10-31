@@ -31,7 +31,7 @@ const atraso = (s: number) => ({ ['--d' as string]: `${s}s` })
 export function AboutSectionExpanded() {
   return (
     <section id="sobre" className="bg-background-soft py-20 lg:py-28">
-      <Container>
+      <Container className="max-w-[max(80%,1280px)]">
         <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <CabecalhoSecao
             rotulo="Por que a Attra"
@@ -63,7 +63,7 @@ export function AboutSectionExpanded() {
                     src={FOTO}
                     alt={p.alt}
                     fill
-                    sizes="(min-width: 1280px) 1216px, 100vw"
+                    sizes="(min-width: 1600px) 80vw, (min-width: 1280px) 1216px, 100vw"
                     className="object-cover object-[50%_50%] md:object-[50%_12%]"
                   />
                 </div>

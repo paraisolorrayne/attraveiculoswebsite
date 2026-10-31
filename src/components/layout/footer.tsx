@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Phone, MessageCircle, Mail, MapPin, Clock, Instagram, Facebook, Youtube } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { cn } from '@/lib/utils'
+import { LARGURA_LARGA, paginaLarga } from '@/lib/navegacao'
 import { PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_RESUMIDO, getWhatsAppUrl } from '@/lib/constants'
 
 const quickLinks = [
@@ -26,6 +28,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear()
   const [mounted, setMounted] = useState(false)
   const { resolvedTheme } = useTheme()
+  const larga = paginaLarga(usePathname()) && LARGURA_LARGA
 
   useEffect(() => {
     setMounted(true)
@@ -36,7 +39,7 @@ export function Footer() {
 
   return (
     <footer className="bg-background-card border-t border-border">
-      <Container className="py-12 lg:py-16">
+      <Container className={cn('py-12 lg:py-16', larga)}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* About */}
           <div>
@@ -165,7 +168,7 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-border">
-        <Container className="py-4">
+        <Container className={cn('py-4', larga)}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-foreground-secondary">
             <p>© {currentYear} Attra Veículos. Todos os direitos reservados.</p>
             <div className="flex gap-4">

@@ -19,7 +19,7 @@ const journeySteps = [
 export function JourneyPreview() {
   return (
     <section className="bg-background py-16 lg:py-24" id="jornada-attra">
-      <Container>
+      <Container className="max-w-[max(80%,1280px)]">
         <div data-revelar className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <CabecalhoSecao
             rotulo="Jornada Attra"
