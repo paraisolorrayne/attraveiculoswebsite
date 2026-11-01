@@ -349,7 +349,7 @@ export function CrmAdmin() {
 					)}
 					<div className={styles.toolbarEnd}>
 						{(filtroDias !== 0 || filtroVendedor || busca) && <button className={styles.button} onClick={() => { setFiltroDias(0); setFiltroVendedor(''); setBusca('') }}><X className="h-3 w-3" />Limpar filtros</button>}
-						<span className="flex items-center gap-1.5 text-[11px] text-foreground-secondary"><SlidersHorizontal className="h-3 w-3" />{cardsFiltrados.length} leads no quadro</span>
+						<span className="flex items-center gap-1.5 text-[0.6875rem] text-foreground-secondary"><SlidersHorizontal className="h-3 w-3" />{cardsFiltrados.length} leads no quadro</span>
 					</div>
 			</div>
 
@@ -611,7 +611,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 						{infos.filter(i => i.valor).map(i => (
 							<div key={i.rotulo}>
-								<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">
+								<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
 									{i.rotulo}
 								</dt>
 								<dd className="text-sm text-foreground mt-0.5 break-words">{i.valor}</dd>
@@ -622,7 +622,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					{/* Standup do vendedor */}
 					{(card.andamento || card.impedimento || card.proxima_acao) && (
 						<div className="space-y-2">
-							<h3 className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
+							<h3 className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
 								<MessageSquareQuote className="w-3.5 h-3.5" />
 								Standup do vendedor
 								<InfoDica>
@@ -657,7 +657,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 
 					{motivoDoCard(card) && (
 						<div>
-							<h3 className="text-[11px] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
 								Motivo do encerramento
 							</h3>
 							<p className="text-sm text-foreground whitespace-pre-wrap">{motivoDoCard(card)}</p>
@@ -666,7 +666,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 
 					{/* Linha do tempo */}
 					<div>
-						<h3 className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary mb-2">
+						<h3 className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-2">
 							Linha do tempo
 							{fonte && (
 								<>
@@ -681,7 +681,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 						<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 							{linhaDoTempo.filter(d => d.valor).map(d => (
 								<div key={d.rotulo}>
-									<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">
+									<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
 										{d.rotulo}
 									</dt>
 									<dd className="text-sm text-foreground mt-0.5">{d.valor}</dd>
@@ -693,7 +693,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					{/* Campos legados do v1 (se ainda presentes no JSONB) */}
 					{observacoes && (
 						<div>
-							<h3 className="text-[11px] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
 								Observações do alerta
 							</h3>
 							<p className="text-sm text-foreground whitespace-pre-wrap">{observacoes}</p>
@@ -701,14 +701,14 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					)}
 					{resposta && (
 						<div>
-							<h3 className="text-[11px] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
 								Última resposta do vendedor (v1)
 							</h3>
 							<blockquote className="text-sm text-foreground border-l-2 border-border pl-3 whitespace-pre-wrap">
 								{resposta.texto}
 							</blockquote>
 							{resposta.em && (
-								<p className="text-[11px] text-foreground-secondary mt-1">
+								<p className="text-[0.6875rem] text-foreground-secondary mt-1">
 									{fmtDataHora(resposta.em)}
 								</p>
 							)}

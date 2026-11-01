@@ -187,3 +187,10 @@ html {
   background: var(--primary); border-radius: 3px;
   transition: height 0.1s linear;
 }
+/* Admin com letra maior (31/10/2026). As classes do Tailwind são em rem (os
+   tamanhos em px do admin viraram rem no mesmo dia), então subir a fonte da
+   raiz aumenta texto e espaçamento juntos, como um zoom de 112,5%, sem mexer
+   nas coordenadas do canvas do gerador como o `zoom` mexeria. Só onde o
+   layout do admin marca a página com .admin-raiz; vale também para os modais,
+   que são montados fora dela. */
+html:has(.admin-raiz) { font-size: 112.5%; }

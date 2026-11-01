@@ -232,7 +232,7 @@ export function CampanhaPainel({ chave }: { chave: string }) {
 function Kpi({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
 	return (
 		<div className={`rounded-xl border bg-background-card px-4 py-3 ${destaque ? 'border-primary/40' : 'border-border'}`}>
-			<div className="text-[11px] uppercase tracking-wide text-foreground-secondary">{rotulo}</div>
+			<div className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">{rotulo}</div>
 			<div className={`mt-1 text-xl font-semibold tabular-nums ${destaque ? 'text-primary' : 'text-foreground'}`}>{valor}</div>
 		</div>
 	)
@@ -254,7 +254,7 @@ function TempoAteClique({ score }: { score: Dados['score'] }) {
 					{score.faixas.map(f => (
 						<li key={f.rotulo} className="grid grid-cols-[9rem_1fr_5rem] items-center gap-3 text-sm">
 							<span className="text-foreground-secondary">
-								{f.rotulo} <span className="text-[10px]">× {String(f.peso).replace('.', ',')}</span>
+								{f.rotulo} <span className="text-[0.625rem]">× {String(f.peso).replace('.', ',')}</span>
 							</span>
 							<div className="h-2 rounded-full bg-background-soft overflow-hidden">
 								<div className="h-full rounded-full bg-primary/70" style={{ width: `${(f.sessoes / maior) * 100}%` }} />

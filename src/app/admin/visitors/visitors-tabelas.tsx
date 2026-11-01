@@ -83,7 +83,7 @@ function ConteudoTaxa({
 				<span className={`text-base font-semibold tabular-nums ${corTaxa(valor, media, total)}`}>{fmtPct(valor)}</span>
 				{baixoVolume && (
 					<span
-						className="text-[10px] text-foreground-secondary"
+						className="text-[0.625rem] text-foreground-secondary"
 						title={`Menos de ${VOLUME_MINIMO} sessões no período: com tão pouca gente essa taxa oscila muito e não sustenta decisão de verba.`}
 					>
 						poucos dados
@@ -520,7 +520,7 @@ export function MidiaPaga({
 								<div className="truncate text-foreground" title={l.campanha}>
 									{l.campanha}
 								</div>
-								<div className="text-[10px] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
+								<div className="text-[0.625rem] uppercase tracking-wide text-foreground-secondary">{l.canal_fonte || '—'}</div>
 							</>
 						),
 					},
@@ -640,7 +640,7 @@ export function ContextoClique({ linhas }: { linhas: LinhaContextoClique[] }) {
 							<div key={dim} className="px-4 py-3">
 								<div className="mb-1 flex items-baseline gap-2">
 									<h3 className="text-sm font-medium text-foreground">{TITULO_DIMENSAO[dim] ?? dim}</h3>
-									<span className="text-[11px] text-foreground-secondary">{EXPLICACAO_DIMENSAO[dim]}</span>
+									<span className="text-[0.6875rem] text-foreground-secondary">{EXPLICACAO_DIMENSAO[dim]}</span>
 								</div>
 
 								{naoMarcado ? (

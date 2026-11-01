@@ -116,7 +116,7 @@ export function TabelaCampanhasScore({ linhas, scoreDesde }: { linhas: LinhaCamp
 					<span className={`text-base font-semibold ${corTaxa(l.score * 100, mediaScore, l.sessoes_mensuraveis)}`}>
 						{fmtFracao(l.score)}
 						{l.sessoes_mensuraveis < VOLUME_MINIMO && (
-							<span className="ml-1 text-[10px] font-normal text-foreground-secondary">poucos dados</span>
+							<span className="ml-1 text-[0.625rem] font-normal text-foreground-secondary">poucos dados</span>
 						)}
 					</span>
 				),

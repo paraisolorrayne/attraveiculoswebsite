@@ -130,7 +130,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-foreground-secondary mt-2">
+            <p className="text-[0.6875rem] text-foreground-secondary mt-2">
               Média do conjunto: <strong>{fmtPct(dados.media_geral)}</strong> ·{' '}
               {fmtNum(dados.total_conversoes)} contatos em {fmtNum(dados.total_sessoes)} sessões com termo.
             </p>
@@ -150,7 +150,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
                       <span className="block truncate" title={t.termo}>
                         {t.termo}
                       </span>
-                      <span className="block truncate text-[11px] text-foreground-secondary">{ROTULO[t.padrao]}</span>
+                      <span className="block truncate text-[0.6875rem] text-foreground-secondary">{ROTULO[t.padrao]}</span>
                       <span
                         className="mt-1 block h-1 rounded-full bg-primary/25"
                         style={{ width: larguraRelativa(t.sessoes, maxSessoes) }}
@@ -210,7 +210,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
           </div>
 
           {dados.sessoes_com_macro > 0 && (
-            <p className="border-t border-border px-4 py-3 text-[11px] text-amber-600 dark:text-amber-400">
+            <p className="border-t border-border px-4 py-3 text-[0.6875rem] text-amber-600 dark:text-amber-400">
               {fmtNum(dados.sessoes_com_macro)} sessão(ões) chegaram com a macro literal (ex.:{' '}
               <code>{'{{ad.name}}'}</code>) em vez do valor: o link foi publicado onde a plataforma não substitui a
               macro. Enquanto isso não for corrigido, essas visitas não têm anúncio identificável.
@@ -218,7 +218,7 @@ export function SecaoTermosDeConversao({ dias }: { dias: number }) {
           )}
 
           {dados.termos_abaixo_do_minimo > 0 && (
-            <p className="px-4 py-3 text-[11px] text-foreground-secondary border-t border-border">
+            <p className="px-4 py-3 text-[0.6875rem] text-foreground-secondary border-t border-border">
               {dados.termos_abaixo_do_minimo} termo(s) com menos de {dados.volume_minimo} sessões ficaram
               fora da tabela — abaixo disso a taxa é ruído. Eles continuam somando nos padrões acima.
             </p>
@@ -321,7 +321,7 @@ export function SecaoAnunciosDaRede({ dias }: { dias: number }) {
         vazio="Nenhum anúncio com volume suficiente no período."
       />
       {dados.anuncios_abaixo_do_minimo > 0 && (
-        <p className="border-t border-border px-4 py-3 text-[11px] text-foreground-secondary">
+        <p className="border-t border-border px-4 py-3 text-[0.6875rem] text-foreground-secondary">
           {dados.anuncios_abaixo_do_minimo} anúncio(s) com menos de {dados.volume_minimo} sessões ficaram fora da
           tabela — abaixo disso a taxa é ruído.
         </p>

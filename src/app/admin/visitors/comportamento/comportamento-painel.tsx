@@ -270,7 +270,7 @@ function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: string; 
     <div className="rounded-xl bg-background p-3">
       <p className="text-xs text-foreground-secondary">{rotulo}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">{valor}</p>
-      {detalhe && <p className="mt-0.5 text-[11px] text-foreground-secondary">{detalhe}</p>}
+      {detalhe && <p className="mt-0.5 text-[0.6875rem] text-foreground-secondary">{detalhe}</p>}
     </div>
   )
 }
@@ -301,7 +301,7 @@ function ListaDePaginas({
                 <span className="block truncate text-foreground" title={l.page_path}>
                   {l.page_path}
                 </span>
-                <span className="text-[11px] text-foreground-secondary">
+                <span className="text-[0.6875rem] text-foreground-secondary">
                   {fmtNum(l.visualizacoes)} visualizações
                   {l.rolagem_mediana != null && ` · rolagem ${l.rolagem_mediana}%`}
                 </span>

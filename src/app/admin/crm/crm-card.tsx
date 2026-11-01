@@ -125,7 +125,7 @@ export const linkWhatsApp = (telefone: string): string | null => {
 export function BadgeSituacao({ situacao }: { situacao: string }) {
 	const s = situacaoInfo(situacao)
 	return (
-		<span className={`inline-flex text-[10px] border rounded-full px-2 py-0.5 whitespace-nowrap ${s.classe}`}>
+		<span className={`inline-flex text-[0.625rem] border rounded-full px-2 py-0.5 whitespace-nowrap ${s.classe}`}>
 			{s.label}
 		</span>
 	)
@@ -143,7 +143,7 @@ export function AvatarVendedor({ nome }: { nome: string }) {
 	return (
 		<span
 			title={nome}
-			className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white flex-shrink-0 ${cor}`}
+			className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[0.5625rem] font-semibold text-white flex-shrink-0 ${cor}`}
 		>
 			{iniciais}
 		</span>
@@ -216,17 +216,17 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 			<div className="flex items-start justify-between gap-2">
 				{/* min-w-0: sem isso o nome não encolhe dentro do flex e empurra o
 				    badge para fora do card em vez de cortar com reticências */}
-				<div className="font-semibold text-foreground text-[13px] leading-snug line-clamp-2 min-w-0" title={c.nome || c.telefone || 'Sem nome'}>
+				<div className="font-semibold text-foreground text-[0.8125rem] leading-snug line-clamp-2 min-w-0" title={c.nome || c.telefone || 'Sem nome'}>
 					{c.nome || c.telefone || 'Sem nome'}
 				</div>
 				{!mostraEspera && (
-					<span className="shrink-0"><span className="text-[11px] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span></span>
+					<span className="shrink-0"><span className="text-[0.6875rem] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span></span>
 				)}
 			</div>
 
 			{/* Valor + tempo */}
 			<div className="mt-2 flex flex-wrap items-center justify-between gap-1.5">
-				<span className="text-[15px] tracking-tight font-semibold text-foreground whitespace-nowrap tabular-nums">
+				<span className="text-[0.9375rem] tracking-tight font-semibold text-foreground whitespace-nowrap tabular-nums">
 					{fmtValor(c.valor) ?? <Traco />}
 				</span>
 				{c.situacao && <BadgeSituacao situacao={c.situacao} />}
@@ -260,7 +260,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 					</span>
 					{c.origem_campanha.metodo === 'provavel' && (
 						<span
-							className="text-[10px] text-foreground-secondary/70 flex-shrink-0"
+							className="text-[0.625rem] text-foreground-secondary/70 flex-shrink-0"
 							title={COMO_LIGOU[c.origem_campanha.ligacao ?? 'telefone']}
 						>
 							(provável)
@@ -271,7 +271,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 
 			{/* Andamento — a última fala do vendedor */}
 			{c.andamento && (
-				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-[11px] leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
+				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-[0.6875rem] leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
 					{c.andamento}
 				</div>
 			)}
@@ -308,8 +308,8 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 				<div className="flex items-center gap-1.5 min-w-0">
 					{c.vendedor && <AvatarVendedor nome={c.vendedor} />}
 					<div className="min-w-0">
-						<p className="text-[11px] text-foreground truncate" title={c.vendedor ?? undefined}>{c.vendedor || 'Sem vendedor'}</p>
-						{c.origem && <p className="text-[10px] text-foreground-secondary truncate" title={c.origem}>{c.origem}</p>}
+						<p className="text-[0.6875rem] text-foreground truncate" title={c.vendedor ?? undefined}>{c.vendedor || 'Sem vendedor'}</p>
+						{c.origem && <p className="text-[0.625rem] text-foreground-secondary truncate" title={c.origem}>{c.origem}</p>}
 					</div>
 				</div>
 				{c.telefone && linkWhatsApp(c.telefone) ? (
