@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetSta
 import { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, MessageCircle, Volume2, VolumeX } from 'lucide-react'
-import { getWhatsAppUrl } from '@/lib/constants'
+import { anosDeMercado, getWhatsAppUrl } from '@/lib/constants'
 
 const consultantWhatsAppMessage =
   'Olá, Attra. Gostaria de falar com um consultor sobre os veículos do acervo.'
@@ -39,11 +39,25 @@ const ENQUADRAMENTO = 'object-cover max-md:object-top portrait:object-top'
 const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celular : FILME.computador).video
 
 /**
+ * Trechos do corte do celular (em segundos) em que o letreiro ATTRA da fachada
+ * ocupa o alto do quadro. No celular o título fica no alto e saía por cima do
+ * letreiro: nesses trechos ele e o escurecimento do alto saem de cena
+ * (31/10/2026). Medidos no v3 com o scene score do ffmpeg (as duas entradas
+ * são fusões); vídeo novo, medir de novo.
+ */
+const CENAS_DO_LETREIRO = [[1.3, 3.6], [23.0, 25.7]] as const
+
+/**
  * O título fixo da home. Até 29/10/2026 três frases se revezavam a cada 7 s
  * ("Seleção, sem igual", "O lugar do extraordinário"): ninguém terminava de
  * ler e o <h1> que o Google indexa mudava. A emoção fica com o vídeo.
  */
 const MANIFESTO = ['Critério.', 'Não estoque.'] as const
+
+// Os anos de mercado abrem o subtítulo, por extenso. Vêm de anosDeMercado()
+// para não envelhecer; depois de "Vinte e cinco", em algarismos.
+const ANOS_POR_EXTENSO = ['Dezoito', 'Dezenove', 'Vinte', 'Vinte e um', 'Vinte e dois', 'Vinte e três', 'Vinte e quatro', 'Vinte e cinco']
+const anosPorExtenso = () => ANOS_POR_EXTENSO[anosDeMercado() - 18] ?? String(anosDeMercado())
 
 /** Primeiro quadro do corte certo para a tela: é o que pinta antes do vídeo. */
 function QuadroInicial() {
@@ -65,18 +79,18 @@ function QuadroInicial() {
 
 /**
  * Vídeo de fundo: entra depois que a página carregou (o quadro inicial é o que
- * pinta primeiro), aparece quando começa a tocar e pausa fora da tela ou com a
- * aba escondida. Sem vídeo com movimento reduzido, economia de dados ou rede 2G/3G: fica o
+ * pinta primeiro), aparece quando dá para tocar sem travar e pausa fora da tela
+ * ou com a aba escondida. Sem vídeo com movimento reduzido, economia de dados ou rede 2G/3G: fica o
  * quadro. O som é do hero (botão "Ligar som"), por isso o elemento é dele.
  */
-function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
+function VideoDeFundo({ videoRef, fonte, setFonte, tocando, setTocando, setComSom }: {
   videoRef: RefObject<HTMLVideoElement | null>
+  fonte: string | null
+  setFonte: Dispatch<SetStateAction<string | null>>
   tocando: boolean
   setTocando: Dispatch<SetStateAction<boolean>>
   setComSom: Dispatch<SetStateAction<boolean>>
 }) {
-  const [fonte, setFonte] = useState<string | null>(null)
-
   useEffect(() => {
     const conexao = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
     // Em 2G/3G o filme (MBs) disputaria a rede com as fotos dos carros: fica o quadro.
@@ -87,7 +101,7 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
     if (document.readyState === 'complete') comecar()
     else window.addEventListener('load', comecar, { once: true })
     return () => { clearTimeout(espera); window.removeEventListener('load', comecar) }
-  }, [])
+  }, [setFonte])
 
   useEffect(() => {
     const video = videoRef.current
@@ -96,7 +110,8 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
     video.muted = true
     const tocar = () => video.play().catch(() => {
       // Com som, o navegador pode recusar sem um toque recente: volta ao mudo e
-      // segue tocando. Mudo e recusado (modo economia do iOS), fica o quadro.
+      // segue tocando. Mudo e recusado (modo economia do iOS), fica o quadro
+      // com o botão de som: o toque nele é o que faz o filme tocar.
       if (video.muted) return
       video.muted = true
       setComSom(false)
@@ -109,6 +124,32 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
     document.addEventListener('visibilitychange', atualizar)
     return () => { io.disconnect(); document.removeEventListener('visibilitychange', atualizar) }
   }, [fonte, videoRef, setComSom])
+
+  // Aparece só quando dá para tocar até o fim sem travar. Antes surgia no
+  // primeiro quadro baixado e, com a rede mais lenta que o filme (4G fraco,
+  // 1,6 Mbps contra os ~2,2 Mbps do corte do celular), parava 5 vezes nos
+  // primeiros 25 s (31/10/2026). Enquanto isso já toca escondido e mudo, porque
+  // no iOS o arquivo só baixa tocando; ao aparecer, volta ao começo.
+  useEffect(() => {
+    const video = videoRef.current
+    if (!fonte || !video || tocando) return
+    const inicio = performance.now()
+    const avaliar = () => {
+      const { buffered, duration } = video
+      if (!buffered.length || !duration) return
+      const baixado = buffered.end(buffered.length - 1)
+      // Segundos de filme que chegam por segundo de rede, com 20% de margem.
+      // Tocando do começo, só alcança o fim do que baixou se faltar baixar
+      // mais do que o ritmo cobre: precisa ter (1 - ritmo) do filme na mão.
+      const ritmo = (0.8 * baixado) / ((performance.now() - inicio) / 1000)
+      if (baixado < duration - 0.5 && baixado < (1 - ritmo) * duration + 1.5) return
+      if (video.currentTime > 0.5) video.currentTime = 0
+      setTocando(true)
+    }
+    const eventos = ['progress', 'timeupdate', 'playing'] as const
+    eventos.forEach((e) => video.addEventListener(e, avaliar))
+    return () => eventos.forEach((e) => video.removeEventListener(e, avaliar))
+  }, [fonte, tocando, videoRef, setTocando])
 
   if (!fonte) return null
 
@@ -126,19 +167,21 @@ function VideoDeFundo({ videoRef, tocando, setTocando, setComSom }: {
       tabIndex={-1}
       disablePictureInPicture
       disableRemotePlayback
-      onPlaying={() => setTocando(true)}
       className={`pointer-events-none absolute inset-0 h-full w-full ${ENQUADRAMENTO} transition-opacity duration-[1200ms] ease-out ${tocando ? 'opacity-100' : 'opacity-0'}`}
     />
   )
 }
 
 /**
- * Liga e desliga o som do filme. Só aparece com o vídeo tocando; o espaço fica
- * reservado para nada pular quando ele entra. No computador é texto, abaixo dos
- * botões; até lá (`icone`), um círculo na linha do "Explorar estoque".
+ * Liga e desliga o som do filme. Aparece assim que o vídeo existe, mesmo antes
+ * de ele tocar: com o autoplay recusado (modo economia do iPhone) o filme não
+ * saía do quadro e o botão nunca aparecia (31/10/2026); agora o toque nele faz
+ * tocar, já com som. Sem vídeo (movimento reduzido, rede lenta), o espaço fica
+ * reservado. No computador é texto, abaixo dos botões; até lá (`icone`), um
+ * círculo na linha do "Explorar estoque".
  */
-function BotaoSom({ tocando, comSom, alternar, icone = false }: {
-  tocando: boolean
+function BotaoSom({ visivel, comSom, alternar, icone = false }: {
+  visivel: boolean
   comSom: boolean
   alternar: () => void
   icone?: boolean
@@ -151,12 +194,12 @@ function BotaoSom({ tocando, comSom, alternar, icone = false }: {
       onClick={alternar}
       aria-pressed={comSom}
       aria-label={icone ? rotulo : undefined}
-      aria-hidden={!tocando || undefined}
-      tabIndex={tocando ? undefined : -1}
+      aria-hidden={!visivel || undefined}
+      tabIndex={visivel ? undefined : -1}
       className={`${icone
         ? 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 text-white/80 hover:border-white hover:text-white lg:hidden'
         : 'alvo-toque mt-7 hidden items-center gap-2.5 text-[13px] uppercase tracking-[0.2em] text-white/75 hover:text-white lg:inline-flex'
-      } transition-[color,border-color,opacity] duration-700 ${tocando ? 'opacity-100' : 'invisible opacity-0'}`}
+      } transition-[color,border-color,opacity] duration-700 ${visivel ? 'opacity-100' : 'invisible opacity-0'}`}
     >
       <Icone className="h-4 w-4" aria-hidden="true" />
       {!icone && rotulo}
@@ -171,14 +214,41 @@ function BotaoSom({ tocando, comSom, alternar, icone = false }: {
  */
 export function HomeHero() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [fonte, setFonte] = useState<string | null>(null)
   const [tocando, setTocando] = useState(false)
   const [comSom, setComSom] = useState(false)
+  const [naCenaDoLetreiro, setNaCenaDoLetreiro] = useState(false)
+
+  // Acompanha o filme do celular para tirar o título de cima do letreiro. O
+  // timeupdate chega a cada ~250 ms: sai um quarto de segundo antes da cena.
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !tocando || fonte !== FILME.celular.video) return
+    const conferir = () => {
+      const t = video.currentTime
+      setNaCenaDoLetreiro(CENAS_DO_LETREIRO.some(([de, ate]) => t >= de - 0.25 && t < ate))
+    }
+    video.addEventListener('timeupdate', conferir)
+    video.addEventListener('seeked', conferir)
+    return () => {
+      video.removeEventListener('timeupdate', conferir)
+      video.removeEventListener('seeked', conferir)
+    }
+  }, [tocando, fonte])
+  // Só no celular (max-lg): no computador o título fica embaixo, longe dele.
+  const foraDoLetreiro = tocando && naCenaDoLetreiro ? 'max-lg:opacity-0' : ''
 
   // No próprio clique: é o toque que autoriza o navegador a tocar com som.
   const alternarSom = () => {
     const video = videoRef.current
     if (!video) return
     video.muted = !video.muted
+    // Ainda escondido (baixando, ou com o autoplay recusado): quem pediu som
+    // vê o filme na hora, do começo, onde a trilha começa.
+    if (!tocando) {
+      video.currentTime = 0
+      setTocando(true)
+    }
     if (video.paused) video.play().catch(() => {})
     setComSom(!video.muted)
   }
@@ -192,25 +262,36 @@ export function HomeHero() {
     >
       <div className="hero-fundo absolute inset-0" aria-hidden="true">
         <QuadroInicial />
-        <VideoDeFundo videoRef={videoRef} tocando={tocando} setTocando={setTocando} setComSom={setComSom} />
+        <VideoDeFundo
+          videoRef={videoRef}
+          fonte={fonte}
+          setFonte={setFonte}
+          tocando={tocando}
+          setTocando={setTocando}
+          setComSom={setComSom}
+        />
       </div>
 
-      {/* Escurecimento para o texto ler bem sobre qualquer quadro do vídeo */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" aria-hidden="true" />
-      <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/90 via-black/40 to-transparent" aria-hidden="true" />
-      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true" />
+      {/* Escurecimento para o texto ler bem sobre qualquer quadro do vídeo. No
+          celular só onde há texto (o título no alto, a frase e os botões
+          embaixo): a faixa do meio, onde passam os carros, fica limpa. */}
+      <div className="absolute inset-0 hidden bg-gradient-to-r from-black/75 via-black/35 to-transparent lg:block" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/90 via-black/60 to-transparent lg:h-3/4 lg:via-black/40" aria-hidden="true" />
+      <div className={`absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-black/75 via-black/40 to-transparent transition-opacity duration-500 lg:h-40 lg:from-black/60 lg:via-transparent ${foraDoLetreiro}`} aria-hidden="true" />
 
-      {/* No celular o filme em pé (v3) ocupa o topo inteiro e o texto fica por
-          cima dele, como no computador. Com a v2 (quadro 16:9 no alto) o
-          título encolhia para 36 px e o bloco descia para começar abaixo do
-          quadro; isso saiu em 30/10/2026. */}
-      <div className="hero-conteudo relative z-10 flex h-full flex-col justify-end px-6 pb-10 sm:px-10 lg:px-[10%] lg:pb-16">
-        <div className="max-w-3xl">
+      {/* No celular o filme em pé (v3) ocupa o topo inteiro. Desde 31/10/2026
+          o título sobe para o alto, logo abaixo do cabeçalho, e a frase e os
+          botões ficam embaixo: o meio da tela é do vídeo. Com tudo junto
+          embaixo, o bloco cobria do meio da tela para baixo, onde passam os
+          carros. No computador segue tudo junto, embaixo à esquerda. */}
+      <div className="hero-conteudo relative z-10 flex h-full flex-col justify-end px-6 pb-10 pt-24 sm:px-10 lg:px-[10%] lg:pb-16 lg:pt-0">
+        <div className="max-w-3xl max-lg:flex max-lg:flex-1 max-lg:flex-col">
           {/* Único <h1> da home. Cada linha sobe por trás de uma máscara; na
-              primeira vez, depois da abertura (motion.css). */}
+              primeira vez, depois da abertura (motion.css). No celular some
+              (só na tela, segue no HTML) nas cenas do letreiro ATTRA. */}
           <h1
             data-primeira
-            className="text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6"
+            className={`text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6 max-lg:mb-auto transition-opacity duration-500 ${foraDoLetreiro}`}
             style={{ fontFamily: 'var(--font-montserrat)' }}
           >
             {MANIFESTO.map((line, i) => (
@@ -220,11 +301,14 @@ export function HomeHero() {
             ))}
           </h1>
 
-          <p className="hero-entra max-w-xl text-[15px] font-light leading-relaxed tracking-wide text-white/75 sm:text-base mb-8 sm:mb-9">
+          <p className="hero-entra max-w-xl text-[15px] font-light leading-relaxed tracking-wide text-white/85 [text-shadow:0_1px_14px_rgb(0_0_0/0.55)] sm:text-base mb-8 sm:mb-9 lg:text-white/75 lg:[text-shadow:none]">
             {/* Sem a lista de marcas: a faixa logo abaixo já mostra as que têm
-                carro no estoque, com link (27/10/2026). */}
-            Supercarros e veículos premium selecionados em Uberlândia, entregues
-            em todo o Brasil.
+                carro no estoque, com link (27/10/2026). Desde 31/10/2026, o
+                caminho "garagens certas" escolhido por ela: autoridade (os
+                anos), a categoria e o "Critério" do título (o carro certo para
+                a pessoa certa), em 2 linhas no celular. */}
+            {anosPorExtenso()} anos levando superesportivos às garagens certas
+            de todo o Brasil.
           </p>
 
           {/* Até o computador: "Explorar estoque" no tamanho do texto, o som
@@ -240,7 +324,7 @@ export function HomeHero() {
               Explorar estoque
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 lg:h-4 lg:w-4" />
             </Link>
-            <BotaoSom tocando={tocando} comSom={comSom} alternar={alternarSom} icone />
+            <BotaoSom visivel={fonte !== null} comSom={comSom} alternar={alternarSom} icone />
             </div>
             <a
               href={getWhatsAppUrl(consultantWhatsAppMessage)}
@@ -253,7 +337,7 @@ export function HomeHero() {
             </a>
           </div>
 
-          <BotaoSom tocando={tocando} comSom={comSom} alternar={alternarSom} />
+          <BotaoSom visivel={fonte !== null} comSom={comSom} alternar={alternarSom} />
         </div>
       </div>
 
