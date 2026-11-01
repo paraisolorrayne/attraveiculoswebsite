@@ -16,10 +16,10 @@ import { fmtPct, larguraRelativa, taxa } from './visitors-metrics'
  * para o interruptor "valores crus" ser um só.
  */
 
-export const TH = 'px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-foreground-secondary whitespace-nowrap'
+export const TH = 'px-3 py-2 text-[0.6875rem] font-medium uppercase tracking-wide text-foreground-secondary whitespace-nowrap'
 export const TD = 'px-3 py-2.5 text-sm text-foreground whitespace-nowrap'
 /** Valor cru de UTM/click id: monoespaçado e discreto, para não disputar com o rótulo. */
-export const CRU = 'font-mono text-[11px] text-foreground-secondary'
+export const CRU = 'font-mono text-[0.6875rem] text-foreground-secondary'
 
 export function Badge({ cor, children }: { cor: string; children: ReactNode }) {
 	return <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cor}`}>{children}</span>

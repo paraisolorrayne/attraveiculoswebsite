@@ -378,7 +378,7 @@ function DoCliqueAoCrm({ conversas }: { conversas: ConversasDaSessao }) {
 function Dado({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
 	return (
 		<div className={`rounded-xl border bg-background-card px-4 py-3 ${destaque ? 'border-emerald-500/40' : 'border-border'}`}>
-			<div className="text-[11px] uppercase tracking-wide text-foreground-secondary">{rotulo}</div>
+			<div className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">{rotulo}</div>
 			<div className={`mt-1 truncate text-base font-semibold ${destaque ? 'text-emerald-500' : 'text-foreground'}`} title={valor}>
 				{valor}
 			</div>

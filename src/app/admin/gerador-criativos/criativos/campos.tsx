@@ -9,7 +9,8 @@
  * ela é escrita — a regra e o campo que ela esconde ficam à mesma vista.
  */
 
-import type { ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
+import { Upload } from 'lucide-react'
 import type {
 	BlocoFicha,
 	CarroEstoque,
@@ -24,12 +25,19 @@ import type { Gerador } from './use-gerador'
 
 /* ---------------------------------------------------------------- primitivas */
 
-const CLASSE_ENTRADA =
-	'w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-secondary/60'
+/** Sem largura: quem usa decide (no desempenho, número e unidade dividem a linha). */
+const CLASSE_CAIXA =
+	'rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-secondary/60'
+const CLASSE_ENTRADA = 'w-full ' + CLASSE_CAIXA
 
+/**
+ * Cada seção é um container (`@container`): as grades de dentro se arrumam
+ * pela largura da SEÇÃO, não da tela. Desde 31/10/2026 o formulário tem duas
+ * colunas em tela larga e a mesma seção pode ter 600 ou 1.400 px.
+ */
 export function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
 	return (
-		<section className="rounded-lg border border-border bg-background-card p-4">
+		<section className="@container rounded-lg border border-border bg-background-card p-4">
 			<h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground-secondary">
 				{titulo}
 			</h3>
@@ -163,6 +171,11 @@ export function CampoFaixa({
 	)
 }
 
+/**
+ * Arquivo do computador. O <input type="file"> do navegador saía em inglês
+ * ("Choose File · No file chosen") e não dizia qual foto já estava na peça:
+ * agora é um botão em português com o nome do último arquivo escolhido.
+ */
 export function CampoArquivo({
 	rotulo,
 	aceita = 'image/*',
@@ -172,18 +185,28 @@ export function CampoArquivo({
 	aceita?: string
 	aoEscolher: (f: File) => void
 }) {
+	const [nome, setNome] = useState<string | null>(null)
 	return (
-		<label className="block">
+		<label className="block cursor-pointer">
 			<span className="mb-1 block text-xs font-medium text-foreground-secondary">{rotulo}</span>
+			<span className="flex items-center gap-2.5 rounded-md border border-dashed border-border bg-background px-3 py-2 text-sm transition-colors hover:border-foreground-secondary">
+				<Upload className="h-4 w-4 shrink-0 text-foreground-secondary" aria-hidden="true" />
+				<span className={'truncate ' + (nome ? 'text-foreground' : 'text-foreground-secondary')}>
+					{nome ?? 'Escolher do computador'}
+				</span>
+			</span>
 			<input
 				type="file"
 				accept={aceita}
 				onChange={e => {
 					const f = e.target.files?.[0]
-					if (f) aoEscolher(f)
+					if (f) {
+						setNome(f.name)
+						aoEscolher(f)
+					}
 					e.target.value = '' // permite reenviar o MESMO arquivo
 				}}
-				className="block w-full text-xs text-foreground-secondary file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-xs file:text-foreground"
+				className="sr-only"
 			/>
 		</label>
 	)
@@ -199,8 +222,9 @@ export function Escolha<T extends string>({
 	valor: T
 	aoEscolher: (v: T) => void
 }) {
+	// Os quatro formatos cabem numa fileira quando a seção é larga.
 	return (
-		<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+		<div className={'grid grid-cols-2 gap-2 ' + (opcoes.length >= 4 ? '@2xl:grid-cols-4' : '@md:grid-cols-3')}>
 			{opcoes.map(o => (
 				<button
 					key={o.id}
@@ -215,7 +239,7 @@ export function Escolha<T extends string>({
 					}
 				>
 					<span className="block font-medium">{o.nome}</span>
-					{o.descricao && <span className="block text-[11px] opacity-70">{o.descricao}</span>}
+					{o.descricao && <span className="block text-[0.6875rem] opacity-70">{o.descricao}</span>}
 				</button>
 			))}
 		</div>
@@ -282,15 +306,13 @@ function CarroDaLista({
 	aoEscolherFoto: (f: File) => void
 }) {
 	return (
-		<div className="rounded-md border border-border p-3">
+		<div className="@container rounded-md border border-border p-3">
 			<h4 className="mb-2 text-xs font-semibold text-foreground">CARRO {indice + 1}</h4>
 			<div className="space-y-2">
 				<CampoTexto rotulo="Nome" valor={carro.nome} aoMudar={v => aoMudar({ ...carro, nome: v })} />
-				<div className="grid grid-cols-2 gap-2">
+				<div className="grid grid-cols-2 gap-2 @md:grid-cols-4">
 					<CampoTexto rotulo="Ano" valor={carro.ano} aoMudar={v => aoMudar({ ...carro, ano: v })} />
 					<CampoTexto rotulo="KM" valor={carro.km} aoMudar={v => aoMudar({ ...carro, km: v })} />
-				</div>
-				<div className="grid grid-cols-2 gap-2">
 					<CampoTexto rotulo="Preço" valor={carro.preco} aoMudar={v => aoMudar({ ...carro, preco: v })} />
 					<CampoTexto
 						rotulo="Selo (opcional)"
@@ -306,16 +328,55 @@ function CarroDaLista({
 
 /* ------------------------------------------------------------ Premium */
 
-/** Onde cada bloco da grade cai na peça — o rótulo do campo diz isso. */
-const LUGAR_DO_BLOCO = [
-	'em cima, à esquerda',
-	'em cima, no meio',
-	'em cima, à direita',
-	'embaixo, no meio',
-	'embaixo, à direita',
-]
+/** As unidades de sempre, sugeridas no campo (ainda dá para digitar outra). */
+const UNIDADES = ['cv', 'kgfm', 's', 'km/h', 'Nm']
 
-function CamposPremium({ g, aoEscolherLogoModelo }: { g: Gerador; aoEscolherLogoModelo: (f: File) => void }) {
+/** Logotipo do modelo: é imagem, fica na coluna das fotos. */
+function LogotipoDoModelo({ g, aoEscolherLogoModelo }: { g: Gerador; aoEscolherLogoModelo: (f: File) => void }) {
+	return (
+		<Secao titulo="Logotipo do modelo">
+			<CampoArquivo rotulo="PNG transparente" aceita="image/png" aoEscolher={aoEscolherLogoModelo} />
+			<Dica>
+				O logotipo do fabricante (o “TEMERARIO” cromado, por exemplo) entra no lugar do nome do
+				modelo. Sem ele, o nome sai escrito em itálico cromado.
+			</Dica>
+			{g.imagens.current.logoModelo && (
+				<button
+					type="button"
+					onClick={() => g.definirLogoModelo(null)}
+					className="rounded-md border border-border px-3 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
+				>
+					Tirar o logotipo e voltar ao nome escrito
+				</button>
+			)}
+		</Secao>
+	)
+}
+
+/** Um bloco da ficha do Premium: o rótulo é o cabeçalho do cartão, o texto embaixo. */
+function BlocoDaFicha({ bloco, aoMudar }: { bloco: BlocoFicha; aoMudar: (b: BlocoFicha) => void }) {
+	return (
+		<div className="flex flex-col gap-2 rounded-md border border-border bg-background p-2.5">
+			<input
+				aria-label="Rótulo do bloco"
+				value={bloco.rotulo}
+				onChange={e => aoMudar({ ...bloco, rotulo: e.target.value })}
+				placeholder="RÓTULO"
+				className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold uppercase tracking-wider text-foreground-secondary placeholder:text-foreground-secondary/50 hover:border-border focus:border-border"
+			/>
+			<textarea
+				aria-label={`Texto de ${bloco.rotulo || 'bloco'}`}
+				rows={3}
+				value={bloco.texto}
+				onChange={e => aoMudar({ ...bloco, texto: e.target.value })}
+				placeholder="Uma informação por linha"
+				className={CLASSE_ENTRADA + ' resize-y'}
+			/>
+		</div>
+	)
+}
+
+function CamposPremium({ g }: { g: Gerador }) {
 	const { estado, campo } = g
 	const desempenho = estado.desempenho ?? []
 	const blocos = estado.blocos ?? []
@@ -323,74 +384,90 @@ function CamposPremium({ g, aoEscolherLogoModelo }: { g: Gerador; aoEscolherLogo
 		campo('desempenho', desempenho.map((x, j) => (j === i ? novo : x)))
 	const mudarBloco = (i: number, novo: BlocoFicha) =>
 		campo('blocos', blocos.map((x, j) => (j === i ? novo : x)))
+	const bloco = (i: number) =>
+		blocos[i] ? <BlocoDaFicha key={i} bloco={blocos[i]} aoMudar={b => mudarBloco(i, b)} /> : null
 
 	return (
 		<>
-			<Secao titulo="Logotipo do modelo">
-				<CampoArquivo rotulo="PNG transparente" aceita="image/png" aoEscolher={aoEscolherLogoModelo} />
-				<Dica>
-					O logotipo do fabricante (o “TEMERARIO” cromado, por exemplo) entra no lugar do nome do
-					modelo. Sem ele, o nome sai escrito em itálico cromado.
-				</Dica>
-				{g.imagens.current.logoModelo && (
-					<button
-						type="button"
-						onClick={() => g.definirLogoModelo(null)}
-						className="rounded-md border border-border px-3 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
-					>
-						Tirar o logotipo e voltar ao nome escrito
-					</button>
-				)}
-			</Secao>
-
 			<Secao titulo="Cor do carro">
-				<CampoTexto
-					rotulo="Nome da cor (vai na faixa, com o ano)"
-					valor={estado.nomeCor ?? ''}
-					aoMudar={v => campo('nomeCor', v)}
-					placeholder="Ex.: VIOLA PASIFAE"
-				/>
-				<CampoCor
-					rotulo="Cor de destaque"
-					valor={estado.corDestaque ?? ''}
-					padrao={RED}
-					aoMudar={v => campo('corDestaque', v)}
-				/>
+				<div className="grid gap-3 @lg:grid-cols-2">
+					<CampoTexto
+						rotulo="Nome da cor (vai na faixa, com o ano)"
+						valor={estado.nomeCor ?? ''}
+						aoMudar={v => campo('nomeCor', v)}
+						placeholder="Ex.: VIOLA PASIFAE"
+					/>
+					<CampoCor
+						rotulo="Cor de destaque"
+						valor={estado.corDestaque ?? ''}
+						padrao={RED}
+						aoMudar={v => campo('corDestaque', v)}
+					/>
+				</div>
 				<Dica>
 					A faixa usa a cor como está; os rótulos usam a mesma cor clareada para ler no fundo
 					escuro. Vazio = vermelho da Attra, que é o que serve para carro preto, branco ou cinza.
 				</Dica>
 			</Secao>
 
+			{/* Os quatro números como saem na peça: número grande, unidade ao lado,
+			    legenda embaixo. Antes eram quatro linhas de "Número / Unidade /
+			    Legenda" repetidos, da largura da tela. */}
 			<Secao titulo="Desempenho (até 4)">
-				{desempenho.map((it, i) => (
-					<div key={i} className="grid grid-cols-[1fr_1fr_2fr] gap-2">
-						<CampoTexto rotulo="Número" valor={it.valor} aoMudar={v => mudarItem(i, { ...it, valor: v })} placeholder="920" />
-						<CampoTexto rotulo="Unidade" valor={it.unidade} aoMudar={v => mudarItem(i, { ...it, unidade: v })} placeholder="cv" />
-						<CampoTexto rotulo="Legenda" valor={it.rotulo} aoMudar={v => mudarItem(i, { ...it, rotulo: v })} placeholder="POTÊNCIA" />
-					</div>
-				))}
+				<div className="grid grid-cols-2 gap-2.5 @2xl:grid-cols-4">
+					{desempenho.map((it, i) => (
+						<div key={i} className="space-y-2 rounded-md border border-border bg-background p-2.5">
+							<div className="flex gap-1.5">
+								<input
+									aria-label={`Número ${i + 1}`}
+									value={it.valor}
+									onChange={e => mudarItem(i, { ...it, valor: e.target.value })}
+									placeholder="920"
+									inputMode="decimal"
+									className={CLASSE_CAIXA + ' min-w-0 flex-1 text-lg font-semibold tabular-nums'}
+								/>
+								<input
+									aria-label={`Unidade ${i + 1}`}
+									list="gerador-unidades"
+									value={it.unidade}
+									onChange={e => mudarItem(i, { ...it, unidade: e.target.value })}
+									placeholder="cv"
+									className={CLASSE_CAIXA + ' w-[5.5rem] shrink-0 px-2'}
+								/>
+							</div>
+							<input
+								aria-label={`Legenda ${i + 1}`}
+								value={it.rotulo}
+								onChange={e => mudarItem(i, { ...it, rotulo: e.target.value })}
+								placeholder="POTÊNCIA"
+								className={CLASSE_ENTRADA + ' text-xs uppercase tracking-wider'}
+							/>
+						</div>
+					))}
+				</div>
+				<datalist id="gerador-unidades">
+					{UNIDADES.map(u => (
+						<option key={u} value={u} />
+					))}
+				</datalist>
 				<Dica>Número vazio tira o item da linha; os outros se recentralizam sozinhos.</Dica>
 			</Secao>
 
+			{/* A grade na mesma disposição da peça: três em cima; embaixo, a casa da
+			    esquerda é livre (é por onde passa a diagonal da foto de baixo). */}
 			<Secao titulo="Ficha (5 blocos)">
-				{blocos.map((b, i) => (
-					<div key={i} className="grid grid-cols-[1fr_2fr] gap-2">
-						<CampoTexto
-							rotulo={`Rótulo — ${LUGAR_DO_BLOCO[i] ?? ''}`}
-							valor={b.rotulo}
-							aoMudar={v => mudarBloco(i, { ...b, rotulo: v })}
-						/>
-						<CampoAreaTexto
-							rotulo="Texto (até 3 linhas)"
-							valor={b.texto}
-							aoMudar={v => mudarBloco(i, { ...b, texto: v })}
-						/>
+				<div className="grid gap-2.5 @xl:grid-cols-3">
+					{bloco(0)}
+					{bloco(1)}
+					{bloco(2)}
+					<div className="hidden items-center justify-center rounded-md border border-dashed border-border p-3 text-center text-xs leading-relaxed text-foreground-secondary @xl:flex">
+						Livre: por aqui passa a diagonal da foto de baixo
 					</div>
-				))}
+					{bloco(3)}
+					{bloco(4)}
+				</div>
 				<Dica>
-					Uma informação por linha: a primeira sai em branco e as outras um tom abaixo. A casa de
-					baixo à esquerda fica livre de propósito — é por onde passa a diagonal da foto de baixo.
+					Uma informação por linha, até três: a primeira sai em branco e as outras um tom abaixo.
 				</Dica>
 			</Secao>
 		</>
@@ -404,13 +481,20 @@ const PISOS: { id: PisoTipo; nome: string; descricao: string }[] = [
 	{ id: 'asfalto', nome: 'Asfalto', descricao: 'piso escuro real' },
 ]
 
+/**
+ * Os campos do formato escolhido, em duas partes que a tela põe lado a lado em
+ * tela larga: `conteudo` (o que se escreve na peça) e `imagem` (fotos,
+ * enquadramento e logotipo do modelo).
+ */
 export function PainelCampos({
 	g,
+	parte,
 	aoEscolherFotoDoComputador,
 	aoEscolherFotoDaLista,
 	aoEscolherLogoModelo,
 }: {
 	g: Gerador
+	parte: 'conteudo' | 'imagem'
 	aoEscolherFotoDoComputador: (slot: SlotFoto, f: File) => void
 	aoEscolherFotoDaLista: (indice: number, f: File) => void
 	aoEscolherLogoModelo: (f: File) => void
@@ -422,31 +506,103 @@ export function PainelCampos({
 	const texto = <K extends keyof EstadoCriativo>(k: K) => (v: string) =>
 		campo(k, v as EstadoCriativo[K])
 
+	if (parte === 'imagem') {
+		if (t === 'estoque') return null
+		return (
+			<>
+				<Secao titulo="Fotos">
+					<div className="space-y-3 rounded-md border border-border bg-background p-3">
+						<CampoArquivo
+							rotulo="Foto principal (frente / 3-4)"
+							aoEscolher={f => aoEscolherFotoDoComputador('foto1', f)}
+						/>
+						<Enquadramento opcoes={estado.f1} aoMudar={o => campo('f1', o)} />
+					</div>
+					<Dica>
+						{edicao
+							? 'A foto entra inteira e ocupa a peça toda. Prefira uma foto sem tarja ou texto aplicado: na Edição esse tipo de informação vai na ficha.'
+							: 'A foto entra inteira — não precisa recortar o fundo. No Clássico Loja, o bloco de preço acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é cortado nem esmaecido.'}
+					</Dica>
+
+					{/* A Edição usa só a foto principal. */}
+					{!edicao && (
+						<div className="space-y-3 rounded-md border border-border bg-background p-3">
+							<CampoArquivo
+								rotulo="Foto secundária (traseira / lateral — rodapé)"
+								aoEscolher={f => aoEscolherFotoDoComputador('foto2', f)}
+							/>
+							<Enquadramento opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
+						</div>
+					)}
+
+					{classicoLoja && (
+						<div className="space-y-3 rounded-md border border-border bg-background p-3">
+							<div>
+								<span className="mb-1 block text-xs font-medium text-foreground-secondary">
+									Fundo da área de texto (Clássico)
+								</span>
+								<Escolha
+									opcoes={PISOS}
+									valor={estado.pisoTipo}
+									aoEscolher={v => campo('pisoTipo', v)}
+								/>
+							</div>
+							<div className="grid gap-3 @lg:grid-cols-2">
+								<CampoFaixa
+									rotulo="Posição do piso (altura)"
+									min={-60}
+									max={160}
+									valor={estado.pisoy}
+									aoMudar={v => campo('pisoy', v)}
+								/>
+								<CampoFaixa
+									rotulo="Altura do corte transversal"
+									min={-160}
+									max={200}
+									valor={estado.corte}
+									aoMudar={v => campo('corte', v)}
+								/>
+							</div>
+							<Dica>
+								Piso: desça até a divisa ficar abaixo do veículo — a fusão nunca deve cobrir o carro; o
+								preço e os destaques acompanham. Corte: para a direita em carros ALTOS (mais área de
+								foto), para a esquerda em carros baixos (mais espaço para os destaques).
+							</Dica>
+						</div>
+					)}
+				</Secao>
+
+				{t === 'premium' && <LogotipoDoModelo g={g} aoEscolherLogoModelo={aoEscolherLogoModelo} />}
+			</>
+		)
+	}
+
 	return (
 		<>
 			{t !== 'estoque' && (
 				<Secao titulo="Veículo">
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid gap-3 @lg:grid-cols-[2fr_3fr_1fr]">
 						<CampoTexto rotulo="Marca" valor={estado.marca} aoMudar={texto('marca')} />
+						<CampoTexto rotulo="Modelo" valor={estado.modelo} aoMudar={texto('modelo')} />
 						<CampoTexto rotulo="Ano" valor={estado.ano} aoMudar={texto('ano')} />
 					</div>
-					<CampoTexto rotulo="Modelo" valor={estado.modelo} aoMudar={texto('modelo')} />
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid gap-3 @lg:grid-cols-[1fr_1fr_2fr]">
 						<CampoTexto
 							rotulo="Preço (só números)"
 							valor={estado.preco}
 							aoMudar={texto('preco')}
+							inputMode="numeric"
 						/>
-						<CampoTexto rotulo="Quilometragem" valor={estado.km} aoMudar={texto('km')} />
+						<CampoTexto rotulo="Quilometragem" valor={estado.km} aoMudar={texto('km')} inputMode="numeric" />
+						{(classicoLoja || t === 'premium' || edicao) && (
+							<CampoTexto
+								rotulo="Complemento da linha do KM (opcional)"
+								valor={estado.kmextra}
+								aoMudar={texto('kmextra')}
+								placeholder="Ex.: VEÍCULO COLECIONÁVEL"
+							/>
+						)}
 					</div>
-					{(classicoLoja || t === 'premium' || edicao) && (
-						<CampoTexto
-							rotulo="Complemento da linha do KM (opcional)"
-							valor={estado.kmextra}
-							aoMudar={texto('kmextra')}
-							placeholder="Ex.: VEÍCULO COLECIONÁVEL"
-						/>
-					)}
 				</Secao>
 			)}
 
@@ -474,74 +630,11 @@ export function PainelCampos({
 				</Secao>
 			)}
 
-			{t === 'premium' && <CamposPremium g={g} aoEscolherLogoModelo={aoEscolherLogoModelo} />}
-
-			{t !== 'estoque' && (
-				<Secao titulo="Fotos">
-					<CampoArquivo
-						rotulo="Foto principal (frente / 3-4)"
-						aoEscolher={f => aoEscolherFotoDoComputador('foto1', f)}
-					/>
-					<Enquadramento opcoes={estado.f1} aoMudar={o => campo('f1', o)} />
-					<Dica>
-						{edicao
-							? 'A foto entra inteira e ocupa a peça toda. Prefira uma foto sem tarja ou texto aplicado: na Edição esse tipo de informação vai na ficha.'
-							: 'A foto entra inteira — não precisa recortar o fundo. No Clássico Loja, o bloco de preço acompanha a base da foto: mover a posição ↕ move o texto junto, e o carro nunca é cortado nem esmaecido.'}
-					</Dica>
-
-					{/* A Edição usa só a foto principal. */}
-					{!edicao && (
-						<>
-							<CampoArquivo
-								rotulo="Foto secundária (traseira / lateral — rodapé)"
-								aoEscolher={f => aoEscolherFotoDoComputador('foto2', f)}
-							/>
-							<Enquadramento opcoes={estado.f2} aoMudar={o => campo('f2', o)} />
-						</>
-					)}
-
-					{classicoLoja && (
-						<>
-							<div>
-								<span className="mb-1 block text-xs font-medium text-foreground-secondary">
-									Fundo da área de texto (Clássico)
-								</span>
-								<Escolha
-									opcoes={PISOS}
-									valor={estado.pisoTipo}
-									aoEscolher={v => campo('pisoTipo', v)}
-								/>
-							</div>
-							<CampoFaixa
-								rotulo="Posição do piso (altura)"
-								min={-60}
-								max={160}
-								valor={estado.pisoy}
-								aoMudar={v => campo('pisoy', v)}
-							/>
-							<Dica>
-								Desça o piso até a divisa ficar abaixo do veículo — a fusão nunca deve cobrir o
-								carro. O preço e os destaques acompanham.
-							</Dica>
-							<CampoFaixa
-								rotulo="Altura do corte transversal (Clássico)"
-								min={-160}
-								max={200}
-								valor={estado.corte}
-								aoMudar={v => campo('corte', v)}
-							/>
-							<Dica>
-								Arraste pra direita em carros ALTOS (mais área de foto); pra esquerda em carros
-								baixos (mais espaço pros destaques).
-							</Dica>
-						</>
-					)}
-				</Secao>
-			)}
+			{t === 'premium' && <CamposPremium g={g} />}
 
 			{t === 'estoque' && (
 				<Secao titulo="Lista de carros (até 4)">
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid gap-3 @lg:grid-cols-2">
 						<CampoTexto rotulo="Título — linha 1" valor={estado.et1} aoMudar={texto('et1')} />
 						<CampoTexto
 							rotulo="Título — linha 2 (vermelho)"
@@ -549,20 +642,22 @@ export function PainelCampos({
 							aoMudar={texto('et2')}
 						/>
 					</div>
-					{estado.estoque.map((c, i) => (
-						<CarroDaLista
-							key={i}
-							indice={i}
-							carro={c}
-							aoMudar={novo =>
-								campo(
-									'estoque',
-									estado.estoque.map((x, j) => (j === i ? novo : x)),
-								)
-							}
-							aoEscolherFoto={f => aoEscolherFotoDaLista(i, f)}
-						/>
-					))}
+					<div className="grid gap-3 @3xl:grid-cols-2">
+						{estado.estoque.map((c, i) => (
+							<CarroDaLista
+								key={i}
+								indice={i}
+								carro={c}
+								aoMudar={novo =>
+									campo(
+										'estoque',
+										estado.estoque.map((x, j) => (j === i ? novo : x)),
+									)
+								}
+								aoEscolherFoto={f => aoEscolherFotoDaLista(i, f)}
+							/>
+						))}
+					</div>
 					<Dica>
 						Carros sem nome e sem foto são omitidos; o espaçamento se ajusta sozinho. As fotos
 						entram inteiras nos cards — sem recorte de fundo.

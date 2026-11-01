@@ -7,12 +7,17 @@
  * devolve um HTML autocontido. Aqui há o formulário, a prévia num iframe e o
  * botão que abre a versão de impressão.
  *
- * O QUE O ESTOQUE PREENCHE E O QUE NÃO. Marca, modelo, ano, km, cor e as fotos
- * vêm da API. A ficha técnica não vem: `engine`, `horsepower`, `torque`,
- * `acceleration`, `top_speed` e `options` chegam nulos. Esses campos são
- * digitados — decisão da Lorrayne (01/09/2026), preferindo o trabalho manual ao
- * risco de uma IA inventar um número de torque num documento que vai para o
- * cliente.
+ * O QUE O ESTOQUE PREENCHE E O QUE NÃO. Marca, modelo, ano, km e as fotos
+ * vêm do cadastro. A ficha técnica não vem dele: `engine`, `horsepower`,
+ * `torque`, `acceleration`, `top_speed` e `options` chegam nulos. Esses campos
+ * eram só digitados, por decisão da Lorrayne (01/09/2026), preferindo o
+ * trabalho manual ao risco de uma IA inventar um número de torque num
+ * documento que vai para o cliente.
+ *
+ * Desde 31/10/2026 entra também a ficha que o MARKETING escreve na AutoConf
+ * (ficha-autoconf.ts): motor, potência, torque, 0-100, cor, interior,
+ * diferenciais e opcionais, digitados por gente e lidos sem IA. Carro sem a
+ * ficha continua como antes; dimensões, suspensão e direção seguem digitadas.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -38,6 +43,7 @@ import {
 import { ehFotoEnviada, prepararFotoEnviada } from '@content/admin/creative/dossie/foto-enviada'
 import { CampoTexto, Dica, Secao } from '../criativos/campos'
 import { urlFotoEstoque } from '../criativos/use-gerador'
+import { buscarFicha, destaquesDa, gruposDoDossie, grupoPeloTitulo, motorComPotencia } from '../ficha-autoconf'
 
 interface VeiculoEstoque {
 	id: string
@@ -109,16 +115,53 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 		}
 	}
 
+	/** Só o último clique vale, se a ficha de um carro chegar depois da do outro. */
+	const pedido = useRef(0)
+
 	/**
-	 * Traz do estoque só o que ele realmente tem, e deixa o resto em branco.
+	 * Traz do estoque e da ficha da AutoConf só o que eles realmente têm, e
+	 * deixa o resto em branco.
 	 *
-	 * Nada de derivar motorização da `version` ou cor da `color`: no Aston o
-	 * estoque diz "Cupê V8 510cv" e "Verde", enquanto o dossiê pede "4.0 V8
-	 * Bi-Turbo · 680cv" e "Podium Green". Preencher com o que está no cadastro
-	 * daria um documento que PARECE conferido e não foi.
+	 * Nada de derivar motorização da `version` ou cor da `color` do cadastro: no
+	 * Aston o cadastro diz "Cupê V8 510cv" e "Verde", enquanto o dossiê pede "4.0
+	 * V8 Bi-Turbo · 680cv" e "Podium Green". Preencher com isso daria um
+	 * documento que PARECE conferido e não foi. A cor e o motor vêm da ficha que o
+	 * marketing escreveu, quando ela existe; com ficha, os grupos de diferenciais
+	 * são trocados pelos do carro, para não misturar dois carros no documento.
 	 */
-	function aplicarVeiculo(v: VeiculoEstoque) {
+	async function aplicarVeiculo(v: VeiculoEstoque) {
+		const meu = ++pedido.current
+		setResultados([])
+		setAviso('Buscando a ficha do carro na AutoConf…')
+		const f = await buscarFicha(v.id)
+		if (meu !== pedido.current) return
+
 		const km = v.mileage != null ? `${fmtBR(v.mileage)} km` : ''
+		const motor = f ? motorComPotencia(f) : ''
+		const grupos = f ? gruposDoDossie(f) : null
+		// Linha da ficha técnica → campo da ficha da AutoConf que a preenche.
+		const daFicha: Record<string, string | null> = f
+			? {
+					MOTOR: f.motor,
+					'POTÊNCIA MÁXIMA': f.potencia,
+					'TORQUE MÁXIMO': f.torque,
+					TRANSMISSÃO: f.cambio,
+					TRAÇÃO: f.tracao,
+					'0 – 100 KM/H': f.aceleracao_0_100,
+					'VELOCIDADE MÁXIMA': f.velocidade_maxima,
+					FREIOS: f.freios,
+				}
+			: {}
+		const naLinha = (l: LinhaFicha): LinhaFicha => (daFicha[l.rotulo] ? { ...l, valor: daFicha[l.rotulo]! } : l)
+		// O que não coube nos itens de cada grupo; fica no texto de opcionais.
+		const sobra =
+			grupos
+				? d.diferenciais.flatMap(g => {
+						const chave = grupoPeloTitulo(g.titulo)
+						return chave ? grupos[chave].slice(g.itens.length) : []
+					})
+				: []
+
 		setD(x => ({
 			...x,
 			marca: (v.brand ?? '').toUpperCase(),
@@ -127,13 +170,29 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 			km,
 			anoModelo: String(v.year_model ?? ''),
 			quilometragem: km,
-			tracao: x.tracao,
-			suspensao: x.suspensao.map(l =>
-				l.rotulo === 'PORTAS' && v.doors ? { ...l, valor: `${v.doors} Portas${v.body_type ? ` · ${v.body_type}` : ''}` } : l,
-			),
-			performance: x.performance.map(l =>
-				l.rotulo === 'TRANSMISSÃO' && v.transmission ? { ...l, valor: v.transmission } : l,
-			),
+			...(f && {
+				// A linha fina sob o nome: "6.5 V12 ASPIRADO · 800 CV".
+				assinatura: motor.toUpperCase() || x.assinatura,
+				cor: f.cor ?? x.cor,
+				corExterna: f.cor ?? x.corExterna,
+				interior: f.interior ?? x.interior,
+				motorizacao: motor || x.motorizacao,
+				tracao: f.tracao ?? x.tracao,
+				opcionaisTexto: destaquesDa(f).join('\n') || x.opcionaisTexto,
+				diferenciais: x.diferenciais.map(g => {
+					const chave = grupoPeloTitulo(g.titulo)
+					const itens = chave && grupos ? grupos[chave] : []
+					return { ...g, itens: g.itens.map((_, i) => itens[i] ?? '') }
+				}),
+			}),
+			suspensao: x.suspensao
+				.map(l =>
+					l.rotulo === 'PORTAS' && v.doors ? { ...l, valor: `${v.doors} Portas${v.body_type ? ` · ${v.body_type}` : ''}` } : l,
+				)
+				.map(naLinha),
+			performance: x.performance
+				.map(l => (l.rotulo === 'TRANSMISSÃO' && v.transmission ? { ...l, valor: v.transmission } : l))
+				.map(naLinha),
 			// A galeria guarda TODAS as fotos do veículo; `fotos` fica com a
 			// distribuição inicial pelos slots, na ordem que a API devolveu. É essa
 			// separação que permite trocar um slot sem perder as outras opções.
@@ -141,9 +200,16 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 			fotos: (v.photos ?? []).map(urlFotoEstoque),
 			fotoFinal: '',
 		}))
-		setResultados([])
+		if (!f) {
+			setAviso(
+				'Este carro ainda não tem a ficha na AutoConf: veio só o que o cadastro tem. Motor, torque, cor, dimensões e freios ficam com você.',
+			)
+			return
+		}
 		setAviso(
-			'Trouxe o que o estoque tem. A ficha técnica não vem dele — motor, torque, dimensões e freios ficam com você.',
+			'Usei a ficha da AutoConf: motor, potência, torque, 0-100, cor, interior e os diferenciais, ' +
+				'distribuídos nos três grupos (confira se cada um caiu no grupo certo). Dimensões, suspensão e direção ficam com você.' +
+				(sobra.length ? ` Não couberam nos grupos: ${sobra.join(', ')}. Estão no texto de opcionais.` : ''),
 		)
 	}
 
@@ -307,7 +373,7 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 								<li key={v.id}>
 									<button
 										type="button"
-										onClick={() => aplicarVeiculo(v)}
+										onClick={() => void aplicarVeiculo(v)}
 										className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-background-soft"
 									>
 										{[v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')}
@@ -548,16 +614,16 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 													// eslint-disable-next-line @next/next/no-img-element
 													<img src={url} alt="" className="h-16 w-full object-cover" />
 												) : (
-													<span className="flex h-16 w-full items-center justify-center text-[10px] text-foreground-secondary">
+													<span className="flex h-16 w-full items-center justify-center text-[0.625rem] text-foreground-secondary">
 														vazio
 													</span>
 												)}
 											</span>
 											<span className="block px-1.5 py-1">
-												<span className="block truncate text-[11px] font-medium text-foreground">
+												<span className="block truncate text-[0.6875rem] font-medium text-foreground">
 													{slot.rotulo}
 												</span>
-												<span className="block truncate text-[10px] text-foreground-secondary">
+												<span className="block truncate text-[0.625rem] text-foreground-secondary">
 													{enviada ? 'foto enviada' : slot.pagina}
 												</span>
 											</span>

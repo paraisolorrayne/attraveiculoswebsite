@@ -76,7 +76,7 @@ export function AgenciaShell({
 			<div className="sticky top-0 z-30 -mx-4 md:-mx-6 2xl:-mx-10 px-4 md:px-6 2xl:px-10 pt-4 pb-3 bg-background/95 backdrop-blur border-b border-border space-y-3">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div className="min-w-0">
-						<p className="text-[11px] uppercase tracking-wide text-foreground-secondary">Marketing</p>
+						<p className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">Marketing</p>
 						<h1 className="text-xl font-semibold text-foreground truncate">{agencia.nome}</h1>
 					</div>
 					{ehAttra && agencias.length > 1 && (

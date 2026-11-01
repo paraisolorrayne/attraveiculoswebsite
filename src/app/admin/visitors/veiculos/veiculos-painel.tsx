@@ -199,7 +199,7 @@ export function VeiculosPainel() {
                       {c.utm_source}
                       {c.utm_medium !== '-' && ` / ${c.utm_medium}`}
                     </span>
-                    <span className="block text-[11px] text-foreground-secondary">
+                    <span className="block text-[0.6875rem] text-foreground-secondary">
                       {c.utm_campaign}
                       {c.tem_gclid && ' · gclid'}
                     </span>
@@ -222,7 +222,7 @@ export function VeiculosPainel() {
                       <span className="text-foreground-secondary">—</span>
                     )}
                     {c.utm_content && (
-                      <span className="block truncate text-[11px] text-foreground-secondary" title={c.utm_content}>
+                      <span className="block truncate text-[0.6875rem] text-foreground-secondary" title={c.utm_content}>
                         {c.utm_content}
                       </span>
                     )}
@@ -240,7 +240,7 @@ export function VeiculosPainel() {
                     <span className="block truncate text-foreground-secondary" title={c.page_path ?? ''}>
                       {c.page_path ?? '—'}
                     </span>
-                    <span className="block text-[11px] text-foreground-secondary">
+                    <span className="block text-[0.6875rem] text-foreground-secondary">
                       {c.vehicle_id ? `veículo ${c.vehicle_id}` : 'sem veículo'}
                     </span>
                   </>
@@ -255,7 +255,7 @@ export function VeiculosPainel() {
                 render: c => (
                   <>
                     {[c.city, c.region].filter(Boolean).join(' / ') || '—'}
-                    {c.device_type && <span className="block text-[11px]">{c.device_type}</span>}
+                    {c.device_type && <span className="block text-[0.6875rem]">{c.device_type}</span>}
                   </>
                 ),
               },
@@ -304,7 +304,7 @@ function TabelaVeiculos({
                 >
                   {[v.vehicle_brand, v.vehicle_model].filter(Boolean).join(' ') || nomeDoSlug(v.vehicle_slug)}
                 </Link>
-                <span className="text-[11px] text-foreground-secondary">
+                <span className="text-[0.6875rem] text-foreground-secondary">
                   {reais(v.vehicle_price)} · {fmtNum(v.sessoes)} sessões
                   {v.tempo_mediano != null && ` · ${fmtDuracao(v.tempo_mediano)}`}
                 </span>

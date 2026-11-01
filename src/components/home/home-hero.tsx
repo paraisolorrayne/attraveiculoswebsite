@@ -48,11 +48,22 @@ const videoDaTela = () => (window.matchMedia(MIDIA_CELULAR).matches ? FILME.celu
 const CENAS_DO_LETREIRO = [[1.3, 3.6], [23.0, 25.7]] as const
 
 /**
- * O título fixo da home. Até 29/10/2026 três frases se revezavam a cada 7 s
- * ("Seleção, sem igual", "O lugar do extraordinário"): ninguém terminava de
- * ler e o <h1> que o Google indexa mudava. A emoção fica com o vídeo.
+ * As frases do título. Até 29/10/2026 as três se revezavam a cada 7 s: ninguém
+ * terminava de ler e o <h1> que o Google indexa mudava. Desde 31/10/2026 só
+ * trocam no celular, quando o título volta depois de sair de cima do letreiro
+ * ATTRA (CENAS_DO_LETREIRO): a cada passagem, a próxima frase. A primeira é a
+ * do HTML; enquanto outra estiver na tela, ela segue para o leitor de tela e o
+ * Google, e a da tela fica aria-hidden. No computador o título não sai de cena
+ * e fica sempre na primeira.
+ *
+ * "O lugar do / extraordinário." quebra assim porque "do extraordinário." dá
+ * 366 px em 44 px de fonte, e a linha tem 312 px no celular de 360.
  */
-const MANIFESTO = ['Critério.', 'Não estoque.'] as const
+const FRASES = [
+  ['Critério.', 'Não estoque.'],
+  ['Seleção,', 'sem igual.'],
+  ['O lugar do', 'extraordinário.'],
+] as const
 
 // Os anos de mercado abrem o subtítulo, por extenso. Vêm de anosDeMercado()
 // para não envelhecer; depois de "Vinte e cinco", em algarismos.
@@ -218,15 +229,24 @@ export function HomeHero() {
   const [tocando, setTocando] = useState(false)
   const [comSom, setComSom] = useState(false)
   const [naCenaDoLetreiro, setNaCenaDoLetreiro] = useState(false)
+  const [frase, setFrase] = useState(0)
 
   // Acompanha o filme do celular para tirar o título de cima do letreiro. O
   // timeupdate chega a cada ~250 ms: sai um quarto de segundo antes da cena.
   useEffect(() => {
     const video = videoRef.current
     if (!video || !tocando || fonte !== FILME.celular.video) return
+    // A frase só troca onde o título sai de cena (max-lg); no tablet em pé
+    // grande o corte é o do celular, mas o título fica, e trocaria à vista.
+    const trocaFrase = window.matchMedia('(max-width: 1023.98px)').matches
+    let estavaNoLetreiro = false
     const conferir = () => {
       const t = video.currentTime
-      setNaCenaDoLetreiro(CENAS_DO_LETREIRO.some(([de, ate]) => t >= de - 0.25 && t < ate))
+      const agora = CENAS_DO_LETREIRO.some(([de, ate]) => t >= de - 0.25 && t < ate)
+      // Saindo do letreiro, o título volta com a próxima frase.
+      if (trocaFrase && estavaNoLetreiro && !agora) setFrase(i => (i + 1) % FRASES.length)
+      estavaNoLetreiro = agora
+      setNaCenaDoLetreiro(agora)
     }
     video.addEventListener('timeupdate', conferir)
     video.addEventListener('seeked', conferir)
@@ -288,14 +308,21 @@ export function HomeHero() {
         <div className="max-w-3xl max-lg:flex max-lg:flex-1 max-lg:flex-col">
           {/* Único <h1> da home. Cada linha sobe por trás de uma máscara; na
               primeira vez, depois da abertura (motion.css). No celular some
-              (só na tela, segue no HTML) nas cenas do letreiro ATTRA. */}
+              (só na tela, segue no HTML) nas cenas do letreiro ATTRA e volta
+              com a próxima frase: a `key` nova faz as linhas subirem de novo. */}
           <h1
             data-primeira
             className={`text-white font-normal tracking-tight leading-[1.02] text-[clamp(2.75rem,6.4vw,6rem)] mb-6 max-lg:mb-auto transition-opacity duration-500 ${foraDoLetreiro}`}
             style={{ fontFamily: 'var(--font-montserrat)' }}
           >
-            {MANIFESTO.map((line, i) => (
-              <span key={i} className="hero-linha" style={{ ['--d' as string]: `${i * 0.12}s` }}>
+            {frase > 0 && <span className="sr-only">{FRASES[0].join(' ')}</span>}
+            {FRASES[frase].map((line, i) => (
+              <span
+                key={`${frase}-${i}`}
+                className="hero-linha"
+                aria-hidden={frase > 0 || undefined}
+                style={{ ['--d' as string]: `${i * 0.12}s` }}
+              >
                 <span>{line}</span>
               </span>
             ))}

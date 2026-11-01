@@ -40,9 +40,10 @@ export default async function AdminLayout({
     }
   }
 
-  // Admin pages have a clean layout without main site header/footer
+  // Admin pages have a clean layout without main site header/footer.
+  // `admin-raiz` sobe a fonte da raiz em todo o admin (globals.css).
   return (
-    <div className="min-h-screen bg-background">
+    <div className="admin-raiz min-h-screen bg-background">
       {admin && <AdminHeader admin={admin} />}
       {children}
     </div>

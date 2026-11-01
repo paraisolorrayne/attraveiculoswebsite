@@ -115,7 +115,7 @@ function SemValor({ quantos }: { quantos: number }) {
 	if (quantos <= 0) return null
 	return (
 		<span
-			className="ml-1 text-[10px] text-amber-600 dark:text-amber-400"
+			className="ml-1 text-[0.625rem] text-amber-600 dark:text-amber-400"
 			title={`${quantos} venda(s) fechada(s) sem o campo valor preenchido no CRM — não entram nesta soma.`}
 		>
 			+{quantos} s/ valor
@@ -325,7 +325,7 @@ export function SecaoReceitaPorCanal({ dias }: { dias: number }) {
 						key={k.rotulo}
 						className={`p-3 rounded-xl border ${k.destaque ? 'border-primary/50' : 'border-border'}`}
 					>
-						<div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
+						<div className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
 							{k.rotulo}
 							<InfoDica>{k.dica}</InfoDica>
 						</div>

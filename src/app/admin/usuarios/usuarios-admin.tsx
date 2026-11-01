@@ -129,7 +129,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Usuários do Admin</h1>
@@ -349,14 +349,14 @@ function PainelPermissoes({
 							<div key={secao.href} className="flex items-center justify-between gap-3 py-2 border-b border-border/60 last:border-0">
 								<div className="min-w-0">
 									<div className="text-sm text-foreground truncate">{secao.label}</div>
-									<div className="text-[11px] text-foreground-secondary">
+									<div className="text-[0.6875rem] text-foreground-secondary">
 										{soAdmin
 											? 'Exclusivo do Administrador'
 											: `Padrão do papel: ${padraoLibera ? 'liberado' : 'sem acesso'}`}
 									</div>
 								</div>
 								{soAdmin ? (
-									<span className="text-[11px] text-foreground-secondary whitespace-nowrap">—</span>
+									<span className="text-[0.6875rem] text-foreground-secondary whitespace-nowrap">—</span>
 								) : (
 									<div className="flex gap-1 flex-shrink-0">
 										{([
@@ -368,7 +368,7 @@ function PainelPermissoes({
 												key={valor}
 												type="button"
 												onClick={() => definir(secao.href, valor)}
-												className={`px-2 py-1 rounded-md text-[11px] border transition-colors ${
+												className={`px-2 py-1 rounded-md text-[0.6875rem] border transition-colors ${
 													atual === valor
 														? valor === 'liberar'
 															? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/40'

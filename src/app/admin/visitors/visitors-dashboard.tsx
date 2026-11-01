@@ -131,7 +131,7 @@ export function VisitorsDashboard(props: Props) {
 	return (
 		// Na área da agência a moldura (margem e largura máxima) é do shell, que ocupa a tela inteira.
 		<div className={modo === 'agencia' ? '' : 'max-w-full px-4 sm:px-6 py-8'}>
-			<div className={modo === 'agencia' ? 'space-y-6' : 'max-w-7xl mx-auto space-y-6'}>
+			<div className={'space-y-6'}>
 				{/* Cabeçalho + período */}
 				<div className="flex items-start justify-between gap-3 flex-wrap">
 					<div>
@@ -188,7 +188,7 @@ export function VisitorsDashboard(props: Props) {
 								k.destaque ? 'border-primary/50' : 'border-border',
 							)}
 						>
-							<div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-foreground-secondary">
+							<div className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
 								{k.rotulo}
 								<InfoDica>{k.dica}</InfoDica>
 							</div>

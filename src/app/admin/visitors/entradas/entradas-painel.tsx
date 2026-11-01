@@ -154,7 +154,7 @@ function PorPagina({ paginas, total, dias }: { paginas: LinhaPaginaEntrada[]; to
 					<Link href={linkSessoes(link, { dias, entrada: p.page_path })} className="block truncate hover:underline" title={p.page_path}>
 						{nomeDaPagina(p)}
 					</Link>
-					{p.vehicle_slug && <div className="truncate font-mono text-[11px] text-foreground-secondary">{p.page_path}</div>}
+					{p.vehicle_slug && <div className="truncate font-mono text-[0.6875rem] text-foreground-secondary">{p.page_path}</div>}
 				</>
 			),
 		},

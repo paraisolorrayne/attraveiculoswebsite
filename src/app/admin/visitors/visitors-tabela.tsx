@@ -491,7 +491,7 @@ function TabelaLarguraTotal<T>({
 											<dl className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
 												{escondidas.map(c => (
 													<div key={c.chave} className="min-w-0">
-														<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
+														<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
 														<dd className="text-sm text-foreground break-words">{c.render(linha)}</dd>
 													</div>
 												))}
@@ -516,7 +516,7 @@ function TabelaLarguraTotal<T>({
 						<dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
 							{colunas.slice(1).map(c => (
 								<div key={c.chave} className="min-w-0">
-									<dt className="text-[11px] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
+									<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">{c.titulo}</dt>
 									<dd className="text-sm text-foreground break-words">{c.render(linha)}</dd>
 								</div>
 							))}

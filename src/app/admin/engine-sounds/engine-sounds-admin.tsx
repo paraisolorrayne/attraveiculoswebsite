@@ -273,7 +273,7 @@ export function EngineSoundsAdmin() {
 
       {/* Admin Header */}
       <header className="bg-background-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
               <Settings className="w-5 h-5 text-primary" />
@@ -296,7 +296,7 @@ export function EngineSoundsAdmin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-foreground-secondary">

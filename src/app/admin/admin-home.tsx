@@ -14,9 +14,10 @@ import type { Indicador, ResumoAdmin } from '@/lib/admin-resumo'
  * A largura era `max-w-7xl` (1280px). Num monitor de 2000px isso deixava a
  * grade inteira ocupando o terço superior esquerdo, com os cards parecendo
  * encolhidos e o resto da tela vazio. Aqui a página acompanha o monitor e a
- * grade ganha uma quarta coluna quando há espaço.
+ * grade ganha uma quarta coluna quando há espaço. Desde 31/10/2026 sem teto
+ * (era 1720px): o admin inteiro ocupa a largura da tela.
  */
-const LARGURA = 'mx-auto w-full max-w-[1720px] px-4 sm:px-6 lg:px-10'
+const LARGURA = 'w-full px-4 sm:px-6 lg:px-10'
 
 export function saudacao(hora: number): string {
 	if (hora < 12) return 'Bom dia'
@@ -45,7 +46,7 @@ function Pulso({ indicador }: { indicador: Indicador }) {
 	return (
 		<div className="flex-1 border-l border-border pl-4 first:border-l-0 first:pl-0 sm:pl-7 sm:first:pl-0">
 			<Numero indicador={indicador} tamanho="grande" />
-			<div className="mt-0.5 text-[11px] uppercase tracking-wider text-foreground-secondary sm:text-xs">
+			<div className="mt-0.5 text-[0.6875rem] uppercase tracking-wider text-foreground-secondary sm:text-xs">
 				{indicador.rotulo}
 			</div>
 		</div>

@@ -109,11 +109,11 @@ export function CreativesBoard() {
                   <div className="text-sm font-medium text-foreground truncate">
                     {c.vehicle_name || 'Criativo'}
                   </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground-secondary">
+                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-foreground-secondary">
                     {rotuloFormatoCriativo(c.format)}
                   </span>
                 </div>
-                <div className="text-[11px] text-foreground-secondary">
+                <div className="text-[0.6875rem] text-foreground-secondary">
                   {c.created_by_name ? `por ${c.created_by_name}` : ''} · {fmtData(c.created_at)}
                 </div>
               </div>
