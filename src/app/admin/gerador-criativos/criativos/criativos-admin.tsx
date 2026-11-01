@@ -34,6 +34,7 @@ import {
 import { corSugeridaPeloNome } from '@content/admin/creative/gerador/formatos/premium'
 import { FOLHA_GOOGLE } from '@content/admin/creative/gerador/fontes'
 import { CampoArquivo, CampoTexto, Dica, Escolha, PainelCampos, Secao } from './campos'
+import { buscarFicha, destaquesDa, motorComPotencia, numeroDa, semParenteses } from '../ficha-autoconf'
 import { exportarPeca, nomeDaPeca } from './baixar'
 import {
 	guardar,
@@ -180,13 +181,38 @@ export function CriativosAdmin() {
 		setLink(`https://attraveiculos.com.br/veiculo/${v.slug}?${p.toString()}`)
 	}
 
-	function aplicarVeiculo(v: VeiculoEstoque) {
+	/**
+	 * O que o preenchimento automático escreveu da última vez, por campo. Trocar
+	 * de carro só mexe num campo que ainda é o exemplo, está vazio ou continua
+	 * igual ao que a busca anterior pôs: o que o operador digitou não some.
+	 */
+	const preenchido = useRef<Record<string, string>>({})
+	/** Só o último clique vale, se a ficha de um carro chegar depois da do outro. */
+	const pedido = useRef(0)
+
+	async function aplicarVeiculo(v: VeiculoEstoque) {
+		const meu = ++pedido.current
+		setResultados([])
+		setAvisoBusca('Buscando a ficha do carro na AutoConf…')
+		// A lista da busca não traz a ficha que o marketing escreve na AutoConf
+		// (motor, torque, 0-100, cor, interior, diferenciais): ela vem com o carro
+		// aberto pelo id. Sem ficha, segue só com o cadastro, como antes.
+		const f = await buscarFicha(v.id)
+		if (meu !== pedido.current) return
+
 		const premium = estado.tipo === 'premium'
 		const edicao = estado.tipo === 'edicao'
-		// Desempenho e ficha só são trocados se ainda forem os do exemplo: senão
-		// os números de um C 300 iriam parar na peça de outro carro, e o que o
-		// operador já digitou não pode sumir por causa de uma busca.
-		const intocado = <T,>(atual: T, exemplo: T) => JSON.stringify(atual) === JSON.stringify(exemplo)
+		const livre = <T,>(chave: string, atual: T, exemplo: T, vazio: boolean) => {
+			const j = JSON.stringify(atual)
+			return vazio || j === JSON.stringify(exemplo) || j === preenchido.current[chave]
+		}
+		const preencher = <K extends keyof typeof estado>(chave: K, valor: (typeof estado)[K]) => {
+			preenchido.current[chave] = JSON.stringify(valor)
+			campo(chave, valor)
+		}
+
+		const cor = f?.cor || v.color || ''
+		const destaques = f ? destaquesDa(f) : []
 		campo('marca', (v.brand ?? '').toUpperCase())
 		// No Premium e na Edição o modelo vira o título grande, e a versão ("V8
 		// Bi-Turbo") o deixaria comprido demais — ela cabe melhor na ficha.
@@ -195,42 +221,73 @@ export function CriativosAdmin() {
 		campo('preco', v.price ? fmtBR(v.price) : '')
 		// 0 km é dado, não ausência: no Premium vira o "0KM" da linha sob a faixa.
 		campo('km', v.mileage ? fmtBR(v.mileage) : (premium || edicao) && v.mileage === 0 ? '0' : '')
+
+		// As três linhas de destaque (Clássico Loja e Edição) andam juntas.
+		const bs = [estado.b1, estado.b2, estado.b3]
+		const exemploBs = [ESTADO_INICIAL.b1, ESTADO_INICIAL.b2, ESTADO_INICIAL.b3]
+		const bsLivres = livre('bs', bs, exemploBs, !bs.some(b => b.trim()))
+		const porNasLinhas = (novas: string[]) => {
+			preenchido.current.bs = JSON.stringify(novas)
+			campo('b1', novas[0])
+			campo('b2', novas[1])
+			campo('b3', novas[2])
+		}
 		if (edicao) {
 			// Na Edição os três destaques são a ficha, e a primeira linha sai em
 			// destaque: é o lugar da versão (motor).
-			const exemplo = [ESTADO_INICIAL.b1, ESTADO_INICIAL.b2, ESTADO_INICIAL.b3]
-			if (intocado([estado.b1, estado.b2, estado.b3], exemplo) || ![estado.b1, estado.b2, estado.b3].some(b => b.trim())) {
-				campo('b1', v.version ?? '')
-				campo('b2', v.color ? 'Cor ' + v.color : '')
-				campo('b3', '')
-			}
-		} else if (!estado.b1.trim() && v.color) campo('b1', 'Cor ' + v.color)
-		if (v.color) {
-			campo('nomeCor', v.color.toUpperCase())
-			campo('corDestaque', corSugeridaPeloNome(v.color))
+			if (bsLivres)
+				porNasLinhas([
+					(f && motorComPotencia(f)) || v.version || '',
+					cor ? 'Cor ' + cor : '',
+					f?.interior ? 'Interior ' + f.interior : (destaques[0] ?? ''),
+				])
+		} else if (f && bsLivres) {
+			// Clássico Loja com ficha: cor, motor e o primeiro destaque, como no exemplo
+			// ("Motor 2.0 turbo gasolina 285 cv / 61,2 kgfm").
+			const numeros = [f.potencia, f.torque].filter(Boolean).join(' / ')
+			porNasLinhas([
+				cor ? 'Cor ' + cor : '',
+				f.motor || numeros ? ['Motor', f.motor && semParenteses(f.motor), numeros].filter(Boolean).join(' ') : '',
+				destaques[0] ?? '',
+			])
+		} else if (!estado.b1.trim() && cor) campo('b1', 'Cor ' + cor)
+
+		if (cor) {
+			// Na faixa do Premium, só o nome da cor: "Viola Pasifae com Detalhes em
+			// Giallo" vira "VIOLA PASIFAE". A sugestão de tom tenta o nome de catálogo
+			// e cai para a cor genérica do cadastro ("Roxo"), que é a que ela conhece.
+			campo('nomeCor', cor.split(/\s+com\s+/i)[0].toUpperCase())
+			campo('corDestaque', corSugeridaPeloNome(f?.cor ?? '') || corSugeridaPeloNome(v.color ?? ''))
 		}
-		if (intocado(estado.desempenho, ESTADO_INICIAL.desempenho)) {
-			campo('desempenho', [
-				{ valor: v.horsepower ? String(v.horsepower) : '', unidade: 'cv', rotulo: 'POTÊNCIA' },
-				{ valor: '', unidade: 'kgfm', rotulo: 'TORQUE' },
-				{ valor: '', unidade: 's', rotulo: '0-100 KM/H' },
-				{ valor: '', unidade: '', rotulo: '' },
+		if (livre('desempenho', estado.desempenho, ESTADO_INICIAL.desempenho, !estado.desempenho.some(d => d.valor.trim()))) {
+			preencher('desempenho', [
+				{ valor: numeroDa(f?.potencia) || (v.horsepower ? String(v.horsepower) : ''), unidade: 'cv', rotulo: 'POTÊNCIA' },
+				{ valor: numeroDa(f?.torque), unidade: 'kgfm', rotulo: 'TORQUE' },
+				{ valor: numeroDa(f?.aceleracao_0_100), unidade: 's', rotulo: '0-100 KM/H' },
+				f?.velocidade_maxima
+					? { valor: numeroDa(f.velocidade_maxima), unidade: 'km/h', rotulo: 'VEL. MÁXIMA' }
+					: { valor: '', unidade: '', rotulo: '' },
 			])
 		}
-		if (intocado(estado.blocos, ESTADO_INICIAL.blocos)) {
-			campo('blocos', [
-				{ rotulo: 'MOTOR', texto: v.version ?? '' },
-				{ rotulo: 'COR', texto: v.color ?? '' },
-				{ rotulo: 'TRAÇÃO', texto: '' },
-				{ rotulo: 'INTERIOR', texto: '' },
-				{ rotulo: 'DESTAQUES', texto: '' },
+		if (livre('blocos', estado.blocos, ESTADO_INICIAL.blocos, !estado.blocos.some(b => b.texto.trim()))) {
+			preencher('blocos', [
+				{ rotulo: 'MOTOR', texto: f?.motor ? semParenteses(f.motor) : (v.version ?? '') },
+				{ rotulo: 'COR', texto: cor },
+				{ rotulo: 'TRAÇÃO', texto: f?.tracao ?? '' },
+				{ rotulo: 'INTERIOR', texto: f?.interior ?? '' },
+				// Até três linhas, uma por destaque: é o que o bloco desenha.
+				{ rotulo: 'DESTAQUES', texto: destaques.slice(0, 3).join('\n') },
 			])
 		}
 		sugerirLinkDoStatus(v)
-		setResultados([])
 		setUsadas({})
 		const fotos = v.photos ?? []
 		setGaleria(fotos)
+		setAvisoBusca(
+			f
+				? 'Usei a ficha da AutoConf (motor, potência, torque, cor, interior e destaques). Confira antes de baixar.'
+				: 'Este carro ainda não tem a ficha na AutoConf: veio só o que o cadastro tem.',
+		)
 	}
 
 	/** Clique numa miniatura da galeria: foto principal, ou a de baixo com Shift. */
@@ -349,8 +406,22 @@ export function CriativosAdmin() {
 
 	/* ------------------------------------------------------------ a tela */
 
+	const propsDoPainel = {
+		g,
+		aoEscolherFotoDoComputador,
+		aoEscolherFotoDaLista,
+		aoEscolherLogoModelo: (f: File) =>
+			void lerArquivo(f)
+				.then(({ img }) => g.definirLogoModelo(img, f))
+				.catch(e => g.setErro(e instanceof Error ? e.message : String(e))),
+	}
+
 	return (
-		<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+		// Formulário à esquerda e prévia à direita. Desde 31/10/2026 a prévia tem
+		// a largura que a ALTURA da tela permite (9:16 inteira, com o botão de
+		// baixar embaixo, sem rolar), e o formulário se divide em duas colunas em
+		// tela larga: o que vai escrito na peça | imagem e saída.
+		<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
 			{/* O React 19 iça este link para o <head>. É a MESMA folha que o HTML
 			    antigo usava: o canvas pede a família "Montserrat" literal, que o
 			    next/font do layout não publica. Ver content/…/gerador/fontes.ts. */}
@@ -359,7 +430,7 @@ export function CriativosAdmin() {
 			<div className="space-y-5">
 				{historico.length > 0 && (
 					<Secao titulo={`Criativos gerados nas últimas 24h (${historico.length})`}>
-						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+						<div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
 							{historico.map(c => (
 								<div
 									key={c.id}
@@ -377,7 +448,7 @@ export function CriativosAdmin() {
 											<p className="truncate text-xs font-medium text-foreground" title={c.nome}>
 												{c.nome}
 											</p>
-											<p className="flex items-center gap-1 text-[11px] text-foreground-secondary">
+											<p className="flex items-center gap-1 text-[0.6875rem] text-foreground-secondary">
 												<Clock3 className="h-3 w-3" />
 												{new Date(c.quando).toLocaleString('pt-BR', {
 													dateStyle: 'short',
@@ -422,159 +493,177 @@ export function CriativosAdmin() {
 					/>
 				</Secao>
 
-				{estado.tipo !== 'estoque' && (
-					<Secao titulo="Buscar do estoque (opcional)">
-						<div className="flex gap-2">
-							<input
-								value={busca}
-								onChange={e => setBusca(e.target.value)}
-								onKeyDown={e => {
-									if (e.key === 'Enter') {
-										e.preventDefault()
-										void buscarEstoque()
-									}
-								}}
-								placeholder="Ex.: Porsche 911, GLC 300, Purosangue…"
-								className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+				<div className="grid items-start gap-5 2xl:grid-cols-2">
+					{/* ---------- o que vai escrito na peça ---------- */}
+					<div className="min-w-0 space-y-5">
+						{estado.tipo !== 'estoque' && (
+							<Secao titulo="Buscar do estoque (opcional)">
+								<div className="flex gap-2">
+									<input
+										value={busca}
+										onChange={e => setBusca(e.target.value)}
+										onKeyDown={e => {
+											if (e.key === 'Enter') {
+												e.preventDefault()
+												void buscarEstoque()
+											}
+										}}
+										placeholder="Ex.: Porsche 911, GLC 300, Purosangue…"
+										className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+									/>
+									<button
+										type="button"
+										onClick={() => void buscarEstoque()}
+										disabled={buscando}
+										className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+									>
+										{buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+										Buscar
+									</button>
+								</div>
+
+								{avisoBusca && <Dica>{avisoBusca}</Dica>}
+
+								{resultados.length > 0 && (
+									<ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
+										{resultados.map(v => (
+											<li key={v.id}>
+												<button
+													type="button"
+													onClick={() => void aplicarVeiculo(v)}
+													className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-foreground hover:bg-background-soft"
+												>
+													{v.photos?.[0] ? (
+														// eslint-disable-next-line @next/next/no-img-element
+														<img
+															src={`/_next/image?url=${encodeURIComponent(v.photos[0])}&w=256&q=60`}
+															alt=""
+															className="h-10 w-14 shrink-0 rounded object-cover"
+														/>
+													) : (
+														<span className="h-10 w-14 shrink-0 rounded bg-background-soft" />
+													)}
+													<span className="min-w-0">
+														<span className="block truncate font-medium">
+															{[v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')}
+														</span>
+														<span className="block text-xs text-foreground-secondary">
+															{[v.price ? `R$ ${fmtBR(v.price)}` : '', v.mileage ? `${fmtBR(v.mileage)} km` : '']
+																.filter(Boolean)
+																.join(' · ')}
+														</span>
+													</span>
+												</button>
+											</li>
+										))}
+									</ul>
+								)}
+
+								{galeria.length > 0 && (
+									<div className="flex flex-wrap gap-2">
+										{galeria.map(u => (
+											<button
+												key={u}
+												type="button"
+												onClick={e => usarFotoDaGaleria(u, e.shiftKey)}
+												title={
+													usadas[u]
+														? `Aplicada em: ${usadas[u] === 'foto1' ? 'Principal' : usadas[u]}`
+														: 'Clique: Foto principal · Shift+clique: Foto 2'
+												}
+												className={
+													'overflow-hidden rounded-md border-2 transition-colors ' +
+													(usadas[u] ? 'border-primary' : 'border-transparent hover:border-border')
+												}
+											>
+												{/* eslint-disable-next-line @next/next/no-img-element */}
+												<img
+													src={`/_next/image?url=${encodeURIComponent(u)}&w=256&q=60`}
+													alt=""
+													className="h-16 w-20 object-cover"
+												/>
+											</button>
+										))}
+									</div>
+								)}
+
+								<Dica>
+									Selecionar um veículo preenche os campos abaixo (tudo continua editável na mão).
+									Clique numa foto para usá-la como <strong>Foto principal</strong>; com Shift, vira a{' '}
+									<strong>Foto 2</strong>.
+								</Dica>
+							</Secao>
+						)}
+
+						<PainelCampos parte="conteudo" {...propsDoPainel} />
+					</div>
+
+					{/* ---------- imagem e saída ---------- */}
+					<div className="min-w-0 space-y-5">
+						<PainelCampos parte="imagem" {...propsDoPainel} />
+
+						<Secao titulo="Logo (opcional)">
+							<CampoArquivo
+								rotulo="PNG transparente"
+								aceita="image/png"
+								aoEscolher={f =>
+									void lerArquivo(f)
+										.then(({ img, dados }) => g.definirLogo(img, dados, f))
+										.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
+								}
 							/>
+							<Dica>
+								As logos oficiais da Attra (branca e preta) já vêm embutidas e são usadas conforme o
+								fundo de cada formato. Envie um PNG transparente aqui apenas se quiser substituir a do
+								formato Clássico.
+							</Dica>
 							<button
 								type="button"
-								onClick={() => void buscarEstoque()}
-								disabled={buscando}
-								className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+								onClick={() => g.definirLogo(null)}
+								className="rounded-md border border-border px-3 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
 							>
-								{buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-								Buscar
+								Voltar ao logo padrão
 							</button>
-						</div>
+						</Secao>
 
-						{avisoBusca && <Dica>{avisoBusca}</Dica>}
-
-						{resultados.length > 0 && (
-							<ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
-								{resultados.map(v => (
-									<li key={v.id}>
-										<button
-											type="button"
-											onClick={() => aplicarVeiculo(v)}
-											className="w-full px-3 py-2 text-left text-sm text-foreground hover:bg-background-soft"
-										>
-											{[v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')}
-											{v.price ? ` — R$ ${fmtBR(v.price)}` : ''}
-											{v.mileage ? ` · ${fmtBR(v.mileage)} km` : ''}
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-
-						{galeria.length > 0 && (
-							<div className="flex flex-wrap gap-2">
-								{galeria.map(u => (
-									<button
-										key={u}
-										type="button"
-										onClick={e => usarFotoDaGaleria(u, e.shiftKey)}
-										title={
-											usadas[u]
-												? `Aplicada em: ${usadas[u] === 'foto1' ? 'Principal' : usadas[u]}`
-												: 'Clique: Foto principal · Shift+clique: Foto 2'
-										}
-										className={
-											'overflow-hidden rounded-md border-2 transition-colors ' +
-											(usadas[u] ? 'border-primary' : 'border-transparent hover:border-border')
-										}
-									>
-										{/* eslint-disable-next-line @next/next/no-img-element */}
-										<img
-											src={`/_next/image?url=${encodeURIComponent(u)}&w=256&q=60`}
-											alt=""
-											className="h-16 w-20 object-cover"
-										/>
-									</button>
-								))}
-							</div>
-						)}
-
-						<Dica>
-							Selecionar um veículo preenche os campos abaixo (tudo continua editável na mão).
-							Clique numa foto para usá-la como <strong>Foto principal</strong>; com Shift, vira a{' '}
-							<strong>Foto 2</strong>.
-						</Dica>
-					</Secao>
-				)}
-
-				<PainelCampos
-					g={g}
-					aoEscolherFotoDoComputador={aoEscolherFotoDoComputador}
-					aoEscolherFotoDaLista={aoEscolherFotoDaLista}
-					aoEscolherLogoModelo={f =>
-						void lerArquivo(f)
-							.then(({ img }) => g.definirLogoModelo(img, f))
-							.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
-					}
-				/>
-
-				<Secao titulo="Logo (opcional)">
-					<CampoArquivo
-						rotulo="PNG transparente"
-						aceita="image/png"
-						aoEscolher={f =>
-							void lerArquivo(f)
-								.then(({ img, dados }) => g.definirLogo(img, dados, f))
-								.catch(e => g.setErro(e instanceof Error ? e.message : String(e)))
-						}
-					/>
-					<Dica>
-						As logos oficiais da Attra (branca e preta) já vêm embutidas e são usadas conforme o
-						fundo de cada formato. Envie um PNG transparente aqui apenas se quiser substituir a do
-						formato Clássico.
-					</Dica>
-					<button
-						type="button"
-						onClick={() => g.definirLogo(null)}
-						className="rounded-md border border-border px-3 py-2 text-xs text-foreground-secondary hover:bg-background-soft"
-					>
-						Voltar ao logo padrão
-					</button>
-				</Secao>
-
-				<Secao titulo="Publicar no Status do WhatsApp">
-					<label className="block">
-						<span className="mb-1 block text-xs font-medium text-foreground-secondary">Legenda</span>
-						<textarea
-							rows={5}
-							value={legenda}
-							onChange={e => setLegenda(e.target.value)}
-							placeholder="Escreva a legenda do status…"
-							className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-						/>
-					</label>
-					<CampoTexto
-						rotulo="Link (entra no fim da legenda)"
-						valor={link}
-						aoMudar={setLink}
-						placeholder="https://attraveiculos.com.br/veiculo/…"
-					/>
-					<Dica>
-						Selecionar um veículo na busca preenche o link com a ficha dele, já marcada para o
-						painel saber que a visita veio do status. Dá para editar.
-					</Dica>
-					<button
-						type="button"
-						onClick={() => void publicarNoStatus()}
-						disabled={publicando || !pronto}
-						className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-white disabled:opacity-40"
-					>
-						{publicando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-						Publicar no status (24h)
-					</button>
-					{msgStatus && <Dica>{msgStatus}</Dica>}
-				</Secao>
+						<Secao titulo="Publicar no Status do WhatsApp">
+							<label className="block">
+								<span className="mb-1 block text-xs font-medium text-foreground-secondary">Legenda</span>
+								<textarea
+									rows={5}
+									value={legenda}
+									onChange={e => setLegenda(e.target.value)}
+									placeholder="Escreva a legenda do status…"
+									className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+								/>
+							</label>
+							<CampoTexto
+								rotulo="Link (entra no fim da legenda)"
+								valor={link}
+								aoMudar={setLink}
+								placeholder="https://attraveiculos.com.br/veiculo/…"
+							/>
+							<Dica>
+								Selecionar um veículo na busca preenche o link com a ficha dele, já marcada para o
+								painel saber que a visita veio do status. Dá para editar.
+							</Dica>
+							<button
+								type="button"
+								onClick={() => void publicarNoStatus()}
+								disabled={publicando || !pronto}
+								className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-medium text-white disabled:opacity-40"
+							>
+								{publicando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+								Publicar no status (24h)
+							</button>
+							{msgStatus && <Dica>{msgStatus}</Dica>}
+						</Secao>
+					</div>
+				</div>
 			</div>
 
 			{/* ---------- prévia ---------- */}
-			<div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+			<div className="space-y-3 max-lg:mx-auto max-lg:w-full max-lg:max-w-[420px] lg:sticky lg:top-0 lg:w-[clamp(340px,calc((100vh_-_15rem)*0.5625),640px)] lg:self-start">
 				<div
 					className="overflow-hidden rounded-xl border border-border bg-black shadow-2xl"
 					style={{ aspectRatio: '9 / 16' }}
@@ -586,7 +675,7 @@ export function CriativosAdmin() {
 						className="block h-full w-full"
 					/>
 				</div>
-				<p className="text-center text-[11px] uppercase tracking-wider text-foreground-secondary">
+				<p className="text-center text-[0.6875rem] uppercase tracking-wider text-foreground-secondary">
 					{pronto ? 'Prévia em tempo real — exporta Stories 1080×1920 + Feed 1080×1350' : 'Carregando fontes e imagens…'}
 				</p>
 
