@@ -51,7 +51,7 @@ const sections = [
 • Órgãos de trânsito (para transferência de propriedade).
 • Empresas de vistorias cautelares.
 
-**Plataformas de anúncio (Google e Meta):** quando você chega por um anúncio e o seu atendimento é encaminhado a um consultor, informamos à plataforma do anúncio que ele gerou um atendimento, para sabermos quais campanhas funcionam; o Google recebe também o identificador do clique no anúncio. Também podemos enviar a essas plataformas o e-mail e o telefone de clientes, para direcionar os anúncios. E-mail e telefone vão sempre codificados (hash SHA-256), no formato que as plataformas exigem. Nome, conversas e documentos não são enviados.`
+**Plataformas de anúncio:** compartilhamos de forma codificada dados de contato (como telefone e e-mail) e de interação com os nossos anúncios com plataformas de publicidade, como Google e Meta, para medir os resultados das campanhas e exibir anúncios mais relevantes.`
   },
   {
     icon: UserCheck,
