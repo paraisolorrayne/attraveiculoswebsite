@@ -1,8 +1,10 @@
+import { Fragment } from 'react'
 import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Shield, Lock, Eye, FileText, UserCheck, MessageCircle, Share2, Mail } from 'lucide-react'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { partesComNegrito } from '@/lib/texto-com-negrito'
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
@@ -47,7 +49,9 @@ const sections = [
 
 • Instituições financeiras (para aprovação de crédito).
 • Órgãos de trânsito (para transferência de propriedade).
-• Empresas de vistorias cautelares.`
+• Empresas de vistorias cautelares.
+
+**Plataformas de anúncio:** compartilhamos de forma codificada dados de contato (como telefone e e-mail) e de interação com os nossos anúncios com plataformas de publicidade, como Google e Meta, para medir os resultados das campanhas e exibir anúncios mais relevantes.`
   },
   {
     icon: UserCheck,
@@ -63,7 +67,7 @@ const sections = [
     title: '6. Alterações nesta Política',
     content: `Reservamo-nos o direito de atualizar esta política periodicamente para refletir mudanças em nosso estoque ou em regulamentações legais. Recomendamos a leitura regular desta página.
 
-**Última atualização**: Outubro de 2026`
+**Última atualização**: Novembro de 2026`
   },
 ]
 
@@ -98,7 +102,13 @@ export default function PoliticaPrivacidadePage() {
                   <div>
                     <h2 className="text-xl font-bold text-foreground mb-4">{section.title}</h2>
                     <div className="text-foreground-secondary leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
-                      {section.content}
+                      {partesComNegrito(section.content).map((parte, i) =>
+                        parte.negrito ? (
+                          <strong key={i} className="text-foreground">{parte.texto}</strong>
+                        ) : (
+                          <Fragment key={i}>{parte.texto}</Fragment>
+                        ),
+                      )}
                     </div>
                   </div>
                 </div>
