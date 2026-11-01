@@ -1,8 +1,10 @@
+import { Fragment } from 'react'
 import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Shield, Lock, Eye, FileText, UserCheck, MessageCircle, Share2, Mail } from 'lucide-react'
 import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { partesComNegrito } from '@/lib/texto-com-negrito'
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
@@ -47,7 +49,9 @@ const sections = [
 
 • Instituições financeiras (para aprovação de crédito).
 • Órgãos de trânsito (para transferência de propriedade).
-• Empresas de vistorias cautelares.`
+• Empresas de vistorias cautelares.
+
+**Plataformas de anúncio (Google e Meta):** quando você chega por um anúncio e o seu atendimento é encaminhado a um consultor, informamos à plataforma do anúncio que ele gerou um atendimento, para sabermos quais campanhas funcionam; o Google recebe também o identificador do clique no anúncio. Também podemos enviar a essas plataformas o e-mail e o telefone de clientes, para direcionar os anúncios. E-mail e telefone vão sempre codificados (hash SHA-256), no formato que as plataformas exigem. Nome, conversas e documentos não são enviados.`
   },
   {
     icon: UserCheck,
@@ -63,7 +67,7 @@ const sections = [
     title: '6. Alterações nesta Política',
     content: `Reservamo-nos o direito de atualizar esta política periodicamente para refletir mudanças em nosso estoque ou em regulamentações legais. Recomendamos a leitura regular desta página.
 
-**Última atualização**: Outubro de 2026`
+**Última atualização**: Novembro de 2026`
   },
 ]
 
@@ -98,7 +102,13 @@ export default function PoliticaPrivacidadePage() {
                   <div>
                     <h2 className="text-xl font-bold text-foreground mb-4">{section.title}</h2>
                     <div className="text-foreground-secondary leading-relaxed whitespace-pre-line prose prose-sm max-w-none">
-                      {section.content}
+                      {partesComNegrito(section.content).map((parte, i) =>
+                        parte.negrito ? (
+                          <strong key={i} className="text-foreground">{parte.texto}</strong>
+                        ) : (
+                          <Fragment key={i}>{parte.texto}</Fragment>
+                        ),
+                      )}
                     </div>
                   </div>
                 </div>
