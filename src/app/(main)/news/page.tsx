@@ -48,9 +48,12 @@ interface NewsData {
 
 async function getNews(): Promise<NewsData> {
   try {
-    // Get the most recently created active cycle
+    // O ciclo ativo, ou o mais recente com notícia se o ativo estiver vazio
+    // (27/10/2026 a semana entrou sem nenhuma e a página mostrou "em breve").
     const cycleRaw = await db.selectFrom('news_cycles').selectAll()
-      .where('is_active', '=', true)
+      .where((eb) => eb.exists(eb.selectFrom('news_articles').select('news_articles.id')
+        .whereRef('news_articles.news_cycle_id', '=', 'news_cycles.id')))
+      .orderBy('is_active', 'desc')
       .orderBy('created_at', 'desc')
       .limit(1)
       .executeTakeFirst()

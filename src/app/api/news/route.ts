@@ -28,9 +28,15 @@ interface NewsCycle {
 
 export async function GET() {
   try {
-    // Get active cycle
+    // O ciclo ativo, ou o mais recente com notícia se o ativo estiver vazio
+    // (mesma regra da página /news).
     const cycle = await db.selectFrom('news_cycles').selectAll()
-      .where('is_active', '=', true).executeTakeFirst()
+      .where((eb) => eb.exists(eb.selectFrom('news_articles').select('news_articles.id')
+        .whereRef('news_articles.news_cycle_id', '=', 'news_cycles.id')))
+      .orderBy('is_active', 'desc')
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .executeTakeFirst()
 
     if (!cycle) {
       return NextResponse.json(

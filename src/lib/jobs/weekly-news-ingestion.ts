@@ -18,7 +18,9 @@ import { generateNewsSlug } from '@/lib/utils'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
-const GNEWS_API_KEY = process.env.GNEWS_API_KEY || '3fed0093c3944c90b74dd58d7110ee4e'
+// Só pelo .env.production: a chave ficava escrita aqui e o repositório é
+// público (01/11/2026).
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY || ''
 const GNEWS_BASE_URL = 'https://gnews.io/api/v4/search'
 
 
@@ -83,6 +85,20 @@ const LUXURY_CONFIRM_KEYWORDS = [
   // Finance/Geral
   'alta renda', 'exclusivo', 'premium', 'luxo', 'milhões', 'bilhões', 'recorde', 'performance', 'inovação',
 ]
+
+// 4. Sem a IA, vale a palavra: F1 ou marca de carro premium no título ou na
+// descrição. Antes, a IA fora do ar devolvia confiança 50, o corte de 75
+// reprovava tudo e a semana de 27/10/2026 foi ao ar sem nenhuma notícia.
+const AUTO_KEYWORDS = [
+  ...F1_KEYWORDS,
+  'ferrari', 'lamborghini', 'porsche', 'mclaren', 'aston martin', 'bugatti', 'pagani', 'koenigsegg',
+  'bentley', 'rolls-royce', 'maserati', 'mercedes-amg', 'mercedes-benz', 'bmw', 'audi', 'land rover', 'range rover',
+]
+
+function mentionsCarsOrF1(title: string, description: string): boolean {
+  const text = `${title} ${description}`.toLowerCase()
+  return AUTO_KEYWORDS.some(k => text.includes(k))
+}
 
 function shouldExcludeArticle(title: string, description: string): boolean {
   const text = `${title} ${description}`.toLowerCase()
@@ -211,6 +227,10 @@ export async function runWeeklyNewsIngestion(): Promise<{
   const { weekStart, weekEnd, startDate, endDate } = getWeekRange()
 
   console.log(`[NewsIngestion] Starting for week ${weekStart} to ${weekEnd}`)
+
+  if (!GNEWS_API_KEY) {
+    return { success: false, articlesInserted, errors: ['GNEWS_API_KEY ausente no .env.production'] }
+  }
 
   try {
     // 0. Auto-cura: o cron roda diariamente, mas só ingere quando o ciclo
@@ -365,6 +385,7 @@ export async function runWeeklyNewsIngestion(): Promise<{
 
     // 5. AI Guardrails (O filtro de Ouro - Gemini como Editor Chefe)
     const filteredArticles: typeof preFilteredArticles = []
+    let withoutAI = 0
     for (const item of preFilteredArticles) {
       const validation = await validateArticleWithAI({
         title: item.article.title,
@@ -373,11 +394,20 @@ export async function runWeeklyNewsIngestion(): Promise<{
       })
 
       // Aceitamos se for relevante para o público (isAutomotive = "Attra Relevant")
-      if (validation.isAutomotive && validation.confidence >= 75) {
+      if (validation.aiUnavailable) withoutAI++
+      const approved = validation.aiUnavailable
+        ? mentionsCarsOrF1(item.article.title, item.article.description)
+        : validation.isAutomotive && validation.confidence >= 75
+      if (approved) {
         filteredArticles.push(item)
       } else {
         console.log(`[AI Reject] ${item.article.title.substring(0, 40)}... (${validation.reason})`)
       }
+    }
+
+    // Vai para o JSON da resposta, que o cron grava em /var/log/attra-news.log.
+    if (withoutAI > 0) {
+      errors.push(`IA indisponível em ${withoutAI} de ${preFilteredArticles.length} notícias; valeu o filtro por palavra`)
     }
 
     console.log(`[NewsIngestion] Approved by AI: ${filteredArticles.length}`)
@@ -426,6 +456,24 @@ export async function runWeeklyNewsIngestion(): Promise<{
     }
 
     console.log(`[NewsIngestion] Inserted ${articlesInserted} articles`)
+
+    // Ciclo vazio não vai ao ar: ativá-lo trocava a semana anterior por
+    // "Notícias em breve" e, com o ciclo novo, o cron só tentava de novo 6 dias
+    // depois. Sem ativar, o site segue com a semana anterior e amanhã repete.
+    const inCycle = await db.selectFrom('news_articles')
+      .select((eb) => eb.fn.countAll<string>().as('total'))
+      .where('news_cycle_id', '=', newCycle.id)
+      .executeTakeFirst()
+    if (Number(inCycle?.total ?? 0) === 0) {
+      if (!existingCycle) {
+        await db.deleteFrom('news_cycles').where('id', '=', newCycle.id).execute()
+      }
+      return {
+        success: false,
+        articlesInserted,
+        errors: [...errors, 'Nenhuma notícia aprovada; a semana anterior continua no ar'],
+      }
+    }
 
     // 6. Activate new cycle, deactivate old
     try {
