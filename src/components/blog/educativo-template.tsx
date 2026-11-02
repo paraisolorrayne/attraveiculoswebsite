@@ -31,7 +31,7 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
     <article className="bg-background">
       {/* Header Section */}
       <section className="pt-28 pb-12 bg-gradient-to-b from-background-soft to-background">
-        <Container>
+        <Container className="max-w-[max(80%,1280px)]">
           <Breadcrumb items={breadcrumbItems} afterHero />
           
           {/* Category Badge - Discreto */}
@@ -139,8 +139,9 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
 
       {/* Content */}
       <section className="py-12 lg:py-16">
-        <Container>
-          <div className="max-w-3xl mx-auto">
+        <Container className="max-w-[max(80%,1280px)]">
+          {/* A coluna acompanha a fonte do texto, que cresce na tela larga (prose.css). */}
+          <div className="blog-coluna">
             {/* Article Content */}
             <BlogContentRenderer
               content={post.content}

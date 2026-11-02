@@ -99,7 +99,7 @@ function VehicleSpecsTable({ specs }: {
       itemScope
       itemType="https://schema.org/Vehicle"
     >
-      <Container>
+      <Container className="max-w-[max(80%,1280px)]">
         <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-12">
           Ficha Técnica
         </h2>
@@ -193,13 +193,13 @@ function GallerySection({
 
   return (
     <section className="py-14 lg:py-18 bg-background-soft border-b border-border">
-      <Container>
+      <Container className="max-w-[max(80%,1280px)]">
         <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-10">
           Galeria de Fotos
         </h2>
 
         {/* Imagem principal com navegação - Carrossel limpo */}
-        <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-6 group bg-background">
+        <div className="relative aspect-[16/9] max-h-[80vh] w-full rounded-2xl overflow-hidden mb-6 group bg-background">
           <Image
             src={normalizedImages[safeIndex].url}
             alt={normalizedImages[safeIndex].alt}
@@ -565,7 +565,7 @@ function CTASection({ brand, model, isPrimary = false, vendido = false }: {
 function ArticleFooter({ brand }: { brand?: string }) {
   return (
     <footer className="py-10 lg:py-14 border-t border-border">
-      <Container>
+      <Container className="max-w-[max(80%,1280px)]">
         <div className="flex flex-col lg:flex-row justify-between gap-8">
           {/* Links para veículos */}
           <div>
@@ -665,7 +665,7 @@ export function CarReviewTemplate({ post, disponibilidade, vendido = false }: Ca
       {/* HERO HEADER - Cabeçalho do artigo com hierarquia visual clara */}
       {/* ================================================================== */}
       <section className="pt-28 pb-12 lg:pb-16 bg-gradient-to-b from-background-soft to-background">
-        <Container>
+        <Container className="max-w-[max(80%,1280px)]">
           {/* Breadcrumb */}
           <Breadcrumb items={breadcrumbItems} afterHero />
 
@@ -771,7 +771,7 @@ export function CarReviewTemplate({ post, disponibilidade, vendido = false }: Ca
 
           {/* Legenda da imagem hero */}
           <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-            <Container>
+            <Container className="max-w-[max(80%,1280px)]">
               <p className="text-white/90 text-sm lg:text-base font-medium">
                 {car_review?.brand} {car_review?.model} {car_review?.year}
                 {car_review?.color && ` • ${car_review.color}`}
@@ -807,8 +807,9 @@ export function CarReviewTemplate({ post, disponibilidade, vendido = false }: Ca
       {/* CONTEÚDO PRINCIPAL - Corpo do artigo longo */}
       {/* ================================================================== */}
       <section className="py-14 lg:py-20">
-        <Container size="lg">
-          <div className="max-w-3xl mx-auto">
+        <Container className="max-w-[max(80%,1280px)]">
+          {/* A coluna acompanha a fonte do texto, que cresce na tela larga (prose.css). */}
+          <div className="blog-coluna">
             {/* Conteúdo HTML com tipografia otimizada para leitura longa */}
             <BlogContentRenderer
               content={post.content}
