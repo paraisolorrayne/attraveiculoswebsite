@@ -247,7 +247,12 @@ export async function runWeeklyNewsIngestion(): Promise<{
     if (activeCycle?.created_at) {
       const ageMs = Date.now() - new Date(activeCycle.created_at).getTime()
       const sixDaysMs = 6 * 24 * 60 * 60 * 1000
-      if (ageMs < sixDaysMs) {
+      // Ciclo ativo sem notícia (o de 27/10/2026) conta como vencido.
+      const hasArticles = await db.selectFrom('news_articles').select('id')
+        .where('news_cycle_id', '=', activeCycle.id)
+        .limit(1)
+        .executeTakeFirst()
+      if (ageMs < sixDaysMs && hasArticles) {
         console.log(`[NewsIngestion] Ciclo ativo tem ${(ageMs / 86_400_000).toFixed(1)} dias — nada a fazer`)
         return { success: true, cycleId: activeCycle.id, articlesInserted: 0, errors: [] }
       }
