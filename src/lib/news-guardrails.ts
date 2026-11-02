@@ -15,6 +15,9 @@ interface ArticleValidation {
   confidence: number // 0-100
   reason: string
   category?: 'formula1' | 'supercar' | 'luxury' | 'market' | 'other'
+  // A IA não respondeu (sem chave, erro da API, resposta ilegível ou tempo
+  // esgotado): a decisão fica com quem chamou, não com a confiança 50 abaixo.
+  aiUnavailable?: boolean
 }
 
 interface ArticleInput {
@@ -29,7 +32,7 @@ interface ArticleInput {
 export async function validateArticleWithAI(article: ArticleInput): Promise<ArticleValidation> {
   if (!GEMINI_API_KEY) {
     console.warn('[NewsGuardrails] No Gemini API key, skipping AI validation')
-    return { isAutomotive: true, confidence: 50, reason: 'AI validation skipped - no API key' }
+    return { isAutomotive: true, confidence: 50, reason: 'AI validation skipped - no API key', aiUnavailable: true }
   }
 
   const prompt = `Você é o Editor Chefe da "Attra Veículos", uma concessionária de supercarros e veículos premium em Uberlândia-MG.
@@ -92,7 +95,7 @@ Retorne APENAS um JSON neste formato, sem markdown:
 
     if (!response.ok) {
       console.error('[NewsGuardrails] Gemini API error:', response.status)
-      return { isAutomotive: true, confidence: 50, reason: 'AI validation failed - API error' }
+      return { isAutomotive: true, confidence: 50, reason: 'AI validation failed - API error', aiUnavailable: true }
     }
 
     const data = await response.json()
@@ -102,7 +105,7 @@ Retorne APENAS um JSON neste formato, sem markdown:
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       console.error('[NewsGuardrails] Could not parse AI response:', text)
-      return { isAutomotive: true, confidence: 50, reason: 'AI validation failed - parse error' }
+      return { isAutomotive: true, confidence: 50, reason: 'AI validation failed - parse error', aiUnavailable: true }
     }
 
     const result = JSON.parse(jsonMatch[0]) as ArticleValidation
@@ -118,7 +121,7 @@ Retorne APENAS um JSON neste formato, sem markdown:
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === 'AbortError'
     console.error(`[NewsGuardrails] ${isTimeout ? 'Timeout' : 'Error'}:`, error)
-    return { isAutomotive: true, confidence: 50, reason: `AI validation failed - ${isTimeout ? 'timeout' : 'error'}` }
+    return { isAutomotive: true, confidence: 50, reason: `AI validation failed - ${isTimeout ? 'timeout' : 'error'}`, aiUnavailable: true }
   }
 }
 
