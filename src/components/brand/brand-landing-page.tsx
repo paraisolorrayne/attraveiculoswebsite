@@ -9,7 +9,7 @@ import { formatarDataBR } from '@/lib/seo/frescor'
 import { getVehicles } from '@/lib/autoconf-api'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
-import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { itemDaListaDeVeiculos } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
@@ -472,32 +472,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 							name: `Modelos ${brand.displayName} na Attra Veículos`,
 							numberOfItems: brandVehicles.length || brand.models.length,
 							itemListElement: brandVehicles.length > 0
-								? brandVehicles.map((v, i) => ({
-									'@type': 'ListItem',
-									position: i + 1,
-									item: {
-										'@type': 'Vehicle',
-										name: `${v.brand} ${v.model} ${v.year_model}`,
-										url: `${SITE_URL}/veiculo/${v.slug}`,
-										brand: { '@type': 'Brand', name: v.brand },
-										modelDate: String(v.year_model),
-										...(v.mileage != null && {
-											mileageFromOdometer: {
-												'@type': 'QuantitativeValue',
-												value: v.mileage,
-												unitCode: 'KMT',
-											},
-										}),
-										offers: {
-											'@type': 'Offer',
-											price: v.price,
-											priceCurrency: 'BRL',
-											availability: availabilityFromStatus(v.status),
-											seller: organizationRef(),
-											itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-										},
-									},
-								}))
+								? brandVehicles.map((v, i) => itemDaListaDeVeiculos(v, i + 1))
 								: brand.models.map((m, i) => ({
 									'@type': 'ListItem',
 									position: i + 1,

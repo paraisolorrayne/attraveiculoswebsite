@@ -26,7 +26,7 @@ import { Search, Globe, Shield, Check, ArrowRight, CalendarCheck } from 'lucide-
 import Link from 'next/link'
 import { VehicleUnavailableToast } from '@/components/vehicles/vehicle-unavailable-toast'
 import { MetaSearchTracker } from '@/components/analytics/meta-pixel'
-import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { itemDaListaDeVeiculos } from '@/lib/vehicle-schema'
 
 // Brand similarity groups for vehicle suggestions
 // When a brand has no stock, vehicles from brands in the same group(s) are suggested
@@ -370,37 +370,13 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
 
   const breadcrumbItems = [{ label: 'Veículos', href: '/veiculos' }]
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://attraveiculos.com.br'
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'Veículos Premium Disponíveis na Attra Veículos',
     description: 'Catálogo de supercarros, importados e veículos premium com curadoria e procedência verificada. Entrega em todo o Brasil.',
     numberOfItems: total,
-    itemListElement: vehicles.slice(0, 20).map((v, i) => {
-      const vName = [v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')
-      return {
-        '@type': 'ListItem',
-        position: (currentPage - 1) * perPage + i + 1,
-        item: {
-          '@type': 'Vehicle',
-          name: vName,
-          url: `${baseUrl}/veiculo/${v.slug}`,
-          ...(v.brand ? { brand: { '@type': 'Brand', name: v.brand } } : {}),
-          ...(v.model ? { model: v.model } : {}),
-          vehicleModelDate: String(v.year_model),
-          mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' },
-          offers: {
-            '@type': 'Offer',
-            price: v.price,
-            priceCurrency: 'BRL',
-            availability: availabilityFromStatus(v.status),
-            itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-          },
-          image: v.photos?.[0],
-        },
-      }
-    }),
+    itemListElement: vehicles.slice(0, 20).map((v, i) => itemDaListaDeVeiculos(v, (currentPage - 1) * perPage + i + 1)),
   }
 
   return (
