@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getBlogPost } from '@/lib/blog-api'
+import { getBlogPost, getBlogPostsPreview, toPreview } from '@/lib/blog-api'
+import { leiaTambem } from '@/lib/blog-categorias'
+import { LeiaTambem } from '@/components/blog/leia-tambem'
 import { buildBlogPostSchemas } from '@/lib/blog-schema'
 import { EducativoTemplate, CarReviewTemplate } from '@/components/blog'
 import { InstagramEmbedProvider } from '@/components/blog/instagram-embed-provider'
 import { DisponibilidadeReview } from '@/components/blog/disponibilidade-review'
-import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle, descricaoSeo } from '@/lib/seo/page-metadata'
 import { loadListedInventory } from '@/app/api/llm/_inventory'
 import { corrigirLinksInternos, pedidoDoReview, situacaoDoReview, slugDaFicha } from '@/lib/blog-disponibilidade'
-import { ordenarPorSemelhanca } from '@/lib/veiculos-semelhantes'
+import { daMesmaMarcaOuModelo } from '@/lib/veiculos-semelhantes'
 import type { Vehicle } from '@/types'
 
 interface PageProps {
@@ -28,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 		// `meta_title` vem do banco e boa parte da base foi gravada já com a
 		// marca no fim, que o template do layout raiz acrescenta de novo.
 		title: pageTitle(post.seo.meta_title || post.title),
-		description: post.seo.meta_description || post.excerpt,
+		description: descricaoSeo(post.seo.meta_description || post.excerpt),
 		keywords: post.seo.keywords,
 		openGraph: {
 			title: post.title,
@@ -81,7 +83,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 		// Marca, modelo e ano vêm do review, que é mais confiável que o slug da
 		// ficha (há fichas como `sf90-2024-1062018`, sem a marca).
 		const semelhantes = !estoque || !cr || situacao.tipo === 'a_venda' ? []
-			: ordenarPorSemelhanca(estoque, pedidoDoReview(cr.brand, cr.model, cr.year)).slice(0, 4)
+			: daMesmaMarcaOuModelo(estoque, pedidoDoReview(cr.brand, cr.model, cr.year)).slice(0, 4)
 		template = (
 			<CarReviewTemplate
 				post={{ ...post, content }}
@@ -94,6 +96,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 	}
 
 	const schemas = buildBlogPostSchemas(post)
+	const relacionados = leiaTambem(toPreview(post), await getBlogPostsPreview({ type: 'all' }))
 
 	return (
 		<InstagramEmbedProvider>
@@ -105,6 +108,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 				/>
 			))}
 			{template}
+			<LeiaTambem posts={relacionados} />
 		</InstagramEmbedProvider>
 	)
 }

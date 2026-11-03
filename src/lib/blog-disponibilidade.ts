@@ -13,6 +13,7 @@
  * reescrito continua sendo o mesmo carro.
  */
 
+import { PAGINAS_LEGADAS } from '@/lib/seo/urls-legadas'
 import { lerSlug, type PedidoDoSlug } from './veiculos-semelhantes'
 import { POSTS_CONSOLIDADOS } from './blog-consolidacao'
 import type { DualBlogPost, Vehicle } from '@/types'
@@ -69,13 +70,27 @@ const HREF_INTERNO = /href=(["'])((?:https?:\/\/(?:www\.)?attraveiculos\.com\.br
  *
  * Com o estoque desconhecido, os links de ficha ficam como estão.
  */
+/**
+ * Páginas que hoje respondem com redirect (next.config): o link do post vai
+ * direto ao destino. O Ahrefs conta link para redirect como erro, e um post
+ * comparativo ainda apontava para /estoque (handoff de SEO de 02/11/2026).
+ */
+const PAGINAS_REDIRECIONADAS: Readonly<Record<string, string>> = {
+	'/estoque': '/veiculos',
+	...Object.fromEntries(Object.entries(PAGINAS_LEGADAS).filter(([origem]) => !origem.includes(':'))),
+}
+const HREF_DE_PAGINA = /href=(["'])(?:https?:\/\/(?:www\.)?attraveiculos\.com\.br)?(\/[a-z0-9/-]*?)\/?\1/gi
+
 export function corrigirLinksInternos(
 	html: string,
 	estoque: Vehicle[] | null,
 	destinoDoVendido: (slug: string) => string,
 ): string {
 	const conhecido = estoqueConhecido(estoque)
-	return html.replace(HREF_INTERNO, (original, aspas: string, _url: string, tipo: string, slug: string) => {
+	return html.replace(HREF_DE_PAGINA, (original, aspas: string, caminho: string) => {
+		const destino = PAGINAS_REDIRECIONADAS[caminho.toLowerCase()]
+		return destino ? `href=${aspas}${destino}${aspas}` : original
+	}).replace(HREF_INTERNO, (original, aspas: string, _url: string, tipo: string, slug: string) => {
 		if (tipo.toLowerCase() === 'blog') {
 			const mantido = POSTS_CONSOLIDADOS[slug]
 			return mantido ? `href=${aspas}/blog/${mantido}${aspas}` : original

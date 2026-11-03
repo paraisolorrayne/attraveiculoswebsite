@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { BlogTabs, BlogCardStatic } from '@/components/blog'
+import { NavegacaoDoBlog } from '@/components/blog/lista-da-categoria'
 import { YouTubePreview } from '@/components/videos/youtube-preview'
 import { getBlogPostsPreview } from '@/lib/blog-api'
 import { fetchAttraYouTubeFeed } from '@/lib/youtube'
@@ -17,7 +18,7 @@ const POSTS_PREVIEW_LIMIT = 6
 
 export const metadata: Metadata = {
 	title: pageTitle('Blog Attra | Insights sobre Superesportivos e Veículos Premium'),
-	description: 'No Blog Attra você encontra Insights exclusivos sobre superesportivos, colecionáveis e mercado premium automotivo. Reviews, análises de especialistas e tendências do setor.',
+	description: 'Blog Attra: reviews, comparativos e guias sobre superesportivos e carros de luxo, escritos por quem vende esses carros em Uberlândia desde 2008.',
 	keywords: ['blog attra', 'attra insights', 'superesportivos', 'carros premium', 'reviews automotivos', 'mercado de luxo'],
 	// Canonical fixo na versão limpa. As abas de categoria são estado de
 	// cliente — `?categoria=` não chega ao servidor e devolve exatamente este
@@ -73,6 +74,9 @@ export default async function BlogPage() {
 			{/* Posts em destaque (limitado) */}
 			<section className="py-12">
 				<Container>
+					{/* As abas abaixo são estado de cliente; estas são as mesmas
+					    categorias como links de servidor, que o Google segue. */}
+					<NavegacaoDoBlog />
 					<BlogTabs
 						educativoPosts={educativoPosts}
 						reviewPosts={reviewPosts}

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck, XCircle, FileCheck, Wrench } from 'lucide-react'
 
@@ -32,7 +32,7 @@ const META_DESC =
 
 export const metadata: Metadata = {
   title: pageTitle(META_TITLE),
-  description: META_DESC,
+  description: descricaoSeo(META_DESC),
   keywords: [
     'procedência de carro importado',
     'como verificar procedência de carro de luxo',

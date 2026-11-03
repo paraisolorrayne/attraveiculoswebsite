@@ -82,13 +82,22 @@ function autorDaLoja(nome: string | undefined): boolean {
   return !nome?.trim() || /\battra\b/i.test(nome)
 }
 
+/**
+ * Todo post é BlogPosting (handoff de SEO de 02/11/2026). Os reviews saíam como
+ * `Review` com o carro em `itemReviewed`: é a loja avaliando o que ela mesma
+ * vende, e o Ahrefs ainda classificava esses textos como gerados por IA.
+ * O carro fica em `about`, como Thing: para o Google, Vehicle é produto, e
+ * produto sem oferta é erro crítico (a oferta, com preço ao vivo, é a da ficha
+ * /veiculo/<slug>).
+ */
 export function buildArticleSchema(post: DualBlogPost) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/blog/${post.slug}`
+  const cr = post.post_type === 'car_review' ? post.car_review : undefined
 
   return {
     '@context': 'https://schema.org',
-    '@type': post.post_type === 'car_review' ? 'Review' : 'Article',
+    '@type': 'BlogPosting',
     '@id': `${url}#article`,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
     headline: post.title,
@@ -111,44 +120,15 @@ export function buildArticleSchema(post: DualBlogPost) {
     // post sair com dois blocos AutoDealer (este e o do layout raiz).
     publisher: { '@id': `${baseUrl}/${ORGANIZATION_ID}` },
     keywords: post.seo?.keywords?.join(', '),
-    articleSection: post.educativo?.category,
-    ...(post.post_type === 'car_review' && post.car_review
-      ? {
-          itemReviewed: buildReviewedVehicle(post, post.car_review, url),
-          reviewBody: post.excerpt,
-        }
-      : {}),
+    articleSection: post.educativo?.category ?? (cr ? 'Reviews' : undefined),
+    ...(cr ? { about: carroDoPost(cr) } : {}),
   }
 }
 
-// O carro avaliado vai dentro do Review, sem `offers`.
-//
-// Antes era um bloco Vehicle solto com uma Offer sem price/priceCurrency, que o
-// Search Console acusava como erro crítico em Listagens do comerciante e
-// Snippets do produto (61 posts, out/2026). O `in_stock` do post é gravado na
-// redação e não acompanha o estoque: metade apontava para carro já vendido. A
-// oferta de verdade, com preço ao vivo, é a da ficha /veiculo/<slug>.
-function buildReviewedVehicle(post: DualBlogPost, cr: CarReviewFields, url: string) {
+function carroDoPost(cr: CarReviewFields) {
   return {
-    '@type': 'Vehicle',
-    '@id': `${url}#vehicle`,
-    name: `${cr.brand} ${cr.model} ${cr.year}${cr.version ? ' ' + cr.version : ''}`,
-    brand: { '@type': 'Brand', name: cr.brand },
-    model: cr.model,
-    vehicleModelDate: String(cr.year),
-    ...(cr.color ? { color: cr.color } : {}),
-    ...(cr.specs?.engine ? { vehicleEngine: { '@type': 'EngineSpecification', name: cr.specs.engine } } : {}),
-    ...(cr.specs?.transmission ? { vehicleTransmission: cr.specs.transmission } : {}),
-    ...(cr.specs?.drivetrain ? { driveWheelConfiguration: cr.specs.drivetrain } : {}),
-    ...(cr.specs?.fuel_consumption ? { fuelConsumption: cr.specs.fuel_consumption } : {}),
-    ...(cr.specs?.top_speed
-      ? { speed: { '@type': 'QuantitativeValue', value: cr.specs.top_speed } }
-      : {}),
-    ...(cr.specs?.power
-      ? { vehicleEngine: { '@type': 'EngineSpecification', enginePower: cr.specs.power, name: cr.specs.engine || cr.specs.power } }
-      : {}),
-    image: post.featured_image ? [post.featured_image] : undefined,
-    description: post.excerpt,
+    '@type': 'Thing',
+    name: [cr.brand, cr.model, cr.version, cr.year].filter(Boolean).join(' '),
   }
 }
 

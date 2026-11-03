@@ -565,6 +565,19 @@ export interface InventorySnapshotsTable {
   created_at: Timestamp
 }
 
+/**
+ * Carros que já passaram pela listagem da AutoConf, para a ficha de vendido.
+ * Ver migration 20261102_veiculos_publicados e src/lib/veiculos-publicados.ts.
+ */
+export interface VeiculosPublicadosTable {
+  autoconf_id: ColumnType<string, number | string, number | string>
+  slug: string
+  marca: string | null
+  dados: Json
+  primeiro_visto: Timestamp
+  ultimo_visto: Timestamp
+}
+
 /** Última assinatura submetida ao IndexNow por URL — ver src/lib/indexnow.ts. */
 export interface IndexnowSubmissionsTable {
   url: string
@@ -650,6 +663,7 @@ export interface Database {
   indexnow_submissions: IndexnowSubmissionsTable
   admin_users: AdminUsersTable
   agencias: AgenciasTable
+  veiculos_publicados: VeiculosPublicadosTable
 }
 
 /**
@@ -675,7 +689,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
-  'agencias',
+  'agencias', 'veiculos_publicados',
 ] as const satisfies readonly (keyof Database)[]
 
 /**

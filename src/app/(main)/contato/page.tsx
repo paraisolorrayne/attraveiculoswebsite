@@ -8,14 +8,13 @@ import { Button } from '@/components/ui/button'
 import { ContactForm } from '@/components/forms/contact-form'
 import { MapaAtendimento, CIDADES_ATENDIDAS } from '@/components/contato/mapa-atendimento'
 import { WHATSAPP_NUMBER, getWhatsAppUrl, PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_UMA_LINHA, HORARIO_SEMANA, HORARIO_SABADO } from '@/lib/constants'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 
-export const metadata: Metadata = {
-  title: 'Contato | Showroom em Uberlândia e Atendimento Nacional',
-  description: 'Entre em contato com a Attra Veículos. Showroom de 5.000m² em Uberlândia com atendimento nacional para colecionadores de todo o Brasil. WhatsApp, telefone e visita agendada.',
+export const metadata: Metadata = metadadosDaPagina('/contato', {
+  titulo: 'Contato | Showroom em Uberlândia e Atendimento Nacional',
+  descricao: 'Entre em contato com a Attra Veículos. Showroom de 5.000m² em Uberlândia com atendimento nacional para colecionadores de todo o Brasil. WhatsApp, telefone e visita agendada.',
   keywords: ['contato Attra Veículos', 'showroom Uberlândia', 'loja de carros premium', 'atendimento nacional veículos'],
-  alternates: { canonical: canonicalUrl('/contato') },
-}
+})
 
 // A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o nó
 // canônico com @id em todo documento. Este bloco declarava um segundo

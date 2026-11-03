@@ -39,6 +39,54 @@ function imageObjects(photos: string[] | null | undefined, vehicleName: string) 
   }))
 }
 
+/**
+ * Um carro numa ItemList de página que lista o estoque (marca, modelo,
+ * /veiculos).
+ *
+ * Vehicle com `offers` vira "listagem do comerciante" para o Google, e listagem
+ * sem `image` é erro crítico (Search Console, 03/11/2026, em
+ * /comprar/ferrari/812: as páginas de marca e modelo não levavam foto). Sem
+ * foto, o item fica só com nome e endereço, sem oferta; a ficha do carro segue
+ * com a marcação completa.
+ */
+export function itemDaListaDeVeiculos(vehicle: Vehicle, position: number) {
+  const { baseUrl } = getContext()
+  const url = `${baseUrl}/veiculo/${vehicle.slug}`
+  const name = tituloDoVeiculo(vehicle)
+  const fotos = (vehicle.photos ?? []).filter(Boolean).slice(0, 3)
+  if (fotos.length === 0) return { '@type': 'ListItem', position, url, name }
+
+  const condicao = vehicle.is_new || vehicle.mileage === 0
+    ? 'https://schema.org/NewCondition'
+    : 'https://schema.org/UsedCondition'
+  return {
+    '@type': 'ListItem',
+    position,
+    item: {
+      '@type': 'Vehicle',
+      name,
+      url,
+      image: fotos,
+      ...(vehicle.brand ? { brand: { '@type': 'Brand', name: vehicle.brand } } : {}),
+      ...(vehicle.model ? { model: vehicle.model } : {}),
+      vehicleModelDate: String(vehicle.year_model),
+      ...(vehicle.mileage != null
+        ? { mileageFromOdometer: { '@type': 'QuantitativeValue', value: vehicle.mileage, unitCode: 'KMT' } }
+        : {}),
+      itemCondition: condicao,
+      offers: {
+        '@type': 'Offer',
+        url,
+        price: vehicle.price,
+        priceCurrency: 'BRL',
+        availability: availabilityFromStatus(vehicle.status),
+        itemCondition: condicao,
+        seller: { '@id': `${baseUrl}/${ORGANIZATION_ID}` },
+      },
+    },
+  }
+}
+
 export function buildVehicleSchema(vehicle: Vehicle) {
   const { baseUrl } = getContext()
   const url = `${baseUrl}/veiculo/${vehicle.slug}`

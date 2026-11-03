@@ -15,11 +15,16 @@ export function avisarNavegacao(destino: string): void {
 
 /**
  * Páginas cujo conteúdo, em tela larga, ocupa 80% da tela em vez de parar em
- * 1280 px: a home e a ficha. O cabeçalho e o rodapé acompanham a largura da
+ * 1280 px: a home, a ficha e o artigo do blog (01/11/2026; a lista e o arquivo
+ * do blog seguem em 1280). O cabeçalho e o rodapé acompanham a largura da
  * página, para o logo ficar alinhado com o conteúdo (31/10/2026).
  */
 export const LARGURA_LARGA = 'max-w-[max(80%,1280px)]'
 
 export function paginaLarga(pathname: string): boolean {
-  return pathname === '/' || pathname.startsWith('/veiculo/')
+  return (
+    pathname === '/' ||
+    pathname.startsWith('/veiculo/') ||
+    (pathname.startsWith('/blog/') && pathname !== '/blog/arquivo')
+  )
 }

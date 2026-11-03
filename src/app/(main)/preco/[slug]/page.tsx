@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { PRECOS, findPreco } from '@/lib/seo'
-import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, DollarSign, TrendingUp } from 'lucide-react'
 import { EstoqueDoModelo } from '@/components/vehicles/estoque-do-modelo'
@@ -30,9 +30,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 	// Com unidade à venda, a descrição já responde quanto custa.
 	const frase = fraseDoEstoque(`${data.brand} ${data.model}`, resumoDoEstoque(await estoqueDoModelo(data.brand, data.model)))
-	const description = frase
-		? `${frase.replace(/\*/g, '')} (sujeito a atualização). Diferença entre versões, o que pesa no preço e se vale a pena.`
-		: data.metaDescription
+	const description = descricaoSeo(
+		frase
+			? `${frase.replace(/\*/g, '')} (sujeito a atualização). Diferença entre versões e o que pesa no preço.`
+			: data.metaDescription,
+		`Versões, o que pesa no preço e se vale a pena, com o estoque da Attra Veículos.`,
+	)
 
 	return {
 		title: pageTitle(data.metaTitle),

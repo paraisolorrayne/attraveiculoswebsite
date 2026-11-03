@@ -11,7 +11,7 @@ import { getVehicles } from '@/lib/autoconf-api'
 import { findVehicleDatasheet } from '@/lib/vehicle-datasheet'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
-import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { itemDaListaDeVeiculos } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 import { MarcaAnalytics } from '@/components/analytics/marca-analytics'
@@ -361,25 +361,7 @@ export async function ModelLandingPage({ brandSlug, modelSlug, basePath }: { bra
 							'@type': 'ItemList',
 							name: `${model.fullName} à venda na Attra`,
 							numberOfItems: modelVehicles.length,
-							itemListElement: modelVehicles.map((v, i) => ({
-								'@type': 'ListItem',
-								position: i + 1,
-								item: {
-									'@type': 'Vehicle',
-									name: `${v.brand} ${v.model} ${v.year_model}`,
-									url: `${SITE_URL}/veiculo/${v.slug}`,
-									brand: { '@type': 'Brand', name: v.brand },
-									modelDate: String(v.year_model),
-									offers: {
-										'@type': 'Offer',
-										price: v.price,
-										priceCurrency: 'BRL',
-										availability: availabilityFromStatus(v.status),
-										seller: organizationRef(),
-										itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-									},
-								},
-							})),
+							itemListElement: modelVehicles.map((v, i) => itemDaListaDeVeiculos(v, i + 1)),
 						} : undefined,
 						// `Thing`, não `Vehicle`: o Google lê Vehicle como produto e exige
 						// offers/review/aggregateRating — eram 24 dos 32 erros críticos de

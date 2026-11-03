@@ -4,14 +4,13 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { glossaryTerms, glossaryCategories } from '@/lib/glossary-data'
 import { BookOpen, Search, ArrowRight } from 'lucide-react'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 
-export const metadata: Metadata = {
-  title: 'Glossário Automotivo | Termos Técnicos de Supercarros',
-  description: 'Glossário completo com termos técnicos do universo automotivo premium. Entenda conceitos como biturbo, downforce, PDK, carbono cerâmico e muito mais.',
+export const metadata: Metadata = metadadosDaPagina('/glossario-automotivo', {
+  titulo: 'Glossário Automotivo | Termos Técnicos de Supercarros',
+  descricao: 'Glossário completo com termos técnicos do universo automotivo premium. Entenda conceitos como biturbo, downforce, PDK, carbono cerâmico e muito mais.',
   keywords: 'glossário automotivo, termos técnicos carros, biturbo, downforce, PDK, carbono cerâmico, supercarros, veículos premium',
-  alternates: { canonical: canonicalUrl('/glossario-automotivo') },
-}
+})
 
 // Group terms by first letter
 function groupTermsByLetter(terms: typeof glossaryTerms) {

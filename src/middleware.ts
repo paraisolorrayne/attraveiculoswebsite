@@ -88,6 +88,16 @@ export default function middleware(
   req: Parameters<typeof comAutenticacao>[0],
   ctx: Parameters<typeof comAutenticacao>[1],
 ) {
+  // Blog em minúsculas: /Blog/Reviews, do site antigo, ainda tem link e clique
+  // (handoff de SEO de 02/11/2026). Aqui e não no next.config, onde o redirect
+  // não diferencia maiúscula e /blog/reviews cairia na mesma regra.
+  if (/^\/blog(\/|$)/i.test(req.nextUrl.pathname)) {
+    const minusculo = req.nextUrl.pathname.toLowerCase()
+    if (minusculo === req.nextUrl.pathname) return NextResponse.next()
+    const destino = req.nextUrl.clone()
+    destino.pathname = minusculo
+    return NextResponse.redirect(destino, 308)
+  }
   if (req.nextUrl.pathname.startsWith('/veiculo/')) {
     const headers = new Headers(req.headers)
     headers.set('x-pathname', req.nextUrl.pathname)
@@ -97,5 +107,5 @@ export default function middleware(
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/veiculo/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/veiculo/:path*', '/Blog', '/Blog/:path*', '/BLOG/:path*', '/blog/:path*'],
 }

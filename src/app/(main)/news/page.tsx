@@ -6,16 +6,17 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { Calendar, Newspaper, Trophy, Car, BookOpen, Search } from 'lucide-react'
 import { EDITORIAL_SECTION } from '@/lib/constants'
 import { db } from '@/lib/db'
-import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 
 // Primary refresh comes from revalidatePath('/news') inside the weekly ingestion job;
 // this 1h ISR window is just a safety net in case the cron-triggered revalidate fails.
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Notícias | Mercado Automotivo Premium e Formula 1',
+  title: pageTitle('Notícias | Mercado Automotivo Premium e Formula 1'),
   description: 'Acompanhe as últimas notícias do mercado automotivo de luxo, supercarros e Formula 1. Curadoria semanal da Attra Veículos.',
   openGraph: {
+    url: canonicalUrl('/news'),
     images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Notícias | Attra Veículos',
     description: 'Curadoria semanal de notícias do mercado automotivo premium e Formula 1.',
@@ -48,9 +49,12 @@ interface NewsData {
 
 async function getNews(): Promise<NewsData> {
   try {
-    // Get the most recently created active cycle
+    // O ciclo ativo, ou o mais recente com notícia se o ativo estiver vazio
+    // (27/10/2026 a semana entrou sem nenhuma e a página mostrou "em breve").
     const cycleRaw = await db.selectFrom('news_cycles').selectAll()
-      .where('is_active', '=', true)
+      .where((eb) => eb.exists(eb.selectFrom('news_articles').select('news_articles.id')
+        .whereRef('news_articles.news_cycle_id', '=', 'news_cycles.id')))
+      .orderBy('is_active', 'desc')
       .orderBy('created_at', 'desc')
       .limit(1)
       .executeTakeFirst()

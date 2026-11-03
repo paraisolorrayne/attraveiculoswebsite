@@ -32,7 +32,38 @@ const TRAILING_SECAO = /\s*[|–—-]\s*(?:Manual|Blog) Attra\s*$/i
 const CITA_A_MARCA = /\bAttra\b/i
 
 /**
- * Normaliza um título de página removendo o sufixo de marca do fim.
+ * Até onde o Google mostra o título sem cortar. O handoff de SEO de 02/11/2026
+ * achou 254 páginas acima disso: a maioria só por causa do sufixo de 17
+ * caracteres que o template do layout raiz acrescenta.
+ */
+export const LIMITE_TITULO = 60
+
+/** O que o `title.template` do layout raiz põe depois do título. */
+const SUFIXO_DO_TEMPLATE = ` | ${TITLE_SUFFIX}`
+/** O sufixo curto, quando o longo não cabe. */
+const SUFIXO_CURTO = ' | Attra'
+
+/**
+ * Pontuação ou conectivo que não pode terminar um título cortado. Sem a flag
+ * `i`: "Classe A" e "Série M" terminam em maiúscula e ficam.
+ */
+const FIM_SOLTO = /[\s,:;–—-]+(?:e|de|da|do|das|dos|com|na|no|em|para|vs|ou)?$/
+
+/**
+ * Corta um texto no último espaço que cabe no limite, sem deixar conectivo ou
+ * pontuação pendurados no fim.
+ */
+export function encurtar(texto: string, limite: number): string {
+  if (texto.length <= limite) return texto
+  let corte = texto.slice(0, limite + 1)
+  corte = corte.slice(0, corte.lastIndexOf(' ')).trim()
+  while (FIM_SOLTO.test(corte)) corte = corte.replace(FIM_SOLTO, '').trim()
+  return corte || texto.slice(0, limite).trim()
+}
+
+/**
+ * Normaliza um título de página: tira o sufixo de marca do fim e o faz caber
+ * em `LIMITE_TITULO` caracteres, já contando o que o template acrescenta.
  *
  * O layout raiz aplica `'%s | Attra Veículos'` por cima do que a página
  * entrega. Quando o título já vem com a marca — e ele vem, porque nasce fora
@@ -43,6 +74,10 @@ const CITA_A_MARCA = /\bAttra\b/i
  *
  * Normalizar aqui, na borda em que o dado vira `Metadata`, mantém o conserto
  * de pé para conteúdo publicado depois desta correção.
+ *
+ * Para caber, na ordem: saem os trechos depois de " | " ("Comprar Porsche no
+ * Brasil | Porsche Seminovo e 0 km"), depois o sufixo vira " | Attra" e, por
+ * último, o título é cortado numa palavra inteira, sem sufixo.
  *
  * Quando a marca está no meio ("Sobre a Attra Veículos | Loja em Uberlândia",
  * "... na Attra Veículos" dos posts de IA), o título sai absoluto, sem o
@@ -57,7 +92,39 @@ export function pageTitle(raw: string): string | { absolute: string } {
   }
   // Um título que era só a marca perderia tudo; fica a marca, uma vez.
   if (!title) return { absolute: TITLE_SUFFIX }
-  return CITA_A_MARCA.test(title) ? { absolute: title } : title
+
+  const cabe = (t: string) =>
+    (CITA_A_MARCA.test(t) ? t.length : t.length + SUFIXO_DO_TEMPLATE.length) <= LIMITE_TITULO
+  while (!cabe(title) && title.includes(' | ')) {
+    title = title.slice(0, title.lastIndexOf(' | ')).trim()
+  }
+
+  if (CITA_A_MARCA.test(title)) return { absolute: encurtar(title, LIMITE_TITULO) }
+  if (cabe(title)) return title
+  if (title.length + SUFIXO_CURTO.length <= LIMITE_TITULO) return { absolute: `${title}${SUFIXO_CURTO}` }
+  return { absolute: encurtar(title, LIMITE_TITULO) }
+}
+
+/** Faixa de meta description que o Google mostra inteira (handoff de 02/11/2026). */
+export const DESCRICAO_MIN = 120
+export const DESCRICAO_MAX = 155
+
+/**
+ * Meta description dentro de `DESCRICAO_MAX`: corta no fim da última frase que
+ * cabe, se ela tiver pelo menos `DESCRICAO_MIN` caracteres; senão, na última
+ * palavra, com reticências. Curta demais, recebe o `complemento` (uma frase
+ * da página, nunca texto genérico repetido em todas).
+ */
+export function descricaoSeo(texto: string, complemento?: string): string {
+  let d = texto.replace(/\s+/g, ' ').trim()
+  if (d.length < DESCRICAO_MIN && complemento) {
+    d = `${d}${/[.!?]$/.test(d) ? '' : '.'} ${complemento.trim()}`
+  }
+  if (d.length <= DESCRICAO_MAX) return d
+  const corte = d.slice(0, DESCRICAO_MAX)
+  const fimDeFrase = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '))
+  if (fimDeFrase + 1 >= DESCRICAO_MIN) return corte.slice(0, fimDeFrase + 1)
+  return `${encurtar(d, DESCRICAO_MAX - 1).replace(/[.,;:]$/, '')}…`
 }
 
 /**
@@ -72,6 +139,36 @@ export const IMAGEM_COMPARTILHAMENTO = {
   width: 1200,
   height: 630,
   alt: 'Fachada da Attra Veículos em Uberlândia',
+}
+
+/**
+ * Metadados de uma página fixa com as regras do handoff de SEO de 02/11/2026
+ * num lugar só: título em até 60 caracteres (`pageTitle`), descrição em até 155
+ * (`descricaoSeo`), canonical e `og:url` iguais e a imagem de compartilhamento.
+ * Faltava `og:url` em 22 páginas; nas sem `openGraph`, o `og:title` era o da home.
+ */
+export function metadadosDaPagina(
+  caminho: string,
+  dados: { titulo: string; descricao: string; complemento?: string; keywords?: Metadata['keywords'] },
+): Metadata {
+  const url = canonicalUrl(caminho)
+  const title = pageTitle(dados.titulo)
+  const description = descricaoSeo(dados.descricao, dados.complemento)
+  return {
+    title,
+    description,
+    ...(dados.keywords ? { keywords: dados.keywords } : {}),
+    alternates: { canonical: url },
+    openGraph: {
+      url,
+      title: typeof title === 'string' ? title : title.absolute,
+      description,
+      type: 'website',
+      locale: 'pt_BR',
+      siteName: TITLE_SUFFIX,
+      images: [IMAGEM_COMPARTILHAMENTO],
+    },
+  }
 }
 
 /**

@@ -9,7 +9,7 @@ import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { VideoEmPe } from '@/components/ui/video-em-pe'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
-import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, descricaoSeo, pageTitle } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -19,10 +19,11 @@ export const revalidate = 86400
 
 // SEO Optimized Metadata - Hub de Serviços (3 serviços principais)
 export const metadata: Metadata = {
-  title: 'Serviços Automotivos Premium | Importação, Financiamento e Consignado',
-  description: 'Serviços premium para veículos nacionais, importados, seminovos premium e supercarros: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',
+  title: pageTitle('Serviços Automotivos Premium | Importação, Financiamento e Consignado'),
+  description: descricaoSeo('Serviços premium para veículos nacionais, importados, seminovos premium e supercarros: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.'),
   keywords: 'serviços automotivos premium, importação de carros de luxo, financiamento de veículos premium, consignado de carros, venda consignada veículos, Attra Veículos Uberlândia',
   openGraph: {
+    url: canonicalUrl('/servicos'),
     images: [IMAGEM_COMPARTILHAMENTO],
     title: 'Serviços Automotivos Premium | Attra Veículos Uberlândia',
     description: 'Soluções completas para veículos premium: importação sob medida, financiamento especial e consignado automotivo. Atendimento nacional.',

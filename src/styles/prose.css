@@ -2,12 +2,23 @@
 /* Moved from globals.css - blog post content typography */
 
 .blog-prose {
-  font-size: 1.0625rem;
+  font-size: var(--blog-fonte, 1.0625rem);
   line-height: 1.8;
   color: var(--foreground-secondary);
   max-width: 720px;
   margin: 0 auto;
 }
+
+/* Coluna do artigo (01/11/2026): a fonte cresce com a tela, de 17 px no
+   celular a 24 px na tela larga, e a coluna acompanha em 44 vezes a fonte
+   (cerca de 80 letras por linha). Antes eram 17 px numa coluna fixa de 720 px,
+   que ficava estreita e miúda no monitor grande. */
+.blog-coluna {
+  --blog-fonte: clamp(1.0625rem, 0.95rem + 0.3vw, 1.5rem);
+  max-width: calc(var(--blog-fonte) * 44);
+  margin-inline: auto;
+}
+.blog-coluna .blog-prose { max-width: none; }
 
 .blog-prose h1, .blog-prose h2, .blog-prose h3,
 .blog-prose h4, .blog-prose h5, .blog-prose h6 {
@@ -18,18 +29,19 @@
   scroll-margin-top: 80px;
 }
 
-.blog-prose h1 { font-size: 2.5rem; margin-top: 3rem; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
-.blog-prose h2 { font-size: 2rem; margin-top: 3rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
+/* Títulos em em: crescem junto com a fonte do texto. */
+.blog-prose h1 { font-size: 2.35em; margin-top: 3rem; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+.blog-prose h2 { font-size: 1.85em; margin-top: 3rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
 /* h1 do corpo do post rebaixado a h2 para haver um único h1 por documento. O
    rebaixamento é semântico: aqui mantemos a aparência que o h1 tinha. */
-.blog-prose h2[data-demoted-h1] { font-size: 2.5rem; padding-bottom: 0; border-bottom: 0; letter-spacing: -0.02em; }
-.blog-prose h3 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1.25rem; }
-.blog-prose h4 { font-size: 1.125rem; margin-top: 2rem; margin-bottom: 0.875rem; font-weight: 600; }
-.blog-prose h5 { font-size: 1.0625rem; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600; }
-.blog-prose h6 { font-size: 1rem; margin-top: 1.5rem; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--foreground-secondary); font-weight: 600; }
+.blog-prose h2[data-demoted-h1] { font-size: 2.35em; padding-bottom: 0; border-bottom: 0; letter-spacing: -0.02em; }
+.blog-prose h3 { font-size: 1.4em; margin-top: 2.5rem; margin-bottom: 1.25rem; }
+.blog-prose h4 { font-size: 1.06em; margin-top: 2rem; margin-bottom: 0.875rem; font-weight: 600; }
+.blog-prose h5 { font-size: 1em; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600; }
+.blog-prose h6 { font-size: 0.94em; margin-top: 1.5rem; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--foreground-secondary); font-weight: 600; }
 
-.blog-prose p { margin-bottom: 1.75rem; color: var(--foreground-secondary); line-height: 1.85; }
-.blog-prose p:first-of-type { font-size: 1.125rem; line-height: 1.9; color: var(--foreground); font-weight: 500; margin-bottom: 2rem; }
+.blog-prose p { margin-bottom: 1.65em; color: var(--foreground-secondary); line-height: 1.85; }
+.blog-prose p:first-of-type { font-size: 1.06em; line-height: 1.9; color: var(--foreground); font-weight: 500; margin-bottom: 1.8em; }
 
 .blog-prose strong, .blog-prose b { color: var(--foreground); font-weight: 700; }
 .blog-prose p strong, .blog-prose p b { font-weight: 600; }

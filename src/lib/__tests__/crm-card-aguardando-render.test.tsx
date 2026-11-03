@@ -46,7 +46,7 @@ describe('CardKanban na coluna Aguardando aceite', () => {
 
 	it('sem data de alerta o tempo corrido genérico volta a aparecer', () => {
 		const html = render({ ...base, atribuido_em: null }, true, brt('2026-08-10T13:31:00'))
-		expect(html).toMatch(/text-\[11px\] text-foreground-secondary">\d/)
+		expect(html).toMatch(/text-\[0\.6875rem\] text-foreground-secondary">\d/)
 	})
 
 	it('espera curta não alarma', () => {

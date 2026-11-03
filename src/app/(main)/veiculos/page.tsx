@@ -7,7 +7,7 @@ import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton, VehicleGridCardSkeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
-import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 import { findSEOBrand } from '@/lib/seo-brands'
 import { normalizarMarca } from '@/lib/marca-normalizacao'
 import { Vehicle } from '@/types'
@@ -26,7 +26,7 @@ import { Search, Globe, Shield, Check, ArrowRight, CalendarCheck } from 'lucide-
 import Link from 'next/link'
 import { VehicleUnavailableToast } from '@/components/vehicles/vehicle-unavailable-toast'
 import { MetaSearchTracker } from '@/components/analytics/meta-pixel'
-import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { itemDaListaDeVeiculos } from '@/lib/vehicle-schema'
 
 // Brand similarity groups for vehicle suggestions
 // When a brand has no stock, vehicles from brands in the same group(s) are suggested
@@ -84,8 +84,8 @@ export async function generateMetadata({ searchParams }: VeiculosPageProps): Pro
   return {
     // Título distinto por página: com o mesmo título, as páginas 2 a 6 se
     // apresentavam como cópia da 1ª.
-    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` | Página ${pagina}` : ''}`,
-    description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
+    title: pageTitle(pagina > 1 ? `Veículos premium à venda, página ${pagina}` : 'Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia'),
+    description: 'Estoque da Attra Veículos em Uberlândia: supercarros, importados e carros de luxo com procedência verificada e entrega em todo o Brasil.',
     alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),
     // og:url apontava para a home, contradizendo o canonical.
@@ -370,37 +370,13 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
 
   const breadcrumbItems = [{ label: 'Veículos', href: '/veiculos' }]
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://attraveiculos.com.br'
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'Veículos Premium Disponíveis na Attra Veículos',
     description: 'Catálogo de supercarros, importados e veículos premium com curadoria e procedência verificada. Entrega em todo o Brasil.',
     numberOfItems: total,
-    itemListElement: vehicles.slice(0, 20).map((v, i) => {
-      const vName = [v.brand, v.model, v.version, v.year_model].filter(Boolean).join(' ')
-      return {
-        '@type': 'ListItem',
-        position: (currentPage - 1) * perPage + i + 1,
-        item: {
-          '@type': 'Vehicle',
-          name: vName,
-          url: `${baseUrl}/veiculo/${v.slug}`,
-          ...(v.brand ? { brand: { '@type': 'Brand', name: v.brand } } : {}),
-          ...(v.model ? { model: v.model } : {}),
-          vehicleModelDate: String(v.year_model),
-          mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' },
-          offers: {
-            '@type': 'Offer',
-            price: v.price,
-            priceCurrency: 'BRL',
-            availability: availabilityFromStatus(v.status),
-            itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-          },
-          image: v.photos?.[0],
-        },
-      }
-    }),
+    itemListElement: vehicles.slice(0, 20).map((v, i) => itemDaListaDeVeiculos(v, (currentPage - 1) * perPage + i + 1)),
   }
 
   return (
@@ -424,6 +400,10 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
         <section className="pt-28 pb-4 bg-gradient-to-b from-background-soft to-background">
           <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumb items={breadcrumbItems} />
+            {/* Sem o destaque, a página ficava sem h1 (páginas 2 a 6 e filtros). */}
+            <h1 className="mt-4 text-2xl lg:text-3xl font-bold text-foreground">
+              Veículos premium à venda{currentPage > 1 ? `, página ${currentPage}` : ''}
+            </h1>
           </div>
         </section>
       )}

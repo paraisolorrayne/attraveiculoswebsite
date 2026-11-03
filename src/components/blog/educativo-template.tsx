@@ -31,7 +31,7 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
     <article className="bg-background">
       {/* Header Section */}
       <section className="pt-28 pb-12 bg-gradient-to-b from-background-soft to-background">
-        <Container>
+        <Container className="max-w-[max(80%,1280px)]">
           <Breadcrumb items={breadcrumbItems} afterHero />
           
           {/* Category Badge - Discreto */}
@@ -139,8 +139,9 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
 
       {/* Content */}
       <section className="py-12 lg:py-16">
-        <Container>
-          <div className="max-w-3xl mx-auto">
+        <Container className="max-w-[max(80%,1280px)]">
+          {/* A coluna acompanha a fonte do texto, que cresce na tela larga (prose.css). */}
+          <div className="blog-coluna">
             {/* Article Content */}
             <BlogContentRenderer
               content={post.content}
@@ -162,10 +163,13 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
             {/* CTA Section */}
             <div className="mt-12 p-8 bg-background-card rounded-2xl border border-border text-center">
               <h3 className="text-2xl font-bold text-foreground mb-3">
-                Procurando seu próximo veículo?
+                Quer um carro assim? Fale com a Attra
               </h3>
+              {/* Os posts de curiosidade (Hummer militar, Porsche rosa) trazem
+                  tráfego e não convertiam: o pedido de um carro sob medida é o
+                  passo que serve a quem chega por eles (handoff de SEO de 02/11/2026). */}
               <p className="text-foreground-secondary mb-6 max-w-lg mx-auto">
-                Explore nosso acervo curado de veículos premium ou fale com um consultor especializado.
+                Se o carro deste texto não está no estoque, a Attra encontra um para você, com procedência verificada e entrega em todo o Brasil.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button asChild size="lg">
@@ -175,7 +179,7 @@ export function EducativoTemplate({ post }: EducativoTemplateProps) {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/contato">Falar com Consultor</Link>
+                  <Link href="/solicitar-veiculo">Quero um carro assim</Link>
                 </Button>
               </div>
             </div>

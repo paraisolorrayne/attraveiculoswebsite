@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { findSEOBrand, getAllBrandSlugs } from '@/lib/seo-brands'
 import { SITE_URL } from '@/lib/constants'
 import { BrandLandingPage } from '@/components/brand/brand-landing-page'
-import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle, descricaoSeo } from '@/lib/seo/page-metadata'
 
 interface BrandPageProps {
 	params: Promise<{ brand: string }>
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
 
 	return {
 		title: pageTitle(brand.metaTitle),
-		description: brand.metaDescription,
+		description: descricaoSeo(brand.metaDescription, 'Attra Veículos, em Uberlândia: procedência verificada e entrega em todo o Brasil.'),
 		keywords: brand.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/${slug}` },
 		openGraph: {

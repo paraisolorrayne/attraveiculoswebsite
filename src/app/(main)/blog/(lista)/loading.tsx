@@ -3,6 +3,8 @@ import { Skeleton, BlogGridSkeleton } from '@/components/ui/skeleton'
 
 // Em blog/(lista)/ e não em blog/: um loading.tsx em blog/ também envolveria
 // blog/[slug], e o post inexistente voltaria a responder 200 (ver a página do post).
+// Pelo mesmo motivo, o arquivo e as categorias (/blog/artigos etc.) ficam fora
+// daqui: a página além da última precisa responder 404.
 
 export default function BlogLoading() {
   return (

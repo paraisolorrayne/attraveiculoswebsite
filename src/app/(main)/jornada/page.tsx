@@ -14,7 +14,7 @@ import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ICONIC_CARS, getCategoryLabel } from '@/lib/iconic-cars'
-import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -22,12 +22,11 @@ import { anosDeMercado } from '@/lib/constants'
 // número mudaria só no próximo deploy, não na virada do ano.
 export const revalidate = 86400
 
-export const metadata: Metadata = {
-  title: pageTitle('Jornada Attra | Curadoria de Supercarros e Entrega Nacional'),
-  description: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra: Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
+export const metadata: Metadata = metadadosDaPagina('/jornada', {
+  titulo: 'Jornada Attra | Curadoria de Supercarros e Entrega Nacional',
+  descricao: 'Jornada de compra de veículos premium com curadoria completa de supercarros. Conheça os carros icônicos que já passaram pela Attra: Ferrari, Lamborghini, Porsche, McLaren e mais. Da seleção à entrega nacional.',
   keywords: ['jornada de compra de veículos premium', 'curadoria completa de supercarros', 'atendimento nacional para colecionadores', 'entrega de veículos premium', 'compra de supercarros Brasil', 'carros icônicos Attra', 'histórico supercarros'],
-  alternates: { canonical: canonicalUrl('/jornada') },
-}
+})
 
 // Schema markup para SEO
 function JornadaSchema() {

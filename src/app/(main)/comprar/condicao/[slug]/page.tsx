@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CONDICOES, findCondicao } from '@/lib/seo'
-import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, ShieldCheck, AlertTriangle, Check } from 'lucide-react'
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 	return {
 		title: pageTitle(data.metaTitle),
-		description: data.metaDescription,
+		description: descricaoSeo(data.metaDescription, 'Attra Veículos, em Uberlândia: procedência verificada e entrega em todo o Brasil.'),
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/condicao/${slug}` },
 		openGraph: {

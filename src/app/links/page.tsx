@@ -175,10 +175,10 @@ export default async function LinksPage() {
 
       {/* Social icons */}
       <div className="flex gap-4 mt-4 mb-8">
-        <a href="https://instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Instagram">
+        <a href="https://www.instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Instagram">
           <Instagram className="w-5 h-5" />
         </a>
-        <a href="https://youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="YouTube">
+        <a href="https://www.youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="YouTube">
           <Youtube className="w-5 h-5" />
         </a>
       </div>

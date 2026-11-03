@@ -4,12 +4,41 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FAIXAS_PRECO, findFaixaPreco } from '@/lib/seo'
-import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, MessageCircle, Banknote } from 'lucide-react'
+import { CartaoDoEstoque } from '@/components/vehicles/estoque-do-modelo'
+import { loadListedInventory } from '@/app/api/llm/_inventory'
+import { AVISO_DE_PRECO } from '@/lib/seo/estoque-do-modelo'
+import { formatarDataBR } from '@/lib/seo/frescor'
+import type { Vehicle } from '@/types'
 
 interface PageProps {
 	params: Promise<{ slug: string }>
+}
+
+// O estoque da faixa sai no HTML; 15 min, como as páginas de modelo.
+export const revalidate = 900
+
+/**
+ * Os carros do estoque dentro da faixa, do mais caro ao mais barato. Sem
+ * nenhum, os quatro de preço mais próximo: a página nunca fica sem carro
+ * (handoff de SEO de 02/11/2026).
+ */
+async function estoqueDaFaixa(min: number | null, max: number | null) {
+	let estoque: Vehicle[] = []
+	try {
+		estoque = (await loadListedInventory()).vehicles.filter(v => v.price > 0)
+	} catch (error) {
+		console.error('faixa de preço: estoque indisponível', error)
+	}
+	const dentro = estoque
+		.filter(v => (min === null || v.price >= min) && (max === null || v.price < max))
+		.sort((a, b) => b.price - a.price)
+	if (dentro.length > 0) return { veiculos: dentro, proximos: false }
+	// Quanto o preço fica fora da faixa, abaixo do piso ou acima do teto.
+	const distancia = (v: Vehicle) => Math.max(min === null ? 0 : min - v.price, max === null ? 0 : v.price - max)
+	return { veiculos: [...estoque].sort((a, b) => distancia(a) - distancia(b)).slice(0, 4), proximos: true }
 }
 
 export async function generateStaticParams() {
@@ -23,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 	return {
 		title: pageTitle(data.metaTitle),
-		description: data.metaDescription,
+		description: descricaoSeo(data.metaDescription, 'Attra Veículos, em Uberlândia: procedência verificada e entrega em todo o Brasil.'),
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/faixa-preco/${slug}` },
 		openGraph: {
@@ -46,6 +75,8 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 		{ label: 'Faixa de Preço' },
 		{ label: data.title },
 	]
+	const { veiculos, proximos } = await estoqueDaFaixa(data.precoMin, data.precoMax)
+	const conferidoEm = formatarDataBR(new Date().toISOString())
 
 	return (
 		<main>
@@ -72,6 +103,34 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 							<MessageCircle className="w-4 h-4" />
 							{data.ctaPrimario}
 						</a>
+					</div>
+				</Container>
+			</section>
+
+			{/* Estoque real da faixa */}
+			<section className="py-12 lg:py-16 border-b border-border">
+				<Container>
+					<h2 className="text-2xl font-bold text-foreground mb-2">
+						{proximos ? 'Os mais próximos desta faixa no estoque' : `${data.title} em estoque`}
+					</h2>
+					<p className="text-foreground-secondary mb-6">
+						{proximos
+							? `Nenhum carro nesta faixa à venda em ${conferidoEm}. Estes são os de preço mais próximo, e a Attra busca o carro certo sob encomenda.`
+							: `${veiculos.length} ${veiculos.length === 1 ? 'carro' : 'carros'} à venda na Attra nesta faixa em ${conferidoEm}.`}
+					</p>
+					{veiculos.length > 0 && (
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+							{veiculos.slice(0, 8).map(v => <CartaoDoEstoque key={v.id} v={v} />)}
+						</div>
+					)}
+					<p className="mt-4 text-xs text-foreground-secondary">*{AVISO_DE_PRECO} Confirme o valor com um consultor.</p>
+					<div className="mt-4 flex flex-wrap gap-4 text-sm">
+						<Link href="/veiculos" className="inline-flex items-center gap-1 text-primary hover:underline font-medium">
+							Ver estoque completo <ArrowRight className="w-4 h-4" />
+						</Link>
+						<Link href="/solicitar-veiculo" className="inline-flex items-center gap-1 text-primary hover:underline font-medium">
+							Encomendar um carro <ArrowRight className="w-4 h-4" />
+						</Link>
 					</div>
 				</Container>
 			</section>
@@ -108,6 +167,23 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 					<div className="max-w-3xl">
 						<h2 className="text-2xl font-bold text-foreground mb-4">Perfil Típico do Comprador</h2>
 						<p className="text-foreground-secondary leading-relaxed">{data.perfilComprador}</p>
+					</div>
+				</Container>
+			</section>
+
+			{/* Perguntas da faixa */}
+			<section className="py-12 lg:py-16 border-b border-border">
+				<Container>
+					<div className="max-w-3xl">
+						<h2 className="text-2xl font-bold text-foreground mb-6">Perguntas frequentes</h2>
+						<div className="space-y-6">
+							{data.faq.map(item => (
+								<div key={item.pergunta}>
+									<h3 className="font-semibold text-foreground">{item.pergunta}</h3>
+									<p className="mt-2 text-foreground-secondary leading-relaxed">{item.resposta}</p>
+								</div>
+							))}
+						</div>
 					</div>
 				</Container>
 			</section>
@@ -164,6 +240,20 @@ export default async function FaixaPrecoPage({ params }: PageProps) {
 							],
 						},
 						author: { '@type': 'Organization', name: 'Attra Veículos', url: SITE_URL },
+					}),
+				}}
+			/>
+			<script
+				type="application/ld+json"
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						'@context': 'https://schema.org',
+						'@type': 'FAQPage',
+						mainEntity: data.faq.map(item => ({
+							'@type': 'Question',
+							name: item.pergunta,
+							acceptedAnswer: { '@type': 'Answer', text: item.resposta },
+						})),
 					}),
 				}}
 			/>

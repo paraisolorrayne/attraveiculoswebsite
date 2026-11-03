@@ -3,12 +3,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
-import { findSEOBrand, SEO_BRANDS } from '@/lib/seo-brands'
+import { findSEOBrand, marcasPorCategoria, SEO_BRANDS } from '@/lib/seo-brands'
+import { AVISO_DE_PRECO, fraseDoEstoque, resumoDoEstoque } from '@/lib/seo/estoque-do-modelo'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { getVehicles } from '@/lib/autoconf-api'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { SITE_URL } from '@/lib/constants'
-import { availabilityFromStatus } from '@/lib/vehicle-schema'
+import { itemDaListaDeVeiculos } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, MapPin, Calendar, Gauge } from 'lucide-react'
 import { Vehicle } from '@/types'
@@ -89,6 +90,43 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 	)
 }
 
+/**
+ * Perguntas da página de compra da marca, respondidas com o estoque do
+ * momento: cada página tem texto próprio, não o mesmo parágrafo trocando o
+ * nome da marca.
+ */
+function perguntasDaMarca(marca: string, veiculos: Vehicle[]): { pergunta: string; resposta: string }[] {
+	const frase = fraseDoEstoque(marca, resumoDoEstoque(veiculos))
+	const zeroKm = veiculos.filter(v => v.is_new || v.mileage === 0).length
+	const seminovos = veiculos.length - zeroKm
+	return [
+		{
+			pergunta: `Quantos ${marca} a Attra tem à venda?`,
+			resposta: frase
+				? `${frase.replace(/\*/g, '')}, em ${formatarDataBR(new Date().toISOString())}. ${AVISO_DE_PRECO} Cada carro tem a ficha completa no site, com fotos, quilometragem e opcionais.`
+				: `Nenhum ${marca} à venda em ${formatarDataBR(new Date().toISOString())}. A Attra encontra o carro sob encomenda, no Brasil ou por importação, com a mesma verificação de procedência do estoque próprio.`,
+		},
+		{
+			pergunta: `A Attra vende ${marca} zero quilômetro ou seminovo?`,
+			resposta: veiculos.length === 0
+				? `Os dois, conforme o que o mercado oferece. Diga a versão, o ano e a cor que procura, e um consultor busca as opções.`
+				: `${zeroKm === 0
+					? `Hoje, só seminovos (${seminovos}).`
+					: seminovos === 0
+						? `Hoje, só zero quilômetro (${zeroKm}).`
+						: `Hoje, ${zeroKm} zero quilômetro e ${seminovos} ${seminovos === 1 ? 'seminovo' : 'seminovos'}.`} Todo seminovo passa pela verificação de procedência da Attra antes de ir para o estoque.`,
+		},
+		{
+			pergunta: `Dá para comprar um ${marca} da Attra morando em outro estado?`,
+			resposta: 'Sim. A Attra fica em Uberlândia (MG) e entrega em todo o Brasil. O transporte e a entrega são combinados com o consultor na negociação.',
+		},
+		{
+			pergunta: 'A Attra aceita meu carro na troca?',
+			resposta: 'Sim. A Attra avalia o seu carro e usa o valor na compra do próximo, com base no estado, no histórico e no mercado do modelo.',
+		},
+	]
+}
+
 export async function BrandLandingPage({ slug, basePath }: { slug: string; basePath: string }) {
 	const brand = findSEOBrand(slug)
 	if (!brand) return null
@@ -102,6 +140,16 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 	const brandVehicles = porPrecoDecrescente(
 		allVehicles.filter(v => marcaCasaCom(v.brand, brand.slug)),
 	)
+
+	// Sem carro da marca, a página não fica em branco: os da mesma categoria
+	// (superesportivo ou performance), do mais caro ao mais barato (handoff de
+	// SEO de 02/11/2026).
+	const marcasIrmas = brand.categoriaEditorial ? marcasPorCategoria(brand.categoriaEditorial) : SEO_BRANDS
+	const similares = brandVehicles.length > 0 ? [] : porPrecoDecrescente(
+		allVehicles.filter(v => marcasIrmas.some(b => b.slug !== brand.slug && marcaCasaCom(v.brand, b.slug))),
+	).slice(0, 4)
+
+	const perguntas = perguntasDaMarca(brand.displayName, brandVehicles)
 
 	// Find related brands
 	const relatedBrands = SEO_BRANDS.filter(b => b.slug !== slug).slice(0, 4)
@@ -128,7 +176,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 							{brand.country}
 						</p>
 						<h1 className="text-3xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
-							Comprar {brand.displayName} no Brasil
+							{brand.displayName} à venda no Brasil
 						</h1>
 						<p className="text-lg text-foreground-secondary leading-relaxed">
 							{brand.description}
@@ -262,7 +310,46 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 							</Link>
 						</div>
 					)}
+					{similares.length > 0 && (
+						<div className="mt-10">
+							<h3 className="text-xl font-bold text-foreground mb-6">Da mesma categoria, à venda agora</h3>
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+								{similares.map(vehicle => <VehicleCard key={vehicle.id} vehicle={vehicle} />)}
+							</div>
+						</div>
+					)}
 				</Container>
+			</section>
+
+			{/* Perguntas com o estoque do momento, com schema FAQPage. */}
+			<section className="py-12 lg:py-16 border-t border-border">
+				<Container>
+					<div className="max-w-3xl">
+						<h2 className="text-2xl font-bold text-foreground mb-6">Perguntas sobre comprar {brand.displayName}</h2>
+						<div className="space-y-6">
+							{perguntas.map(item => (
+								<div key={item.pergunta}>
+									<h3 className="font-semibold text-foreground">{item.pergunta}</h3>
+									<p className="mt-2 text-foreground-secondary leading-relaxed">{item.resposta}</p>
+								</div>
+							))}
+						</div>
+					</div>
+				</Container>
+				<script
+					type="application/ld+json"
+					dangerouslySetInnerHTML={{
+						__html: JSON.stringify({
+							'@context': 'https://schema.org',
+							'@type': 'FAQPage',
+							mainEntity: perguntas.map(item => ({
+								'@type': 'Question',
+								name: item.pergunta,
+								acceptedAnswer: { '@type': 'Answer', text: item.resposta },
+							})),
+						}),
+					}}
+				/>
 			</section>
 
 			{/* Ponte para a página editorial da marca.
@@ -385,32 +472,7 @@ export async function BrandLandingPage({ slug, basePath }: { slug: string; baseP
 							name: `Modelos ${brand.displayName} na Attra Veículos`,
 							numberOfItems: brandVehicles.length || brand.models.length,
 							itemListElement: brandVehicles.length > 0
-								? brandVehicles.map((v, i) => ({
-									'@type': 'ListItem',
-									position: i + 1,
-									item: {
-										'@type': 'Vehicle',
-										name: `${v.brand} ${v.model} ${v.year_model}`,
-										url: `${SITE_URL}/veiculo/${v.slug}`,
-										brand: { '@type': 'Brand', name: v.brand },
-										modelDate: String(v.year_model),
-										...(v.mileage != null && {
-											mileageFromOdometer: {
-												'@type': 'QuantitativeValue',
-												value: v.mileage,
-												unitCode: 'KMT',
-											},
-										}),
-										offers: {
-											'@type': 'Offer',
-											price: v.price,
-											priceCurrency: 'BRL',
-											availability: availabilityFromStatus(v.status),
-											seller: organizationRef(),
-											itemCondition: v.is_new || v.mileage === 0 ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
-										},
-									},
-								}))
+								? brandVehicles.map((v, i) => itemDaListaDeVeiculos(v, i + 1))
 								: brand.models.map((m, i) => ({
 									'@type': 'ListItem',
 									position: i + 1,

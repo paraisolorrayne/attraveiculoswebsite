@@ -54,20 +54,18 @@ describe('buildBlogPostSchemas — avaliação de carro', () => {
 		expect(topo).not.toContain('Vehicle')
 	})
 
-	it('o carro avaliado leva a ficha técnica dentro do Review', () => {
-		const reviewNode = buildBlogPostSchemas(review).find(s => s['@type'] === 'Review') as Node
-		const item = reviewNode.itemReviewed as Node
-		expect(item['@type']).toBe('Vehicle')
-		expect(item.vehicleTransmission).toBe('PDK')
-		expect(item.speed).toEqual({ '@type': 'QuantitativeValue', value: '330 km/h' })
-		expect(item.vehicleEngine).toMatchObject({ '@type': 'EngineSpecification', enginePower: '650 cv' })
-		expect(item).not.toHaveProperty('offers')
+	it('o post é BlogPosting, com o carro em about como Thing (sem Review nem Vehicle)', () => {
+		const post = buildBlogPostSchemas(review).find(s => s['@type'] === 'BlogPosting') as Node
+		expect(post).toBeDefined()
+		expect(post).not.toHaveProperty('itemReviewed')
+		expect((post.about as Node)['@type']).toBe('Thing')
+		expect(nodes.filter(n => n['@type'] === 'Review' || n['@type'] === 'Vehicle')).toEqual([])
 	})
 })
 
 describe('buildBlogPostSchemas — autor', () => {
 	const autorDe = (post: DualBlogPost) =>
-		(buildBlogPostSchemas(post).find(s => s['@type'] === 'Review' || s['@type'] === 'Article') as Node).author as Node
+		(buildBlogPostSchemas(post).find(s => s['@type'] === 'BlogPosting') as Node).author as Node
 
 	it('post assinado pela loja aponta para a organização, não para uma pessoa', () => {
 		const autor = autorDe(review)

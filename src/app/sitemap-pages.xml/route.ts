@@ -1,3 +1,4 @@
+import { ORDEM_DAS_CATEGORIAS } from '@/lib/blog-categorias'
 import { SITE_URL } from '@/lib/constants'
 import { sitemapResponse, type SitemapUrl } from '@/lib/sitemap-utils'
 import { getVehicles } from '@/lib/autoconf-api'
@@ -57,6 +58,9 @@ export async function GET() {
 		{ loc: `${BASE}/solicitar-veiculo`, lastmod, changefreq: 'monthly', priority: 0.6 },
 		{ loc: `${BASE}/blog`, lastmod: blog, changefreq: 'daily', priority: 0.8 },
 		{ loc: `${BASE}/blog/arquivo`, lastmod: blog, changefreq: 'daily', priority: 0.6 },
+		// Categorias com endereço próprio e o hub dos guias (handoff de SEO de 02/11/2026).
+		...ORDEM_DAS_CATEGORIAS.map(c => ({ loc: `${BASE}/blog/${c}`, lastmod: blog, changefreq: 'daily' as const, priority: 0.6 })),
+		{ loc: `${BASE}/guia`, lastmod, changefreq: 'monthly', priority: 0.7 },
 		{ loc: `${BASE}/videos`, lastmod, changefreq: 'daily', priority: 0.7 },
 		// Índice de notícias: revalida a cada ciclo semanal de ingestão, daí o changefreq weekly.
 		{ loc: `${BASE}/news`, lastmod, changefreq: 'weekly', priority: 0.6 },

@@ -9,7 +9,7 @@ import {
   manualAttraCategories,
   manualAttraTerms,
 } from '@/lib/manual-attra-data'
-import { canonicalUrl, pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { canonicalUrl, pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { ArrowLeft, ArrowRight, Wrench } from 'lucide-react'
 
 interface ManualAttraTermPageProps {
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: ManualAttraTermPageProps): Pr
 
   return {
     title: pageTitle(term.seo.title),
-    description: term.seo.metaDescription,
+    description: descricaoSeo(term.seo.metaDescription, `${term.title} no Manual Attra: engenharia e performance explicadas por quem vende superesportivos desde 2008.`),
     openGraph: {
       images: [IMAGEM_COMPARTILHAMENTO],
       title: term.seo.title,
