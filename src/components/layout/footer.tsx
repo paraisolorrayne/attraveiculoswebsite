@@ -11,18 +11,39 @@ import { cn } from '@/lib/utils'
 import { LARGURA_LARGA, paginaLarga } from '@/lib/navegacao'
 import { PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_RESUMIDO, getWhatsAppUrl } from '@/lib/constants'
 
+// Os hubs (/comprar, /guia) e as páginas que só o sitemap alcançava entram
+// aqui: o rodapé está em todas as páginas (handoff de SEO de 02/11/2026).
 const quickLinks = [
   { name: 'Veículos', href: '/veiculos' },
+  { name: 'Comprar carro de luxo', href: '/comprar' },
   { name: 'Sobre Nós', href: '/sobre' },
   { name: 'Financiamento', href: '/financiamento' },
+  { name: 'Seu carro na troca', href: '/troca' },
   { name: 'Compramos seu Carro', href: '/compramos-seu-carro' },
   { name: 'Solicitar Veículo', href: '/solicitar-veiculo' },
+  { name: 'Carros de luxo em Uberlândia', href: '/carros-de-luxo-uberlandia' },
   { name: 'Blog', href: '/blog' },
+  { name: 'Guias', href: '/guia' },
+  { name: 'Vídeos', href: '/videos' },
+  { name: 'Glossário', href: '/glossario-automotivo' },
   { name: 'Contato', href: '/contato' },
   { name: 'Manual Attra: Engenharia e Performance', href: '/manual-attra' },
 ]
 
-const brands = ['Porsche', 'BMW', 'Mercedes-Benz', 'Audi', 'Land Rover', 'Cadillac', 'Lamborghini', 'Ferrari']
+// Direto para /comprar/{marca}: o /veiculos?marca= tem a página da marca como
+// canonical, e o link para a URL que não é a canônica contava como redirect.
+const brands = [
+  { name: 'Porsche', href: '/comprar/porsche' },
+  { name: 'Ferrari', href: '/comprar/ferrari' },
+  { name: 'Lamborghini', href: '/comprar/lamborghini' },
+  { name: 'Mercedes-Benz', href: '/comprar/mercedes-benz' },
+  { name: 'BMW', href: '/comprar/bmw' },
+  { name: 'Audi', href: '/comprar/audi' },
+  { name: 'Land Rover', href: '/comprar/land-rover' },
+  { name: 'Range Rover', href: '/range-rover' },
+  { name: 'McLaren', href: '/comprar/mclaren' },
+  { name: 'Todas as marcas', href: '/comprar' },
+]
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
@@ -73,13 +94,13 @@ export function Footer() {
               Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.
             </p>
             <div className="flex gap-3">
-              <a href="https://instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
+              <a href="https://www.instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="https://facebook.com/attraveiculos" target="_blank" rel="noopener noreferrer" aria-label="Facebook da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
+              <a href="https://www.facebook.com/attraveiculos" target="_blank" rel="noopener noreferrer" aria-label="Facebook da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="https://youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" aria-label="YouTube da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
+              <a href="https://www.youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" aria-label="YouTube da Attra" className="p-3 bg-background hover:bg-primary hover:text-white rounded-lg transition-colors">
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -106,9 +127,9 @@ export function Footer() {
             <h3 className="text-foreground font-semibold mb-4">Marcas em Destaque</h3>
             <ul className="space-y-2 max-md:grid max-md:grid-cols-2 max-md:gap-x-6 max-md:space-y-0">
               {brands.map((brand) => (
-                <li key={brand}>
-                  <Link href={`/veiculos?marca=${brand.toLowerCase()}`} className="text-foreground-secondary hover:text-primary text-sm transition-colors max-md:block max-md:py-3">
-                    {brand}
+                <li key={brand.href}>
+                  <Link href={brand.href} className="text-foreground-secondary hover:text-primary text-sm transition-colors max-md:block max-md:py-3">
+                    {brand.name}
                   </Link>
                 </li>
               ))}

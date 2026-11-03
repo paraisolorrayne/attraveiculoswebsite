@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { anoDoVeiculo, nomeDoVeiculo, tituloDistintoDoVeiculo, tituloDoVeiculo, versaoDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { anoDoVeiculo, nomeDoVeiculo, tituloDeVendaDoVeiculo, tituloDistintoDoVeiculo, tituloDoVeiculo, versaoDoVeiculo } from '@/lib/identidade-do-veiculo'
 
 describe('tituloDoVeiculo — o nome que vai para o <title> e o JSON-LD', () => {
 	it('traz a versão, que distingue um 911 GTS de um 911 Carrera', () => {
@@ -74,5 +74,25 @@ describe('tituloDistintoDoVeiculo', () => {
 		const b = { ...temerario, id: '2', color: 'cinza', mileage: 0 }
 		expect(tituloDistintoDoVeiculo(a, [a, b])).toBe('Lamborghini Temerário V8 Bi-Turbo 2026 Cinza, 23.070 km')
 		expect(tituloDistintoDoVeiculo(b, [a, b])).toBe('Lamborghini Temerário V8 Bi-Turbo 2026 cinza, 0 km')
+	})
+})
+
+describe('tituloDeVendaDoVeiculo', () => {
+	it('segue "{Modelo} {Ano} à venda | Attra" quando cabe inteiro', () => {
+		const v = { id: '1', brand: 'Porsche', model: 'Cayenne', version: 'Coupe V6', year_manufacture: 2025, year_model: 2025 }
+		expect(tituloDeVendaDoVeiculo(v, [v])).toBe('Porsche Cayenne Coupe V6 2025 à venda | Attra')
+	})
+
+	it('tira palavras do fim da versão até caber em 60', () => {
+		const v = { id: '1', brand: 'Mercedes', model: 'G-63', version: 'AMG Edition 1 4MATIC V8 Bi-Turbo Automático', year_manufacture: 2018, year_model: 2019 }
+		const t = tituloDeVendaDoVeiculo(v, [v])
+		expect(t.length).toBeLessThanOrEqual(60)
+		expect(t).toBe('Mercedes G-63 AMG Edition 1 4MATIC 2018/2019 à venda | Attra')
+	})
+
+	it('mantém a cor que distingue dois carros de mesmo nome', () => {
+		const a = { id: '1', brand: 'Lamborghini', model: 'Temerario', version: '', year_manufacture: 2026, year_model: 2026, color: 'Laranja' }
+		const b = { ...a, id: '2', color: 'Verde' }
+		expect(tituloDeVendaDoVeiculo(a, [a, b])).toBe('Lamborghini Temerario 2026 Laranja à venda | Attra')
 	})
 })

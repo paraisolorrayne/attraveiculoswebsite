@@ -7,7 +7,7 @@ import { SortDropdown } from '@/components/vehicles/sort-dropdown'
 import { Skeleton, VehicleGridCardSkeleton } from '@/components/ui/skeleton'
 import { getVehicles, type AutoConfFilters } from '@/lib/autoconf-api'
 import { formatarDataBR } from '@/lib/seo/frescor'
-import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { listingCanonical, listingRobots, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 import { findSEOBrand } from '@/lib/seo-brands'
 import { normalizarMarca } from '@/lib/marca-normalizacao'
 import { Vehicle } from '@/types'
@@ -84,8 +84,8 @@ export async function generateMetadata({ searchParams }: VeiculosPageProps): Pro
   return {
     // Título distinto por página: com o mesmo título, as páginas 2 a 6 se
     // apresentavam como cópia da 1ª.
-    title: `Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia${pagina > 1 ? ` | Página ${pagina}` : ''}`,
-    description: 'Explore nossos veículos premium em Uberlândia. Supercarros, importados e veículos de luxo com curadoria rigorosa e entrega em todo o Brasil. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini e mais.',
+    title: pageTitle(pagina > 1 ? `Veículos premium à venda, página ${pagina}` : 'Veículos Premium | Supercarros e Veículos de Luxo em Uberlândia'),
+    description: 'Estoque da Attra Veículos em Uberlândia: supercarros, importados e carros de luxo com procedência verificada e entrega em todo o Brasil.',
     alternates: { canonical },
     robots: listingRobots(params, FILTROS_INDEXAVEIS),
     // og:url apontava para a home, contradizendo o canonical.
@@ -424,6 +424,10 @@ export default async function VeiculosPage({ searchParams }: VeiculosPageProps) 
         <section className="pt-28 pb-4 bg-gradient-to-b from-background-soft to-background">
           <div className="w-full lg:w-[82%] mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumb items={breadcrumbItems} />
+            {/* Sem o destaque, a página ficava sem h1 (páginas 2 a 6 e filtros). */}
+            <h1 className="mt-4 text-2xl lg:text-3xl font-bold text-foreground">
+              Veículos premium à venda{currentPage > 1 ? `, página ${currentPage}` : ''}
+            </h1>
           </div>
         </section>
       )}

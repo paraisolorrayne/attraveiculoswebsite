@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   // Era o mesmo título de /comprar ("Comprar Carros de Luxo e Supercarros no
   // Brasil"), e as duas disputavam a mesma busca. /comprar fica com a compra;
   // a home, com a loja.
-  title: { absolute: 'Attra Veículos | Loja de Supercarros e Carros de Luxo no Brasil' },
+  title: { absolute: 'Attra Veículos | Supercarros e Carros de Luxo no Brasil' },
   description:
-    'Supercarros, veículos premium e importados com curadoria e procedência verificada. Porsche, Ferrari, BMW, Mercedes-Benz, Lamborghini, McLaren e Audi. Entrega em todo o Brasil. Attra Veículos.',
+    'Supercarros, carros de luxo e importados com procedência verificada: Porsche, Ferrari, Lamborghini, Mercedes-AMG e BMW. Entrega em todo o Brasil.',
   keywords: [
     'comprar carro de luxo brasil',
     'comprar supercarro brasil',
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   openGraph: {
     images: [IMAGEM_COMPARTILHAMENTO],
     url: canonicalUrl('/'),
-    title: 'Attra Veículos | Loja de Supercarros e Carros de Luxo no Brasil',
+    title: 'Attra Veículos | Supercarros e Carros de Luxo no Brasil',
     description:
       'Curadoria de supercarros e veículos premium com procedência verificada. Porsche, Ferrari, Lamborghini, BMW, Mercedes-Benz e mais. Entrega nacional.',
   },

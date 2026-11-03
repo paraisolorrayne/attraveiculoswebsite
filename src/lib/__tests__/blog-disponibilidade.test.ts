@@ -91,3 +91,12 @@ describe('slugs', () => {
 		expect(pedidoDoReview('Mercedes-Benz', 'G 63', undefined)).toEqual({ prefixo: 'mercedes-benz-g-63', ano: null, id: null })
 	})
 })
+
+describe('corrigirLinksInternos: páginas com redirect', () => {
+	it('troca o link para /estoque e para página legada pelo destino final', () => {
+		const html = '<a href="https://attraveiculos.com.br/estoque">estoque</a> <a href="/quem-somos/">sobre</a> <a href="/veiculos">ok</a>'
+		expect(corrigirLinksInternos(html, null, () => '/veiculos')).toBe(
+			'<a href="/veiculos">estoque</a> <a href="/sobre">sobre</a> <a href="/veiculos">ok</a>',
+		)
+	})
+})

@@ -12,7 +12,7 @@ import { NumeroQueSobe } from '@/components/ui/numero-que-sobe'
 import { LinhaDoTempo } from '@/components/attra/linha-do-tempo'
 import { EquipeAttra } from '@/components/attra/equipe-attra'
 import { PostInstagram } from '@/components/attra/post-instagram'
-import { canonicalUrl, pageTitle } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -20,12 +20,11 @@ import { anosDeMercado } from '@/lib/constants'
 // número mudaria só no próximo deploy, não na virada do ano.
 export const revalidate = 86400
 
-export const metadata: Metadata = {
-  title: pageTitle('Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia'),
-  description: 'Conheça a Attra Veículos. Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
+export const metadata: Metadata = metadadosDaPagina('/sobre', {
+  titulo: 'Sobre a Attra Veículos | Loja de Veículos Premium em Uberlândia',
+  descricao: 'Conheça a Attra Veículos. Curadoria e comercialização de veículos nacionais, importados, esportivos e supercarros, com operação em Uberlândia e atendimento em todo o Brasil.',
   keywords: ['Attra Veículos Uberlândia', 'loja de veículos premium', 'supercarros Minas Gerais', 'loja de carros de luxo', 'referência em veículos premium'],
-  alternates: { canonical: canonicalUrl('/sobre') },
-}
+})
 
 // A entidade AutoDealer não é redeclarada aqui: o layout raiz já emite o nó
 // canônico com @id em todo documento. Este bloco declarava um segundo

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { LeadMagnetForm } from './lead-magnet-form'
 import { Shield, FileText, CheckCircle, Car, BookOpen, TrendingUp } from 'lucide-react'
-import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
 import { anosDeMercado } from '@/lib/constants'
 
 // Página estática que exibe os anos de mercado (calculados a partir do ano
@@ -11,10 +11,11 @@ import { anosDeMercado } from '@/lib/constants'
 export const revalidate = 86400
 
 export const metadata: Metadata = {
-  title: 'Guia Definitivo para Comprar Supercarros com Segurança',
+  title: pageTitle('Guia Definitivo para Comprar Supercarros com Segurança'),
   description: 'Baixe gratuitamente o guia completo com 8 páginas de dicas exclusivas para comprar supercarros e veículos de luxo com total segurança. Curadoria Attra Veículos.',
   keywords: 'guia supercarros, como comprar supercarro, comprar ferrari, comprar lamborghini, guia veículos de luxo, dicas compra carro premium',
   openGraph: {
+    url: canonicalUrl('/guia-supercarro-gratis'),
     title: 'Guia Definitivo para Comprar Supercarros com Segurança',
     description: 'Baixe gratuitamente o guia completo com dicas exclusivas para comprar supercarros e veículos de luxo.',
     type: 'website',

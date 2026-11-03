@@ -9,11 +9,12 @@ import { SITE_URL } from '@/lib/constants'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Shield, Globe, Truck, Search } from 'lucide-react'
 import { ANO_FUNDACAO, anosDeMercado } from '@/lib/constants'
-import { IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { IMAGEM_COMPARTILHAMENTO, descricaoSeo, pageTitle } from '@/lib/seo/page-metadata'
+import { CONDICOES, FAIXAS_PRECO, MODELOS, PERFIS_COMPRADOR, PRECOS } from '@/lib/seo'
 
 export const metadata: Metadata = {
-	title: 'Comprar Carros de Luxo e Supercarros no Brasil',
-	description: 'Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos, desde 2008.',
+	title: pageTitle('Comprar Carros de Luxo e Supercarros no Brasil'),
+	description: descricaoSeo('Carros de luxo e supercarros à venda no Brasil. Ferrari, Porsche, BMW, Mercedes-Benz, McLaren e mais. Curadoria premium, procedência verificada e entrega nacional. Attra Veículos, desde 2008.'),
 	keywords: [
 		'comprar carro de luxo brasil', 'comprar supercarro brasil',
 		'carros de luxo à venda brasil', 'carros importados premium brasil',
@@ -28,6 +29,24 @@ export const metadata: Metadata = {
 		type: 'website',
 	},
 }
+
+const GRUPOS = [
+	{ titulo: 'Por faixa de preço', links: FAIXAS_PRECO.map(f => ({ rotulo: f.title, href: `/comprar/faixa-preco/${f.slug}` })) },
+	{ titulo: 'Por condição', links: CONDICOES.map(c => ({ rotulo: c.title, href: `/comprar/condicao/${c.slug}` })) },
+	{ titulo: 'Por perfil de uso', links: PERFIS_COMPRADOR.map(p => ({ rotulo: p.title, href: `/comprar/perfil/${p.slug}` })) },
+	{ titulo: 'Modelos mais procurados', links: MODELOS.map(m => ({ rotulo: `${m.brand} ${m.model}`, href: `/comprar/modelo/${m.slug}` })) },
+	{ titulo: 'Quanto custa no Brasil', links: PRECOS.map(p => ({ rotulo: `Preço do ${p.brand} ${p.model}`, href: `/preco/${p.slug}` })) },
+	{
+		titulo: 'Antes de comprar',
+		links: [
+			{ rotulo: 'Guias de compra e manutenção', href: '/guia' },
+			{ rotulo: 'Carros de luxo em Uberlândia', href: '/carros-de-luxo-uberlandia' },
+			{ rotulo: 'Seu carro na troca', href: '/troca' },
+			{ rotulo: 'Financiamento', href: '/financiamento' },
+			{ rotulo: 'Importação de veículos de luxo', href: '/importacao-de-veiculos-de-luxo' },
+		],
+	},
+]
 
 const TRUST_SIGNALS = [
 	{ icon: Shield, title: 'Procedência Verificada', description: 'Curadoria rigorosa com inspeção completa de cada veículo' },
@@ -137,6 +156,31 @@ export default async function ComprarHubPage() {
 								</Link>
 							)
 						})}
+					</div>
+				</Container>
+			</section>
+
+			{/* Todas as páginas de compra, linkadas daqui (handoff de SEO de
+			    02/11/2026): faixas, perfis, condições, modelos e preços só eram
+			    alcançáveis pelo sitemap, e o Ahrefs os contava como órfãos. */}
+			<section className="py-12 lg:py-16 border-t border-border">
+				<Container>
+					<div className="grid gap-10 md:grid-cols-2 xl:grid-cols-3">
+						{GRUPOS.map(grupo => (
+							<div key={grupo.titulo}>
+								<h2 className="text-xl font-bold text-foreground mb-4">{grupo.titulo}</h2>
+								<ul className="space-y-2">
+									{grupo.links.map(link => (
+										<li key={link.href}>
+											<Link href={link.href} className="inline-flex items-center gap-1 text-foreground-secondary hover:text-primary transition-colors">
+												{link.rotulo}
+												<ArrowRight className="w-3.5 h-3.5" />
+											</Link>
+										</li>
+									))}
+								</ul>
+							</div>
+						))}
 					</div>
 				</Container>
 			</section>

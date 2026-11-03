@@ -3,13 +3,13 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { VehicleRequestForm } from '@/components/forms/vehicle-request-form'
 import { Search, Check, Globe, Shield } from 'lucide-react'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 
-export const metadata: Metadata = {
-  title: 'Solicitar Veículo',
-  description: 'Não encontrou o veículo que procura? A Attra Veículos busca para você. Serviço personalizado e sem compromisso.',
-  alternates: { canonical: canonicalUrl('/solicitar-veiculo') },
-}
+export const metadata: Metadata = metadadosDaPagina('/solicitar-veiculo', {
+  titulo: 'Solicitar Veículo',
+  descricao: 'Não encontrou o veículo que procura? A Attra Veículos busca para você. Serviço personalizado e sem compromisso.',
+  complemento: 'A Attra procura o carro no Brasil e no exterior, confere a procedência e entrega em todo o país.',
+})
 
 const features = [
   { icon: Search, title: 'Busca Personalizada', description: 'Encontramos exatamente o veículo que você procura.' },

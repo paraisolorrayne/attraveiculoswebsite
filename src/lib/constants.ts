@@ -97,9 +97,9 @@ export const HORARIO_UMA_LINHA = `${HORARIO_SEMANA} | Sáb: 9h às 12h30`
  *   somam autoridade — e não há como corrigir um erro publicado lá.
  */
 export const PERFIS_OFICIAIS = [
-  'https://instagram.com/attra.veiculos',
-  'https://facebook.com/attraveiculos',
-  'https://youtube.com/@attraveiculos',
+  'https://www.instagram.com/attra.veiculos',
+  'https://www.facebook.com/attraveiculos',
+  'https://www.youtube.com/@attraveiculos',
   'https://www.olx.com.br/perfil/attra-veiculos-d0a2ec98',
   'https://www.webmotors.com.br/carros/mg/loja.attra-veiculos-3840973',
 ] as const

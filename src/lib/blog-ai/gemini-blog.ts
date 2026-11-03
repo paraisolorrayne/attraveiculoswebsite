@@ -358,16 +358,21 @@ function injectImages(html: string, images: string[]): string {
   })
 }
 
-function buildSlug(hint: string, fallback: string): string {
-  const base = (hint || fallback)
+/**
+ * Slug limpo, sem o sufixo aleatório que os posts levavam até 02/11/2026
+ * ("-wud3", "-kw7p"; handoff de SEO). Endereço repetido ganha "-2" na hora de
+ * gravar (`slugLivre`, em daily-blog-ai.ts). Os posts antigos não mudam.
+ */
+export function buildSlug(hint: string, fallback: string): string {
+  const slug = (hint || fallback)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
-    .substring(0, 80)
-  const suffix = Date.now().toString(36).slice(-4)
-  return `${base}-${suffix}`
+  if (slug.length <= 80) return slug
+  // Corta numa palavra inteira, não no meio dela.
+  return slug.slice(0, 81).replace(/-[^-]*$/, '')
 }
 
 function toSeo(r: GeminiJsonResponse): BlogPostSEO {

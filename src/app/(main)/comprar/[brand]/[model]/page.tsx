@@ -14,7 +14,7 @@ import { availabilityFromStatus } from '@/lib/vehicle-schema'
 import { organizationRef } from '@/lib/schema-entity'
 import { ArrowRight, Calendar, Gauge, Zap, RotateCw, Shield, Check } from 'lucide-react'
 import { ModelLandingPage, resolverModelo } from '@/components/brand/model-landing-page'
-import { IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
+import { IMAGEM_COMPARTILHAMENTO, pageTitle, descricaoSeo } from '@/lib/seo/page-metadata'
 
 interface ModelPageProps {
 	params: Promise<{ brand: string; model: string }>
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: ModelPageProps): Promise<Meta
 	const { model } = result
 	return {
 		title: pageTitle(model.metaTitle),
-		description: model.metaDescription,
+		description: descricaoSeo(model.metaDescription, 'Attra Veículos, em Uberlândia: procedência verificada e entrega em todo o Brasil.'),
 		keywords: model.keywords,
 		alternates: { canonical: `${SITE_URL}/comprar/${brandSlug}/${modelSlug}` },
 		openGraph: {

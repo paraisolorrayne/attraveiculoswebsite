@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { GUIAS_OPERACIONAIS, findGuiaOperacional } from '@/lib/seo'
-import { pageTitle, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
+import { pageTitle, IMAGEM_COMPARTILHAMENTO, descricaoSeo } from '@/lib/seo/page-metadata'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { ArrowRight, BookOpen, MessageCircle } from 'lucide-react'
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 	return {
 		title: pageTitle(data.metaTitle),
-		description: data.metaDescription,
+		description: descricaoSeo(data.metaDescription, 'Attra Veículos, em Uberlândia: procedência verificada e entrega em todo o Brasil.'),
 		keywords: data.keywords,
 		alternates: { canonical: `${SITE_URL}/guia/${slug}` },
 		openGraph: {
@@ -42,7 +42,7 @@ export default async function GuiaPage({ params }: PageProps) {
 	if (!data) notFound()
 
 	const breadcrumbItems = [
-		{ label: 'Guia' },
+		{ label: 'Guias', href: '/guia' },
 		{ label: data.title },
 	]
 

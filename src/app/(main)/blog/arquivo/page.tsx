@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { BlogCardStatic } from '@/components/blog'
 import { getBlogPostsPreview } from '@/lib/blog-api'
-import { cn } from '@/lib/utils'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { canonicalUrl, IMAGEM_COMPARTILHAMENTO, pageTitle } from '@/lib/seo/page-metadata'
+import { enderecoDaCategoria } from '@/lib/blog-categorias'
+import { NavegacaoDoBlog } from '@/components/blog/lista-da-categoria'
 
 // Rota é dinâmica (searchParams); o cache fica na camada de dados
 // (getBlogPostsPreview usa unstable_cache com revalidate de 30 min)
@@ -15,6 +16,7 @@ const PAGE_SIZE = 24
 
 type ArchiveSearchParams = Promise<{ tipo?: string; pagina?: string }>
 
+// Filtros antigos (?tipo=), hoje redirect para a página da categoria.
 const TIPO_MAP = { artigos: 'educativo', reviews: 'car_review' } as const
 type TipoFiltro = keyof typeof TIPO_MAP
 
@@ -39,19 +41,27 @@ async function totalPagesFor(tipo: TipoFiltro | undefined): Promise<number> {
 
 export async function generateMetadata({ searchParams }: { searchParams: ArchiveSearchParams }): Promise<Metadata> {
   const { tipo, pagina } = parseParams(await searchParams)
-  // 404 precisa acontecer aqui: no corpo da página o status 200 já foi
-  // enviado (streaming) e vira soft-404. A busca é cacheada (unstable_cache).
+  // O filtro por tipo virou página de categoria com endereço próprio
+  // (/blog/artigos, /blog/reviews).
+  if (tipo) permanentRedirect(enderecoDaCategoria(tipo, pagina))
+  // Página além da última é 404. O arquivo saiu de blog/(lista)/ em 02/11/2026:
+  // com o loading.tsx de lá, o 404 daqui saía como 200 (soft 404).
   if (pagina > await totalPagesFor(tipo)) notFound()
+  const url = canonicalUrl(archiveHref(tipo, pagina))
+  const description = 'Acervo completo de artigos, reviews e comparativos da Attra Veículos sobre superesportivos e carros premium, do mais recente ao mais antigo.'
   return {
-    title: pageTitle('Arquivo do Blog Attra | Todos os artigos'),
-    description:
-      'Acervo completo de artigos, reviews e análises da Attra Veículos. Explore todo o conteúdo editorial sobre superesportivos e carros premium.',
-    alternates: { canonical: archiveHref(tipo, pagina) },
+    title: pageTitle(pagina > 1 ? `Arquivo do Blog Attra, página ${pagina}` : 'Arquivo do Blog Attra'),
+    description,
+    alternates: { canonical: url },
+    openGraph: { title: 'Arquivo do Blog Attra', description, url, type: 'website', images: [IMAGEM_COMPARTILHAMENTO] },
   }
 }
 
 export default async function BlogArchivePage({ searchParams }: { searchParams: ArchiveSearchParams }) {
   const { tipo, pagina } = parseParams(await searchParams)
+  // Também aqui: página e metadados rodam juntos, e o 404 da página de categoria
+  // inexistente no arquivo chegaria antes do redirect.
+  if (tipo) permanentRedirect(enderecoDaCategoria(tipo, pagina))
 
   const allPosts = await getBlogPostsPreview({ type: tipo ? TIPO_MAP[tipo] : 'all' })
   const totalPages = Math.max(1, Math.ceil(allPosts.length / PAGE_SIZE))
@@ -60,12 +70,6 @@ export default async function BlogArchivePage({ searchParams }: { searchParams: 
   if (pagina > totalPages) notFound()
   const page = pagina
   const posts = allPosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  const filtros: Array<{ label: string; value: TipoFiltro | undefined }> = [
-    { label: 'Todos', value: undefined },
-    { label: 'Artigos', value: 'artigos' },
-    { label: 'Reviews', value: 'reviews' },
-  ]
 
   return (
     <main className="bg-background min-h-screen">
@@ -89,23 +93,7 @@ export default async function BlogArchivePage({ searchParams }: { searchParams: 
 
       <section className="py-12">
         <Container>
-          {/* Filtros por tipo — links server-side, sem JS */}
-          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
-            {filtros.map((f) => (
-              <Link
-                key={f.label}
-                href={archiveHref(f.value, 1)}
-                className={cn(
-                  'px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap',
-                  tipo === f.value
-                    ? 'bg-primary text-white shadow-md'
-                    : 'bg-background-card text-foreground-secondary hover:bg-background-soft hover:text-foreground border border-border'
-                )}
-              >
-                {f.label}
-              </Link>
-            ))}
-          </div>
+          <NavegacaoDoBlog atual="todos" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => (

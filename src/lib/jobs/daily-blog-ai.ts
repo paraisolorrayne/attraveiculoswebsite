@@ -52,6 +52,8 @@ import {
   type GeneratedBlog,
 } from '@/lib/blog-ai/gemini-blog'
 import { addInternalLinks } from '@/lib/blog-ai/internal-linker'
+import { importedBlogPosts } from '@/lib/imported-blog-posts'
+import { POSTS_CONSOLIDADOS } from '@/lib/blog-consolidacao'
 
 export interface BlogAiRunResult {
   success: boolean
@@ -189,6 +191,25 @@ async function snapshotPostImages(post: GeneratedBlog['post']): Promise<Generate
   }
 }
 
+/**
+ * O slug sem sufixo aleatório (ver buildSlug) pode já existir: "-2", "-3"...
+ * Inclui os posts importados do WordPress e os consolidados, que também são
+ * endereços do blog.
+ */
+export async function slugLivre(base: string): Promise<string> {
+  const doBanco = await db.selectFrom('dual_blog_posts').select('slug')
+    .where('slug', 'like', `${base}%`).execute()
+  const usados = new Set([
+    ...doBanco.map(r => r.slug),
+    ...importedBlogPosts.map(p => p.slug),
+    ...Object.keys(POSTS_CONSOLIDADOS),
+  ])
+  if (!usados.has(base)) return base
+  let n = 2
+  while (usados.has(`${base}-${n}`)) n++
+  return `${base}-${n}`
+}
+
 async function persistPost(generated: GeneratedBlog): Promise<{
   id: string
   slug: string
@@ -198,6 +219,7 @@ async function persistPost(generated: GeneratedBlog): Promise<{
     console.log(`[DailyBlogAI] added ${linked.linksAdded} internal links`)
   }
   const post = await snapshotPostImages(linked.post)
+  post.slug = await slugLivre(post.slug)
 
   const data = await db.insertInto('dual_blog_posts')
     .values({

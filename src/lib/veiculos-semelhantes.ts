@@ -114,6 +114,23 @@ export function ordenarPorSemelhanca(
     .map(p => p.veiculo)
 }
 
+/**
+ * Só os da mesma marca ou do mesmo modelo, do mais parecido ao menos.
+ *
+ * Para o bloco de estoque dos posts: sem nenhum Hummer à venda, o post do
+ * Hummer H1 mostrava Ferrari 812 e Lamborghini Temerário (handoff de SEO de
+ * 02/11/2026). Vazio, o bloco fica com o convite para encomendar.
+ */
+export function daMesmaMarcaOuModelo(estoque: Vehicle[], pedido: PedidoDoSlug): Vehicle[] {
+  const prefixo = chaveDeComparacao(pedido.prefixo)
+  const parente = (veiculo: Vehicle) => {
+    const marca = chaveDeComparacao(slugificar(veiculo.brand))
+    const modelo = chaveDeComparacao(slugificar(veiculo.model))
+    return (marca.length >= 2 && prefixo.startsWith(marca)) || (modelo.length >= 2 && prefixo.includes(modelo))
+  }
+  return ordenarPorSemelhanca(estoque.filter(parente), pedido)
+}
+
 export interface Semelhantes {
   /** Os veículos a exibir, do mais parecido ao menos. */
   veiculos: Vehicle[]

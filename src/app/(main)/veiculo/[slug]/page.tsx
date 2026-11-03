@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
-import { Suspense } from 'react'
+import { cache, Suspense } from 'react'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CinematicGallery } from '@/components/vehicles/cinematic-gallery'
@@ -22,14 +22,17 @@ import { getCachedVehicleSections, getFallbackVehicleSections, generateAndCacheV
 import { getVehicleSoundByVehicleId } from '@/lib/vehicle-sounds-storage'
 import { formatPrice } from '@/lib/utils'
 import { buildVehiclePageSchemas, trilhaDoVeiculo } from '@/lib/vehicle-schema'
-import { tituloDistintoDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { tituloDeVendaDoVeiculo, tituloDoVeiculo } from '@/lib/identidade-do-veiculo'
 import { loadListedInventory } from '@/app/api/llm/_inventory'
 import { joinNonEmpty } from '@/lib/vehicle-fallbacks'
 import { SITE_URL, getWhatsAppUrl } from '@/lib/constants'
 import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
 import { opcionaisDoVeiculo } from '@/lib/ficha-do-anuncio'
 import { perguntasDoVeiculo } from '@/lib/faq-do-veiculo'
-import { pageTitle } from '@/lib/seo/page-metadata'
+import { descricaoSeo, pageTitle } from '@/lib/seo/page-metadata'
+import { FichaVendida } from '@/components/vehicles/ficha-vendida'
+import { lerSlug } from '@/lib/veiculos-semelhantes'
+import { destinoDoVendido, situacaoNoRegistro, slugDaAutoConf, vendidoHaMuitoTempo } from '@/lib/veiculos-publicados'
 import { formatarDataBR } from '@/lib/seo/frescor'
 import { Vehicle } from '@/types'
 
@@ -37,20 +40,25 @@ interface VehiclePageProps {
 	params: Promise<{ slug: string }>
 }
 
+/** Uma consulta ao registro por requisição, para os metadados e a página. */
+const buscarNoRegistro = cache((slug: string) => situacaoNoRegistro(lerSlug(slug).id ?? ''))
+
 /** Build a self-contained one-line summary used as meta description
- * and Open Graph / Twitter Card text via generateMetadata(). */
+ * and Open Graph / Twitter Card text via generateMetadata().
+ *
+ * Modelo, ano, km, cor e preço, em até 155 caracteres (handoff de SEO de
+ * 02/11/2026): com a frase da loja inteira, 48 fichas passavam de 160 e o
+ * Google cortava justamente o fim. */
 function buildVehicleSummary(vehicle: Vehicle): string {
 	const name = tituloDoVeiculo(vehicle)
 	const condition = vehicle.is_new || vehicle.mileage === 0
 		? '0 km'
 		: `${vehicle.mileage.toLocaleString('pt-BR')} km`
-	const colorPart = vehicle.color ? ` na cor ${vehicle.color}` : ''
-	const enginePart = vehicle.engine
-		? ` com motor ${vehicle.engine}`
-		: vehicle.horsepower
-			? ` com ${vehicle.horsepower} cv de potência`
-			: ''
-	return `${name}${colorPart}${enginePart}, ${condition}, disponível na Attra Veículos em Uberlândia/MG. Curadoria, procedência verificada e entrega nacional.`
+	const colorPart = vehicle.color ? ` ${vehicle.color.toLowerCase()}` : ''
+	const pricePart = vehicle.price > 0 ? `, por ${formatPrice(vehicle.price)}` : ''
+	return descricaoSeo(
+		`${name}${colorPart}, ${condition}${pricePart}. À venda na Attra Veículos em Uberlândia, com procedência verificada e entrega em todo o Brasil.`,
+	)
 }
 
 export async function generateMetadata({ params }: VehiclePageProps): Promise<Metadata> {
@@ -59,6 +67,29 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? SITE_URL
 
 	if (!vehicle) {
+		const registro = await buscarNoRegistro(slug)
+		const vendido = registro.tipo === 'vendido' ? registro : null
+		if (vendido && !vendidoHaMuitoTempo(vendido.saiuEm)) {
+			const nome = tituloDoVeiculo(vendido.veiculo)
+			const descricao = descricaoSeo(
+				`${nome} já foi vendido pela Attra. Veja os similares em estoque ou peça um igual, com procedência verificada e entrega em todo o Brasil.`,
+			)
+			const url = `${baseUrl}/veiculo/${vendido.veiculo.slug}`
+			return {
+				title: pageTitle(`${nome} vendido`),
+				description: descricao,
+				alternates: { canonical: url },
+				openGraph: {
+					type: 'website',
+					locale: 'pt_BR',
+					url,
+					siteName: 'Attra Veículos',
+					title: `${nome} (vendido)`,
+					description: descricao,
+					images: (vendido.veiculo.photos ?? []).slice(0, 1).map(u => ({ url: u, alt: nome })),
+				},
+			}
+		}
 		return {
 			// Sem a marca: o `title.template` do layout raiz já a acrescenta.
 			title: 'Veículo não encontrado',
@@ -74,19 +105,18 @@ export async function generateMetadata({ params }: VehiclePageProps): Promise<Me
 	const url = `${baseUrl}/veiculo/${vehicle.slug}`
 	const ogImages = (vehicle.photos ?? []).slice(0, 4).map(u => ({ url: u, alt: fullName }))
 
-	// Outro carro do estoque com o mesmo nome e ano: o título leva a cor (a
-	// mesma busca da AutoConf da página, em cache de 5 min).
-	let titulo = fullName
+	// "{Modelo} {Ano} à venda | Attra" em até 60 caracteres. Outro carro do
+	// estoque com o mesmo nome e ano: o título leva a cor (a mesma busca da
+	// AutoConf da página, em cache de 5 min).
+	let estoque: Vehicle[] = [vehicle]
 	try {
-		titulo = tituloDistintoDoVeiculo(vehicle, (await loadListedInventory()).vehicles)
+		estoque = (await loadListedInventory()).vehicles
 	} catch (error) {
 		console.error('ficha: estoque indisponível para distinguir o título', error)
 	}
 
 	return {
-		// Marca + modelo + versão + ano. O `seo_title` do feed é o mesmo texto;
-		// `pageTitle` só garante que o sufixo de marca não saia duplicado.
-		title: pageTitle(titulo),
+		title: { absolute: tituloDeVendaDoVeiculo(vehicle, estoque) },
 		description: summary,
 		keywords: [
 			vehicle.brand,
@@ -143,6 +173,16 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 	const vehicle = await getVehicleBySlug(slug)
 
 	if (!vehicle) {
+		// Carro que saiu do estoque (handoff de SEO de 02/11/2026): até 90 dias, a
+		// ficha de vendido; depois, ou sem registro mas com slug da AutoConf, o
+		// redirect para a marca. Slug inventado continua 404.
+		const registro = await buscarNoRegistro(slug)
+		if (registro.tipo === 'vendido') {
+			if (vendidoHaMuitoTempo(registro.saiuEm)) permanentRedirect(destinoDoVendido(slug, registro.veiculo.brand))
+			if (registro.veiculo.slug !== slug) permanentRedirect(`/veiculo/${registro.veiculo.slug}`)
+			return <FichaVendida veiculo={registro.veiculo} />
+		}
+		if (registro.tipo === 'desconhecido' && slugDaAutoConf(slug)) permanentRedirect(destinoDoVendido(slug))
 		notFound()
 	}
 

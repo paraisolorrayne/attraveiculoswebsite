@@ -3,13 +3,13 @@ import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FinancingForm } from '@/components/forms/financing-form'
 import { Check, Shield, Clock, Percent } from 'lucide-react'
-import { canonicalUrl } from '@/lib/seo/page-metadata'
+import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 
-export const metadata: Metadata = {
-  title: 'Financiamento',
-  description: 'Simule seu financiamento na Attra Veículos. Taxas a partir de 0,99% a.m., aprovação rápida e sem burocracia.',
-  alternates: { canonical: canonicalUrl('/financiamento') },
-}
+export const metadata: Metadata = metadadosDaPagina('/financiamento', {
+  titulo: 'Financiamento',
+  descricao: 'Simule seu financiamento na Attra Veículos. Taxas a partir de 0,99% a.m., aprovação rápida e sem burocracia.',
+  complemento: 'Simulação com um consultor da Attra, em Uberlândia, para carros de todo o estoque.',
+})
 
 const benefits = [
   { icon: Percent, title: 'Taxas competitivas', description: 'A partir de 0,99% ao mês' },

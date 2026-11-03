@@ -88,3 +88,31 @@ export function tituloDistintoDoVeiculo(v: VeiculoDoEstoque, estoque: VeiculoDoE
 	const km = v.mileage ? `${v.mileage.toLocaleString('pt-BR')} km` : '0 km'
 	return `${[titulo, cor].filter(Boolean).join(' ')}, ${km}`
 }
+
+/**
+ * O <title> da ficha no formato do handoff de SEO de 02/11/2026:
+ * "{Modelo} {Ano} à venda | Attra", em até `limite` caracteres.
+ *
+ * Mantém a distinção de `tituloDistintoDoVeiculo` (cor, e a quilometragem
+ * quando a cor também empata) e, para caber, tira palavras do fim da versão:
+ * "Mercedes G-63 AMG Edition 1 4MATIC V8 Bi-Turbo Automático 2018/2019" passava
+ * de 80 caracteres com o sufixo e era cortado no Google.
+ */
+export function tituloDeVendaDoVeiculo(
+	v: VeiculoDoEstoque,
+	estoque: VeiculoDoEstoque[],
+	limite = 60,
+): string {
+	const extra = tituloDistintoDoVeiculo(v, estoque).slice(tituloDoVeiculo(v).length)
+	const ano = anoDoVeiculo(v)
+	const marcaModelo = [limpar(v.brand), limpar(v.model)].filter(Boolean)
+	const versao = versaoDoVeiculo(v).split(' ').filter(Boolean)
+	const montar = (palavras: number) => {
+		const nome = [...marcaModelo, ...versao.slice(0, palavras)].join(' ') || 'Veículo premium'
+		return `${[nome, ano].filter(Boolean).join(' ')}${extra} à venda | Attra`
+	}
+	for (let n = versao.length; n > 0; n--) {
+		if (montar(n).length <= limite) return montar(n)
+	}
+	return montar(0)
+}

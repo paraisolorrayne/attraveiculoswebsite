@@ -5,6 +5,7 @@
 
 import { Vehicle } from '@/types'
 import { realInventoryVehicles } from './vehicle-inventory-data'
+import { registrarVeiculosPublicados, registroPendente } from './veiculos-publicados'
 import {
   appendVehicleToSnapshot,
   loadLatestAdsHomeSnapshot,
@@ -220,6 +221,13 @@ export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Prom
       data,
       data.veiculos.length,
     )
+    // Registro para a ficha de vendido: só com o estoque de carros inteiro
+    // numa página, senão o carro da página 2 pareceria vendido.
+    const estoqueInteiro = (filters.tipo ?? 'carros') === 'carros'
+      && (filters.pagina ?? 1) === 1 && data.ultima_pagina <= 1
+    if (estoqueInteiro && registroPendente()) {
+      void registrarVeiculosPublicados(data.veiculos.map(mapAutoConfToVehicle))
+    }
   }
   return data
 }
