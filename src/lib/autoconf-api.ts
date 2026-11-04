@@ -500,7 +500,15 @@ function generateVehicleSlug(vehicle: AutoConfVehicle): string {
   // Filter out null/undefined/empty parts BEFORE joining \u2014 template literals
   // coerce null to the literal string "null", which produced ugly slugs like
   // "null-corvette-z06-2023-989248" when AutoConf returned marca_nome: null.
-  const parts = [vehicle.marca_nome, vehicle.modelopai_nome, vehicle.anomodelo]
+  //
+  // Sem `marca_nome`, a marca resolvida (a mesma do título da ficha). Até
+  // 04/11/2026 o endereço saía sem ela: `/veiculo/812-2024-1154688`, a Ferrari
+  // 812 GTS na 3ª página do Google para "ferrari 812 gts". Só nesse caso:
+  // com `marca_nome` preenchido o endereço não muda (o apelido às vezes é
+  // grafado diferente, e trocar o endereço de todo o estoque não ganha nada).
+  // O endereço antigo redireciona para o novo na própria ficha (308).
+  const marca = (vehicle.marca_nome ?? '').trim() || resolveBrand(vehicle)
+  const parts = [marca, vehicle.modelopai_nome, vehicle.anomodelo]
     .map(p => (p == null ? '' : String(p)).trim())
     .filter(p => p.length > 0)
 

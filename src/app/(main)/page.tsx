@@ -13,6 +13,7 @@ import {
 import { FAQSchema } from '@/components/seo'
 import { homepageFAQs } from '@/lib/faq-data'
 import { getVehicles } from '@/lib/autoconf-api'
+import { semModeloRepetido } from '@/lib/selecao-editorial'
 import { canonicalUrl, IMAGEM_COMPARTILHAMENTO } from '@/lib/seo/page-metadata'
 import { Vehicle } from '@/types'
 
@@ -93,9 +94,11 @@ export default async function Home() {
       // sempre carrega o ticket mais alto.
       //
       //   Hero pool      = top 6 mais caros (rotaciona 3 por quinzena)
-      //   Editorial pool = posições 7-9 (próximos 3 abaixo do hero pool)
+      //   Editorial pool = os 3 seguintes abaixo do hero pool, sem repetir
+      //                    marca e modelo (04/11/2026: dois Aston Martin
+      //                    Vantage 2026 iguais lado a lado)
       const heroPool = sorted.slice(0, 6)
-      const editorialPool = sorted.slice(6, 9)
+      const editorialPool = semModeloRepetido(sorted.slice(6), 3)
 
       heroVehicles = heroPool.length >= 3
         ? selectBiweeklyHeroSlice(heroPool, 3)
@@ -104,7 +107,7 @@ export default async function Home() {
       // graciosamente para o que sobrar abaixo do hero pool.
       editorialVehicles = editorialPool.length > 0
         ? editorialPool
-        : sorted.slice(heroVehicles.length, heroVehicles.length + 3)
+        : semModeloRepetido(sorted.slice(heroVehicles.length), 3)
     }
   } catch (error) {
     console.error('Failed to fetch featured vehicles:', error)
