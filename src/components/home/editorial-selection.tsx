@@ -66,8 +66,9 @@ const atraso = (s: number) => ({ ['--d' as string]: `${s}s` })
  * botões, dois secundários com o essencial, e o "Ver todo o acervo" como
  * bloco grande no fim, com o total do estoque.
  *
- * Os carros são as posições 7 a 9 do estoque por preço (page.tsx): mudam com
- * o estoque, não por semana. Por isso saiu o "Atualizada semanalmente".
+ * Os carros são os 3 seguintes ao banner no estoque por preço, sem repetir
+ * marca e modelo (page.tsx, `semModeloRepetido`): mudam com o estoque, não
+ * por semana. Por isso saiu o "Atualizada semanalmente".
  */
 export function EditorialSelection({ vehicles = [], totalEstoque }: EditorialSelectionProps) {
   const [main, ...rest] = vehicles
