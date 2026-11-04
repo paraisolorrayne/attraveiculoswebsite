@@ -52,18 +52,22 @@ export function TituloDaFicha({ vehicle }: TituloDaFichaProps) {
 
   return (
     <div className="@container">
+      {/* Os espaços entre os spans são para o TEXTO do h1: na tela o `block`
+          já separa as linhas, mas sem eles o documento dizia "Ferrari812GTS". */}
       <h1>
         {vehicle.brand && (
-          <span className="mb-2 block text-sm font-semibold uppercase tracking-[0.16em] text-primary">
-            {vehicle.brand}
-          </span>
+          <>
+            <span className="mb-2 block text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+              {vehicle.brand}
+            </span>{' '}
+          </>
         )}
         <span
           className="block text-[32px] leading-tight font-semibold tracking-tight text-foreground lg:text-5xl 2xl:text-6xl"
           style={MONTSERRAT}
         >
           {vehicle.model || vehicle.brand || 'Veículo premium'}
-        </span>
+        </span>{' '}
         <span className="mt-2 block text-foreground-secondary lg:mt-3 lg:text-lg">
           {vehicle.version && `${vehicle.version} • `}
           {vehicle.year_manufacture}/{vehicle.year_model}
