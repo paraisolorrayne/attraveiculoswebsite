@@ -1,8 +1,10 @@
 /**
- * Liga o card do CRM ao clique de WhatsApp que o originou, por dois caminhos:
+ * Liga o card do CRM ao clique de WhatsApp que o originou, por três caminhos:
  *
  *   - `ligarPorCodigo`: o card traz o código invisível da mensagem (desde
- *     29/10/2026). Ligação certa; vale mais que a outra.
+ *     29/10/2026). Ligação certa; vale mais que as outras.
+ *   - `ligarPorCliqueDoCrm`: o código não achou clique aqui, mas a Fykos ligou
+ *     pelo código do lado dela e devolveu o id do clique (04/11/2026). Também certa.
  *   - `ligarCliqueAoCard`: sem código, a decisão de `whatsapp-correlacao.ts`
  *     (mesmo carro, pouco antes). A função pura decide QUAL clique originou a
  *     conversa; aqui buscamos os candidatos, reivindicamos o clique e gravamos a
@@ -13,7 +15,7 @@
 import { sql, type Transaction } from 'kysely'
 import type { Database } from './db/types'
 import { correlacionarClique, JANELA_CORRELACAO_MS, type ResultadoCorrelacao } from './whatsapp-correlacao'
-import { extrairRefSessao } from './atribuicao-receita'
+import { extrairRefSessao, pareceUuid } from './atribuicao-receita'
 import { codigoDoCampo } from './codigo-whatsapp'
 
 /**
@@ -237,8 +239,19 @@ export async function ligarPorCodigo(
 
   if (!clique) return { tipo: 'codigo_sem_clique', codigo }
   const cliqueId = String(clique.id)
+  await tomarClique(trx, cardId, cliqueId)
+  await gravarSessaoNoCard(trx, cardId, clique.session_db_id, 'codigo_whatsapp')
 
-  // Devolve o clique que a correlação por horário tinha dado a este card.
+  return { tipo: 'ligado', sessionId: clique.session_db_id, cliqueId }
+}
+
+/**
+ * Toma o clique para o card da ligação certa (código ou id do clique), e devolve
+ * o que a correlação por horário tinha dado a este card.
+ *
+ * Um clique já tomado por OUTRO card fica com ele.
+ */
+async function tomarClique(trx: Transaction<Database>, cardId: string, cliqueId: string): Promise<void> {
   await trx
     .updateTable('whatsapp_clicks')
     .set({ consumido_em: null, card_id: null })
@@ -252,7 +265,48 @@ export async function ligarPorCodigo(
     .where('id', '=', cliqueId)
     .where('consumido_em', 'is', null)
     .execute()
+}
 
+export type ResultadoPorCliqueDoCrm =
+  | { tipo: 'ligado'; sessionId: string; cliqueId: string }
+  /** O card não trouxe clique, ou trouxe um que a Fykos ligou só pelo horário. */
+  | { tipo: 'sem_clique_certo' }
+  /** O id não é de clique nenhum daqui. */
+  | { tipo: 'clique_desconhecido'; cliqueId: string }
+
+/**
+ * Liga o card ao clique que a própria Fykos ligou ao lead (`clique_site_id`).
+ *
+ * Caso do lead Erison (04/11/2026): a Fykos leu o código e ligou ao clique do
+ * aviso, mas aqui o clique ficou sem o código (o código é gravado num UPDATE à
+ * parte em `api/tracking/interaction`, que falha só no log), e o card não achou
+ * a sessão. O id do clique é o mesmo que mandamos no aviso, então não depende
+ * do código ter sido gravado.
+ *
+ * Só com `clique_site_ligacao = 'codigo'`: é a ligação que a Fykos fez pelo
+ * código, a mesma prova do `ligarPorCodigo`, e grava como ele. A `visita` vem
+ * com a sessão no próprio card (`site_session_id`), e a `horario` é estimativa
+ * que a correlação daqui refaz com o carro.
+ */
+export async function ligarPorCliqueDoCrm(
+  trx: Transaction<Database>,
+  cardId: string,
+  card: Record<string, unknown>,
+): Promise<ResultadoPorCliqueDoCrm> {
+  const bruto = typeof card.clique_site_id === 'string' ? card.clique_site_id.trim() : ''
+  if (card.clique_site_ligacao !== 'codigo' || !bruto) return { tipo: 'sem_clique_certo' }
+  // `whatsapp_clicks.id` é UUID: texto fora do formato quebraria o cast.
+  if (!pareceUuid(bruto)) return { tipo: 'clique_desconhecido', cliqueId: bruto }
+
+  const clique = await trx
+    .selectFrom('whatsapp_clicks')
+    .select(['id', 'session_db_id'])
+    .where('id', '=', bruto)
+    .executeTakeFirst()
+  if (!clique) return { tipo: 'clique_desconhecido', cliqueId: bruto }
+
+  const cliqueId = String(clique.id)
+  await tomarClique(trx, cardId, cliqueId)
   await gravarSessaoNoCard(trx, cardId, clique.session_db_id, 'codigo_whatsapp')
 
   return { tipo: 'ligado', sessionId: clique.session_db_id, cliqueId }

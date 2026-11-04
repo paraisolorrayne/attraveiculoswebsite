@@ -3,7 +3,7 @@ import { sql, type Insertable, type Updateable, type Transaction } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 import { verifyCrmSignature, safeEquals, mergeCardV2, atualizadoEmInvalido, linhaRejeicao } from '@/lib/crm-webhook'
-import { ligarCliqueAoCard, ligarPorCodigo } from '@/lib/whatsapp-correlacao-db'
+import { ligarCliqueAoCard, ligarPorCliqueDoCrm, ligarPorCodigo } from '@/lib/whatsapp-correlacao-db'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,8 +56,9 @@ async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<
 
 		// Atribuição do lead que chegou por WhatsApp: é aqui que a conversa é
 		// ligada ao clique que a originou. Primeiro pelo código invisível que a
-		// Fykos devolve no card; sem ele, pela correlação (mesmo carro, pouco
-		// antes). Best-effort — o lead entra mesmo que isto falhe.
+		// Fykos devolve no card, ou pelo clique que ela ligou por ele; sem isso,
+		// pela correlação (mesmo carro, pouco antes). Best-effort — o lead entra
+		// mesmo que isto falhe.
 		if (await ligarPeloCodigo(trx, id, card)) return 'insert'
 		try {
 			const ligacao = await ligarCliqueAoCard(trx, id, card)
@@ -82,31 +83,41 @@ async function aplicarCard(trx: Transaction<Database>, id: string, card: Record<
 		.where('id', '=', id)
 		.execute()
 
-	// O código pode chegar numa atualização do card, depois de a correlação por
-	// horário já ter ligado (ou não) o card a um clique. Ele vale mais: substitui.
+	// O código (ou o clique ligado por ele) pode chegar numa atualização do card,
+	// depois de a correlação por horário já ter ligado (ou não) o card a um
+	// clique. Ele vale mais: substitui.
 	if (existing?.dados?.site_session_origem !== 'codigo_whatsapp') await ligarPeloCodigo(trx, id, card)
 	return 'update'
 }
 
 /**
- * Liga pelo código, se o card trouxer um. Diz se ligou; falha só vai para o log,
- * como na correlação.
+ * Liga pelo código, se o card trouxer um; se o código não achar clique aqui,
+ * pelo clique que a Fykos ligou por ele (`clique_site_id`). Diz se ligou; falha
+ * só vai para o log, como na correlação.
  *
  * Num SAVEPOINT: erro de banco dentro de uma transação do Postgres aborta todo
  * o resto dela, e o lead tem de entrar mesmo se a ligação falhar (coluna
  * `codigo_whatsapp` sem a migration, por exemplo).
  */
 async function ligarPeloCodigo(trx: Transaction<Database>, id: string, card: Record<string, unknown>): Promise<boolean> {
-	if (card.codigo_whatsapp === undefined || card.codigo_whatsapp === null) return false
+	const temCodigo = card.codigo_whatsapp !== undefined && card.codigo_whatsapp !== null
+	const temClique = card.clique_site_id !== undefined && card.clique_site_id !== null
+	if (!temCodigo && !temClique) return false
 	try {
 		await sql`savepoint ligacao_codigo`.execute(trx)
-		const r = await ligarPorCodigo(trx, id, card)
+		const r = temCodigo ? await ligarPorCodigo(trx, id, card) : null
+		const c = r?.tipo === 'ligado' ? null : await ligarPorCliqueDoCrm(trx, id, card)
 		await sql`release savepoint ligacao_codigo`.execute(trx)
-		if (r.tipo === 'ligado') {
+		if (r?.tipo === 'ligado') {
 			console.error(`[FykosCRM] card ${id} ligado pelo código à sessão ${r.sessionId} (clique ${r.cliqueId})`)
 			return true
 		}
-		if (r.tipo === 'codigo_sem_clique') console.warn(`[FykosCRM] card ${id}: código ${r.codigo} sem clique gravado`)
+		if (r?.tipo === 'codigo_sem_clique') console.warn(`[FykosCRM] card ${id}: código ${r.codigo} sem clique gravado`)
+		if (c?.tipo === 'ligado') {
+			console.error(`[FykosCRM] card ${id} ligado pelo clique da Fykos à sessão ${c.sessionId} (clique ${c.cliqueId})`)
+			return true
+		}
+		if (c?.tipo === 'clique_desconhecido') console.warn(`[FykosCRM] card ${id}: clique ${c.cliqueId} da Fykos não existe aqui`)
 	} catch (erro) {
 		await sql`rollback to savepoint ligacao_codigo`.execute(trx).catch(() => undefined)
 		console.warn(`[FykosCRM] ligação pelo código falhou no card ${id}:`, erro instanceof Error ? erro.message : erro)
