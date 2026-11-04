@@ -250,4 +250,69 @@ describe.skipIf(!TEST_DB)('ligação lead→clique — SQL real', () => {
 			expect(r).toEqual({ tipo: 'codigo_sem_clique', codigo: 1630495827 })
 		})
 	})
+
+	describe('pelo clique que a Fykos ligou (04/11/2026)', () => {
+		// O código vai para o clique num UPDATE à parte, que falha só no log
+		// (api/tracking/interaction). Sem ele aqui, a Fykos ainda liga pelo código do
+		// lado dela e devolve no card o id do clique (`clique_site_id`).
+		const clicarComId = async (sessao: string, segundosAtras: number, page_path: string) =>
+			(
+				await sql<{ id: string }>`insert into whatsapp_clicks (session_db_id, clicked_at, page_path)
+				    values (${sessao}::uuid, ${antes(segundosAtras)}, ${page_path}) returning id`.execute(db)
+			).rows[0].id
+
+		it('código sem clique gravado aqui: liga pelo clique que a Fykos ligou pelo código (Erison, 04/11)', async () => {
+			const daFicha = await clicarComId(sessaoFicha, 200, '/veiculo/ferrari-296-2025-1099157')
+			// Clique mais recente no mesmo carro, de outra sessão: pelo horário, seria este.
+			await clicarComId(sessaoHome, 60, '/veiculo/ferrari-296-2025-1099157')
+
+			const r = await enviar({
+				id: 'teste-corr-clq-1', etapa: 'novo', veiculo_interesse: 'Ferrari 296 GTB', atualizado_em: agora.toISOString(),
+				codigo_whatsapp: 2651172492, clique_site_id: daFicha, clique_site_ligacao: 'codigo',
+			})
+			expect(r.status).toBe(200)
+			expect(await dadosDo('teste-corr-clq-1')).toMatchObject({ site_session_id: sessaoFicha, site_session_origem: 'codigo_whatsapp' })
+			expect(await cliques()).toEqual([
+				{ session_db_id: sessaoFicha, card_id: 'teste-corr-clq-1', consumido: true },
+				{ session_db_id: sessaoHome, card_id: null, consumido: false },
+			])
+		})
+
+		it('ligação por horário da Fykos não vale como prova: segue a correlação daqui', async () => {
+			const daHome = await clicarComId(sessaoHome, 60, '/')
+			await enviar({
+				id: 'teste-corr-clq-2', etapa: 'novo', veiculo_interesse: 'Ferrari 296 GTB', atualizado_em: agora.toISOString(),
+				clique_site_id: daHome, clique_site_ligacao: 'horario',
+			})
+			expect(await dadosDo('teste-corr-clq-2')).not.toHaveProperty('site_session_origem')
+			expect((await cliques())[0]).toMatchObject({ card_id: null, consumido: false })
+		})
+
+		it('id de clique que não existe aqui, ou fora do formato, não impede o lead de entrar', async () => {
+			for (const [id, clique] of [['teste-corr-clq-3', '6f1d2c3b-0000-4000-8000-000000000000'], ['teste-corr-clq-4', 'nao-e-uuid']]) {
+				const r = await enviar({
+					id, etapa: 'novo', atualizado_em: agora.toISOString(), clique_site_id: clique, clique_site_ligacao: 'codigo',
+				})
+				expect(r.status).toBe(200)
+				expect(await dadosDo(id)).not.toHaveProperty('site_session_origem')
+			}
+		})
+
+		it('clique que chega numa atualização substitui a correlação e devolve o clique dela', async () => {
+			await clicarComId(sessaoHome, 60, '/veiculo/ferrari-296-2025-1099157')
+			const daFicha = await clicarComId(sessaoFicha, 300, '/')
+			await enviar({ id: 'teste-corr-clq-5', etapa: 'novo', veiculo_interesse: 'Ferrari 296 GTB', atualizado_em: agora.toISOString() })
+			expect(await dadosDo('teste-corr-clq-5')).toMatchObject({ site_session_id: sessaoHome, site_session_origem: 'correlacao_clique_veiculo' })
+
+			await enviar({
+				id: 'teste-corr-clq-5', etapa: 'em_atendimento', atualizado_em: new Date(agora.getTime() + 1000).toISOString(),
+				clique_site_id: daFicha, clique_site_ligacao: 'codigo',
+			})
+			expect(await dadosDo('teste-corr-clq-5')).toMatchObject({ site_session_id: sessaoFicha, site_session_origem: 'codigo_whatsapp' })
+			expect(await cliques()).toEqual([
+				{ session_db_id: sessaoFicha, card_id: 'teste-corr-clq-5', consumido: true },
+				{ session_db_id: sessaoHome, card_id: null, consumido: false },
+			])
+		})
+	})
 })
