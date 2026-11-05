@@ -167,8 +167,14 @@ const DEALER_TOKEN = process.env.AUTOCONF_DEALER_TOKEN || ''
 
 /**
  * Fetch vehicles from AutoConf API
+ *
+ * `aoVivo` pula o cache de 5 minutos do Next, que serve a cópia velha enquanto
+ * busca a nova (ver src/lib/destaque-da-bio.ts).
  */
-export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Promise<AutoConfResponse> {
+export async function fetchAutoConfVehicles(
+  filters: AutoConfFilters = {},
+  { aoVivo = false }: { aoVivo?: boolean } = {},
+): Promise<AutoConfResponse> {
   const formData = new URLSearchParams()
   formData.append('token', DEALER_TOKEN)
   formData.append('tipo', filters.tipo || 'carros')
@@ -196,7 +202,7 @@ export async function fetchAutoConfVehicles(filters: AutoConfFilters = {}): Prom
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: formData.toString(),
-    next: { revalidate: 300 }, // Cache for 5 minutes
+    ...(aoVivo ? { cache: 'no-store' as const } : { next: { revalidate: 300 } }), // Cache for 5 minutes
   })
 
   if (!response.ok) {
