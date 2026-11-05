@@ -2,32 +2,15 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { MessageCircle, Car, MapPin, Instagram, Youtube, ChevronRight, ArrowRight, Star } from 'lucide-react'
 import { getWhatsAppUrl, SITE_URL } from '@/lib/constants'
-import { getVehicles } from '@/lib/autoconf-api'
+import { estoqueDaBio, escolherDestaque } from '@/lib/destaque-da-bio'
 import { formatPrice, formatMileage } from '@/lib/utils'
 
+// O destaque é um carro à venda agora: sem a cópia da página em cache, que
+// mostraria um carro já vendido (ver src/lib/destaque-da-bio.ts).
+export const dynamic = 'force-dynamic'
+
 export default async function LinksPage() {
-  // Fetch 3 premium vehicles (R$1M–5M), sorted by highest price, pick one randomly
-  let featuredVehicle = null
-  try {
-    const result = await getVehicles({
-      tipo: 'carros',
-      registros_por_pagina: 20,
-      ordenar: 'preco',
-      ordem: 'desc',
-      preco_de: 1000000,
-      preco_ate: 5000000,
-    })
-    // Filter client-side to guarantee price range (fallback/mock data may ignore filters)
-    const eligible = result.vehicles.filter(v => v.price >= 1000000 && v.price <= 5000000)
-    const top3 = eligible.slice(0, 5)
-    if (top3.length > 0) {
-      // True random pick (changes on every request/revalidation)
-      const randomIndex = Math.floor(Math.random() * top3.length)
-      featuredVehicle = top3[randomIndex]
-    }
-  } catch (e) {
-    console.error('Failed to fetch featured vehicle for links page:', e)
-  }
+  const featuredVehicle = escolherDestaque(await estoqueDaBio())
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col items-center px-5 py-10 sm:py-14">
@@ -55,7 +38,8 @@ export default async function LinksPage() {
 
       {/* Headline */}
       <h1 className="text-gray-900 dark:text-white text-xl sm:text-2xl font-bold text-center leading-snug max-w-xs mb-8">
-        Onde carros exclusivos encontram escolhas seguras.
+        <span className="block">Automóveis extraordinários.</span>
+        <span className="block">Escolhas com confiança.</span>
       </h1>
 
       {/* Main CTAs */}
@@ -65,7 +49,7 @@ export default async function LinksPage() {
           href={getWhatsAppUrl('Olá! Vim pelo link da bio e gostaria de iniciar o processo de escolha.')}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between bg-green-500 hover:bg-green-600 text-white rounded-xl px-5 py-4 transition-colors active:scale-[0.98]"
+          className="flex items-center justify-between bg-[#0F7B6C] hover:bg-[#0C6A5D] text-white rounded-xl px-5 py-4 transition-colors active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <MessageCircle className="w-5 h-5" />
@@ -92,43 +76,37 @@ export default async function LinksPage() {
       {/* Exemplo Recente de Curadoria */}
       {featuredVehicle && (
         <div className="w-full max-w-sm mb-6">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Veículo Disponível</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Veículo disponível</h2>
           <a
             href={`${SITE_URL}/veiculo/${featuredVehicle.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
           >
-            {/* Vehicle image with overlay info */}
-            <div className="relative aspect-[16/9] bg-gray-900">
-              {featuredVehicle.photos?.[0] && (
-                <Image
-                  src={featuredVehicle.photos[0]}
-                  alt={`${featuredVehicle.brand} ${featuredVehicle.model}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, 400px"
-                />
-              )}
-              {/* Overlay with vehicle name */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <p className="text-white font-bold text-lg tracking-wide">
-                  {featuredVehicle.brand.toUpperCase()} {featuredVehicle.model.toUpperCase()}
-                </p>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                  <span className="text-white/80 text-xs">{featuredVehicle.year_model}</span>
-                  <span className="text-white/80 text-xs">{featuredVehicle.mileage === 0 ? '0 km' : formatMileage(featuredVehicle.mileage)}</span>
-                  <span className="text-white/80 text-xs">{formatPrice(featuredVehicle.price)}</span>
-                </div>
-              </div>
+            {/* Foto limpa: as fotos da AutoConf costumam trazer uma faixa gravada
+                embaixo, e o nome por cima dela ficava ilegível. */}
+            <div className="relative aspect-[16/10] bg-gray-100 dark:bg-gray-900">
+              <Image
+                src={featuredVehicle.photos[0]}
+                alt={`${featuredVehicle.brand} ${featuredVehicle.model}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 100vw, 400px"
+              />
             </div>
-            {/* Caption */}
             <div className="p-4">
-              <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Selecionado por configuração e histórico</p>
-              <p className="text-xs text-primary flex items-center gap-1 mt-1">
-                Ver outros disponíveis <ArrowRight className="w-3 h-3" />
+              <p className="text-base font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                {featuredVehicle.brand} {featuredVehicle.model}
               </p>
+              <p className="mt-1 text-[0.8125rem] text-gray-600 dark:text-gray-400">
+                {featuredVehicle.year_model} · {featuredVehicle.mileage === 0 ? '0 km' : formatMileage(featuredVehicle.mileage)}
+              </p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p className="text-base font-semibold tabular-nums text-gray-900 dark:text-white">{formatPrice(featuredVehicle.price)}</p>
+                <span className="flex items-center gap-1 whitespace-nowrap text-[0.8125rem] font-medium text-primary dark:text-red-400">
+                  Ver ficha <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
             </div>
           </a>
         </div>
@@ -136,7 +114,7 @@ export default async function LinksPage() {
 
       {/* Endereço e orientações de chegada */}
       <div className="w-full max-w-sm border border-gray-200 dark:border-gray-800 rounded-xl p-5 mb-6">
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Endereço e orientações de chegada</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Endereço e orientações de chegada</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Vem de outra cidade? Encontre aqui todas as instruções necessárias para você nos encontrar com facilidade.
         </p>
@@ -154,7 +132,7 @@ export default async function LinksPage() {
         </a>
       </div>
 
-      {/* Avaliar experiência com a Attra */}
+      {/* Avaliação no Google */}
       <div className="w-full max-w-sm mb-6">
         <a
           href="https://g.page/r/CQHb-QTnsh8hEBM/review"
@@ -165,7 +143,7 @@ export default async function LinksPage() {
           <div className="flex items-center gap-3">
             <Star className="w-5 h-5 text-yellow-500" />
             <div>
-              <span className="font-semibold text-sm block">Avaliar minha experiência com a Attra</span>
+              <span className="font-semibold text-sm block">Avalie sua experiência</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">Seu feedback nos ajuda a evoluir</span>
             </div>
           </div>
@@ -174,17 +152,17 @@ export default async function LinksPage() {
       </div>
 
       {/* Social icons */}
-      <div className="flex gap-4 mt-4 mb-8">
-        <a href="https://www.instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Instagram">
+      <div className="flex gap-3 mt-4 mb-6">
+        <a href="https://www.instagram.com/attra.veiculos" target="_blank" rel="noopener noreferrer" className="p-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" aria-label="Instagram">
           <Instagram className="w-5 h-5" />
         </a>
-        <a href="https://www.youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" className="p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="YouTube">
+        <a href="https://www.youtube.com/@attraveiculos" target="_blank" rel="noopener noreferrer" className="p-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" aria-label="YouTube">
           <Youtube className="w-5 h-5" />
         </a>
       </div>
 
       {/* Footer */}
-      <Link href="/politica-de-privacidade" className="text-gray-400 text-xs hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      <Link href="/politica-privacidade" className="inline-block py-3.5 px-2 text-gray-500 dark:text-gray-400 text-xs hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
         Política de Privacidade
       </Link>
     </div>
