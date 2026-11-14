@@ -28,3 +28,23 @@ export function paginaLarga(pathname: string): boolean {
     (pathname.startsWith('/blog/') && pathname !== '/blog/arquivo')
   )
 }
+
+/** Listas do blog. O artigo (/blog/<slug>) não entra: tem escala própria (.blog-coluna). */
+const LISTAS_DO_BLOG = ['/blog', '/blog/arquivo', '/blog/reviews', '/blog/artigos', '/blog/comparativos']
+
+/**
+ * Páginas internas que, em tela larga, crescem junto com a tela: conteúdo em
+ * 80% da largura e letra, espaçamento e colunas de texto na mesma proporção
+ * (classe .pagina-ampla, em globals.css). A regra é pela exceção: toda página
+ * nova já nasce ampla, em vez de ficar numa caixa de 1280 px com letra de 14 px
+ * no meio de um monitor grande (13/11/2026, /comprar/ferrari).
+ *
+ * Ficam de fora só as que já têm largura e escala próprias para tela larga: a
+ * home, a ficha, o estoque e o artigo do blog.
+ */
+export function paginaAmpla(pathname: string): boolean {
+  if (pathname === '/') return false
+  if (pathname === '/veiculos' || pathname.startsWith('/veiculo/')) return false
+  if (pathname.startsWith('/blog/')) return LISTAS_DO_BLOG.includes(pathname)
+  return true
+}
