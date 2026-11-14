@@ -146,3 +146,13 @@ describe('métricas do anúncio', async () => {
 		expect(nomeDaPosicao(undefined, undefined)).toBe('Outros')
 	})
 })
+
+describe('anúncio renomeado', () => {
+	it('não cria um segundo card para anúncios que já estão num card', () => {
+		const a = (id: string, nome: string) => ({ id, nome, noAr: true, criadoEm: null, campanhaId: '900', campanhaNome: 'C', gasto30d: 10 })
+		const cards = [{ id: 'v1', campaign_id: 'c1', vehicle_name: 'Porsche 911', status: 'publicada', meta_ad_ids: ['1', '2'] }]
+		const p = planejar([a('1', 'Porsche 911'), a('2', 'Porsche 911 Turbo S')], [{ id: 'c1', meta_campaign_id: '900' }], cards)
+		expect(p.criar).toEqual([])
+		expect(p.atualizar).toEqual([{ id: 'v1', adIds: ['1', '2'], noAr: true, gasto: 20 }])
+	})
+})

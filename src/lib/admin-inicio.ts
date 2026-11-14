@@ -48,6 +48,8 @@ export interface BlocoCarros {
 export interface LeadAguardando {
 	id: string
 	nome: string
+	/** O que procurar no CRM para achar este lead: nome, telefone ou e-mail. */
+	busca: string | null
 	veiculo: string | null
 	vendedor: string | null
 	espera: string | null
@@ -231,6 +233,7 @@ async function carregarComercial(agora: number): Promise<BlocoComercial> {
 			leads: fila.slice(0, 5).map(({ c, atraso }) => ({
 				id: c.id,
 				nome: c.nome?.trim() || 'Sem nome',
+				busca: c.nome?.trim() || c.telefone?.trim() || c.email?.trim() || null,
 				veiculo: c.veiculo?.trim() || null,
 				vendedor: c.vendedor?.trim() || null,
 				espera: atraso ? fmtHorasComerciais(atraso.ms) : null,
@@ -274,6 +277,7 @@ async function carregarProcurados(agora: number): Promise<CarroProcurado[]> {
 
 async function carregarMarketing(usuarioId: string, agora: number): Promise<BlocoMarketing> {
 	const abertas = ['completed', 'failed']
+	const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(agora))
 	const [fila, minhas, emAberto] = await Promise.all([
 		db.selectFrom('marketing_creatives').select(sql<string>`count(*)`.as('total')).where('status', '=', 'pendente').executeTakeFirst(),
 		db
@@ -291,12 +295,14 @@ async function carregarMarketing(usuarioId: string, agora: number): Promise<Bloc
 		fila: Number(fila?.total ?? 0),
 		tarefasEmAberto: Number(emAberto?.total ?? 0),
 		tarefas: minhas.map(t => {
-			const prazo = iso(t.due_date)
+			// O prazo é um DIA, gravado como meia-noite UTC. Vai para a tela como
+			// "aaaa-mm-dd" e só atrasa quando o dia inteiro passou em São Paulo.
+			const prazo = iso(t.due_date)?.slice(0, 10) ?? null
 			return {
 				id: String(t.id),
 				titulo: t.title,
 				prazo,
-				atrasada: !!prazo && Date.parse(prazo) < agora,
+				atrasada: !!prazo && prazo < hoje,
 				prioridade: t.priority ?? null,
 			}
 		}),
@@ -305,11 +311,14 @@ async function carregarMarketing(usuarioId: string, agora: number): Promise<Bloc
 
 /* -------------------------------------------------------------- conteúdo */
 
-async function carregarConteudo(): Promise<BlocoConteudo> {
+async function carregarConteudo(comNewsletter: boolean): Promise<BlocoConteudo> {
 	const [rascunhos, total, campanhas] = await Promise.all([
 		db.selectFrom('dual_blog_posts').select(['id', 'title']).where('is_published', '=', false).orderBy('updated_at', 'desc').limit(4).execute(),
 		db.selectFrom('dual_blog_posts').select(sql<string>`count(*)`.as('total')).where('is_published', '=', false).executeTakeFirst(),
-		db.selectFrom('newsletter_campaigns').select(sql<string>`count(*)`.as('total')).where('status', 'in', ['draft', 'scheduled']).executeTakeFirst(),
+		// Quem não abre a Newsletter não recebe o número dela.
+		comNewsletter
+			? db.selectFrom('newsletter_campaigns').select(sql<string>`count(*)`.as('total')).where('status', 'in', ['draft', 'scheduled']).executeTakeFirst()
+			: null,
 	])
 	return {
 		rascunhos: rascunhos.map(r => ({ id: String(r.id), titulo: r.title })),
@@ -326,7 +335,7 @@ export async function carregarInicio(admin: { id: string; role: AdminRole; secoe
 		carros: pode('/admin/gerador-criativos'),
 		// O CRM abre só para admin e owner (regra da própria página, crm/page.tsx):
 		// a tela inicial não mostra nome e valor de lead a quem não abre o CRM.
-		comercial: isPrivileged(admin.role),
+		comercial: isPrivileged(admin.role) && pode('/admin/crm'),
 		procurados: pode('/admin/visitors'),
 		marketing: pode('/admin/marketing'),
 		conteudo: pode('/admin/blog'),
@@ -339,7 +348,7 @@ export async function carregarInicio(admin: { id: string; role: AdminRole; secoe
 		ve.comercial ? tentar('comercial', () => carregarComercial(agora)) : null,
 		ve.procurados ? tentar('procurados', () => carregarProcurados(agora)) : null,
 		ve.marketing ? tentar('marketing', () => carregarMarketing(admin.id, agora)) : null,
-		ve.conteudo ? tentar('conteudo', () => carregarConteudo()) : null,
+		ve.conteudo ? tentar('conteudo', () => carregarConteudo(pode('/admin/newsletter'))) : null,
 		ve.saldo ? tentar('saldo', () => saldoDaMeta()) : null,
 	])
 	return { carros, comercial, procurados, marketing, conteudo, saldo, ve }

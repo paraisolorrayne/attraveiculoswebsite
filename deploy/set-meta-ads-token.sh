@@ -38,7 +38,9 @@ fi
 echo ">> token: ${#TOKEN} chars, sha256 $(printf '%s' "$TOKEN" | sha256sum | cut -c1-12)"
 
 echo ">> o token lê a conta ${CONTA}?"
-CONTA_JSON="$(curl -s -G -H "Authorization: Bearer ${TOKEN}" \
+# O header entra pela entrada padrão (-H @-): em argumento, o token apareceria
+# no `ps` para qualquer usuário da máquina.
+CONTA_JSON="$(printf 'Authorization: Bearer %s' "$TOKEN" | curl -s -G -H @- \
 	--data-urlencode "fields=name,account_status,currency,is_prepay_account" "${GRAPH}/${CONTA}" || true)"
 if printf '%s' "$CONTA_JSON" | grep -q '"name"'; then
 	echo "   OK: $(printf '%s' "$CONTA_JSON" | head -c 300)"
@@ -49,9 +51,10 @@ else
 fi
 
 cp "$ENV" "$ENV.bak-$(date -u +%Y%m%dT%H%M%SZ)-meta-ads"
-python3 - "$ENV" "$TOKEN" "$CONTA" <<'PY'
-import re, sys
-caminho, tok, conta = sys.argv[1], sys.argv[2], sys.argv[3]
+# O token vai por variável de ambiente, não por argumento (mesmo motivo).
+META_TOKEN_NOVO="$TOKEN" python3 - "$ENV" "$CONTA" <<'PY'
+import os, re, sys
+caminho, tok, conta = sys.argv[1], os.environ["META_TOKEN_NOVO"], sys.argv[2]
 t = open(caminho).read()
 for chave, valor in (("META_ADS_TOKEN", tok), ("META_AD_ACCOUNT_ID", conta)):
     linha = f"{chave}={valor}"

@@ -113,7 +113,7 @@ function BlocoCarros({ dados }: { dados: DadosDoInicio['carros'] }) {
 			}
 			link={{ rotulo: 'Abrir o gerador', href: '/admin/gerador-criativos' }}
 		>
-			<CarrosSemCriativo carros={dados.carros} />
+			<CarrosSemCriativo carros={dados.carros} haMais={resto > 0} />
 		</Bloco>
 	)
 }
@@ -139,7 +139,7 @@ function BlocoComercial({ dados }: { dados: DadosDoInicio['comercial'] }) {
 						<ul className="divide-y divide-border">
 							{aguardando.leads.map(l => (
 								<li key={l.id}>
-									<Link href={`/admin/crm?periodo=0&q=${encodeURIComponent(l.nome)}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-background">
+									<Link href={l.busca ? `/admin/crm?periodo=0&q=${encodeURIComponent(l.busca)}` : '/admin/crm?periodo=0'} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-background">
 										<span className="min-w-40 flex-1 font-medium text-foreground">{l.nome}</span>
 										<span className="min-w-40 flex-1 text-sm text-foreground-secondary">{l.veiculo ?? 'Carro não informado'}</span>
 										<span className="w-40 text-sm text-foreground-secondary">{l.vendedor ?? 'Sem vendedor'}</span>
@@ -201,7 +201,7 @@ function BlocoProcurados({ dados }: { dados: DadosDoInicio['procurados'] }) {
 
 function BlocoMarketing({ dados }: { dados: DadosDoInicio['marketing'] }) {
 	if (!dados) return <Bloco titulo="Marketing"><NaoCarregou oQue="as tarefas" /></Bloco>
-	const dia = (isoData: string) => new Date(isoData).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Sao_Paulo' })
+	const dia = (isoData: string) => new Date(`${isoData.slice(0, 10)}T12:00:00Z`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 	return (
 		<Bloco
 			titulo="Marketing"

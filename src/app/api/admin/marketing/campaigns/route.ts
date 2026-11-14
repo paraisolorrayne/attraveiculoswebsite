@@ -34,10 +34,12 @@ export async function GET() {
 
     // Antes de listar, traz da Meta os anúncios novos (no máximo a cada 15
     // minutos, e sem segurar a tela se a Meta demorar). Sem token, não faz nada.
-    const meta = await sincronizarCampanhasDaMeta()
+    // Só quem abre o Marketing dispara a leitura da Meta e recebe o estado dela.
+    const doMarketing = canAccessRoute(admin.role, '/admin/marketing', admin.secoes)
+    const meta = doMarketing ? await sincronizarCampanhasDaMeta() : null
     const [campaigns, saldo] = await Promise.all([
       campaignsWithVehicles().orderBy('created_at', 'desc').execute(),
-      meta.ligada && PAPEIS_COM_SALDO.includes(admin.role)
+      meta?.ligada && PAPEIS_COM_SALDO.includes(admin.role)
         ? saldoDaMeta().catch(e => { console.warn('[meta] saldo falhou:', e); return null })
         : null,
     ])

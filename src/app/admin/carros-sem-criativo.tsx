@@ -6,6 +6,7 @@
  * "Já tem" tira da lista o carro cuja peça foi feita fora do gerador.
  */
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Check, Palette } from 'lucide-react'
@@ -20,7 +21,8 @@ function haQuanto(dias: number | null): string {
 	return `há ${dias} dias no estoque`
 }
 
-export function CarrosSemCriativo({ carros }: { carros: CarroSemCriativo[] }) {
+export function CarrosSemCriativo({ carros, haMais = false }: { carros: CarroSemCriativo[]; haMais?: boolean }) {
+	const router = useRouter()
 	const [fora, setFora] = useState<Set<string>>(new Set())
 	const [erro, setErro] = useState<string | null>(null)
 
@@ -34,6 +36,9 @@ export function CarrosSemCriativo({ carros }: { carros: CarroSemCriativo[] }) {
 				body: JSON.stringify({ autoconf_id: c.id, nome: c.nome }),
 			})
 			if (!r.ok) throw new Error()
+			// A tela mostra só os primeiros: com mais carros na fila, busca os
+			// próximos em vez de deixar a lista esvaziar e parecer que acabou.
+			if (haMais) router.refresh()
 		} catch {
 			// Não gravou: o carro volta para a lista, com o aviso.
 			setFora(f => {
@@ -46,6 +51,9 @@ export function CarrosSemCriativo({ carros }: { carros: CarroSemCriativo[] }) {
 	}
 
 	const visiveis = carros.filter(c => !fora.has(c.id))
+	if (visiveis.length === 0 && haMais) {
+		return <p className="rounded-xl border border-border bg-background-card px-5 py-4 text-foreground-secondary">Buscando os próximos carros da fila.</p>
+	}
 	if (visiveis.length === 0) {
 		return (
 			<p className="flex items-center gap-2 rounded-xl border border-border bg-background-card px-5 py-4 text-foreground">

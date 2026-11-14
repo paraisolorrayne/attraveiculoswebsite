@@ -5,13 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ExternalLink, LayoutGrid, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
-import { GRUPOS, secaoAtiva, sectionsForRole } from '@/lib/admin-sections'
+import { GRUPOS, secaoAtiva, sectionsForRole, COOKIE_LATERAL } from '@/lib/admin-sections'
 import { ROLE_LABELS, isAdminRole, type AdminRole } from '@/lib/auth/roles'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 
 /** Cookie que guarda a barra recolhida, para o servidor já desenhar no estado certo. */
-export const COOKIE_LATERAL = 'attra_admin_lateral'
 
 /**
  * Barra lateral do admin (14/11/2026).

@@ -132,6 +132,9 @@ export function CriativosAdmin({ veiculoInicial }: { veiculoInicial?: string }) 
 
 	async function editar(c: CriativoGuardado) {
 		await g.restaurar(c)
+		// A peça restaurada pode ser de outro carro: sem limpar, a exportação
+		// marcaria como "já tem criativo" o carro escolhido antes.
+		veiculoAplicado.current = null
 		setMsgDownload(`Editando "${c.nome}", gerado às ${new Date(c.quando).toLocaleTimeString('pt-BR')}.`)
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 	}

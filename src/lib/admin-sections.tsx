@@ -56,3 +56,10 @@ export function secaoAtiva(secao: AdminSection, pathname: string): boolean {
   const prefixo = secao.ativaEm ?? secao.href
   return pathname === prefixo || pathname.startsWith(`${prefixo}/`)
 }
+
+/**
+ * Cookie que guarda a barra lateral recolhida. Mora aqui, e não no componente
+ * da barra: exportado de um módulo `use client`, o layout (servidor) receberia
+ * uma referência de cliente no lugar do texto e nunca leria o cookie.
+ */
+export const COOKIE_LATERAL = 'attra_admin_lateral'

@@ -96,6 +96,15 @@ export function planejar(anuncios: AnuncioDaMeta[], campanhas: CampanhaDoQuadro[
 			plano.atualizar.push({ id: card.id, adIds: [...new Set([...card.meta_ad_ids, ...ids])], noAr, gasto })
 			continue
 		}
+		// Anúncio renomeado: os ids já estão num card que outro grupo usou nesta
+		// rodada. Soma nele em vez de criar um segundo card com os mesmos anúncios.
+		const dono = cards.find(c => c.meta_ad_ids.some(id => ids.includes(id)))
+		const jaNoPlano = dono && plano.atualizar.find(a => a.id === dono.id)
+		if (jaNoPlano) {
+			jaNoPlano.noAr = jaNoPlano.noAr || noAr
+			jaNoPlano.gasto = jaNoPlano.gasto === null && gasto === null ? null : (jaNoPlano.gasto ?? 0) + (gasto ?? 0)
+			continue
+		}
 		if (!noAr) continue
 		if (!campanhaId && !plano.campanhas.some(c => c.metaId === grupo[0].campanhaId)) {
 			plano.campanhas.push({ metaId: grupo[0].campanhaId, nome: grupo[0].campanhaNome })
