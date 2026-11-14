@@ -35,12 +35,12 @@ const ABAS = [
 
 type Aba = (typeof ABAS)[number]['id']
 
-export function GeradorCriativosAdmin({ usuarioId }: { usuarioId: string }) {
+export function GeradorCriativosAdmin({ usuarioId, veiculoInicial }: { usuarioId: string; veiculoInicial?: string }) {
   const [aba, setAba] = useState<Aba>('criativos')
   const abrirVendido = useCallback(() => setAba('vendido'), [])
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-[calc(100dvh-var(--admin-topo,4rem))] flex-col">
       <AvisoNovidades usuarioId={usuarioId} aoUsar={abrirVendido} />
 
       <nav className="flex shrink-0 gap-1 border-b border-border bg-background-card px-4">
@@ -64,7 +64,7 @@ export function GeradorCriativosAdmin({ usuarioId }: { usuarioId: string }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div hidden={aba !== 'criativos'}>
-          <CriativosAdmin />
+          <CriativosAdmin veiculoInicial={veiculoInicial} />
         </div>
         <div hidden={aba !== 'vendido'}>
           <StoryVendidoAdmin />

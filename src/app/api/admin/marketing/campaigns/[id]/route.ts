@@ -87,6 +87,22 @@ export async function PATCH(
 
     // If vehicles array is provided, replace all vehicles
     if (body.vehicles !== undefined) {
+      // A lista é apagada e reinserida: sem guardar a ligação com a Meta antes,
+      // editar a campanha soltaria os cards dos anúncios e a próxima sincronia
+      // criaria todos de novo, duplicados.
+      const antes = await db.selectFrom('campaign_vehicles')
+        .select(['meta_ad_ids', 'meta_no_ar', 'meta_gasto_30d'])
+        .where('campaign_id', '=', id).execute()
+      const metaPorIds = new Map(antes.filter(a => a.meta_ad_ids.length > 0).map(a => [a.meta_ad_ids.join(','), a]))
+      const metaDoVeiculo = (ids: unknown) => {
+        const lista = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string' && /^\d+$/.test(x)) : []
+        const anterior = metaPorIds.get(lista.join(','))
+        // Só vale a ligação que já existia neste card: o cliente não inventa ids.
+        return anterior
+          ? { meta_ad_ids: anterior.meta_ad_ids, meta_no_ar: anterior.meta_no_ar, meta_gasto_30d: anterior.meta_gasto_30d }
+          : {}
+      }
+
       await db.deleteFrom('campaign_vehicles').where('campaign_id', '=', id).execute()
 
       if (body.vehicles && body.vehicles.length > 0) {
@@ -103,7 +119,8 @@ export async function PATCH(
             : 'encerrada_desempenho'
         }
 
-        const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string; ended_date?: string; end_reason?: string }, i: number) => ({
+        const vehicleRows = body.vehicles.map((v: { vehicle_name: string; added_date?: string; notes?: string; ended_date?: string; end_reason?: string; meta_ad_ids?: unknown }, i: number) => ({
+          ...metaDoVeiculo(v.meta_ad_ids),
           campaign_id: id,
           vehicle_name: v.vehicle_name,
           added_date: v.added_date || null,

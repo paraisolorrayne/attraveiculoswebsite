@@ -125,7 +125,7 @@ export const linkWhatsApp = (telefone: string): string | null => {
 export function BadgeSituacao({ situacao }: { situacao: string }) {
 	const s = situacaoInfo(situacao)
 	return (
-		<span className={`inline-flex text-[0.625rem] border rounded-full px-2 py-0.5 whitespace-nowrap ${s.classe}`}>
+		<span className={`inline-flex text-xs border rounded-full px-2 py-0.5 whitespace-nowrap ${s.classe}`}>
 			{s.label}
 		</span>
 	)
@@ -143,7 +143,7 @@ export function AvatarVendedor({ nome }: { nome: string }) {
 	return (
 		<span
 			title={nome}
-			className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[0.5625rem] font-semibold text-white flex-shrink-0 ${cor}`}
+			className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold text-white flex-shrink-0 ${cor}`}
 		>
 			{iniciais}
 		</span>
@@ -220,7 +220,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 					{c.nome || c.telefone || 'Sem nome'}
 				</div>
 				{!mostraEspera && (
-					<span className="shrink-0"><span className="text-[0.6875rem] text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span></span>
+					<span className="shrink-0"><span className="text-xs text-foreground-secondary">{fmtQuando(dataReferenciaPeriodo(c))}</span></span>
 				)}
 			</div>
 
@@ -260,7 +260,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 					</span>
 					{c.origem_campanha.metodo === 'provavel' && (
 						<span
-							className="text-[0.625rem] text-foreground-secondary/70 flex-shrink-0"
+							className="text-xs text-foreground-secondary/70 flex-shrink-0"
 							title={COMO_LIGOU[c.origem_campanha.ligacao ?? 'telefone']}
 						>
 							(provável)
@@ -271,7 +271,7 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 
 			{/* Andamento — a última fala do vendedor */}
 			{c.andamento && (
-				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-[0.6875rem] leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
+				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-xs leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
 					{c.andamento}
 				</div>
 			)}
@@ -308,8 +308,8 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 				<div className="flex items-center gap-1.5 min-w-0">
 					{c.vendedor && <AvatarVendedor nome={c.vendedor} />}
 					<div className="min-w-0">
-						<p className="text-[0.6875rem] text-foreground truncate" title={c.vendedor ?? undefined}>{c.vendedor || 'Sem vendedor'}</p>
-						{c.origem && <p className="text-[0.625rem] text-foreground-secondary truncate" title={c.origem}>{c.origem}</p>}
+						<p className="text-xs text-foreground truncate" title={c.vendedor ?? undefined}>{c.vendedor || 'Sem vendedor'}</p>
+						{c.origem && <p className="text-xs text-foreground-secondary truncate" title={c.origem}>{c.origem}</p>}
 					</div>
 				</div>
 				{c.telefone && linkWhatsApp(c.telefone) ? (

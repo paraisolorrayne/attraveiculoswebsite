@@ -5,6 +5,7 @@ import { canAccessRoute } from '@/lib/auth/roles'
 import { db } from '@/lib/db'
 import { putObject } from '@/lib/storage/disk'
 import { normalizarFormatoCriativo } from '@/lib/marketing-creatives'
+import { idDoVeiculo, registrarCriativo } from '@/lib/criativos-gerados'
 
 // Fila de criativos para publicar no patrocinado (ponte Gerador → board).
 export const dynamic = 'force-dynamic'
@@ -70,6 +71,19 @@ export async function POST(request: NextRequest) {
       status: 'pendente',
       format,
     }).returningAll().executeTakeFirst()
+
+    // O carro escolhido na busca do estoque fica marcado como "já tem
+    // criativo" (tela inicial). Só na peça Stories, para contar uma vez por
+    // exportação, e sem derrubar o envio se o registro falhar.
+    const autoconfId = idDoVeiculo(form.get('vehicle_id'))
+    if (autoconfId && format === 'stories') {
+      await registrarCriativo({
+        autoconfId,
+        nome: vehicleName,
+        origem: 'gerador',
+        por: { id: admin.id, nome: admin.name || admin.email.split('@')[0] },
+      }).catch(e => console.warn('[creatives] registro do carro falhou:', e))
+    }
 
     return NextResponse.json({ creative: row }, { status: 201 })
   } catch (error) {

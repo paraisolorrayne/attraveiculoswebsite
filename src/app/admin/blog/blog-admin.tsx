@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Trash2, Search, Loader2, Check, X, RefreshCw,
+  Plus, Trash2, Loader2, Check, X, RefreshCw,
   Pencil, FileText, Car, Eye, EyeOff, Upload, Image as ImageIcon,
-  ChevronDown, ExternalLink,
+  ChevronDown, ChevronUp, ExternalLink,
 } from 'lucide-react'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
+import {
+  BarraDeFiltros, BotaoSecundario, CampoBusca, EstadoErro, EstadoVazio,
+  ResumoDosFiltros, SeletorFiltro, useFiltrosUrl, type FiltroLigado,
+} from '@/components/admin/filtros'
+import { termosDaBusca } from '@/lib/crm-busca'
 
 // =============================================
 // TYPES
@@ -103,6 +109,64 @@ function generateSlug(title: string): string {
 }
 
 // =============================================
+// FILTROS E ORDENAÇÃO DA LISTA
+// =============================================
+
+// A API devolve a lista inteira de uma vez, então filtro e ordem rodam aqui,
+// sem requisição por tecla. Tudo fica na URL para sobreviver ao recarregar.
+const CHAVES_FILTRO = ['busca', 'tipo', 'status', 'fonte', 'categoria', 'marca', 'pendencia'] as const
+const CHAVES_ORDEM = ['ordem'] as const
+
+const OPCOES_TIPO = [
+  { valor: 'educativo', rotulo: 'Educativo' },
+  { valor: 'car_review', rotulo: 'Review' },
+] as const
+const OPCOES_STATUS = [
+  { valor: 'publicado', rotulo: 'Publicado' },
+  { valor: 'rascunho', rotulo: 'Rascunho' },
+] as const
+const OPCOES_FONTE = [
+  { valor: 'admin', rotulo: 'Admin' },
+  { valor: 'wordpress', rotulo: 'WordPress' },
+] as const
+const OPCOES_PENDENCIA = [
+  { valor: 'sem-capa', rotulo: 'Sem imagem de capa' },
+  { valor: 'sem-meta', rotulo: 'Sem meta description' },
+] as const
+
+type ColunaOrdem = 'titulo' | 'tipo' | 'status' | 'data'
+type Direcao = 'asc' | 'desc'
+const COLUNAS_ORDEM: readonly ColunaOrdem[] = ['titulo', 'tipo', 'status', 'data']
+
+/** Lê "titulo-asc" da URL; qualquer coisa fora do esperado cai no padrão (data, mais novo primeiro). */
+function lerOrdem(valor: string): { coluna: ColunaOrdem; direcao: Direcao } {
+  const [coluna, direcao] = valor.split('-')
+  if (COLUNAS_ORDEM.includes(coluna as ColunaOrdem) && (direcao === 'asc' || direcao === 'desc')) {
+    return { coluna: coluna as ColunaOrdem, direcao }
+  }
+  return { coluna: 'data', direcao: 'desc' }
+}
+
+/** Minúsculas e sem acento, para a busca achar "huracan" em "Huracán". */
+const semAcento = (s: string): string =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/** Capa vazia ou a capa padrão (a lista já tratava a padrão como "sem imagem"). */
+const semCapa = (p: BlogPostItem): boolean =>
+  !p.featured_image?.trim() || p.featured_image.includes('default-cover')
+
+const semMeta = (p: BlogPostItem): boolean => !p.seo?.meta_description?.trim()
+
+/** Data em milissegundos; data inválida vai para o fim em vez de embaralhar a ordem. */
+const tempoDe = (data: string): number => {
+  const t = new Date(data).getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+
+const rotuloDe = (opcoes: readonly { valor: string; rotulo: string }[], valor: string): string =>
+  opcoes.find(o => o.valor === valor)?.rotulo ?? valor
+
+// =============================================
 // MAIN COMPONENT
 // =============================================
 
@@ -110,10 +174,11 @@ export function BlogAdmin() {
   // State
   const [posts, setPosts] = useState<BlogPostItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'educativo' | 'car_review'>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all')
-  const [filterSource, setFilterSource] = useState<'all' | 'admin' | 'wordpress'>('all')
+  // Antes a falha ia só para o console e a tela dizia "Nenhum post encontrado".
+  const [erroCarga, setErroCarga] = useState(false)
+  const { valores: filtros, definir, limpar } = useFiltrosUrl(CHAVES_FILTRO)
+  const { valores: ordemUrl, definir: definirOrdem } = useFiltrosUrl(CHAVES_ORDEM)
+  const ordem = lerOrdem(ordemUrl.ordem)
 
   // Modal state
   const [showModal, setShowModal] = useState(false)
@@ -131,30 +196,116 @@ export function BlogAdmin() {
 
   const fetchPosts = useCallback(async () => {
     setIsLoading(true)
+    setErroCarga(false)
     try {
-      const params = new URLSearchParams()
-      if (filterType !== 'all') params.set('type', filterType)
-      if (filterStatus !== 'all') params.set('status', filterStatus)
-      if (filterSource !== 'all') params.set('source', filterSource)
-      if (searchQuery) params.set('search', searchQuery)
-
-      const res = await fetch(`/api/admin/blog?${params}`)
+      // Uma carga só, sem parâmetros: os filtros rodam no navegador.
+      const res = await fetch('/api/admin/blog')
       if (res.status === 401) {
         router.push('/admin/login')
         return
       }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setPosts(data.posts || [])
     } catch (error) {
       console.error('Error fetching posts:', error)
+      setErroCarga(true)
     } finally {
       setIsLoading(false)
     }
-  }, [filterType, filterStatus, filterSource, searchQuery, router])
+  }, [router])
 
   useEffect(() => {
     fetchPosts()
   }, [fetchPosts])
+
+  // =============================================
+  // FILTROS, ORDEM E ETIQUETAS
+  // =============================================
+
+  // Opções de Categoria e Marca saem dos posts carregados (só o que existe).
+  const { opcoesCategoria, opcoesMarca } = useMemo(() => {
+    const unicos = (lista: (string | undefined)[]) =>
+      [...new Set(lista.map(v => v?.trim()).filter((v): v is string => !!v))]
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .map(v => ({ valor: v, rotulo: v }))
+    return {
+      opcoesCategoria: unicos(posts.map(p => p.educativo?.category)),
+      opcoesMarca: unicos(posts.map(p => p.car_review?.brand)),
+    }
+  }, [posts])
+
+  const postsVisiveis = useMemo(() => {
+    const termos = termosDaBusca(filtros.busca)
+    const filtrados = posts.filter(p => {
+      if (filtros.tipo && p.post_type !== filtros.tipo) return false
+      if (filtros.status && p.is_published !== (filtros.status === 'publicado')) return false
+      if (filtros.fonte && p.source !== filtros.fonte) return false
+      if (filtros.categoria && p.educativo?.category?.trim() !== filtros.categoria) return false
+      if (filtros.marca && p.car_review?.brand?.trim() !== filtros.marca) return false
+      if (filtros.pendencia === 'sem-capa' && !semCapa(p)) return false
+      if (filtros.pendencia === 'sem-meta' && !semMeta(p)) return false
+      if (termos.length > 0) {
+        const alvo = semAcento(`${p.title ?? ''} ${p.slug ?? ''}`)
+        if (!termos.every(t => alvo.includes(t))) return false
+      }
+      return true
+    })
+
+    const sinal = ordem.direcao === 'asc' ? 1 : -1
+    return filtrados.sort((a, b) => {
+      let d = 0
+      if (ordem.coluna === 'titulo') d = (a.title ?? '').localeCompare(b.title ?? '', 'pt-BR', { sensitivity: 'base' })
+      else if (ordem.coluna === 'tipo') d = a.post_type.localeCompare(b.post_type)
+      else if (ordem.coluna === 'status') d = Number(a.is_published) - Number(b.is_published)
+      else d = tempoDe(a.published_date) - tempoDe(b.published_date)
+      // Empate: mais novo primeiro, para a ordem não pular entre renderizações.
+      return d !== 0 ? d * sinal : tempoDe(b.published_date) - tempoDe(a.published_date)
+    })
+  }, [posts, filtros, ordem.coluna, ordem.direcao])
+
+  const filtrosLigados: FiltroLigado[] = [
+    filtros.busca && { rotulo: `Busca: ${filtros.busca}`, aoRemover: () => definir({ busca: '' }) },
+    filtros.tipo && { rotulo: `Tipo: ${rotuloDe(OPCOES_TIPO, filtros.tipo)}`, aoRemover: () => definir({ tipo: '' }) },
+    filtros.status && { rotulo: `Status: ${rotuloDe(OPCOES_STATUS, filtros.status)}`, aoRemover: () => definir({ status: '' }) },
+    filtros.fonte && { rotulo: `Fonte: ${rotuloDe(OPCOES_FONTE, filtros.fonte)}`, aoRemover: () => definir({ fonte: '' }) },
+    filtros.categoria && { rotulo: `Categoria: ${filtros.categoria}`, aoRemover: () => definir({ categoria: '' }) },
+    filtros.marca && { rotulo: `Marca: ${filtros.marca}`, aoRemover: () => definir({ marca: '' }) },
+    filtros.pendencia && { rotulo: `Pendência: ${rotuloDe(OPCOES_PENDENCIA, filtros.pendencia)}`, aoRemover: () => definir({ pendencia: '' }) },
+  ].filter((f): f is FiltroLigado => !!f)
+
+  const aoBuscar = useCallback((v: string) => definir({ busca: v.trim() }), [definir])
+
+  // Clique na coluna da vez inverte; coluna nova começa em A-Z (data, no mais novo).
+  const ordenarPor = (coluna: ColunaOrdem) => {
+    const direcao: Direcao =
+      ordem.coluna === coluna ? (ordem.direcao === 'asc' ? 'desc' : 'asc') : coluna === 'data' ? 'desc' : 'asc'
+    // O padrão não precisa ir para a URL.
+    definirOrdem({ ordem: coluna === 'data' && direcao === 'desc' ? '' : `${coluna}-${direcao}` })
+  }
+
+  const cabecalhoOrdenavel = (coluna: ColunaOrdem, rotulo: string, classe = '') => {
+    const ativa = ordem.coluna === coluna
+    const Seta = ativa && ordem.direcao === 'asc' ? ChevronUp : ChevronDown
+    return (
+      <th
+        aria-sort={ativa ? (ordem.direcao === 'asc' ? 'ascending' : 'descending') : 'none'}
+        className={`text-left px-2 py-1 text-xs font-medium uppercase tracking-wider ${classe}`}
+      >
+        <button
+          type="button"
+          onClick={() => ordenarPor(coluna)}
+          title={`Ordenar por ${rotulo.toLowerCase()}`}
+          className={`flex min-h-10 items-center gap-1 rounded-md px-2 uppercase tracking-wider hover:text-foreground ${
+            ativa ? 'text-foreground' : 'text-foreground-secondary'
+          }`}
+        >
+          {rotulo}
+          <Seta className={`h-4 w-4 ${ativa ? '' : 'opacity-40'}`} />
+        </button>
+      </th>
+    )
+  }
 
   // =============================================
   // IMAGE UPLOAD
@@ -319,127 +470,96 @@ export function BlogAdmin() {
   // =============================================
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Gerenciar Blog</h1>
-          <p className="text-foreground-secondary mt-1">
-            {posts.length} post(s) encontrado(s)
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={fetchPosts}
-            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Atualizar
-          </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Post
-          </button>
-        </div>
-      </div>
+    <div className="w-full">
+      <CabecalhoPagina
+        titulo="Blog"
+        descricao="Posts educativos e reviews de carros publicados no site."
+        acoes={
+          <>
+            <BotaoSecundario onClick={fetchPosts} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </BotaoSecundario>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              Novo post
+            </button>
+          </>
+        }
+      />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary" />
-          <input
-            type="text"
-            placeholder="Buscar por título..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-background-card border border-border rounded-lg text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+      {/* Filtros */}
+      <BarraDeFiltros className="mb-4">
+        <CampoBusca valor={filtros.busca} aoMudar={aoBuscar} placeholder="Buscar por título ou slug" />
+        <SeletorFiltro rotulo="Tipo" valor={filtros.tipo} aoMudar={v => definir({ tipo: v })} opcoes={OPCOES_TIPO} />
+        <SeletorFiltro rotulo="Status" valor={filtros.status} aoMudar={v => definir({ status: v })} opcoes={OPCOES_STATUS} />
+        <SeletorFiltro rotulo="Fonte" valor={filtros.fonte} aoMudar={v => definir({ fonte: v })} opcoes={OPCOES_FONTE} todos="Todas" />
+        <SeletorFiltro rotulo="Categoria" valor={filtros.categoria} aoMudar={v => definir({ categoria: v })} opcoes={opcoesCategoria} todos="Todas" />
+        <SeletorFiltro rotulo="Marca" valor={filtros.marca} aoMudar={v => definir({ marca: v })} opcoes={opcoesMarca} todos="Todas" />
+        <SeletorFiltro rotulo="Pendências" valor={filtros.pendencia} aoMudar={v => definir({ pendencia: v })} opcoes={OPCOES_PENDENCIA} todos="Todas" />
+      </BarraDeFiltros>
 
-        {/* Type filter */}
-        <div className="relative">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as typeof filterType)}
-            className="appearance-none pl-3 pr-8 py-2 bg-background-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">Todos os tipos</option>
-            <option value="educativo">Educativo</option>
-            <option value="car_review">Car Review</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
-        </div>
-
-        {/* Status filter */}
-        <div className="relative">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="appearance-none pl-3 pr-8 py-2 bg-background-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">Todos os status</option>
-            <option value="published">Publicado</option>
-            <option value="draft">Rascunho</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
-        </div>
-
-        {/* Source filter */}
-        <div className="relative">
-          <select
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value as typeof filterSource)}
-            className="appearance-none pl-3 pr-8 py-2 bg-background-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">Todas as fontes</option>
-            <option value="admin">Admin</option>
-            <option value="wordpress">WordPress</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
-        </div>
-      </div>
+      {!isLoading && !erroCarga && posts.length > 0 && (
+        <ResumoDosFiltros
+          className="mb-4"
+          total={posts.length}
+          mostrando={postsVisiveis.length}
+          nome={['post', 'posts']}
+          filtros={filtrosLigados}
+          aoLimpar={limpar}
+        />
+      )}
 
       {/* Posts List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : erroCarga ? (
+        <EstadoErro texto="Não foi possível carregar os posts do blog." aoTentar={fetchPosts} />
       ) : posts.length === 0 ? (
-        <div className="text-center py-20 bg-background-card border border-border rounded-2xl">
-          <FileText className="w-12 h-12 text-foreground-secondary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            Nenhum post encontrado
-          </h2>
-          <p className="text-foreground-secondary mb-6">
-            Crie seu primeiro post ou ajuste os filtros
-          </p>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Criar Post
-          </button>
-        </div>
+        <EstadoVazio
+          Icon={FileText}
+          titulo="Ainda não há nenhum post"
+          texto="Crie o primeiro post do blog. Ele pode ficar como rascunho até você publicar."
+          acao={
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              Criar post
+            </button>
+          }
+        />
+      ) : postsVisiveis.length === 0 ? (
+        <EstadoVazio
+          Icon={FileText}
+          titulo="Nenhum post com esses filtros"
+          texto="Tire algum filtro ou mude a busca para ver mais posts."
+          acao={<BotaoSecundario onClick={limpar}>Limpar filtros</BotaoSecundario>}
+        />
       ) : (
         <div className="bg-background-card border border-border rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-background-soft">
-                <th className="text-left px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider">Título</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider hidden md:table-cell">Tipo</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider hidden lg:table-cell">Data</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider">Status</th>
+                {cabecalhoOrdenavel('titulo', 'Título')}
+                {cabecalhoOrdenavel('tipo', 'Tipo', 'hidden md:table-cell')}
+                {cabecalhoOrdenavel('data', 'Data', 'hidden lg:table-cell')}
+                {cabecalhoOrdenavel('status', 'Status')}
                 <th className="text-left px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider hidden lg:table-cell">Fonte</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-foreground-secondary uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {posts.map((post) => (
+              {postsVisiveis.map((post) => (
                 <tr key={`${post.source}-${post.id}`} className="hover:bg-background-soft/50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -460,8 +580,8 @@ export function BlogAdmin() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate max-w-[300px]">{post.title}</p>
-                        <p className="text-xs text-foreground-secondary truncate max-w-[300px]">/{post.slug}</p>
+                        <p className="font-medium text-foreground truncate max-w-[min(48rem,45vw)]">{post.title}</p>
+                        <p className="text-xs text-foreground-secondary truncate max-w-[min(48rem,45vw)]">/{post.slug}</p>
                       </div>
                     </div>
                   </td>
@@ -535,6 +655,7 @@ export function BlogAdmin() {
           </table>
         </div>
       )}
+      </div>
 
       {/* =============================================
           CREATE/EDIT MODAL

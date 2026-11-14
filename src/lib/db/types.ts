@@ -444,6 +444,8 @@ export interface MarketingCampaignsTable {
   description: string | null
   status: Generated<string>
   created_by: string | null
+  /** Id da campanha na Meta, quando veio da sincronia (migration 20261115). */
+  meta_campaign_id: string | null
   created_at: Timestamp
   updated_at: Timestamp
 }
@@ -486,6 +488,12 @@ export interface CampaignVehiclesTable {
   end_reason: string | null
   /** Coluna do board: publicada | encerrada_ganho | encerrada_desempenho. */
   status: Generated<string>
+  /** Anúncios da Meta deste carro (migration 20261115). Vazio = card digitado à mão. */
+  meta_ad_ids: Generated<string[]>
+  /** Algum anúncio do card está ativo na Meta? null = card sem ligação. */
+  meta_no_ar: boolean | null
+  /** Gasto dos últimos 30 dias. numeric: o driver devolve como texto. */
+  meta_gasto_30d: ColumnType<string | null, number | string | null, number | string | null>
   created_at: Timestamp
 }
 
@@ -578,6 +586,22 @@ export interface VeiculosPublicadosTable {
   ultimo_visto: Timestamp
 }
 
+/**
+ * Carros que já tiveram criativo, uma linha por carro. Alimenta "Carros sem
+ * criativo" na tela inicial do admin. Ver migration 20261114_criativos_gerados
+ * e src/lib/criativos-gerados.ts.
+ */
+export interface CriativosGeradosTable {
+  autoconf_id: ColumnType<string, number | string, number | string>
+  nome: string | null
+  origem: Generated<string>
+  pecas: Generated<number>
+  criado_por: string | null
+  criado_por_nome: string | null
+  primeiro_em: Generated<Timestamp>
+  ultimo_em: Generated<Timestamp>
+}
+
 /** Última assinatura submetida ao IndexNow por URL — ver src/lib/indexnow.ts. */
 export interface IndexnowSubmissionsTable {
   url: string
@@ -664,6 +688,7 @@ export interface Database {
   admin_users: AdminUsersTable
   agencias: AgenciasTable
   veiculos_publicados: VeiculosPublicadosTable
+  criativos_gerados: CriativosGeradosTable
 }
 
 /**
@@ -689,7 +714,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
-  'agencias', 'veiculos_publicados',
+  'agencias', 'veiculos_publicados', 'criativos_gerados',
 ] as const satisfies readonly (keyof Database)[]
 
 /**

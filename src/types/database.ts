@@ -283,6 +283,8 @@ export interface Database {
           description: string | null
           status: CampaignStatus
           created_by: string | null
+          /** Id da campanha na Meta, quando veio da sincronia. */
+          meta_campaign_id?: string | null
           created_at: string
           updated_at: string
         }
@@ -303,6 +305,11 @@ export interface Database {
           // descrevem o ciclo de um anúncio (vendeu / não performou), e antes
           // mover um card arrastava todos os veículos da campanha junto.
           status: CampaignStatus
+          /** Anúncios da Meta deste carro. Vazio ou ausente = card digitado à mão. */
+          meta_ad_ids?: string[]
+          meta_no_ar?: boolean | null
+          /** numeric: chega como texto. */
+          meta_gasto_30d?: string | number | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['campaign_vehicles']['Row'], 'id' | 'created_at'>
