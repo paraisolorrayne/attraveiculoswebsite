@@ -194,3 +194,46 @@ html {
    layout do admin marca a página com .admin-raiz; vale também para os modais,
    que são montados fora dela. */
 html:has(.admin-raiz) { font-size: 112.5%; }
+
+/* Páginas internas em tela larga (13/11/2026). Elas ficavam numa caixa de
+   1280 px com letra de 14 px no meio de um monitor grande. Agora, acima de
+   1600 px, a página cresce com a tela: o contêiner vai a 80% da largura (o
+   mesmo da home e da ficha) e espaçamento e larguras internas crescem na mesma
+   proporção, até 1,5x em 2400 px. Funciona porque o Tailwind escreve tamanhos
+   como variáveis: clamp(X rem, X vw, 1,5X rem) vale X rem até 1600 px (onde
+   1vw = 16 px) e daí acompanha a tela. Abaixo de 1600 px nada muda.
+   A letra cresce um pouco mais rápido que a tela (1,69x em 2560 px) e as
+   colunas de texto (max-w-3xl e max-w-4xl) alargam mais que o resto, para o
+   texto não ficar numa tira à esquerda com meia tela vazia (14/11/2026).
+   Quem recebe a classe: paginaAmpla(), em src/lib/navegacao.ts. O cabeçalho e
+   o rodapé só alargam (sem aumentar a letra), para alinhar com o conteúdo. */
+html:has(.pagina-ampla) { --breakpoint-xl: max(80vw, 80rem); }
+.pagina-ampla {
+  font-size: clamp(1rem, 1.15vw - 0.15rem, 1.7rem);
+  --spacing: clamp(0.25rem, 0.25vw, 0.375rem);
+  --text-xs: clamp(0.75rem, 0.8625vw - 0.1125rem, 1.275rem);
+  --text-sm: clamp(0.875rem, 1.0062vw - 0.1313rem, 1.4875rem);
+  --text-base: clamp(1rem, 1.15vw - 0.15rem, 1.7rem);
+  --text-lg: clamp(1.125rem, 1.2937vw - 0.1687rem, 1.9125rem);
+  --text-xl: clamp(1.25rem, 1.4375vw - 0.1875rem, 2.125rem);
+  --text-2xl: clamp(1.5rem, 1.725vw - 0.225rem, 2.55rem);
+  --text-3xl: clamp(1.875rem, 2.1562vw - 0.2812rem, 3.1875rem);
+  --text-4xl: clamp(2.25rem, 2.5875vw - 0.3375rem, 3.825rem);
+  --text-5xl: clamp(3rem, 3.45vw - 0.45rem, 5.1rem);
+  --text-6xl: clamp(3.75rem, 4.3125vw - 0.5625rem, 6.375rem);
+  --text-7xl: clamp(4.5rem, 5.175vw - 0.675rem, 7.65rem);
+  --container-3xs: clamp(16rem, 16vw, 24rem);
+  --container-2xs: clamp(18rem, 18vw, 27rem);
+  --container-xs: clamp(20rem, 20vw, 30rem);
+  --container-sm: clamp(24rem, 24vw, 36rem);
+  --container-md: clamp(28rem, 28vw, 42rem);
+  --container-lg: clamp(32rem, 32vw, 48rem);
+  --container-xl: clamp(36rem, 36vw, 54rem);
+  --container-2xl: clamp(42rem, 42vw, 63rem);
+  --container-5xl: clamp(64rem, 64vw, 96rem);
+  --container-6xl: clamp(72rem, 72vw, 108rem);
+  --container-7xl: clamp(80rem, 80vw, 120rem);
+  /* Colunas de texto: de 63% do contêiner (1600 px) a 80% (2560 px). */
+  --container-3xl: clamp(48rem, 80vw - 32rem, 100rem);
+  --container-4xl: clamp(56rem, 80vw - 24rem, 108rem);
+}
