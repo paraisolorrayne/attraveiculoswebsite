@@ -74,7 +74,7 @@ export function AnuncioDetalhe({ card, periodoInicial }: { card: CardDoAnuncio; 
             cardId={card.id}
             carro={card.carro}
             anuncios={card.anuncios}
-            pausado={card.encerrado || card.noAr === false}
+            pausado={card.noAr === false}
             // O estado do card vem do servidor: recarrega os dados da página.
             aoMudar={() => router.refresh()}
           />

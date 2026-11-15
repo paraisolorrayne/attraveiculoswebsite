@@ -36,6 +36,7 @@ export function PausarAnuncio({
   const [motivo, setMotivo] = useState<EndReason | ''>('')
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const acao = pausado ? 'reativar' : 'pausar'
   const quantos = anuncios > 1 ? `os ${anuncios} anúncios` : 'o anúncio'
 
@@ -60,9 +61,11 @@ export function PausarAnuncio({
         setErro(d?.error || 'Não foi possível concluir agora.')
         return
       }
-      setAberto(false)
       setMotivo('')
       aoMudar()
+      // Deu certo, mas com ressalva (campanha pausada na Meta): mostra antes de fechar.
+      if (d?.aviso) setAviso(d.aviso)
+      else setAberto(false)
     } catch {
       setErro('Não foi possível falar com o servidor.')
     } finally {
@@ -75,7 +78,7 @@ export function PausarAnuncio({
     <>
       <button
         type="button"
-        onClick={() => { setErro(null); setAberto(true) }}
+        onClick={() => { setErro(null); setAviso(null); setAberto(true) }}
         className={cn(
           'flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-foreground transition-colors hover:border-foreground-secondary',
           compacto ? 'w-full bg-background-card px-3' : 'bg-background-card px-4',
@@ -121,16 +124,17 @@ export function PausarAnuncio({
               </label>
             )}
 
+            {aviso && <p role="status" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground">{aviso}</p>}
             {erro && <p role="alert" className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-foreground">{erro}</p>}
 
             <div className="mt-6 flex flex-wrap justify-end gap-2">
               <button type="button" disabled={enviando} onClick={() => setAberto(false)} className="min-h-11 rounded-lg border border-border px-4 font-medium text-foreground hover:border-foreground-secondary disabled:opacity-50">
-                Cancelar
+                {aviso ? 'Fechar' : 'Cancelar'}
               </button>
-              <button type="button" disabled={enviando} onClick={confirmar} className="flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 font-medium text-white hover:bg-primary/90 disabled:opacity-60">
+              {!aviso && <button type="button" disabled={enviando} onClick={confirmar} className="flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 font-medium text-white hover:bg-primary/90 disabled:opacity-60">
                 {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
                 {pausado ? 'Reativar na Meta' : 'Pausar na Meta'}
-              </button>
+              </button>}
             </div>
           </div>
         </div>

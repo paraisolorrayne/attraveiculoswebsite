@@ -143,7 +143,9 @@ function Cards({ itens, aoAbrirCampanha, aoMudar }: { itens: AnuncioDaLista[]; a
                 cardId={veiculo.id}
                 carro={veiculo.vehicle_name}
                 anuncios={veiculo.meta_ad_ids?.length ?? 1}
-                pausado={situacao !== 'no-ar'}
+                // O botão segue a Meta, não a coluna do painel: card encerrado à
+                // mão com o anúncio ainda no ar precisa oferecer Pausar.
+                pausado={veiculo.meta_no_ar === false}
                 aoMudar={aoMudar}
                 compacto
               />
