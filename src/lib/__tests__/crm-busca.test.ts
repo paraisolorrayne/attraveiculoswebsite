@@ -118,3 +118,13 @@ describe('cardCasaBusca', () => {
 		expect(cardCasaBusca({ nome: 'Ricardo', veiculo: null, veiculo_troca: null }, termosDaBusca('99887766'))).toBe(false)
 	})
 })
+
+describe('standup do vendedor', async () => {
+	const { andamentoDoVendedor } = await import('@/app/admin/crm/crm-card')
+	it('não mostra a observação do alerta como fala do vendedor', () => {
+		expect(andamentoDoVendedor({ andamento: ' Cliente quer a Ferrari ', dados: { observacoes_alerta: 'Cliente quer a Ferrari' } })).toBeNull()
+		expect(andamentoDoVendedor({ andamento: 'Vendedor assumiu o lead.', dados: { observacoes_alerta: 'Cliente quer a Ferrari' } })).toBe('Vendedor assumiu o lead.')
+		expect(andamentoDoVendedor({ andamento: 'Já estou em contato', dados: null })).toBe('Já estou em contato')
+		expect(andamentoDoVendedor({ andamento: null, dados: null })).toBeNull()
+	})
+})

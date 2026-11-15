@@ -354,6 +354,43 @@ export function SessoesPainel() {
 				}
 			/>
 
+			{/* Atalho do filtro de contato (15/11/2026). O filtro já existia, mas
+			    escondido no cabeçalho da coluna: ver quem clicou no WhatsApp pedia
+			    abrir os filtros da tabela e achar a coluna certa. */}
+			<div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por contato">
+				{(
+					[
+						['', 'Todas as sessões', null],
+						['whatsapp', 'Clicaram no WhatsApp', dados?.whatsapp_filtrado ?? null],
+						['formulario', 'Enviaram formulário', dados?.formularios_filtrado ?? null],
+						['qualquer', 'Com qualquer contato', null],
+						['nenhuma', 'Sem contato', null],
+					] as const
+				).map(([valor, rotulo, quantos]) => {
+					const ativo = (params.get('conversao') ?? '') === valor
+					return (
+						<button
+							key={valor || 'todas'}
+							type="button"
+							aria-pressed={ativo}
+							onClick={() => definir({ conversao: valor || undefined })}
+							className={
+								'flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors ' +
+								(ativo
+									? 'border-primary bg-primary text-white'
+									: 'border-border bg-background-card text-foreground hover:border-foreground-secondary')
+							}
+						>
+							{rotulo}
+							{/* O número só vale quando não há filtro de contato ligado: com ele, a contagem já é a da lista. */}
+							{quantos !== null && !params.get('conversao') && (
+								<span className={ativo ? 'tabular-nums' : 'tabular-nums text-foreground-secondary'}>{fmtNum(quantos)}</span>
+							)}
+						</button>
+					)
+				})}
+			</div>
+
 			{ativos.length > 0 && (
 				<div className="flex flex-wrap items-center gap-1.5 text-xs">
 					{ativos.map(([k, v]) => (

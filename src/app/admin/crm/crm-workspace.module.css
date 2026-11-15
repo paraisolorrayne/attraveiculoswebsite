@@ -71,7 +71,18 @@
    acompanha o conteúdo até o teto — sem espaço morto e sem esconder o quadro
    atrás de uma faixa. */
 .janelaFundo { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: #0007; backdrop-filter: blur(3px); }
-.janela { display: flex; flex-direction: column; width: min(920px, 100%); max-height: min(880px, 88dvh); background: var(--background-card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px #00000059; overflow: hidden; }
+/* 15/11/2026: maior e com letra maior. A janela tinha 920px fixos, pequena em
+   monitor grande, e a letra era a do quadro. As variáveis de texto do Tailwind
+   são redefinidas só aqui dentro: tudo o que usa text-xs, text-sm etc. na
+   janela cresce junto, sem tocar em cada classe. */
+.janela {
+	--text-xs: 0.9375rem; --text-xs--line-height: 1.45;
+	--text-sm: 1.0625rem; --text-sm--line-height: 1.5;
+	--text-base: 1.125rem; --text-base--line-height: 1.55;
+	--text-lg: 1.375rem; --text-xl: 1.5rem;
+	font-size: 1.0625rem;
+}
+.janela { display: flex; flex-direction: column; width: min(82rem, 96vw); max-height: 94dvh; background: var(--background-card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px #00000059; overflow: hidden; }
 
 /* No celular vira tela cheia: 920px centralizados com respiro em volta não
    existem em 390px de largura, e a moldura só roubaria área útil. */

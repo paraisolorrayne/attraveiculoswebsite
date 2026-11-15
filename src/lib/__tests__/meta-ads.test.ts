@@ -156,3 +156,24 @@ describe('anúncio renomeado', () => {
 		expect(p.atualizar).toEqual([{ id: 'v1', adIds: ['1', '2'], noAr: true, gasto: 20 }])
 	})
 })
+
+describe('troca de criativo', async () => {
+	const { situacaoDoAnuncio } = await import('@/app/admin/marketing/components/anuncios-lista')
+	const v = (p: Record<string, unknown>) => ({ status: 'publicada', meta_ad_ids: ['1'], meta_no_ar: true, end_reason: null, ...p }) as never
+	it('é pausa, não fim: o card fica aberto e marcado', () => {
+		expect(situacaoDoAnuncio(v({ meta_no_ar: false, end_reason: 'troca_criativo' }))).toBe('troca')
+		expect(situacaoDoAnuncio(v({ meta_no_ar: false }))).toBe('pausado')
+		expect(situacaoDoAnuncio(v({ status: 'encerrada_ganho', meta_no_ar: false, end_reason: 'ganho' }))).toBe('encerrado')
+		// O anúncio novo entrou: volta para no ar mesmo antes de a marca ser limpa.
+		expect(situacaoDoAnuncio(v({ meta_no_ar: true, end_reason: 'troca_criativo' }))).toBe('no-ar')
+	})
+	it('o anúncio novo do mesmo carro entra no card que estava em troca', () => {
+		const p = planejar(
+			[{ id: '9', nome: '[VIDEO] Audi Q5 Prestige | Pedro', noAr: true, criadoEm: null, campanhaId: '900', campanhaNome: 'Loja', gasto30d: 0 }],
+			[{ id: 'c1', meta_campaign_id: '900' }],
+			[{ id: 'v1', campaign_id: 'c1', vehicle_name: 'Audi Q5 Prestige', status: 'publicada', meta_ad_ids: ['1'] }],
+		)
+		expect(p.criar).toEqual([])
+		expect(p.atualizar).toEqual([{ id: 'v1', adIds: ['1', '9'], noAr: true, gasto: 0 }])
+	})
+})

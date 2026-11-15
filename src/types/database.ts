@@ -434,13 +434,15 @@ export type MarketingCampaign = Database['public']['Tables']['marketing_campaign
 export type MarketingCampaignInsert = Database['public']['Tables']['marketing_campaigns']['Insert']
 export type MarketingCampaignUpdate = Database['public']['Tables']['marketing_campaigns']['Update']
 // Motivo de retirada do ar de um item de campanha (por item — decidido com a Attra).
-export type EndReason = 'ganho' | 'vendido_externo' | 'performance' | 'despriorizado'
+// 'troca_criativo' (15/11/2026) é uma pausa, não um fim: o card continua aberto.
+export type EndReason = 'ganho' | 'vendido_externo' | 'performance' | 'despriorizado' | 'troca_criativo'
 
 export const END_REASON_LABELS: Record<EndReason, string> = {
   ganho: 'Encerrado por ganho (vendido pelo patrocinado)',
   vendido_externo: 'Vendido, mas não pelo patrocinado',
   performance: 'Performance',
   despriorizado: 'Despriorizado',
+  troca_criativo: 'Troca de criativo',
 }
 
 export type CampaignVehicle = Database['public']['Tables']['campaign_vehicles']['Row']

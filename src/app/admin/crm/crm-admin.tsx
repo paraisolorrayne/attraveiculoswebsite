@@ -20,7 +20,7 @@ import { ORIGEM_CRM_AUSENTE, origemCrmInfo } from '@/lib/atribuicao-receita'
 import { useFiltrosUrl } from '@/components/admin/filtros'
 import {
 	type CrmCard, CardKanban, BadgeSituacao,
-	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
+	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard, andamentoDoVendedor,
 } from './crm-card'
 
 const colunaInfo = (c: { etapa: string; fonte_evento: string | null }) =>
@@ -687,6 +687,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 	const estilo = colunaInfo(card)
 	// Campos legados do v1, mantidos se ainda vierem no JSONB
 	const observacoes = dadoStr(card.dados, 'observacoes_alerta')
+	const andamento = andamentoDoVendedor(card)
 	const resposta = ultimaResposta(card.dados)
 	const fonte = card.fonte_evento ? (FONTES_EVENTO[card.fonte_evento] ?? card.fonte_evento) : null
 
@@ -760,7 +761,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 				{/* Conteúdo */}
 				<div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-5">
 					{editor}
-					<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+					<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 xl:grid-cols-4">
 						{infos.filter(i => i.valor).map(i => (
 							<div key={i.rotulo}>
 								<dt className="text-xs uppercase tracking-wide text-foreground-secondary">
@@ -772,7 +773,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					</dl>
 
 					{/* Standup do vendedor */}
-					{(card.andamento || card.impedimento || card.proxima_acao) && (
+					{(andamento || card.impedimento || card.proxima_acao) && (
 						<div className="space-y-2">
 							<h3 className="flex items-center gap-1 text-xs uppercase tracking-wide text-foreground-secondary">
 								<MessageSquareQuote className="w-3.5 h-3.5" />
@@ -782,9 +783,9 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 									(se houver) e a próxima ação agendada.
 								</InfoDica>
 							</h3>
-							{card.andamento && (
+							{andamento && (
 								<blockquote className="text-sm text-foreground border-l-2 border-blue-400/60 pl-3 whitespace-pre-wrap">
-									{card.andamento}
+									{andamento}
 								</blockquote>
 							)}
 							{card.impedimento && (
@@ -830,7 +831,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 								</>
 							)}
 						</h3>
-						<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+						<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 xl:grid-cols-4">
 							{linhaDoTempo.filter(d => d.valor).map(d => (
 								<div key={d.rotulo}>
 									<dt className="text-xs uppercase tracking-wide text-foreground-secondary">

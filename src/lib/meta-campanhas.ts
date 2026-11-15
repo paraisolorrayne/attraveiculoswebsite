@@ -188,6 +188,11 @@ async function sincronizar(): Promise<ResultadoDaSincronia> {
 		}
 	})
 
+	// O anúncio novo do carro que estava em troca de criativo entrou no ar: a
+	// marca de troca sai sozinha.
+	await db.updateTable('campaign_vehicles').set({ end_reason: null })
+		.where('end_reason', '=', 'troca_criativo').where('meta_no_ar', '=', true).execute()
+
 	return { criados: plano.criar.length, atualizados: plano.atualizar.length, campanhasNovas: plano.campanhas.length }
 }
 

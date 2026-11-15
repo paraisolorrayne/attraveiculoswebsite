@@ -28,7 +28,8 @@ const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
   { value: 'encerrada_desempenho', label: 'Encerrada por Desempenho' },
 ]
 
-const END_REASON_OPTIONS = (Object.keys(END_REASON_LABELS) as EndReason[]).map((value) => ({
+// "Troca de criativo" não é encerramento: só existe no botão de pausar na Meta.
+const END_REASON_OPTIONS = (Object.keys(END_REASON_LABELS) as EndReason[]).filter(v => v !== 'troca_criativo').map((value) => ({
   value,
   label: END_REASON_LABELS[value],
 }))

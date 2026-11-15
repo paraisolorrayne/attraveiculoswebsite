@@ -38,15 +38,18 @@ function conta(): string {
 	return cru.startsWith('act_') ? cru : `act_${cru}`
 }
 
-async function pedir(caminho: string, params: Record<string, string>): Promise<Record<string, unknown>> {
+async function pedir(caminho: string, params: Record<string, string>, metodo: 'GET' | 'POST' = 'GET'): Promise<Record<string, unknown>> {
 	const token = process.env.META_ADS_TOKEN?.trim()
 	if (!token) throw new ErroDaMeta('META_ADS_TOKEN vazio')
 	const versao = process.env.META_ADS_API_VERSION?.trim() || 'v21.0'
 	const base = process.env.META_ADS_BASE_URL?.trim() || BASE_PADRAO
-	const url = `${base}/${versao}${caminho}?${new URLSearchParams(params)}`
+	// Escrita vai no corpo; leitura, na query. O token nunca vai em nenhum dos dois.
+	const url = metodo === 'GET' ? `${base}/${versao}${caminho}?${new URLSearchParams(params)}` : `${base}/${versao}${caminho}`
 	let r: Response
 	try {
 		r = await fetch(url, {
+			method: metodo,
+			body: metodo === 'POST' ? new URLSearchParams(params) : undefined,
 			headers: { Authorization: `Bearer ${token}` },
 			cache: 'no-store',
 			signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
@@ -262,6 +265,8 @@ export interface MetricasDoCard {
 	anuncios: MetricasDoAnuncio[]
 	porDia: { dia: string; gasto: number; conversas: number; cliquesNoLink: number }[]
 	porPosicionamento: { nome: string; gasto: number; impressoes: number; cliquesNoLink: number; conversas: number }[]
+	/** Por faixa de idade, com a parte de cada gênero no gasto. */
+	porPublico: { faixa: string; gasto: number; impressoes: number; cliquesNoLink: number; conversas: number; mulheres: number; homens: number }[]
 	lidoEm: string
 }
 
@@ -347,6 +352,7 @@ export function montarMetricas(
 	porDia: LinhaDeInsight[],
 	porPosicao: LinhaDeInsight[],
 	agora = new Date(),
+	porPublico: LinhaDeInsight[] = [],
 ): MetricasDoCard {
 	const anuncios = porAnuncio.map(l => ({
 		id: String(l.ad_id ?? ''),
@@ -369,8 +375,24 @@ export function montarMetricas(
 		const a = posicoes.get(nome) ?? { gasto: 0, impressoes: 0, cliquesNoLink: 0, conversas: 0 }
 		posicoes.set(nome, { gasto: a.gasto + m.gasto, impressoes: a.impressoes + m.impressoes, cliquesNoLink: a.cliquesNoLink + m.cliquesNoLink, conversas: a.conversas + m.conversas })
 	}
+	const publico = new Map<string, MetricasDoCard['porPublico'][number]>()
+	for (const l of porPublico) {
+		const faixa = String(l.age ?? '') || 'Sem idade'
+		const m = metricasDaLinha(l)
+		const a = publico.get(faixa) ?? { faixa, gasto: 0, impressoes: 0, cliquesNoLink: 0, conversas: 0, mulheres: 0, homens: 0 }
+		publico.set(faixa, {
+			faixa,
+			gasto: a.gasto + m.gasto,
+			impressoes: a.impressoes + m.impressoes,
+			cliquesNoLink: a.cliquesNoLink + m.cliquesNoLink,
+			conversas: a.conversas + m.conversas,
+			mulheres: a.mulheres + (l.gender === 'female' ? m.gasto : 0),
+			homens: a.homens + (l.gender === 'male' ? m.gasto : 0),
+		})
+	}
 	return {
 		periodo,
+		porPublico: [...publico.values()].sort((a, b) => a.faixa.localeCompare(b.faixa)),
 		total: anuncios.reduce<Metricas>((s, a) => somar(s, a), ZERO),
 		anuncios,
 		porDia: [...dias.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dia, v]) => ({ dia, ...v })),
@@ -403,14 +425,92 @@ export async function metricasDosAnuncios(ids: string[], periodo: PeriodoDaMeta)
 		filtering: JSON.stringify([{ field: 'ad.id', operator: 'IN', value: limpos }]),
 		limit: '500',
 	}
-	const [porAnuncio, porDia, porPosicao] = await Promise.all([
+	const [porAnuncio, porDia, porPosicao, porPublico] = await Promise.all([
 		paginar(`/${act}/insights`, { ...base, fields: CAMPOS_DE_METRICA }),
 		// As quebras são um extra: se uma falhar, os números principais aparecem.
 		paginar(`/${act}/insights`, { ...base, fields: 'spend,inline_link_clicks,actions', time_increment: '1' }, 5).catch(() => []),
 		paginar(`/${act}/insights`, { ...base, fields: 'spend,impressions,inline_link_clicks,actions', breakdowns: 'publisher_platform,platform_position' }, 5).catch(() => []),
+		paginar(`/${act}/insights`, { ...base, fields: 'spend,impressions,inline_link_clicks,actions', breakdowns: 'age,gender' }, 5).catch(() => []),
 	])
-	const valor = montarMetricas(periodo, porAnuncio as LinhaDeInsight[], porDia as LinhaDeInsight[], porPosicao as LinhaDeInsight[])
+	const valor = montarMetricas(periodo, porAnuncio as LinhaDeInsight[], porDia as LinhaDeInsight[], porPosicao as LinhaDeInsight[], new Date(), porPublico as LinhaDeInsight[])
 	if (metricasGuardadas.size > 200) metricasGuardadas.clear()
 	metricasGuardadas.set(chave, { em: Date.now(), valor })
 	return valor
+}
+
+/* ------------------------------------------------- resultados da conta */
+
+export interface ResultadosDaConta {
+	periodo: PeriodoDaMeta
+	total: Metricas
+	/** Uma linha por anúncio que teve entrega no período. */
+	anuncios: MetricasDoAnuncio[]
+	porDia: MetricasDoCard['porDia']
+	lidoEm: string
+}
+
+let resultadosGuardados = new Map<string, { em: number; valor: ResultadosDaConta }>()
+
+/** Todos os anúncios da conta com entrega no período, mais o dia a dia da conta. Cache de 5 minutos. */
+export async function resultadosDaConta(periodo: PeriodoDaMeta): Promise<ResultadosDaConta> {
+	const guardado = resultadosGuardados.get(periodo)
+	if (guardado && Date.now() - guardado.em < CACHE_METRICAS_MS) return guardado.valor
+	const act = conta()
+	const base = { date_preset: PERIODOS_DA_META[periodo], limit: '500' }
+	const [porAnuncio, porDia] = await Promise.all([
+		paginar(`/${act}/insights`, { ...base, level: 'ad', fields: CAMPOS_DE_METRICA }),
+		paginar(`/${act}/insights`, { ...base, fields: 'spend,inline_link_clicks,actions', time_increment: '1' }, 10).catch(() => []),
+	])
+	const m = montarMetricas(periodo, porAnuncio as LinhaDeInsight[], porDia as LinhaDeInsight[], [])
+	const valor = { periodo, total: m.total, anuncios: m.anuncios, porDia: m.porDia, lidoEm: m.lidoEm }
+	if (resultadosGuardados.size > 10) resultadosGuardados = new Map()
+	resultadosGuardados.set(periodo, { em: Date.now(), valor })
+	return valor
+}
+
+/* ------------------------------------------------------ pausar e reativar */
+
+/**
+ * Pausa ou reativa anúncios na Meta. É a ÚNICA escrita deste arquivo e mexe só
+ * no status do anúncio: campanha, conjunto e orçamento ficam como estão.
+ * Precisa de token com `ads_management`; com `ads_read` a Meta recusa.
+ *
+ * Um anúncio de cada vez, para saber qual falhou. Não levanta: devolve os que
+ * mudaram e os que não mudaram, com o motivo.
+ */
+export async function mudarStatusDosAnuncios(ids: string[], status: 'PAUSED' | 'ACTIVE'): Promise<{ ok: string[]; falhas: { id: string; erro: string }[] }> {
+	const ok: string[] = []
+	const falhas: { id: string; erro: string }[] = []
+	for (const id of [...new Set(ids)]) {
+		if (!/^\d+$/.test(id)) {
+			falhas.push({ id, erro: 'id inválido' })
+			continue
+		}
+		try {
+			const r = await pedir(`/${id}`, { status }, 'POST')
+			if (r.success === true) ok.push(id)
+			else falhas.push({ id, erro: 'a Meta não confirmou a mudança' })
+		} catch (e) {
+			falhas.push({ id, erro: e instanceof Error ? e.message : 'falha' })
+		}
+	}
+	// O que estava guardado em memória deixou de valer.
+	metricasGuardadas.clear()
+	return { ok, falhas }
+}
+
+/**
+ * Quais destes anúncios estão ativos agora. Serve para pausar só o que está
+ * no ar: um card pode guardar o anúncio antigo (já pausado numa troca de
+ * criativo) junto do novo. Devolve null se a Meta não respondeu.
+ */
+export async function anunciosAtivos(ids: string[]): Promise<Set<string> | null> {
+	const limpos = [...new Set(ids.filter(id => /^\d+$/.test(id)))]
+	if (limpos.length === 0) return new Set()
+	try {
+		const r = await pedir('/', { ids: limpos.join(','), fields: 'effective_status' })
+		return new Set(limpos.filter(id => (r[id] as { effective_status?: string } | undefined)?.effective_status === 'ACTIVE'))
+	} catch {
+		return null
+	}
 }
