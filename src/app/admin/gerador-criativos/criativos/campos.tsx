@@ -239,7 +239,7 @@ export function Escolha<T extends string>({
 					}
 				>
 					<span className="block font-medium">{o.nome}</span>
-					{o.descricao && <span className="block text-[0.6875rem] opacity-70">{o.descricao}</span>}
+					{o.descricao && <span className="block text-xs opacity-70">{o.descricao}</span>}
 				</button>
 			))}
 		</div>

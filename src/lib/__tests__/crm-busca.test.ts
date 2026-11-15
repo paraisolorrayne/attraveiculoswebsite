@@ -7,6 +7,8 @@ const card = (p: Partial<CardBuscavel> = {}): CardBuscavel => ({
 	nome: null,
 	veiculo: null,
 	veiculo_troca: null,
+	telefone: null,
+	email: null,
 	...p,
 })
 
@@ -76,5 +78,43 @@ describe('cardCasaBusca', () => {
 
 	it('card sem nome e sem carro não casa com nenhum termo', () => {
 		expect(casa({}, 'ricardo')).toBe(false)
+	})
+
+	// O telefone chega do CRM em vários formatos; quem busca cola o número do
+	// jeito que tem. Só os dígitos contam, dos dois lados.
+	it('acha pelo telefone comparando só os dígitos', () => {
+		expect(casa({ telefone: '+5545991242400' }, '45991242400')).toBe(true)
+		expect(casa({ telefone: '+5545991242400' }, '(45) 99124-2400')).toBe(true)
+		expect(casa({ telefone: '34 99988-7766' }, '34999887766')).toBe(true)
+		expect(casa({ telefone: '34999887766' }, '7766')).toBe(true)
+		expect(casa({ telefone: '34999887766' }, '11988776655')).toBe(false)
+	})
+
+	it('telefone digitado com espaços ou com o 55 na frente acha o card', () => {
+		expect(casa({ telefone: '34999887766' }, '34 99988 7766')).toBe(true)
+		expect(casa({ telefone: '34999887766' }, '+55 34 99988-7766')).toBe(true)
+	})
+
+	// "911" é o Porsche, não um pedaço de telefone: número curto só casa com texto.
+	it('número curto não casa com telefone', () => {
+		expect(casa({ telefone: '34991145566' }, '911')).toBe(false)
+		expect(casa({ telefone: '34991145566', veiculo: 'Porsche 911' }, '911')).toBe(true)
+	})
+
+	it('cruza nome e pedaço do telefone', () => {
+		const c = { nome: 'Ricardo Almeida', telefone: '34999887766' }
+		expect(casa(c, 'ricardo 7766')).toBe(true)
+		expect(casa(c, 'fernanda 7766')).toBe(false)
+	})
+
+	it('acha pelo e-mail, inteiro ou em pedaço, sem ligar para a caixa', () => {
+		expect(casa({ email: 'Ricardo@Example.com' }, 'ricardo@example.com')).toBe(true)
+		expect(casa({ email: 'ricardo@example.com' }, 'example')).toBe(true)
+		expect(casa({ email: 'ricardo@example.com' }, 'fernanda@')).toBe(false)
+	})
+
+	it('card sem telefone e sem e-mail continua buscável pelo resto', () => {
+		expect(cardCasaBusca({ nome: 'Ricardo', veiculo: null, veiculo_troca: null }, termosDaBusca('ricardo'))).toBe(true)
+		expect(cardCasaBusca({ nome: 'Ricardo', veiculo: null, veiculo_troca: null }, termosDaBusca('99887766'))).toBe(false)
 	})
 })

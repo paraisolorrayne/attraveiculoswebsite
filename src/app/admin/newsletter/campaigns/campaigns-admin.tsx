@@ -1,12 +1,19 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Loader2, Pencil, X, Check,
   Mail, Send, Clock, FileText, Eye, Calendar
 } from 'lucide-react'
 import type { NewsletterCampaign, NewsletterCampaignStatus } from '@/types/database'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
+import {
+  BarraDeFiltros, BotaoSecundario, CampoBusca, EstadoErro, EstadoVazio,
+  ResumoDosFiltros, SeletorFiltro, useFiltrosUrl, type FiltroLigado,
+} from '@/components/admin/filtros'
+import { termosDaBusca } from '@/lib/crm-busca'
+import { NewsletterAbas } from '../newsletter-abas'
 
 // =============================================
 // TYPES
@@ -46,6 +53,23 @@ const statusConfig: Record<NewsletterCampaignStatus, { label: string; color: str
   cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: X },
 }
 
+// Filtros da lista, guardados na URL. A ordem padrão (criação, mais recente) é
+// a que a API já devolve, por isso fica fora da URL.
+const CHAVES_FILTRO = ['q', 'status', 'ordem'] as const
+
+const OPCOES_STATUS = (Object.keys(statusConfig) as NewsletterCampaignStatus[]).map(s => ({
+  valor: s,
+  rotulo: statusConfig[s].label,
+}))
+
+const OPCOES_ORDEM = [
+  { valor: 'criacao-antiga', rotulo: 'Criação, mais antiga' },
+  { valor: 'envio', rotulo: 'Envio, mais recente' },
+  { valor: 'destinatarios', rotulo: 'Mais destinatários' },
+] as const
+
+const tempo = (iso: string | null) => (iso ? new Date(iso).getTime() : null)
+
 // =============================================
 // MAIN COMPONENT
 // =============================================
@@ -53,6 +77,7 @@ const statusConfig: Record<NewsletterCampaignStatus, { label: string; color: str
 export function CampaignsAdmin() {
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [erroCarga, setErroCarga] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<NewsletterCampaign | null>(null)
@@ -60,16 +85,21 @@ export function CampaignsAdmin() {
   const [isSaving, setIsSaving] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const router = useRouter()
+  const { valores: filtro, definir } = useFiltrosUrl(CHAVES_FILTRO)
 
   const fetchCampaigns = useCallback(async () => {
     setIsLoading(true)
+    setErroCarga(null)
     try {
       const res = await fetch('/api/admin/newsletter/campaigns')
       if (res.status === 401) { router.push('/admin/login'); return }
+      // Antes a falha ia só para o console e a tela dizia "nenhuma campanha".
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setCampaigns(data.campaigns || [])
     } catch (error) {
       console.error('Error fetching campaigns:', error)
+      setErroCarga('Não foi possível carregar as campanhas.')
     } finally {
       setIsLoading(false)
     }
@@ -178,12 +208,66 @@ export function CampaignsAdmin() {
     }))
   }
 
+  // Busca (sem acento, todas as palavras), status e ordem, tudo sobre a lista
+  // inteira: a API devolve todas as campanhas de uma vez.
+  const visiveis = useMemo(() => {
+    const termos = termosDaBusca(filtro.q)
+    const lista = campaigns.filter(c => {
+      if (filtro.status && c.status !== filtro.status) return false
+      if (termos.length === 0) return true
+      const alvo = termosDaBusca(`${c.title} ${c.subject ?? ''}`).join(' ')
+      return termos.every(t => alvo.includes(t))
+    })
+    const criada = (c: NewsletterCampaign) => tempo(c.created_at) ?? 0
+    if (filtro.ordem === 'criacao-antiga') {
+      lista.sort((a, b) => criada(a) - criada(b))
+    } else if (filtro.ordem === 'envio') {
+      // Quem ainda não foi enviada vai para o fim, na ordem de criação.
+      lista.sort((a, b) => {
+        const ea = tempo(a.sent_at)
+        const eb = tempo(b.sent_at)
+        if (ea === null && eb === null) return criada(b) - criada(a)
+        if (ea === null) return 1
+        if (eb === null) return -1
+        return eb - ea
+      })
+    } else if (filtro.ordem === 'destinatarios') {
+      lista.sort((a, b) => b.recipient_count - a.recipient_count || criada(b) - criada(a))
+    } else {
+      lista.sort((a, b) => criada(b) - criada(a))
+    }
+    return lista
+  }, [campaigns, filtro.q, filtro.status, filtro.ordem])
+
+  // A ordem não é filtro: não vira etiqueta nem é desfeita pelo "Limpar filtros".
+  const limparFiltros = () => definir({ q: '', status: '' })
+  const filtrosLigados: FiltroLigado[] = []
+  if (filtro.q) filtrosLigados.push({ rotulo: `Busca: ${filtro.q}`, aoRemover: () => definir({ q: '' }) })
+  if (filtro.status) {
+    const rotulo = statusConfig[filtro.status as NewsletterCampaignStatus]?.label ?? filtro.status
+    filtrosLigados.push({ rotulo: `Status: ${rotulo}`, aoRemover: () => definir({ status: '' }) })
+  }
+
   // =============================================
   // RENDER
   // =============================================
 
   return (
-    <div className="space-y-6">
+    <>
+    <CabecalhoPagina
+      titulo="Newsletter"
+      descricao="Crie e gerencie campanhas de email marketing"
+      acoes={
+        <button onClick={openNewModal}
+          className="flex min-h-10 items-center gap-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+          <Plus className="w-5 h-5" />
+          Nova Campanha
+        </button>
+      }
+    >
+      <NewsletterAbas />
+    </CabecalhoPagina>
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Feedback */}
       {feedback && (
         <div className={`p-4 rounded-lg flex items-center gap-2 ${
@@ -194,36 +278,51 @@ export function CampaignsAdmin() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Campanhas Newsletter</h1>
-          <p className="text-foreground-secondary">Crie e gerencie campanhas de email marketing</p>
-        </div>
-        <button onClick={openNewModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
-          <Plus className="w-5 h-5" />
-          Nova Campanha
-        </button>
+      {/* Filtros */}
+      <div className="space-y-3">
+        <BarraDeFiltros>
+          <CampoBusca valor={filtro.q} aoMudar={v => definir({ q: v })} placeholder="Buscar por título ou assunto" />
+          <SeletorFiltro rotulo="Status" valor={filtro.status} aoMudar={v => definir({ status: v })} opcoes={OPCOES_STATUS} />
+          <SeletorFiltro rotulo="Ordenar por" valor={filtro.ordem} aoMudar={v => definir({ ordem: v })}
+            opcoes={OPCOES_ORDEM} todos="Criação, mais recente" />
+        </BarraDeFiltros>
+        {!isLoading && !erroCarga && campaigns.length > 0 && (
+          <ResumoDosFiltros total={campaigns.length} mostrando={visiveis.length}
+            nome={['campanha', 'campanhas']} filtros={filtrosLigados} aoLimpar={limparFiltros} />
+        )}
       </div>
 
       {/* Campaign List */}
-      <div className="bg-background-card rounded-xl border border-border overflow-hidden">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : campaigns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-foreground-secondary">
-            <Mail className="w-12 h-12 mb-4" />
-            <p>Nenhuma campanha criada</p>
-            <button onClick={openNewModal} className="mt-3 text-primary hover:underline">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : erroCarga ? (
+        <EstadoErro texto={erroCarga} aoTentar={fetchCampaigns} />
+      ) : campaigns.length === 0 ? (
+        <EstadoVazio
+          Icon={Mail}
+          titulo="Nenhuma campanha criada"
+          texto="Crie a primeira campanha para enviar aos assinantes."
+          acao={
+            <button onClick={openNewModal}
+              className="flex min-h-10 items-center gap-2 px-4 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+              <Plus className="w-4 h-4" />
               Criar primeira campanha
             </button>
-          </div>
-        ) : (
+          }
+        />
+      ) : visiveis.length === 0 ? (
+        <EstadoVazio
+          Icon={Mail}
+          titulo="Nenhuma campanha com esses filtros"
+          texto="Mude a busca ou o status para ver outras campanhas."
+          acao={<BotaoSecundario onClick={limparFiltros}>Limpar filtros</BotaoSecundario>}
+        />
+      ) : (
+        <div className="bg-background-card rounded-xl border border-border overflow-hidden">
           <div className="divide-y divide-border">
-            {campaigns.map((campaign) => {
+            {visiveis.map((campaign) => {
               const cfg = statusConfig[campaign.status]
               const StatusIcon = cfg.icon
               return (
@@ -271,8 +370,8 @@ export function CampaignsAdmin() {
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Preview Modal */}
       {showPreview && editingCampaign && (
@@ -402,6 +501,7 @@ export function CampaignsAdmin() {
         </div>
       )}
     </div>
+    </>
   )
 }
 

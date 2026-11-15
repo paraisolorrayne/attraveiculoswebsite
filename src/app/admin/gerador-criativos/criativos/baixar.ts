@@ -82,11 +82,14 @@ async function baixarBlob(blob: Blob, arquivo: string): Promise<void> {
 	setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
-async function enviarAoMarketing(blob: Blob, nome: string, formato: 'stories' | 'feed') {
+async function enviarAoMarketing(blob: Blob, nome: string, formato: 'stories' | 'feed', veiculoId?: number | string | null) {
 	const fd = new FormData()
 	fd.append('file', blob, `${nome}-${formato.toUpperCase()}.png`)
 	fd.append('vehicle_name', nome)
 	fd.append('format', formato)
+	// Id do carro escolhido na busca do estoque: marca o carro como "já tem
+	// criativo" na tela inicial. Peça sem carro do estoque não manda nada.
+	if (veiculoId) fd.append('vehicle_id', String(veiculoId))
 	const r = await fetch('/api/admin/marketing/creatives', { method: 'POST', body: fd })
 	if (r.ok) return
 	const d = await r.json().catch(() => null)
@@ -113,6 +116,8 @@ export async function exportarPeca(
 	imagens: ImagensDoOperador,
 	assets: Assets,
 	aoAndar?: (m: string) => void,
+	/** Id (AutoConf) do carro aplicado pela busca do estoque, se houver. */
+	veiculoId?: number | string | null,
 ): Promise<ResultadoExportacao> {
 	const nome = nomeDaPeca(estado)
 	aoAndar?.('Gerando Stories e Feed…')
@@ -132,8 +137,8 @@ export async function exportarPeca(
 
 	aoAndar?.('Enviando os dois ao Marketing…')
 	const envios = await Promise.allSettled([
-		enviarAoMarketing(stories, nome, 'stories'),
-		enviarAoMarketing(feed, nome, 'feed'),
+		enviarAoMarketing(stories, nome, 'stories', veiculoId),
+		enviarAoMarketing(feed, nome, 'feed', veiculoId),
 	])
 	const falhas = envios
 		.map((e, i) =>

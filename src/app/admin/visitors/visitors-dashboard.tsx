@@ -188,7 +188,7 @@ export function VisitorsDashboard(props: Props) {
 								k.destaque ? 'border-primary/50' : 'border-border',
 							)}
 						>
-							<div className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
+							<div className="flex items-center gap-1 text-xs uppercase tracking-wide text-foreground-secondary">
 								{k.rotulo}
 								<InfoDica>{k.dica}</InfoDica>
 							</div>

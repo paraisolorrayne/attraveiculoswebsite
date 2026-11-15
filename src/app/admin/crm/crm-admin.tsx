@@ -5,7 +5,10 @@ import {
 	Loader2, RefreshCw, X, Search, Maximize2, Minimize2, Inbox, SlidersHorizontal,
 	AlertTriangle, CalendarClock, MessageSquareQuote,
 } from 'lucide-react'
-import { COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS } from './crm-constants'
+import {
+	COLUNAS_KANBAN, colunaDoCard, cardSemInformacao, FONTES_EVENTO, PERIODOS, SITUACOES, situacaoInfo,
+	PROXIMA_ACAO, ORDENACOES,
+} from './crm-constants'
 import { InfoDica } from './info-dica'
 import { CrmEditar } from './crm-editar'
 import type { ColunaKanban } from './crm-constants'
@@ -13,6 +16,8 @@ import styles from './crm-workspace.module.css'
 import { dataEncerramento, dataReferenciaPeriodo } from '@/lib/crm-datas'
 import { inicioDoPeriodoBRT } from '@/lib/crm-periodo'
 import { termosDaBusca, cardCasaBusca } from '@/lib/crm-busca'
+import { ORIGEM_CRM_AUSENTE, origemCrmInfo } from '@/lib/atribuicao-receita'
+import { useFiltrosUrl } from '@/components/admin/filtros'
 import {
 	type CrmCard, CardKanban, BadgeSituacao,
 	fmtValor, fmtValorAbrev, dadoStr, motivoDoCard,
@@ -22,6 +27,18 @@ const colunaInfo = (c: { etapa: string; fonte_evento: string | null }) =>
 	COLUNAS_KANBAN.find(col => col.id === colunaDoCard(c)) ?? COLUNAS_KANBAN[0]
 
 const ENCERRADAS = ['encerrado_ganho', 'encerrado_perdido']
+
+// Filtros e ordenação ficam na URL: recarregar a página ou mandar o link
+// mantém o recorte. Parâmetro ausente = o padrão de sempre (tudo, mais recente).
+const CHAVES_URL = ['q', 'periodo', 'vendedor', 'situacao', 'origem', 'acao', 'ordem'] as const
+// "Limpar filtros" não mexe na ordenação: ordem não é filtro.
+const FILTROS_VAZIOS = { q: '', periodo: '', vendedor: '', situacao: '', origem: '', acao: '' }
+
+const valorDoCard = (c: CrmCard) => (c.valor !== null ? Number(c.valor) : null)
+const tempo = (iso: string) => {
+	const t = new Date(iso).getTime()
+	return Number.isNaN(t) ? 0 : t
+}
 
 const fmtDataHora = (iso: string) => {
 	const d = new Date(iso)
@@ -136,9 +153,40 @@ export function CrmAdmin() {
 		setColunaDestino(coluna)
 		setSelecionado(card)
 	}
-	const [filtroVendedor, setFiltroVendedor] = useState<string>('') // '' = todos
-	const [filtroDias, setFiltroDias] = useState<number>(0) // 0 = tudo
-	const [busca, setBusca] = useState('') // nome do cliente ou carro
+	const { valores: url, definir } = useFiltrosUrl(CHAVES_URL)
+	const filtroVendedor = url.vendedor // '' = todos
+	// 0 = tudo. Valor estranho na URL (link editado à mão) cai no padrão.
+	const filtroDias = PERIODOS.find(p => p.dias !== 0 && String(p.dias) === url.periodo)?.dias ?? 0
+	const filtroSituacao = url.situacao
+	const filtroOrigem = url.origem
+	const filtroAcao = PROXIMA_ACAO.some(o => o.valor === url.acao) ? url.acao : ''
+	const ordem = ORDENACOES.some(o => o.valor === url.ordem) ? url.ordem : ''
+	const setFiltroDias = (dias: number) => definir({ periodo: dias === 0 ? '' : String(dias) })
+
+	// A busca filtra na hora pelo que está no campo e só vai para a URL depois
+	// de uma pausa, para não trocar o endereço a cada tecla.
+	const [busca, setBusca] = useState(url.q) // cliente, carro, telefone ou e-mail
+	const buscaNaUrl = useRef(url.q)
+	// Mudança de fora (voltar do navegador, link colado) entra no campo.
+	useEffect(() => {
+		if (url.q !== buscaNaUrl.current) {
+			buscaNaUrl.current = url.q
+			setBusca(url.q)
+		}
+	}, [url.q])
+	useEffect(() => {
+		if (busca === buscaNaUrl.current) return
+		const t = setTimeout(() => {
+			buscaNaUrl.current = busca
+			definir({ q: busca })
+		}, 250)
+		return () => clearTimeout(t)
+	}, [busca, definir])
+	const limparFiltros = () => {
+		buscaNaUrl.current = ''
+		setBusca('')
+		definir(FILTROS_VAZIOS)
+	}
 	// A API tem teto de cards. Se ele for atingido, "Tudo" deixa de ser tudo —
 	// e o gestor precisa saber disso em vez de contar um número incompleto.
 	const [truncado, setTruncado] = useState(false)
@@ -208,6 +256,30 @@ export function CrmAdmin() {
 		.filter(v => !vendedorOculto(v))
 		.sort()
 
+	// Origem vazia vira um valor filtrável ("Sem origem"), como na tela de receita.
+	const origemDoCard = (c: CrmCard) => (c.origem && c.origem.trim() !== '' ? c.origem : ORIGEM_CRM_AUSENTE)
+
+	// Situações e origens oferecidas: só as que existem nos cards carregados
+	// (mais a que veio na URL, para o select não mostrar um valor que não tem).
+	const situacoesPresentes = new Set(cardsBase.map(c => c.situacao).filter((v): v is string => !!v))
+	if (filtroSituacao) situacoesPresentes.add(filtroSituacao)
+	const ordemSituacoes = Object.keys(SITUACOES)
+	const posicao = (v: string) => (ordemSituacoes.indexOf(v) === -1 ? ordemSituacoes.length : ordemSituacoes.indexOf(v))
+	const situacoes = [...situacoesPresentes]
+		.sort((a, b) => posicao(a) - posicao(b) || a.localeCompare(b))
+		.map(v => ({ valor: v, rotulo: situacaoInfo(v).label }))
+
+	const origensPresentes = new Set(cardsBase.map(origemDoCard))
+	if (filtroOrigem) origensPresentes.add(filtroOrigem)
+	const origens = [...origensPresentes]
+		// "Sem origem" por último.
+		.sort((a, b) => Number(a === ORIGEM_CRM_AUSENTE) - Number(b === ORIGEM_CRM_AUSENTE) || a.localeCompare(b))
+		.map(v => ({ valor: v, rotulo: origemCrmInfo(v).rotulo }))
+
+	const vendedoresDoFiltro = filtroVendedor && !vendedores.includes(filtroVendedor)
+		? [...vendedores, filtroVendedor]
+		: vendedores
+
 	const agora = Date.now()
 	// Corte por DIA-CALENDÁRIO em São Paulo, não por janela móvel de 24h.
 	// A janela móvel respondia outra pergunta: às 08:00 ela ainda mostrava as
@@ -224,6 +296,15 @@ export function CrmAdmin() {
 	// de concluir que o lead sumiu do CRM.
 	const casaFiltros = (c: CrmCard) => {
 		if (filtroVendedor && c.vendedor !== filtroVendedor) return false
+		if (filtroSituacao && c.situacao !== filtroSituacao) return false
+		if (filtroOrigem && origemDoCard(c) !== filtroOrigem) return false
+		// Próxima ação só faz sentido em lead aberto: encerrado não tem o que agendar.
+		if (filtroAcao) {
+			if (ENCERRADAS.includes(c.etapa)) return false
+			const quando = c.proxima_acao_em ? new Date(c.proxima_acao_em).getTime() : NaN
+			if (filtroAcao === 'sem' && c.proxima_acao_em) return false
+			if (filtroAcao === 'vencida' && !(quando < agora)) return false
+		}
 		return cardCasaBusca(c, termos)
 	}
 	const dentroDoPeriodo = (c: CrmCard) => {
@@ -235,7 +316,33 @@ export function CrmAdmin() {
 		return !Number.isNaN(t) && t >= inicioPeriodo
 	}
 
-	const cardsFiltrados = cardsBase.filter(c => casaFiltros(c) && dentroDoPeriodo(c))
+	const cardsNoRecorte = cardsBase.filter(c => casaFiltros(c) && dentroDoPeriodo(c))
+	// A API já entrega do mais recente para o mais antigo (atualizado_em), e
+	// esse é o padrão. As outras ordens valem dentro de cada coluna.
+	const cardsFiltrados = ordem === 'antigo'
+		? [...cardsNoRecorte].sort((a, b) => tempo(a.atualizado_em) - tempo(b.atualizado_em))
+		: ordem === 'valor'
+			// Sem valor informado vai para o fim.
+			? [...cardsNoRecorte].sort((a, b) => (valorDoCard(b) ?? -1) - (valorDoCard(a) ?? -1))
+			: cardsNoRecorte
+
+	// Etiquetas dos filtros ligados, com rótulo que se lê, uma para tirar cada um.
+	const filtrosLigados: { chave: string; rotulo: string; aoRemover: () => void }[] = []
+	if (busca.trim() !== '') filtrosLigados.push({
+		chave: 'q', rotulo: `Busca: ${busca.trim()}`,
+		aoRemover: () => { buscaNaUrl.current = ''; setBusca(''); definir({ q: '' }) },
+	})
+	if (filtroDias !== 0) filtrosLigados.push({
+		chave: 'periodo', rotulo: `Período: ${PERIODOS.find(p => p.dias === filtroDias)?.label ?? filtroDias}`,
+		aoRemover: () => definir({ periodo: '' }),
+	})
+	if (filtroVendedor) filtrosLigados.push({ chave: 'vendedor', rotulo: `Vendedor: ${filtroVendedor}`, aoRemover: () => definir({ vendedor: '' }) })
+	if (filtroSituacao) filtrosLigados.push({ chave: 'situacao', rotulo: `Situação: ${situacaoInfo(filtroSituacao).label}`, aoRemover: () => definir({ situacao: '' }) })
+	if (filtroOrigem) filtrosLigados.push({ chave: 'origem', rotulo: `Origem: ${origemCrmInfo(filtroOrigem).rotulo}`, aoRemover: () => definir({ origem: '' }) })
+	if (filtroAcao) filtrosLigados.push({
+		chave: 'acao', rotulo: PROXIMA_ACAO.find(o => o.valor === filtroAcao)?.rotulo ?? filtroAcao,
+		aoRemover: () => definir({ acao: '' }),
+	})
 	// Quantos a busca acharia se o período não estivesse estreitando o quadro.
 	const foraDoPeriodo = buscando
 		? cardsBase.filter(c => casaFiltros(c) && !dentroDoPeriodo(c)).length
@@ -255,7 +362,7 @@ export function CrmAdmin() {
 		.reduce((s, c) => s + Number(c.valor), 0)
 
 	const kpis: { rotulo: string; valor: string; dica: string }[] = [
-		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Todos os leads do período selecionado, já com o filtro de vendedor e a busca aplicados: aguardando aceite + assumidos + movimentando + encerrados. Sem busca e sem filtro de vendedor, é o número que deve bater com a quantidade de alertas enviados no período.' },
+		{ rotulo: 'Leads', valor: String(kpiTotal), dica: 'Todos os leads do período selecionado, já com os filtros e a busca aplicados: aguardando aceite + assumidos + movimentando + encerrados. Sem busca e sem filtros, é o número que deve bater com a quantidade de alertas enviados no período.' },
 		{ rotulo: 'Aguardando aceite', valor: String(kpiAguardando), dica: 'Alerta enviado ao vendedor, sem aceite até agora. O relógio de cada card conta só em horário comercial (09:00–21:00 em dia útil, sábado até 13:00).' },
 		{ rotulo: 'Assumidos', valor: String(kpiAssumidos), dica: 'O vendedor aceitou o lead e confirmou o contato, mas ainda não reportou movimentação nas cobranças.' },
 		{ rotulo: 'Movimentando', valor: String(kpiMovimentando), dica: 'Leads cujo último evento é um reporte do vendedor — a conversa está andando de fato.' },
@@ -299,8 +406,8 @@ export function CrmAdmin() {
 									setBusca('')
 								}
 							}}
-							placeholder="Buscar cliente ou carro"
-							aria-label="Buscar por nome do cliente ou carro"
+							placeholder="Buscar cliente, carro, telefone ou e-mail"
+							aria-label="Buscar por nome do cliente, carro, telefone ou e-mail"
 							className="text-foreground placeholder:text-foreground-secondary [&::-webkit-search-cancel-button]:hidden"
 						/>
 						{busca !== '' && (
@@ -332,24 +439,69 @@ export function CrmAdmin() {
 							em que foram ganhos/perdidos de fato.
 						</InfoDica>
 					</div>
-					{vendedores.length > 0 && (
+					{vendedoresDoFiltro.length > 0 && (
 						<div className={styles.filter}>
 						<select
 							value={filtroVendedor}
-							onChange={e => setFiltroVendedor(e.target.value)}
+							onChange={e => definir({ vendedor: e.target.value })}
 							title="Filtrar por vendedor"
 							aria-label="Filtrar por vendedor"
 						>
 							<option value="">Todos os vendedores</option>
-							{vendedores.map(v => (
+							{vendedoresDoFiltro.map(v => (
 								<option key={v} value={v}>{v}</option>
 							))}
 						</select>
 						</div>
 					)}
-					<div className={styles.toolbarEnd}>
-						{(filtroDias !== 0 || filtroVendedor || busca) && <button className={styles.button} onClick={() => { setFiltroDias(0); setFiltroVendedor(''); setBusca('') }}><X className="h-3 w-3" />Limpar filtros</button>}
-						<span className="flex items-center gap-1.5 text-[0.6875rem] text-foreground-secondary"><SlidersHorizontal className="h-3 w-3" />{cardsFiltrados.length} leads no quadro</span>
+					{situacoes.length > 0 && (
+						<label className={styles.filter}>
+							<span className={styles.filterLabel}>Situação</span>
+							<select value={filtroSituacao} onChange={e => definir({ situacao: e.target.value })}>
+								<option value="">Todas</option>
+								{situacoes.map(o => (
+									<option key={o.valor} value={o.valor}>{o.rotulo}</option>
+								))}
+							</select>
+						</label>
+					)}
+					{origens.length > 0 && (
+						<label className={styles.filter}>
+							<span className={styles.filterLabel}>Origem</span>
+							<select value={filtroOrigem} onChange={e => definir({ origem: e.target.value })}>
+								<option value="">Todas</option>
+								{origens.map(o => (
+									<option key={o.valor} value={o.valor}>{o.rotulo}</option>
+								))}
+							</select>
+						</label>
+					)}
+					<label className={styles.filter}>
+						<span className={styles.filterLabel}>Próxima ação</span>
+						<select value={filtroAcao} onChange={e => definir({ acao: e.target.value })}>
+							<option value="">Todas</option>
+							{PROXIMA_ACAO.map(o => (
+								<option key={o.valor} value={o.valor}>{o.rotulo}</option>
+							))}
+						</select>
+					</label>
+					<label className={styles.filter}>
+						<span className={styles.filterLabel}>Ordenar por</span>
+						<select value={ordem} onChange={e => definir({ ordem: e.target.value })}>
+							<option value="">Mais recente</option>
+							{ORDENACOES.map(o => (
+								<option key={o.valor} value={o.valor}>{o.rotulo}</option>
+							))}
+						</select>
+					</label>
+					<div className={`${styles.toolbarEnd} ${styles.toolbarResumo}`}>
+						{filtrosLigados.map(f => (
+							<button key={f.chave} type="button" className={styles.chip} onClick={f.aoRemover} title="Tirar este filtro">
+								<span>{f.rotulo}</span><X className="h-3.5 w-3.5" />
+							</button>
+						))}
+						{filtrosLigados.length > 0 && <button className={styles.button} onClick={limparFiltros}><X className="h-3 w-3" />Limpar filtros</button>}
+						<span className="flex items-center gap-1.5 text-xs text-foreground-secondary"><SlidersHorizontal className="h-3 w-3" />{cardsFiltrados.length} leads no quadro</span>
 					</div>
 			</div>
 
@@ -385,8 +537,8 @@ export function CrmAdmin() {
 				<div className="px-4 py-3 rounded-lg text-sm bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center justify-between gap-3 flex-wrap">
 					<span>
 						{foraDoPeriodo === 1
-							? 'Mais 1 lead com esse nome/carro está fora do período selecionado.'
-							: `Mais ${foraDoPeriodo} leads com esse nome/carro estão fora do período selecionado.`}
+							? 'Mais 1 lead dessa busca está fora do período selecionado.'
+							: `Mais ${foraDoPeriodo} leads dessa busca estão fora do período selecionado.`}
 					</span>
 					<button
 						onClick={() => setFiltroDias(0)}
@@ -416,17 +568,17 @@ export function CrmAdmin() {
 					</p>
 					<p className="text-sm text-foreground-secondary mt-2">
 						{buscando
-							? 'A busca olha o nome do cliente e o carro (o de interesse e o da troca). Confira a grafia ou tente só um pedaço, como o sobrenome ou a marca.'
-							: 'Ajuste o período ou o vendedor no topo.'}
+							? 'A busca olha o nome do cliente, o telefone, o e-mail e o carro (o de interesse e o da troca). Confira a grafia ou tente só um pedaço, como o sobrenome, a marca ou o final do telefone.'
+							: 'Nenhum lead passa por todos os filtros ligados. Tire um deles nas etiquetas do topo ou limpe todos.'}
 					</p>
-					{buscando && (
-						<button
-							onClick={() => setBusca('')}
-							className="mt-4 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-background-card transition-colors"
-						>
-							Limpar busca
-						</button>
-					)}
+					{/* Com outro filtro ligado além da busca, limpar só a busca pode
+					    continuar devolvendo nada: aí a saída é limpar tudo. */}
+					<button
+						onClick={buscando && filtrosLigados.length === 1 ? () => setBusca('') : limparFiltros}
+						className="mt-4 min-h-10 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground hover:bg-background-card transition-colors"
+					>
+						{buscando && filtrosLigados.length === 1 ? 'Limpar busca' : 'Limpar filtros'}
+					</button>
 				</div>
 			) : (
 				<div className={styles.board} aria-label="Funil de vendas">
@@ -611,7 +763,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 						{infos.filter(i => i.valor).map(i => (
 							<div key={i.rotulo}>
-								<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
+								<dt className="text-xs uppercase tracking-wide text-foreground-secondary">
 									{i.rotulo}
 								</dt>
 								<dd className="text-sm text-foreground mt-0.5 break-words">{i.valor}</dd>
@@ -622,7 +774,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					{/* Standup do vendedor */}
 					{(card.andamento || card.impedimento || card.proxima_acao) && (
 						<div className="space-y-2">
-							<h3 className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
+							<h3 className="flex items-center gap-1 text-xs uppercase tracking-wide text-foreground-secondary">
 								<MessageSquareQuote className="w-3.5 h-3.5" />
 								Standup do vendedor
 								<InfoDica>
@@ -657,7 +809,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 
 					{motivoDoCard(card) && (
 						<div>
-							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-xs uppercase tracking-wide text-foreground-secondary mb-1">
 								Motivo do encerramento
 							</h3>
 							<p className="text-sm text-foreground whitespace-pre-wrap">{motivoDoCard(card)}</p>
@@ -666,7 +818,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 
 					{/* Linha do tempo */}
 					<div>
-						<h3 className="flex items-center gap-1 text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-2">
+						<h3 className="flex items-center gap-1 text-xs uppercase tracking-wide text-foreground-secondary mb-2">
 							Linha do tempo
 							{fonte && (
 								<>
@@ -681,7 +833,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 						<dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
 							{linhaDoTempo.filter(d => d.valor).map(d => (
 								<div key={d.rotulo}>
-									<dt className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary">
+									<dt className="text-xs uppercase tracking-wide text-foreground-secondary">
 										{d.rotulo}
 									</dt>
 									<dd className="text-sm text-foreground mt-0.5">{d.valor}</dd>
@@ -693,7 +845,7 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					{/* Campos legados do v1 (se ainda presentes no JSONB) */}
 					{observacoes && (
 						<div>
-							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-xs uppercase tracking-wide text-foreground-secondary mb-1">
 								Observações do alerta
 							</h3>
 							<p className="text-sm text-foreground whitespace-pre-wrap">{observacoes}</p>
@@ -701,14 +853,14 @@ function DetalhesModal({ card, onClose, editor }: { card: CrmCard; onClose: () =
 					)}
 					{resposta && (
 						<div>
-							<h3 className="text-[0.6875rem] uppercase tracking-wide text-foreground-secondary mb-1">
+							<h3 className="text-xs uppercase tracking-wide text-foreground-secondary mb-1">
 								Última resposta do vendedor (v1)
 							</h3>
 							<blockquote className="text-sm text-foreground border-l-2 border-border pl-3 whitespace-pre-wrap">
 								{resposta.texto}
 							</blockquote>
 							{resposta.em && (
-								<p className="text-[0.6875rem] text-foreground-secondary mt-1">
+								<p className="text-xs text-foreground-secondary mt-1">
 									{fmtDataHora(resposta.em)}
 								</p>
 							)}

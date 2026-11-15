@@ -27,6 +27,8 @@ interface VeiculoNoBoard {
 interface CampaignsBoardProps {
   campaigns: CampaignWithVehicles[]
   onCampaignClick: (campaign: CampaignWithVehicles) => void
+  /** Clique no card que veio da Meta: abre as métricas em vez da edição. */
+  onAnuncioClick?: (veiculo: CampaignVehicle, campanha: CampaignWithVehicles) => void
   onVehicleStatusChange: (vehicleId: string, newStatus: CampaignStatus) => void
   isAdmin: boolean
 }
@@ -49,6 +51,7 @@ function formatarData(data: string | null): string | null {
 export function CampaignsBoard({
   campaigns,
   onCampaignClick,
+  onAnuncioClick,
   onVehicleStatusChange,
   isAdmin,
 }: CampaignsBoardProps) {
@@ -119,8 +122,16 @@ export function CampaignsBoard({
                   draggable={isAdmin}
                   onDragStart={() => handleDragStart({ veiculo, campanha })}
                   onDragEnd={() => setArrastado(null)}
-                  onClick={() => onCampaignClick(campanha)}
-                  title={`Abrir "${campanha.name}" para editar`}
+                  onClick={() =>
+                    onAnuncioClick && (veiculo.meta_ad_ids?.length ?? 0) > 0
+                      ? onAnuncioClick(veiculo, campanha)
+                      : onCampaignClick(campanha)
+                  }
+                  title={
+                    onAnuncioClick && (veiculo.meta_ad_ids?.length ?? 0) > 0
+                      ? 'Ver as métricas do anúncio na Meta'
+                      : `Abrir "${campanha.name}" para editar`
+                  }
                   className={cn(
                     'bg-background-card border border-border rounded-lg p-3 cursor-pointer',
                     'hover:border-primary/50 hover:shadow-sm transition-all',
@@ -130,6 +141,30 @@ export function CampaignsBoard({
                   <h4 className="font-semibold text-foreground text-sm leading-snug">
                     {veiculo.vehicle_name}
                   </h4>
+
+                  {(veiculo.meta_ad_ids?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      {/* A Meta não sabe o motivo do fim: o aviso pede a decisão de quem cuida. */}
+                      {veiculo.status === 'publicada' && veiculo.meta_no_ar === false ? (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+                          Pausado na Meta
+                        </span>
+                      ) : veiculo.status !== 'publicada' && veiculo.meta_no_ar ? (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+                          Ainda no ar na Meta
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-blue-500/15 px-2 py-0.5 font-medium text-blue-700 dark:text-blue-400">
+                          Meta Ads
+                        </span>
+                      )}
+                      {veiculo.meta_gasto_30d != null && Number(veiculo.meta_gasto_30d) > 0 && (
+                        <span className="text-foreground-secondary">
+                          {Number(veiculo.meta_gasto_30d).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} em 30 dias
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {veiculo.notes && (
                     <p className="text-xs text-foreground-secondary mt-1.5 line-clamp-2">

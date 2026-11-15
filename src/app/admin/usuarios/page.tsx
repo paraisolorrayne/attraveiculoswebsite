@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { UsuariosAdmin } from './usuarios-admin'
@@ -12,5 +13,10 @@ export default async function AdminUsuariosPage() {
     redirect('/admin/engine-sounds')
   }
 
-  return <UsuariosAdmin currentAdminId={admin.id} />
+  // Os filtros da lista ficam na URL (useSearchParams pede Suspense).
+  return (
+    <Suspense fallback={null}>
+      <UsuariosAdmin currentAdminId={admin.id} />
+    </Suspense>
+  )
 }

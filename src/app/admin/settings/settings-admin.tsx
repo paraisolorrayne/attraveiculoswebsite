@@ -3,17 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Settings,
   Volume2,
   Mic,
   Loader2,
   Check,
   X,
   RefreshCw,
-  LogOut,
   AlertCircle,
 } from 'lucide-react'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
 import { cn } from '@/lib/utils'
 
 interface SiteSettings {
@@ -118,43 +116,12 @@ export function SettingsAdmin() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' })
-      router.push('/admin/login')
-    } catch (err) {
-      console.error('Logout error:', err)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-background-card border-b border-border sticky top-0 z-10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <Settings className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">Configurações do Site</h1>
-              <p className="text-xs text-foreground-secondary">Funcionalidades de Áudio</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 text-foreground-secondary hover:text-foreground hover:bg-background-soft rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <CabecalhoPagina titulo="Configurações" descricao="Funcionalidades de áudio do site" />
 
-      <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-8">
           <p className="text-foreground-secondary">

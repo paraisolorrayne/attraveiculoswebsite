@@ -75,7 +75,11 @@ function lerArquivo(file: File): Promise<{ img: HTMLImageElement; dados: string 
 	})
 }
 
-export function CriativosAdmin() {
+/**
+ * `veiculoInicial`: id (AutoConf) de um carro para já abrir escolhido. É o que o
+ * botão "Criar criativo" da tela inicial do admin manda em `?veiculo=`.
+ */
+export function CriativosAdmin({ veiculoInicial }: { veiculoInicial?: string }) {
 	const g = useGerador()
 	const { estado, campo, imagens, assets, pronto, erro } = g
 
@@ -128,6 +132,9 @@ export function CriativosAdmin() {
 
 	async function editar(c: CriativoGuardado) {
 		await g.restaurar(c)
+		// A peça restaurada pode ser de outro carro: sem limpar, a exportação
+		// marcaria como "já tem criativo" o carro escolhido antes.
+		veiculoAplicado.current = null
 		setMsgDownload(`Editando "${c.nome}", gerado às ${new Date(c.quando).toLocaleTimeString('pt-BR')}.`)
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 	}
@@ -190,8 +197,15 @@ export function CriativosAdmin() {
 	/** Só o último clique vale, se a ficha de um carro chegar depois da do outro. */
 	const pedido = useRef(0)
 
+	/**
+	 * Id do último carro aplicado pela busca do estoque. Vai junto na exportação
+	 * para o carro ficar marcado como "já tem criativo" na tela inicial.
+	 */
+	const veiculoAplicado = useRef<string | null>(null)
+
 	async function aplicarVeiculo(v: VeiculoEstoque) {
 		const meu = ++pedido.current
+		veiculoAplicado.current = v.id ? String(v.id) : null
 		setResultados([])
 		setAvisoBusca('Buscando a ficha do carro na AutoConf…')
 		// A lista da busca não traz a ficha que o marketing escreve na AutoConf
@@ -290,6 +304,34 @@ export function CriativosAdmin() {
 		)
 	}
 
+	// Carro vindo da tela inicial (`?veiculo=<id>`): aplica uma vez, quando o
+	// gerador já carregou. O mesmo endpoint da ficha devolve o carro inteiro.
+	const inicialAplicado = useRef(false)
+	useEffect(() => {
+		if (!veiculoInicial || !pronto || inicialAplicado.current) return
+		inicialAplicado.current = true
+		setAvisoBusca('Abrindo o carro escolhido na tela inicial…')
+		// Primeiro o carro aberto pelo id; se a AutoConf não responder por ali,
+		// a lista do estoque (que tem cópia de reserva) ainda acha o carro.
+		const peloId = () =>
+			fetch(`/api/vehicles/${encodeURIComponent(veiculoInicial)}`)
+				.then(r => (r.ok ? r.json() : null))
+				.then(j => (j?.data as VeiculoEstoque | undefined) ?? null)
+				.catch(() => null)
+		const pelaLista = () =>
+			fetch('/api/vehicles?limit=200')
+				.then(r => (r.ok ? r.json() : null))
+				.then(j => ((j?.vehicles ?? []) as VeiculoEstoque[]).find(v => String(v.id) === veiculoInicial) ?? null)
+				.catch(() => null)
+		void peloId()
+			.then(v => v ?? pelaLista())
+			.then(v => {
+				if (v?.id) void aplicarVeiculo(v)
+				else setAvisoBusca('Não encontrei esse carro no estoque. Use a busca.')
+			})
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [veiculoInicial, pronto])
+
 	/** Clique numa miniatura da galeria: foto principal, ou a de baixo com Shift. */
 	function usarFotoDaGaleria(url: string, comShift: boolean) {
 		const destino: SlotFoto = comShift ? 'foto2' : 'foto1'
@@ -334,6 +376,8 @@ export function CriativosAdmin() {
 				imagens.current,
 				assets,
 				setMsgDownload,
+				// A peça "Estoque" mostra vários carros: não conta para nenhum.
+				estado.tipo === 'estoque' ? null : veiculoAplicado.current,
 			)
 			setMsgDownload(r.mensagem)
 			// O histórico entra DEPOIS do download: se guardar falhar (cota, janela
@@ -448,7 +492,7 @@ export function CriativosAdmin() {
 											<p className="truncate text-xs font-medium text-foreground" title={c.nome}>
 												{c.nome}
 											</p>
-											<p className="flex items-center gap-1 text-[0.6875rem] text-foreground-secondary">
+											<p className="flex items-center gap-1 text-xs text-foreground-secondary">
 												<Clock3 className="h-3 w-3" />
 												{new Date(c.quando).toLocaleString('pt-BR', {
 													dateStyle: 'short',
@@ -675,7 +719,7 @@ export function CriativosAdmin() {
 						className="block h-full w-full"
 					/>
 				</div>
-				<p className="text-center text-[0.6875rem] uppercase tracking-wider text-foreground-secondary">
+				<p className="text-center text-xs uppercase tracking-wider text-foreground-secondary">
 					{pronto ? 'Prévia em tempo real — exporta Stories 1080×1920 + Feed 1080×1350' : 'Carregando fontes e imagens…'}
 				</p>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Volume2,
@@ -10,15 +10,29 @@ import {
   Pause,
   Upload,
   Search,
-  LogOut,
   Loader2,
   Check,
   X,
   RefreshCw,
-  Settings,
   Pencil,
 } from 'lucide-react'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
+import {
+  BarraDeFiltros, BotaoSecundario, CampoBusca, EstadoErro, EstadoVazio,
+  ResumoDosFiltros, SeletorFiltro, useFiltrosUrl, type FiltroLigado,
+} from '@/components/admin/filtros'
+import { termosDaBusca } from '@/lib/crm-busca'
+
+// Filtros da lista de sons, guardados na URL.
+const CHAVES_FILTRO = ['q', 'situacao', 'tipo'] as const
+const OPCOES_SITUACAO = [
+  { valor: 'ativo', rotulo: 'Ativos' },
+  { valor: 'inativo', rotulo: 'Inativos' },
+] as const
+const OPCOES_TIPO = [
+  { valor: 'combustao', rotulo: 'Combustão' },
+  { valor: 'eletrico', rotulo: 'Elétrico' },
+] as const
 
 interface VehicleSound {
   id: string
@@ -47,6 +61,8 @@ export function EngineSoundsAdmin() {
   const [sounds, setSounds] = useState<VehicleSound[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [erroCarga, setErroCarga] = useState<string | null>(null)
+  const { valores: filtro, definir, limpar } = useFiltrosUrl(CHAVES_FILTRO)
   const [isSearching, setIsSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -83,10 +99,14 @@ export function EngineSoundsAdmin() {
         router.push('/admin/login')
         return
       }
+      // Antes a falha ia só para o console e a tela dizia "nenhum som cadastrado".
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setSounds(data.sounds || [])
+      setErroCarga(null)
     } catch (error) {
       console.error('Error fetching sounds:', error)
+      setErroCarga('Não foi possível carregar os sons de motor.')
     } finally {
       setIsLoading(false)
     }
@@ -133,10 +153,6 @@ export function EngineSoundsAdmin() {
   }
 
   // Handle logout
-  const handleLogout = async () => {
-    await fetch('/api/admin/logout', { method: 'POST' })
-    router.push('/admin/login')
-  }
 
   // Play/pause audio
   const togglePlay = (soundUrl: string, id: string) => {
@@ -267,52 +283,56 @@ export function EngineSoundsAdmin() {
     }
   }
 
+  // Busca por veículo ou marca (sem acento, todas as palavras), situação e tipo.
+  const visiveis = useMemo(() => {
+    const termos = termosDaBusca(filtro.q)
+    return sounds.filter(s => {
+      if (filtro.situacao === 'ativo' && !s.is_active) return false
+      if (filtro.situacao === 'inativo' && s.is_active) return false
+      if (filtro.tipo === 'eletrico' && !s.is_electric) return false
+      if (filtro.tipo === 'combustao' && s.is_electric) return false
+      if (termos.length === 0) return true
+      const alvo = termosDaBusca(`${s.vehicle_name ?? ''} ${s.vehicle_brand ?? ''}`).join(' ')
+      return termos.every(t => alvo.includes(t))
+    })
+  }, [sounds, filtro.q, filtro.situacao, filtro.tipo])
+
+  const filtrosLigados: FiltroLigado[] = []
+  if (filtro.q) filtrosLigados.push({ rotulo: `Busca: ${filtro.q}`, aoRemover: () => definir({ q: '' }) })
+  if (filtro.situacao) {
+    const rotulo = OPCOES_SITUACAO.find(o => o.valor === filtro.situacao)?.rotulo ?? filtro.situacao
+    filtrosLigados.push({ rotulo: `Situação: ${rotulo}`, aoRemover: () => definir({ situacao: '' }) })
+  }
+  if (filtro.tipo) {
+    const rotulo = OPCOES_TIPO.find(o => o.valor === filtro.tipo)?.rotulo ?? filtro.tipo
+    filtrosLigados.push({ rotulo: `Tipo: ${rotulo}`, aoRemover: () => definir({ tipo: '' }) })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <audio ref={audioRef} onEnded={() => setPlayingId(null)} />
 
-      {/* Admin Header */}
-      <header className="bg-background-card border-b border-border sticky top-0 z-10">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <Settings className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">Painel Admin</h1>
-              <p className="text-xs text-foreground-secondary">Sons de Motor</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 text-foreground-secondary hover:text-foreground hover:bg-background-soft rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <CabecalhoPagina titulo="Sons de motor" descricao="Áudios de motor dos veículos" />
 
-      <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Actions Bar */}
-        <div className="flex items-center justify-between mb-8">
-          <p className="text-foreground-secondary">
-            {sounds.length} som(ns) cadastrado(s)
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+          <BarraDeFiltros className="min-w-0 flex-1">
+            <CampoBusca valor={filtro.q} aoMudar={v => definir({ q: v })} placeholder="Buscar por veículo ou marca" />
+            <SeletorFiltro rotulo="Situação" valor={filtro.situacao} aoMudar={v => definir({ situacao: v })} opcoes={OPCOES_SITUACAO} />
+            <SeletorFiltro rotulo="Tipo" valor={filtro.tipo} aoMudar={v => definir({ tipo: v })} opcoes={OPCOES_TIPO} />
+          </BarraDeFiltros>
           <div className="flex gap-3">
             <button
               onClick={fetchSounds}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground"
+              className="flex min-h-11 items-center gap-2 px-4 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground"
             >
               <RefreshCw className="w-4 h-4" />
               Atualizar
             </button>
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex min-h-11 items-center gap-2 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               Adicionar Som
@@ -320,11 +340,20 @@ export function EngineSoundsAdmin() {
           </div>
         </div>
 
+        <div className="mb-6 min-h-8">
+          {!isLoading && !erroCarga && sounds.length > 0 && (
+            <ResumoDosFiltros total={sounds.length} mostrando={visiveis.length}
+              nome={['som', 'sons']} filtros={filtrosLigados} aoLimpar={limpar} />
+          )}
+        </div>
+
         {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
+        ) : erroCarga ? (
+          <EstadoErro texto={erroCarga} aoTentar={() => { setIsLoading(true); fetchSounds() }} />
         ) : (
           <>
             {/* Existing Sounds List */}
@@ -345,9 +374,16 @@ export function EngineSoundsAdmin() {
                   Adicionar Primeiro Som
                 </button>
               </div>
+            ) : visiveis.length === 0 ? (
+              <EstadoVazio
+                Icon={Volume2}
+                titulo="Nenhum som com esses filtros"
+                texto="Mude a busca, a situação ou o tipo para ver outros sons."
+                acao={<BotaoSecundario onClick={limpar}>Limpar filtros</BotaoSecundario>}
+              />
             ) : (
               <div className="grid gap-4">
-                {sounds.map((sound) => (
+                {visiveis.map((sound) => (
                   <div
                     key={sound.id}
                     className="bg-background-card border border-border rounded-xl p-4 flex items-center gap-4"

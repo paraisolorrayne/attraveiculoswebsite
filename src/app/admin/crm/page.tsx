@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { CrmAdmin } from './crm-admin'
@@ -12,5 +13,10 @@ export default async function AdminCrmPage() {
     redirect('/admin/engine-sounds')
   }
 
-  return <CrmAdmin />
+  // Os filtros do quadro ficam na URL (useSearchParams), o que exige Suspense.
+  return (
+    <Suspense fallback={null}>
+      <CrmAdmin />
+    </Suspense>
+  )
 }

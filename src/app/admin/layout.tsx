@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { AdminHeader } from '@/components/admin/admin-header'
+import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { COOKIE_LATERAL } from '@/lib/admin-sections'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { canAccessRoute, isAdminRole, type AdminRole } from '@/lib/auth/roles'
 
@@ -40,12 +42,29 @@ export default async function AdminLayout({
     }
   }
 
-  // Admin pages have a clean layout without main site header/footer.
   // `admin-raiz` sobe a fonte da raiz em todo o admin (globals.css).
+  //
+  // O time da Attra tem a barra lateral no computador e o cabeçalho com menu
+  // no celular. A agência (e a tela de login, sem usuário) fica só com o
+  // cabeçalho: ela tem uma área só e não precisa de menu.
+  const comLateral = !!admin && admin.role !== 'agencia'
+  if (!comLateral) {
+    return (
+      <div className="admin-raiz min-h-screen bg-background">
+        {admin && <AdminHeader admin={admin} />}
+        {children}
+      </div>
+    )
+  }
+
+  const recolhida = (await cookies()).get(COOKIE_LATERAL)?.value === '1'
   return (
-    <div className="admin-raiz min-h-screen bg-background">
-      {admin && <AdminHeader admin={admin} />}
-      {children}
+    <div className="admin-raiz admin-com-lateral flex min-h-screen bg-background">
+      <AdminSidebar admin={admin} recolhidaInicial={recolhida} />
+      <div className="min-w-0 flex-1">
+        <AdminHeader admin={admin} comLateral />
+        {children}
+      </div>
     </div>
   )
 }

@@ -5,11 +5,14 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, User, Shield, LayoutGrid, Menu, X, Home } from 'lucide-react'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
-import { sectionsForRole } from '@/lib/admin-sections'
+import { secaoAtiva, sectionsForRole } from '@/lib/admin-sections'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { isAdminRole, type AdminRole } from '@/lib/auth/roles'
 
 interface AdminHeaderProps {
   admin: AdminUser
+  /** Com a barra lateral (time da Attra), este cabeçalho só aparece no celular. */
+  comLateral?: boolean
 }
 
 const roleLabels: Record<AdminRole, string> = {
@@ -23,7 +26,7 @@ const roleLabels: Record<AdminRole, string> = {
 
 const HIGH_ROLES: AdminRole[] = ['admin', 'owner']
 
-export function AdminHeader({ admin }: AdminHeaderProps) {
+export function AdminHeader({ admin, comLateral = false }: AdminHeaderProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const router = useRouter()
@@ -48,8 +51,8 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
   }
 
   return (
-    <header className="bg-background-card border-b border-border sticky top-0 z-50">
-      <div className={pathname.startsWith('/admin/crm') ? 'w-full px-3 sm:px-6' : 'w-full px-4 sm:px-6 lg:px-8'}>
+    <header className={`bg-background-card border-b border-border sticky top-0 z-50 ${comLateral ? 'lg:hidden' : ''}`}>
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo + voltar ao painel */}
           <div className="flex items-center gap-4">
@@ -87,6 +90,8 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
               </div>
             </div>
 
+            <ThemeToggle />
+
             <Link
               href="/"
               target="_blank"
@@ -107,7 +112,8 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
 
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 text-foreground-secondary hover:text-foreground"
+              className="lg:hidden p-2 text-foreground-secondary hover:text-foreground"
+              aria-label="Menu"
             >
               {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -117,7 +123,7 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
 
       {/* Mobile Menu */}
       {showMobileMenu && (
-        <div className="md:hidden border-t border-border bg-background-card">
+        <div className="lg:hidden border-t border-border bg-background-card">
           <div className="px-4 py-4 space-y-2">
             <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border mb-4">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isHigh ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-500'}`}>
@@ -138,8 +144,8 @@ export function AdminHeader({ admin }: AdminHeaderProps) {
               Painel
             </Link>
 
-            {sections.map(({ label, href, Icon }) => {
-              const isActive = pathname.startsWith(href)
+            {sections.map(({ label, href, Icon, ativaEm }) => {
+              const isActive = secaoAtiva({ href, ativaEm } as Parameters<typeof secaoAtiva>[0], pathname)
               return (
                 <Link
                   key={href}

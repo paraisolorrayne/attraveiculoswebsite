@@ -187,13 +187,30 @@ html {
   background: var(--primary); border-radius: 3px;
   transition: height 0.1s linear;
 }
-/* Admin com letra maior (31/10/2026). As classes do Tailwind são em rem (os
-   tamanhos em px do admin viraram rem no mesmo dia), então subir a fonte da
-   raiz aumenta texto e espaçamento juntos, como um zoom de 112,5%, sem mexer
-   nas coordenadas do canvas do gerador como o `zoom` mexeria. Só onde o
-   layout do admin marca a página com .admin-raiz; vale também para os modais,
-   que são montados fora dela. */
-html:has(.admin-raiz) { font-size: 112.5%; }
+/* Letra do admin (31/10/2026, revista em 14/11/2026). As classes do Tailwind
+   são em rem, então subir a fonte da raiz aumenta texto e espaçamento juntos,
+   como um zoom, sem mexer nas coordenadas do canvas do gerador como o `zoom`
+   mexeria. Só onde o layout do admin marca a página com .admin-raiz; vale
+   também para os modais, que são montados fora dela.
+   - Até 1600 px de largura a raiz vale 18 px (112,5%). Daí em diante cresce
+     com a tela: 24 px em 2560 px, teto de 26 px. Em monitor grande o admin
+     continuava com letra de notebook.
+   - Os dois degraus de baixo sobem: text-xs de 13,5 para 14,6 px e text-sm de
+     15,75 para 16,9 px. É neles que mora quase todo o texto das tabelas,
+     cartões e rótulos.
+   Regra: no admin, tamanho de texto sempre em rem e nunca abaixo de text-xs. */
+html:has(.admin-raiz) {
+  font-size: clamp(112.5%, calc(0.625vw + 50%), 162.5%);
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+}
+/* Altura do cabeçalho do admin, para as telas de altura cheia (CRM, gerador)
+   descontarem o valor certo: 4rem onde há cabeçalho, zero no computador de
+   quem tem a barra lateral (14/11/2026). */
+.admin-raiz { --admin-topo: 4rem; }
+@media (min-width: 1024px) { .admin-com-lateral { --admin-topo: 0rem; } }
 
 /* Páginas internas em tela larga (13/11/2026). Elas ficavam numa caixa de
    1280 px com letra de 14 px no meio de um monitor grande. Agora, acima de

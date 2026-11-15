@@ -3,17 +3,29 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Trash2, Loader2, X, Check, Search, Download,
+  Plus, Trash2, Loader2, X, Check, Download,
   Upload, Users, UserCheck, UserX, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import type { NewsletterSubscriber } from '@/types/database'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
+import {
+  BarraDeFiltros, BotaoSecundario, CampoBusca, EstadoErro, EstadoVazio,
+  ResumoDosFiltros, useFiltrosUrl, type FiltroLigado,
+} from '@/components/admin/filtros'
+import { NewsletterAbas } from '../newsletter-abas'
+
+// Busca, aba e página ficam na URL: recarregar ou mandar o link mantém a lista.
+const CHAVES_FILTRO = ['q', 'status', 'pagina'] as const
+type Situacao = 'all' | 'active' | 'inactive'
 
 export function SubscribersAdmin() {
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [page, setPage] = useState(1)
+  const [erroCarga, setErroCarga] = useState<string | null>(null)
+  const { valores: filtro, definir } = useFiltrosUrl(CHAVES_FILTRO)
+  const search = filtro.q.trim()
+  const statusFilter: Situacao = filtro.status === 'active' || filtro.status === 'inactive' ? filtro.status : 'all'
+  const page = Math.max(1, parseInt(filtro.pagina, 10) || 1)
   const [total, setTotal] = useState(0)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -27,16 +39,20 @@ export function SubscribersAdmin() {
 
   const fetchSubscribers = useCallback(async () => {
     setIsLoading(true)
+    setErroCarga(null)
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit), status: statusFilter })
       if (search) params.set('search', search)
       const res = await fetch(`/api/admin/newsletter/subscribers?${params}`)
       if (res.status === 401) { router.push('/admin/login'); return }
+      // Antes a falha ia só para o console e a tela dizia "nenhum assinante".
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setSubscribers(data.subscribers || [])
       setTotal(data.total || 0)
     } catch (error) {
       console.error('Error fetching subscribers:', error)
+      setErroCarga('Não foi possível carregar os assinantes.')
     } finally {
       setIsLoading(false)
     }
@@ -130,8 +146,43 @@ export function SubscribersAdmin() {
 
   const totalPages = Math.ceil(total / limit)
 
+  // Mudar busca ou aba volta para a primeira página.
+  const limparFiltros = () => definir({ q: '', status: '', pagina: '' })
+  const irParaPagina = (n: number) => definir({ pagina: n > 1 ? String(n) : '' })
+  const filtrosLigados: FiltroLigado[] = []
+  if (search) filtrosLigados.push({ rotulo: `Busca: ${search}`, aoRemover: () => definir({ q: '', pagina: '' }) })
+  if (statusFilter !== 'all') {
+    filtrosLigados.push({
+      rotulo: `Situação: ${statusFilter === 'active' ? 'Ativos' : 'Inativos'}`,
+      aoRemover: () => definir({ status: '', pagina: '' }),
+    })
+  }
+
   return (
-    <div className="space-y-6">
+    <>
+    <CabecalhoPagina
+      titulo="Newsletter"
+      descricao="Quem recebe as campanhas"
+      acoes={
+        <>
+          <button onClick={() => setShowImportModal(true)}
+            className="flex min-h-10 items-center gap-2 px-4 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground-secondary">
+            <Upload className="w-4 h-4" /> Importar
+          </button>
+          <button onClick={handleExport}
+            className="flex min-h-10 items-center gap-2 px-4 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground-secondary">
+            <Download className="w-4 h-4" /> Exportar
+          </button>
+          <button onClick={() => setShowAddModal(true)}
+            className="flex min-h-10 items-center gap-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+            <Plus className="w-5 h-5" /> Adicionar
+          </button>
+        </>
+      }
+    >
+      <NewsletterAbas />
+    </CabecalhoPagina>
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Feedback */}
       {feedback && (
         <div className={`p-4 rounded-lg flex items-center gap-2 ${
@@ -142,59 +193,63 @@ export function SubscribersAdmin() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Assinantes Newsletter</h1>
-          <p className="text-foreground-secondary">{total} assinante{total !== 1 ? 's' : ''} cadastrados</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground-secondary">
-            <Upload className="w-4 h-4" /> Importar
-          </button>
-          <button onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground-secondary">
-            <Download className="w-4 h-4" /> Exportar
-          </button>
-          <button onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
-            <Plus className="w-5 h-5" /> Adicionar
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary" />
-          <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar por email ou nome..."
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground" />
-        </div>
-        <div className="flex gap-2">
-          {(['all', 'active', 'inactive'] as const).map(s => (
-            <button key={s} onClick={() => { setStatusFilter(s); setPage(1) }}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === s ? 'bg-primary text-white' : 'border border-border text-foreground-secondary hover:bg-background-soft'
-              }`}>
-              {s === 'all' ? <Users className="w-4 h-4 inline mr-1" /> : s === 'active' ? <UserCheck className="w-4 h-4 inline mr-1" /> : <UserX className="w-4 h-4 inline mr-1" />}
-              {s === 'all' ? 'Todos' : s === 'active' ? 'Ativos' : 'Inativos'}
-            </button>
-          ))}
-        </div>
+      {/* Filtros */}
+      <div className="space-y-3">
+        <BarraDeFiltros>
+          <CampoBusca valor={filtro.q} aoMudar={v => definir({ q: v, pagina: '' })} placeholder="Buscar por email ou nome" />
+          <div className="flex gap-2" role="group" aria-label="Situação">
+            {(['all', 'active', 'inactive'] as const).map(s => (
+              <button key={s} onClick={() => definir({ status: s === 'all' ? '' : s, pagina: '' })}
+                aria-pressed={statusFilter === s}
+                className={`flex min-h-11 items-center px-3 rounded-lg text-sm font-medium transition-colors ${
+                  statusFilter === s ? 'bg-primary text-white' : 'border border-border text-foreground-secondary hover:bg-background-soft'
+                }`}>
+                {s === 'all' ? <Users className="w-4 h-4 inline mr-1" /> : s === 'active' ? <UserCheck className="w-4 h-4 inline mr-1" /> : <UserX className="w-4 h-4 inline mr-1" />}
+                {s === 'all' ? 'Todos' : s === 'active' ? 'Ativos' : 'Inativos'}
+              </button>
+            ))}
+          </div>
+        </BarraDeFiltros>
+        {/* O servidor só devolve o total já filtrado, então a contagem é a do filtro. */}
+        {!isLoading && !erroCarga && (
+          <ResumoDosFiltros total={total} mostrando={total}
+            nome={['assinante', 'assinantes']} filtros={filtrosLigados} aoLimpar={limparFiltros} />
+        )}
       </div>
 
       {/* Table */}
-      <div className="bg-background-card rounded-xl border border-border overflow-hidden">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-        ) : subscribers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-foreground-secondary">
-            <Users className="w-12 h-12 mb-4" />
-            <p>Nenhum assinante encontrado</p>
-          </div>
-        ) : (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : erroCarga ? (
+        <EstadoErro texto={erroCarga} aoTentar={fetchSubscribers} />
+      ) : subscribers.length === 0 && filtrosLigados.length > 0 ? (
+        <EstadoVazio
+          Icon={Users}
+          titulo="Nenhum assinante com esses filtros"
+          texto="Mude a busca ou a situação para ver outros assinantes."
+          acao={<BotaoSecundario onClick={limparFiltros}>Limpar filtros</BotaoSecundario>}
+        />
+      ) : subscribers.length === 0 && page > 1 ? (
+        // Página que deixou de existir (link antigo ou assinantes removidos).
+        <EstadoVazio
+          Icon={Users}
+          titulo="Esta página não tem assinantes"
+          acao={<BotaoSecundario onClick={() => irParaPagina(1)}>Voltar para a primeira página</BotaoSecundario>}
+        />
+      ) : subscribers.length === 0 ? (
+        <EstadoVazio
+          Icon={Users}
+          titulo="Nenhum assinante cadastrado"
+          texto="Adicione um assinante ou importe uma lista de emails."
+          acao={
+            <button onClick={() => setShowAddModal(true)}
+              className="flex min-h-10 items-center gap-2 px-4 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+              <Plus className="w-4 h-4" /> Adicionar assinante
+            </button>
+          }
+        />
+      ) : (
+        <div className="bg-background-card rounded-xl border border-border overflow-x-auto">
           <table className="w-full">
             <thead className="bg-background-soft">
               <tr>
@@ -230,20 +285,20 @@ export function SubscribersAdmin() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {!erroCarga && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-foreground-secondary">Página {page} de {totalPages}</p>
           <div className="flex gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-              className="p-2 border border-border rounded-lg hover:bg-background-soft disabled:opacity-50 transition-colors">
+            <button onClick={() => irParaPagina(page - 1)} disabled={page <= 1} aria-label="Página anterior"
+              className="flex h-10 w-10 items-center justify-center border border-border rounded-lg hover:bg-background-soft disabled:opacity-50 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-              className="p-2 border border-border rounded-lg hover:bg-background-soft disabled:opacity-50 transition-colors">
+            <button onClick={() => irParaPagina(Math.min(totalPages, page + 1))} disabled={page >= totalPages} aria-label="Próxima página"
+              className="flex h-10 w-10 items-center justify-center border border-border rounded-lg hover:bg-background-soft disabled:opacity-50 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -309,6 +364,7 @@ export function SubscribersAdmin() {
         </div>
       )}
     </div>
+    </>
   )
 }
 

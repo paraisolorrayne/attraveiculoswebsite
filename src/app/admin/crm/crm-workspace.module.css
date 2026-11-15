@@ -18,24 +18,29 @@
 }
 
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--foreground-secondary); }
-.title { margin-top: 3px; font-size: 25px; line-height: 1.2; font-weight: 650; letter-spacing: -.04em; }
+.eyebrow { font-size: 0.8125rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--foreground-secondary); }
+.title { margin-top: 3px; font-size: 1.5625rem; line-height: 1.2; font-weight: 650; letter-spacing: -.04em; }
 .headingActions { display: flex; align-items: center; gap: 12px; }
-.sync { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--foreground-secondary); white-space: nowrap; }
-.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 12px; font-weight: 500; cursor: pointer; transition: border-color .15s, background .15s; }
+.sync { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--foreground-secondary); white-space: nowrap; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 2.5rem; padding: 7px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: border-color .15s, background .15s; }
 .button:hover { border-color: var(--foreground-secondary); }
 .button:disabled { opacity: .5; cursor: default; }
 .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .search { position: relative; flex: 1 1 240px; max-width: 420px; }
-.search input { width: 100%; height: 38px; padding: 8px 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 12px; }
+.search input { width: 100%; height: 2.5rem; padding: 8px 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 0.875rem; }
 .filter { display: flex; align-items: center; gap: 7px; }
-.filter select { max-width: 200px; height: 38px; padding: 7px 28px 7px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 12px; }
-.filterLabel { font-size: 11px; color: var(--foreground-secondary); }
+.filter select { max-width: 200px; height: 2.5rem; padding: 7px 28px 7px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--background-card); font-size: 0.875rem; }
+.filterLabel { font-size: 0.8125rem; color: var(--foreground-secondary); }
 .toolbarEnd { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.toolbarResumo { flex-wrap: wrap; justify-content: flex-end; }
+.chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 2.5rem; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--foreground-secondary) 45%, var(--border)); border-radius: 999px; background: var(--background-soft); font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: border-color .15s; }
+.chip:hover { border-color: var(--foreground-secondary); }
+.chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip svg { flex-shrink: 0; }
 .metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 12px; background: var(--background-card); }
 .metric { min-width: 0; padding: 14px 16px; position: relative; }
 .metric + .metric::before { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 1px; background: var(--border); }
-.metricLabel { display: flex; align-items: center; gap: 5px; color: var(--foreground-secondary); font-size: 11px; }
+.metricLabel { display: flex; align-items: center; gap: 5px; color: var(--foreground-secondary); font-size: 0.8125rem; }
 .metricValue { margin-top: 7px; font-size: clamp(17px, 1.4vw, 24px); line-height: 1.1; font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .metric[data-tone="aguardando"] .metricValue { color: #c08020; }
 .metric[data-tone="ganho"] .metricValue { color: #23956b; }
@@ -49,16 +54,16 @@
 .column[data-drag-over="true"] { border-color: var(--stage); background: color-mix(in srgb, var(--stage) 10%, var(--background)); }
 .columnHeader { flex-shrink: 0; padding: 14px 12px 12px; border-top: 3px solid var(--stage); border-bottom: 1px solid var(--border); }
 .columnTitle { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.columnTitle h2 { min-width: 0; font-size: 12px; font-weight: 600; letter-spacing: -.015em; }
-.columnCount { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-left: auto; padding: 0 5px; border-radius: 6px; background: color-mix(in srgb, var(--stage) 13%, transparent); color: var(--foreground); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.columnTotal { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--foreground-secondary); font-variant-numeric: tabular-nums; }
+.columnTitle h2 { min-width: 0; font-size: 0.875rem; font-weight: 600; letter-spacing: -.015em; }
+.columnCount { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-left: auto; padding: 0 5px; border-radius: 6px; background: color-mix(in srgb, var(--stage) 13%, transparent); color: var(--foreground); font-size: 0.8125rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.columnTotal { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 0.8125rem; color: var(--foreground-secondary); font-variant-numeric: tabular-nums; }
 .columnCards { flex: 1; min-height: 0; padding: 9px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .columnCards > div + div { margin-top: 8px; }
 .card { padding: 12px; background: var(--background-card); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; box-shadow: 0 1px 2px #00000004; transition: border-color .15s, box-shadow .15s; }
 .card:hover { border-color: color-mix(in srgb, var(--stage) 65%, var(--border)); box-shadow: 0 3px 12px #0000000a; }
-.emptyColumn { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 22px; padding: 22px 12px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; font-size: 11px; color: var(--foreground-secondary); }
-.footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--foreground-secondary); font-size: 10px; }
-.notice { flex-shrink: 0; border-radius: 8px; padding: 10px 12px; font-size: 12px; }
+.emptyColumn { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 22px; padding: 22px 12px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; font-size: 0.8125rem; color: var(--foreground-secondary); }
+.footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--foreground-secondary); font-size: 0.8125rem; }
+.notice { flex-shrink: 0; border-radius: 8px; padding: 10px 12px; font-size: 0.875rem; }
 /* Janela central do detalhe do card.
    Era gaveta lateral de 540px FIXOS: num monitor de 1920 ela continuava
    estreita, os campos se espremiam em duas colunas e sobrava um vazio no pé.
@@ -76,7 +81,7 @@
 }
 
 @media (min-width: 1180px) {
-	.workspace { height: calc(100dvh - 65px); min-height: 620px; }
+	.workspace { height: calc(100dvh - var(--admin-topo, 4rem)); min-height: 620px; }
 	.expanded { min-height: 0; }
 	.board { grid-template-columns: repeat(5, minmax(0, 1fr)); min-height: 240px; }
 }
@@ -92,7 +97,7 @@
 
 @media (max-width: 640px) {
 	.workspace { padding: 16px 12px 10px; gap: 12px; }
-	.title { font-size: 22px; }
+	.title { font-size: 1.375rem; }
 	.sync, .filterLabel { display: none; }
 	.headingActions { gap: 6px; }
 	.headingActions .button span { display: none; }
@@ -106,7 +111,7 @@
 	.metric:nth-child(n+3) { border-top: 0; }
 	.metric + .metric::before { display: block; }
 	.metric:last-child { flex-basis: 175px; }
-	.metricLabel { font-size: 10px; }
-	.metricValue { font-size: 20px; }
+	.metricLabel { font-size: 0.8125rem; }
+	.metricValue { font-size: 1.25rem; }
 	.board { grid-template-columns: repeat(5, minmax(280px, 85vw)); gap: 10px; }
 }

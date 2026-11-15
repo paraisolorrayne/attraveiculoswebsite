@@ -150,3 +150,17 @@ export const PERIODOS = [
 	{ dias: 30, label: 'Mês (30d)' },
 	{ dias: 0,  label: 'Tudo' },
 ] as const
+
+// Filtro "Próxima ação": só olha lead aberto. "Sem" = o vendedor não agendou
+// nada; "vencida" = a data combinada já passou.
+export const PROXIMA_ACAO = [
+	{ valor: 'sem', rotulo: 'Sem próxima ação' },
+	{ valor: 'vencida', rotulo: 'Ação vencida' },
+] as const
+
+// Ordem dos cards dentro da coluna. O padrão (mais recente primeiro) é a ordem
+// em que a API entrega e não tem valor na URL.
+export const ORDENACOES = [
+	{ valor: 'antigo', rotulo: 'Mais antigo' },
+	{ valor: 'valor', rotulo: 'Maior valor' },
+] as const

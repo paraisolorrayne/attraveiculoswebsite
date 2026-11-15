@@ -614,16 +614,16 @@ export function DossieAdmin({ visivel }: { visivel: boolean }) {
 													// eslint-disable-next-line @next/next/no-img-element
 													<img src={url} alt="" className="h-16 w-full object-cover" />
 												) : (
-													<span className="flex h-16 w-full items-center justify-center text-[0.625rem] text-foreground-secondary">
+													<span className="flex h-16 w-full items-center justify-center text-xs text-foreground-secondary">
 														vazio
 													</span>
 												)}
 											</span>
 											<span className="block px-1.5 py-1">
-												<span className="block truncate text-[0.6875rem] font-medium text-foreground">
+												<span className="block truncate text-xs font-medium text-foreground">
 													{slot.rotulo}
 												</span>
-												<span className="block truncate text-[0.625rem] text-foreground-secondary">
+												<span className="block truncate text-xs text-foreground-secondary">
 													{enviada ? 'foto enviada' : slot.pagina}
 												</span>
 											</span>

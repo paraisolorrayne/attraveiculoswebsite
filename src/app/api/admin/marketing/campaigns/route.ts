@@ -3,6 +3,8 @@ import { jsonArrayFrom } from 'kysely/helpers/postgres'
 import { getCurrentAdmin } from '@/lib/admin-auth-supabase'
 import { canAccessRoute } from '@/lib/auth/roles'
 import { db } from '@/lib/db'
+import { PAPEIS_COM_SALDO, saldoDaMeta } from '@/lib/meta-ads'
+import { sincronizarCampanhasDaMeta } from '@/lib/meta-campanhas'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 // O embed PostgREST `vehicles:campaign_vehicles(*)` virou jsonArrayFrom.
@@ -30,10 +32,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const campaigns = await campaignsWithVehicles()
-      .orderBy('created_at', 'desc').execute()
+    // Antes de listar, traz da Meta os anúncios novos (no máximo a cada 15
+    // minutos, e sem segurar a tela se a Meta demorar). Sem token, não faz nada.
+    // Só quem abre o Marketing dispara a leitura da Meta e recebe o estado dela.
+    const doMarketing = canAccessRoute(admin.role, '/admin/marketing', admin.secoes)
+    const meta = doMarketing ? await sincronizarCampanhasDaMeta() : null
+    const [campaigns, saldo] = await Promise.all([
+      campaignsWithVehicles().orderBy('created_at', 'desc').execute(),
+      meta?.ligada && PAPEIS_COM_SALDO.includes(admin.role)
+        ? saldoDaMeta().catch(e => { console.warn('[meta] saldo falhou:', e); return null })
+        : null,
+    ])
 
-    return NextResponse.json({ campaigns })
+    return NextResponse.json({ campaigns, meta, saldo })
   } catch (error) {
     console.error('Error in campaigns GET:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

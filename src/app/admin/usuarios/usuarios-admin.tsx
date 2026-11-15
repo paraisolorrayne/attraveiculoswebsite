@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Shield, User, UserPlus, KeyRound, Loader2, Power, SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Shield, User, UserPlus, KeyRound, Loader2, Power, SlidersHorizontal, ArrowDown, ArrowUp, ArrowUpDown, Users } from 'lucide-react'
 import { ADMIN_ROLES, ROLE_LABELS, canAccessRoute, AREAS_SO_ADMIN, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
 import { ADMIN_SECTIONS } from '@/lib/admin-sections'
+import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
+import {
+  BarraDeFiltros, BotaoSecundario, CampoBusca, EstadoErro, EstadoVazio,
+  ResumoDosFiltros, SeletorFiltro, useFiltrosUrl, type FiltroLigado,
+} from '@/components/admin/filtros'
+import { termosDaBusca } from '@/lib/crm-busca'
 
 interface AdminUserRow {
   id: string
@@ -22,6 +28,41 @@ interface AdminUserRow {
 // cinco papéis reais e rebaixava quem fosse editado por esta tela.
 const roleLabels = ROLE_LABELS
 
+// Filtros e ordenação da lista, guardados na URL. Sem `ordem`, vale a ordem em
+// que a API devolve (data de criação da conta).
+const CHAVES_FILTRO = ['q', 'papel', 'situacao', 'ordem', 'dir'] as const
+type ColunaOrdem = 'nome' | 'papel' | 'acesso'
+
+const OPCOES_PAPEL = ADMIN_ROLES.map(r => ({ valor: r, rotulo: ROLE_LABELS[r] }))
+const OPCOES_SITUACAO = [
+  { valor: 'ativo', rotulo: 'Ativos' },
+  { valor: 'inativo', rotulo: 'Inativos' },
+] as const
+
+/** Cabeçalho de coluna clicável: alterna crescente/decrescente e mostra a seta. */
+function ThOrdenavel({
+  coluna, rotulo, ordem, dir, aoOrdenar, className = '',
+}: {
+  coluna: ColunaOrdem
+  rotulo: string
+  ordem: string
+  dir: string
+  aoOrdenar: (c: ColunaOrdem) => void
+  className?: string
+}) {
+  const ativa = ordem === coluna
+  const Seta = !ativa ? ArrowUpDown : dir === 'desc' ? ArrowDown : ArrowUp
+  return (
+    <th className={`px-4 ${className}`} aria-sort={ativa ? (dir === 'desc' ? 'descending' : 'ascending') : undefined}>
+      <button type="button" onClick={() => aoOrdenar(coluna)}
+        className={`flex min-h-10 items-center gap-1.5 uppercase hover:text-foreground ${ativa ? 'text-foreground' : ''}`}>
+        {rotulo}
+        <Seta className={`w-3.5 h-3.5 ${ativa ? '' : 'opacity-50'}`} />
+      </button>
+    </th>
+  )
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return 'nunca'
   return new Date(iso).toLocaleString('pt-BR', {
@@ -35,6 +76,8 @@ function formatDate(iso: string | null): string {
 export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
   const [users, setUsers] = useState<AdminUserRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [erroCarga, setErroCarga] = useState<string | null>(null)
+  const { valores: filtro, definir } = useFiltrosUrl(CHAVES_FILTRO)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -51,6 +94,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setErroCarga(null)
     try {
       const r = await fetch('/api/admin/users')
       const d = await r.json()
@@ -58,9 +102,11 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
         setUsers(d.users || [])
         setAgencias(d.agencias || [])
       }
-      else setFeedback({ ok: false, msg: d.error || 'Falha ao carregar usuários' })
+      // Falha de carga fica no lugar da lista, com "Tentar de novo" (antes era
+      // um aviso em cima de uma tabela vazia).
+      else setErroCarga(d.error || 'Falha ao carregar usuários')
     } catch {
-      setFeedback({ ok: false, msg: 'Falha ao carregar usuários' })
+      setErroCarga('Falha ao carregar usuários')
     } finally {
       setLoading(false)
     }
@@ -82,7 +128,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
       await load()
       return true
     } catch {
-      setFeedback({ ok: false, msg: 'Erro de rede — tente novamente' })
+      setFeedback({ ok: false, msg: 'Erro de rede. Tente novamente' })
       return false
     } finally {
       setBusy(false)
@@ -128,23 +174,76 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
     }, `Senha de ${u.email} redefinida`)
   }
 
+  // Busca por nome ou e-mail (sem acento, todas as palavras), papel, situação e
+  // ordenação, tudo sobre a lista inteira que a API devolve.
+  const visiveis = useMemo(() => {
+    const termos = termosDaBusca(filtro.q)
+    const lista = users.filter(u => {
+      if (filtro.papel && u.role !== filtro.papel) return false
+      if (filtro.situacao === 'ativo' && !u.is_active) return false
+      if (filtro.situacao === 'inativo' && u.is_active) return false
+      if (termos.length === 0) return true
+      const alvo = termosDaBusca(`${u.name ?? ''} ${u.email}`).join(' ')
+      return termos.every(t => alvo.includes(t))
+    })
+    const sinal = filtro.dir === 'desc' ? -1 : 1
+    const nome = (u: AdminUserRow) => u.name || u.email
+    if (filtro.ordem === 'nome') {
+      lista.sort((a, b) => sinal * nome(a).localeCompare(nome(b), 'pt-BR', { sensitivity: 'base' }))
+    } else if (filtro.ordem === 'papel') {
+      lista.sort((a, b) =>
+        sinal * ROLE_LABELS[a.role].localeCompare(ROLE_LABELS[b.role], 'pt-BR') ||
+        nome(a).localeCompare(nome(b), 'pt-BR', { sensitivity: 'base' }))
+    } else if (filtro.ordem === 'acesso') {
+      // Quem nunca acessou fica sempre no fim, nas duas direções.
+      lista.sort((a, b) => {
+        const ta = a.ultimo_acesso_em ? new Date(a.ultimo_acesso_em).getTime() : null
+        const tb = b.ultimo_acesso_em ? new Date(b.ultimo_acesso_em).getTime() : null
+        if (ta === null && tb === null) return 0
+        if (ta === null) return 1
+        if (tb === null) return -1
+        return sinal * (ta - tb)
+      })
+    }
+    return lista
+  }, [users, filtro.q, filtro.papel, filtro.situacao, filtro.ordem, filtro.dir])
+
+  // Clique no cabeçalho: mesma coluna inverte; coluna nova começa crescente
+  // (último acesso começa pelo mais recente).
+  const ordenarPor = (coluna: ColunaOrdem) => {
+    if (filtro.ordem === coluna) definir({ dir: filtro.dir === 'desc' ? 'asc' : 'desc' })
+    else definir({ ordem: coluna, dir: coluna === 'acesso' ? 'desc' : 'asc' })
+  }
+
+  // A ordenação não é filtro: não vira etiqueta nem é desfeita pelo "Limpar filtros".
+  const limparFiltros = () => definir({ q: '', papel: '', situacao: '' })
+  const filtrosLigados: FiltroLigado[] = []
+  if (filtro.q) filtrosLigados.push({ rotulo: `Busca: ${filtro.q}`, aoRemover: () => definir({ q: '' }) })
+  if (filtro.papel) {
+    const rotulo = (ROLE_LABELS as Record<string, string>)[filtro.papel] ?? filtro.papel
+    filtrosLigados.push({ rotulo: `Papel: ${rotulo}`, aoRemover: () => definir({ papel: '' }) })
+  }
+  if (filtro.situacao) {
+    const rotulo = OPCOES_SITUACAO.find(o => o.valor === filtro.situacao)?.rotulo ?? filtro.situacao
+    filtrosLigados.push({ rotulo: `Situação: ${rotulo}`, aoRemover: () => definir({ situacao: '' }) })
+  }
+
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Usuários do Admin</h1>
-          <p className="text-sm text-foreground-secondary mt-1">
-            Quem acessa o painel e com qual papel
-          </p>
-        </div>
+    <>
+    <CabecalhoPagina
+      titulo="Usuários"
+      descricao="Quem acessa o painel e com qual papel"
+      acoes={
         <button
           onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          className="flex min-h-10 items-center gap-2 px-4 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
         >
           <UserPlus className="w-4 h-4" />
           Novo usuário
         </button>
-      </div>
+      }
+    />
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
 
       {feedback && (
         <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${feedback.ok
@@ -204,23 +303,50 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
         </form>
       )}
 
-      <div className="bg-background-card border border-border rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-foreground-secondary">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-          </div>
-        ) : (
+      <div className="mb-4 space-y-3">
+        <BarraDeFiltros>
+          <CampoBusca valor={filtro.q} aoMudar={v => definir({ q: v })} placeholder="Buscar por nome ou e-mail" />
+          <SeletorFiltro rotulo="Papel" valor={filtro.papel} aoMudar={v => definir({ papel: v })} opcoes={OPCOES_PAPEL} />
+          <SeletorFiltro rotulo="Situação" valor={filtro.situacao} aoMudar={v => definir({ situacao: v })} opcoes={OPCOES_SITUACAO} />
+        </BarraDeFiltros>
+        {!loading && !erroCarga && users.length > 0 && (
+          <ResumoDosFiltros total={users.length} mostrando={visiveis.length}
+            nome={['usuário', 'usuários']} filtros={filtrosLigados} aoLimpar={limparFiltros} />
+        )}
+      </div>
+
+      {loading ? (
+        <div className="p-8 text-center text-foreground-secondary">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+        </div>
+      ) : erroCarga ? (
+        <EstadoErro texto={erroCarga} aoTentar={load} />
+      ) : users.length === 0 ? (
+        <EstadoVazio
+          Icon={Users}
+          titulo="Nenhum usuário cadastrado"
+          acao={<BotaoSecundario onClick={() => setShowForm(true)}><UserPlus className="w-4 h-4" />Novo usuário</BotaoSecundario>}
+        />
+      ) : visiveis.length === 0 ? (
+        <EstadoVazio
+          Icon={Users}
+          titulo="Nenhum usuário com esses filtros"
+          texto="Mude a busca, o papel ou a situação para ver outros usuários."
+          acao={<BotaoSecundario onClick={limparFiltros}>Limpar filtros</BotaoSecundario>}
+        />
+      ) : (
+        <div className="bg-background-card border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-foreground-secondary uppercase">
-                <th className="px-4 py-3">Usuário</th>
-                <th className="px-4 py-3">Papel</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Último acesso</th>
+                <ThOrdenavel coluna="nome" rotulo="Usuário" ordem={filtro.ordem} dir={filtro.dir} aoOrdenar={ordenarPor} />
+                <ThOrdenavel coluna="papel" rotulo="Papel" ordem={filtro.ordem} dir={filtro.dir} aoOrdenar={ordenarPor} />
+                <ThOrdenavel coluna="acesso" rotulo="Último acesso" ordem={filtro.ordem} dir={filtro.dir} aoOrdenar={ordenarPor} className="hidden sm:table-cell" />
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
+              {visiveis.map(u => (
                 <tr key={u.id} className={`border-b border-border last:border-0 ${!u.is_active ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="font-medium text-foreground">{u.name || u.email}</div>
@@ -271,8 +397,8 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       <p className="mt-4 text-xs text-foreground-secondary">
         Contas usam e-mail + senha. O papel define o acesso padrão; use o botão de
@@ -289,6 +415,7 @@ export function UsuariosAdmin({ currentAdminId }: { currentAdminId: string }) {
         />
       )}
     </div>
+    </>
   )
 }
 
@@ -349,14 +476,14 @@ function PainelPermissoes({
 							<div key={secao.href} className="flex items-center justify-between gap-3 py-2 border-b border-border/60 last:border-0">
 								<div className="min-w-0">
 									<div className="text-sm text-foreground truncate">{secao.label}</div>
-									<div className="text-[0.6875rem] text-foreground-secondary">
+									<div className="text-xs text-foreground-secondary">
 										{soAdmin
 											? 'Exclusivo do Administrador'
 											: `Padrão do papel: ${padraoLibera ? 'liberado' : 'sem acesso'}`}
 									</div>
 								</div>
 								{soAdmin ? (
-									<span className="text-[0.6875rem] text-foreground-secondary whitespace-nowrap">—</span>
+									<span className="text-xs text-foreground-secondary whitespace-nowrap">—</span>
 								) : (
 									<div className="flex gap-1 flex-shrink-0">
 										{([
@@ -368,7 +495,7 @@ function PainelPermissoes({
 												key={valor}
 												type="button"
 												onClick={() => definir(secao.href, valor)}
-												className={`px-2 py-1 rounded-md text-[0.6875rem] border transition-colors ${
+												className={`px-2 py-1 rounded-md text-xs border transition-colors ${
 													atual === valor
 														? valor === 'liberar'
 															? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/40'

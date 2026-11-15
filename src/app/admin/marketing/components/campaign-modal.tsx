@@ -18,6 +18,8 @@ interface VehicleEntry {
   notes: string
   ended_date: string
   end_reason: string // '' = ainda no ar
+  /** Anúncios da Meta ligados ao card: vai e volta sem edição, para não soltar a ligação. */
+  meta_ad_ids?: string[]
 }
 
 const STATUS_OPTIONS: { value: CampaignStatus; label: string }[] = [
@@ -45,6 +47,7 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
       notes: v.notes || '',
       ended_date: v.ended_date || '',
       end_reason: v.end_reason || '',
+      meta_ad_ids: v.meta_ad_ids ?? [],
     })) || [{ vehicle_name: '', added_date: '', notes: '', ended_date: '', end_reason: '' }]
   )
 
@@ -85,6 +88,7 @@ export function CampaignModal({ campaign, isAdmin, onClose, onSaved }: CampaignM
           notes: v.notes.trim() || null,
           ended_date: v.end_reason ? (v.ended_date || today()) : null,
           end_reason: v.end_reason || null,
+          meta_ad_ids: v.meta_ad_ids ?? [],
         })),
       }
 

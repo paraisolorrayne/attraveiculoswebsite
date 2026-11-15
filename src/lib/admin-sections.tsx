@@ -30,6 +30,8 @@ export interface AdminSection {
   description: string
   grupo: GrupoAdmin
   Icon: LucideIcon
+  /** Prefixo que marca a seção como ativa no menu, quando não é o próprio href. */
+  ativaEm?: string
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
@@ -38,7 +40,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { label: 'Visitantes', href: '/admin/visitors', description: 'Rastreamento e métricas de visita', grupo: 'aquisicao', Icon: BarChart3 },
   { label: 'CRM', href: '/admin/crm', description: 'Funil de leads', grupo: 'aquisicao', Icon: KanbanSquare },
   { label: 'Blog', href: '/admin/blog', description: 'Posts e insights do blog', grupo: 'conteudo', Icon: FileText },
-  { label: 'Newsletter', href: '/admin/newsletter/campaigns', description: 'Campanhas e inscritos', grupo: 'conteudo', Icon: MailOpen },
+  { label: 'Newsletter', href: '/admin/newsletter/campaigns', description: 'Campanhas e inscritos', grupo: 'conteudo', Icon: MailOpen, ativaEm: '/admin/newsletter' },
   { label: 'Sons de Motor', href: '/admin/engine-sounds', description: 'Áudios de motor dos veículos', grupo: 'conteudo', Icon: Volume2 },
   { label: 'Usuários', href: '/admin/usuarios', description: 'Contas e papéis do painel', grupo: 'sistema', Icon: Users },
   { label: 'Configurações', href: '/admin/settings', description: 'Ajustes gerais do site', grupo: 'sistema', Icon: Settings },
@@ -49,13 +51,15 @@ export function sectionsForRole(role: AdminRole, secoes?: SecoesExtras | null): 
   return ADMIN_SECTIONS.filter((s) => canAccessRoute(role, s.href, secoes))
 }
 
-/** Card da área de uma agência ("Marketing Media House") na tela inicial do time da Attra. */
-export function secaoDaAgencia(agencia: { slug: string; nome: string }): AdminSection {
-  return {
-    label: `Marketing ${agencia.nome}`,
-    href: `/admin/agencia/${agencia.slug}`,
-    description: 'Campanhas e visitantes da agência',
-    grupo: 'aquisicao',
-    Icon: Megaphone,
-  }
+/** A seção é a que está aberta? (para o estado ativo do menu) */
+export function secaoAtiva(secao: AdminSection, pathname: string): boolean {
+  const prefixo = secao.ativaEm ?? secao.href
+  return pathname === prefixo || pathname.startsWith(`${prefixo}/`)
 }
+
+/**
+ * Cookie que guarda a barra lateral recolhida. Mora aqui, e não no componente
+ * da barra: exportado de um módulo `use client`, o layout (servidor) receberia
+ * uma referência de cliente no lugar do texto e nunca leria o cookie.
+ */
+export const COOKIE_LATERAL = 'attra_admin_lateral'
