@@ -650,7 +650,22 @@ export interface AgenciasTable {
   criado_em: Generated<Timestamp>
 }
 
+/** Quem pausou ou reativou anúncio na Meta pelo painel (migration 20261116). */
+export interface MetaAcoesTable {
+  id: Generated<string>
+  card_id: string | null
+  carro: string
+  acao: string
+  motivo: string | null
+  ad_ids: Generated<string[]>
+  por: string | null
+  por_nome: string | null
+  resultado: string
+  criado_em: Generated<Timestamp>
+}
+
 export interface Database {
+  meta_acoes: MetaAcoesTable
   visitor_fingerprints: VisitorFingerprintsTable
   visitor_sessions: VisitorSessionsTable
   visitor_page_views: VisitorPageViewsTable
@@ -714,7 +729,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
-  'agencias', 'veiculos_publicados', 'criativos_gerados',
+  'agencias', 'veiculos_publicados', 'criativos_gerados', 'meta_acoes',
 ] as const satisfies readonly (keyof Database)[]
 
 /**

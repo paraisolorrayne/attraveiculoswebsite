@@ -65,6 +65,22 @@ export const fmtQuando = (iso: string) => {
 }
 
 /** Leitura defensiva do JSONB `dados` (campos legados do contrato v1). */
+/**
+ * O que o vendedor reportou, ou null se o campo ainda guarda a observação do
+ * alerta (15/11/2026).
+ *
+ * O sistema dos agentes cria o card gravando a observação do alerta também em
+ * `andamento`, e ela só sai quando chega um evento com outro andamento. Até lá
+ * a tela mostrava o texto do alerta sob o título "Standup do vendedor", como
+ * se fosse a fala dele. A observação continua em "Observações do alerta".
+ */
+export function andamentoDoVendedor(c: { andamento: string | null; dados: Record<string, unknown> | null }): string | null {
+	const fala = c.andamento?.trim()
+	if (!fala) return null
+	const alerta = c.dados?.observacoes_alerta
+	return typeof alerta === 'string' && alerta.trim() === fala ? null : fala
+}
+
 export const dadoStr = (dados: Record<string, unknown> | null, chave: string): string | null => {
 	const v = dados?.[chave]
 	return typeof v === 'string' && v.trim() !== '' ? v : null
@@ -270,9 +286,9 @@ export function CardKanban({ card: c, encerrada, aguardando = false, agora, onSe
 			)}
 
 			{/* Andamento — a última fala do vendedor */}
-			{c.andamento && (
-				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-xs leading-relaxed text-foreground-secondary line-clamp-2" title={c.andamento}>
-					{c.andamento}
+			{andamentoDoVendedor(c) && (
+				<div className="mt-2.5 rounded-md bg-background px-2 py-1.5 text-xs leading-relaxed text-foreground-secondary line-clamp-2" title={andamentoDoVendedor(c) ?? undefined}>
+					{andamentoDoVendedor(c)}
 				</div>
 			)}
 

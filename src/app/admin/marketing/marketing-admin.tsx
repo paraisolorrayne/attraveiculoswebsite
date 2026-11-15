@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  LayoutDashboard,
-  Kanban,
   Plus,
   RefreshCw,
   Loader2,
@@ -16,7 +14,7 @@ import {
 } from 'lucide-react'
 import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
 import { SaldoMeta } from '@/components/admin/saldo-meta'
-import type { SaldoDaMeta } from '@/lib/meta-ads'
+import { PERIODOS_DA_META, type PeriodoDaMeta, type SaldoDaMeta } from '@/lib/meta-ads'
 import type { EstadoDaMeta } from '@/lib/meta-campanhas'
 import {
   BarraDeFiltros,
@@ -34,14 +32,14 @@ import { cn } from '@/lib/utils'
 import { KanbanBoard } from './components/kanban-board'
 import { MetricsDashboard } from './components/metrics-dashboard'
 import { TaskModal } from './components/task-modal'
-import { CampaignsBoard } from './components/campaigns-board'
+import { AnunciosLista, situacaoDoAnuncio, type AnuncioDaLista } from './components/anuncios-lista'
+import { ResultadosMeta } from './components/resultados-meta'
 import { CampaignModal } from './components/campaign-modal'
-import { PainelAnuncio } from './components/painel-anuncio'
 import { CreativesBoard } from './components/creatives-board'
 import { EstatisticasCampanhas } from '../visitors/campanhas-score'
 import type { AdminUser } from '@/lib/admin-auth-supabase'
 import { canAccessRoute } from '@/lib/auth/roles'
-import type { MarketingTask, MarketingStrategy, TaskStatus, CampaignWithVehicles, CampaignStatus, CampaignVehicle } from '@/types/database'
+import type { MarketingTask, MarketingStrategy, TaskStatus, CampaignWithVehicles } from '@/types/database'
 
 interface MarketingAdminProps {
   admin: AdminUser
@@ -49,17 +47,38 @@ interface MarketingAdminProps {
 
 type ViewMode = 'campanhas' | 'criativos' | 'kanban' | 'dashboard' | 'estatisticas'
 
-const VISOES: { id: ViewMode; rotulo: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'campanhas', rotulo: 'Campanhas', Icon: Megaphone },
-  { id: 'criativos', rotulo: 'Criativos', Icon: ImageIcon },
-  { id: 'kanban', rotulo: 'Kanban', Icon: Kanban },
-  { id: 'dashboard', rotulo: 'Dashboard', Icon: LayoutDashboard },
-  { id: 'estatisticas', rotulo: 'Estatísticas', Icon: BarChart3 },
+const VISOES: ViewMode[] = ['campanhas', 'criativos', 'kanban', 'dashboard', 'estatisticas']
+
+/**
+ * As abas, com o nome do que a pessoa encontra em cada uma (15/11/2026). Os
+ * nomes antigos (Campanhas, Criativos, Kanban, Dashboard, Estatísticas)
+ * diziam a ferramenta, não o conteúdo. As chaves da URL não mudaram, para os
+ * links já salvos continuarem abrindo. "Dashboard" deixou de ser aba: são os
+ * indicadores das tarefas e ficam dentro de Tarefas.
+ */
+const ABAS: { id: ViewMode; rotulo: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'campanhas', rotulo: 'Anúncios', Icon: Megaphone },
+  { id: 'estatisticas', rotulo: 'Resultados', Icon: BarChart3 },
+  { id: 'criativos', rotulo: 'Criativos a publicar', Icon: ImageIcon },
+  { id: 'kanban', rotulo: 'Tarefas', Icon: ListChecks },
 ]
+
+const SITUACOES = [
+  { valor: 'no-ar', rotulo: 'No ar' },
+  { valor: 'pausado', rotulo: 'Pausados na Meta' },
+  { valor: 'troca', rotulo: 'Trocando o criativo' },
+  { valor: 'manual', rotulo: 'Cadastrados à mão' },
+  { valor: 'encerrado', rotulo: 'Encerrados' },
+] as const
+
+const ORDENS_DOS_ANUNCIOS = [
+  { valor: 'recente', rotulo: 'Mais recentes' },
+  { valor: 'nome', rotulo: 'Nome (A a Z)' },
+] as const
 
 // Tudo na URL: a visão aberta, os filtros das tarefas e a busca das campanhas.
 // Recarregar a página ou mandar o link mantém o que estava na tela.
-const CHAVES_URL = ['visao', 'q', 'resp', 'prio', 'cat', 'estr', 'prazo', 'camp'] as const
+const CHAVES_URL = ['visao', 'q', 'resp', 'prio', 'cat', 'estr', 'prazo', 'camp', 'cid', 'sit', 'ord', 'per', 'editar'] as const
 const FILTROS_TAREFAS_VAZIOS = { q: '', resp: '', prio: '', cat: '', estr: '', prazo: '' }
 
 // Mesmos rótulos do modal da tarefa.
@@ -142,13 +161,12 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
   // Estatísticas por campanha são dados do painel de visitantes: a aba só existe
   // para quem já vê Visitantes (a rota também barra, com a mesma regra).
   const podeVerEstatisticas = canAccessRoute(admin.role, '/admin/visitors', admin.secoes)
-  // Visão ausente, desconhecida ou sem permissão cai na padrão (Campanhas).
-  const viewMode: ViewMode =
-    VISOES.some(v => v.id === valores.visao) && (valores.visao !== 'estatisticas' || podeVerEstatisticas)
-      ? (valores.visao as ViewMode)
-      : 'campanhas'
-  // A padrão não aparece na URL, para o link limpo continuar abrindo Campanhas.
+  // Visão ausente ou desconhecida cai na padrão (Anúncios).
+  const viewMode: ViewMode = VISOES.includes(valores.visao as ViewMode) ? (valores.visao as ViewMode) : 'campanhas'
+  // A padrão não aparece na URL, para o link limpo continuar abrindo Anúncios.
   const setViewMode = (v: ViewMode) => definir({ visao: v === 'campanhas' ? '' : v })
+  const emTarefas = viewMode === 'kanban' || viewMode === 'dashboard'
+  const periodo: PeriodoDaMeta = valores.per in PERIODOS_DA_META ? (valores.per as PeriodoDaMeta) : '30d'
   const [tasks, setTasks] = useState<TaskWithDetails[]>([])
   const [strategies, setStrategies] = useState<MarketingStrategy[]>([])
   const [users, setUsers] = useState<AdminUserBasic[]>([])
@@ -156,8 +174,6 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
   const [meta, setMeta] = useState<EstadoDaMeta | null>(null)
   const [saldo, setSaldo] = useState<SaldoDaMeta | null>(null)
   const [atualizandoMeta, setAtualizandoMeta] = useState(false)
-  const [anuncioAberto, setAnuncioAberto] = useState<{ veiculo: CampaignVehicle; campanha: CampaignWithVehicles } | null>(null)
-  const fecharAnuncio = useCallback(() => setAnuncioAberto(null), [])
   const [isLoading, setIsLoading] = useState(true)
   const [erroCarga, setErroCarga] = useState<string | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
@@ -279,35 +295,11 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
   const handleCampaignSaved = () => {
     setShowCampaignModal(false)
     setSelectedCampaign(null)
+    if (valores.editar) definir({ editar: '' })
     fetchData()
   }
 
   // O card do board é o veículo, então quem muda de coluna é ele — e só ele.
-  // Antes isto movia a campanha inteira, arrastando junto todos os outros
-  // anúncios dela.
-  const handleVehicleStatusChange = async (vehicleId: string, newStatus: CampaignStatus) => {
-    try {
-      const res = await fetch(`/api/admin/marketing/campaigns/vehicles/${vehicleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (!res.ok) {
-        console.error('Falha ao mover o veículo:', await res.text())
-        return
-      }
-
-      const { vehicle } = await res.json()
-      setCampaigns(prev => prev.map(c => ({
-        ...c,
-        vehicles: (c.vehicles ?? []).map(v => (v.id === vehicleId ? { ...v, ...vehicle } : v)),
-      })))
-    } catch (error) {
-      console.error('Error updating vehicle status:', error)
-    }
-  }
-
   const handleExport = () => {
     const csvContent = [
       ['ID', 'Title', 'Category', 'Status', 'Priority', 'Due Date', 'Assignees'].join(','),
@@ -402,63 +394,107 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
       }))
       .filter(c => c.vehicles.length > 0)
   }, [campaigns, valores.camp])
-  const veiculosMostrados = campanhasFiltradas.reduce((n, c) => n + (c.vehicles ?? []).length, 0)
+  // Um card por carro anunciado, com a situação e a ordem escolhidas.
+  const anuncios = useMemo(() => {
+    const itens: AnuncioDaLista[] = campanhasFiltradas.flatMap(campanha =>
+      (campanha.vehicles ?? []).map(veiculo => ({ veiculo, campanha })),
+    )
+    const filtrados = itens.filter(i => (!valores.sit || situacaoDoAnuncio(i.veiculo) === valores.sit) && (!valores.cid || i.campanha.id === valores.cid))
+    const dia = (i: AnuncioDaLista) => String(i.veiculo.added_date ?? i.veiculo.created_at ?? '')
+    return [...filtrados].sort((a, b) =>
+      valores.ord === 'nome'
+        ? a.veiculo.vehicle_name.localeCompare(b.veiculo.vehicle_name, 'pt-BR')
+        : valores.ord === 'recente'
+          ? dia(b).localeCompare(dia(a))
+          // Padrão: quem mais gastou nos últimos 30 dias primeiro.
+          : Number(b.veiculo.meta_gasto_30d ?? 0) - Number(a.veiculo.meta_gasto_30d ?? 0),
+    )
+  }, [campanhasFiltradas, valores.sit, valores.cid, valores.ord])
+  const opcoesDeCampanha = useMemo(
+    () => campaigns.filter(c => (c.vehicles ?? []).length > 0).map(c => ({ valor: c.id, rotulo: c.name })).sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR')),
+    [campaigns],
+  )
+  const filtrosDosAnuncios = [
+    valores.camp && { rotulo: `Busca: ${valores.camp}`, aoRemover: () => definir({ camp: '' }) },
+    valores.cid && { rotulo: `Campanha: ${rotuloDe(opcoesDeCampanha, valores.cid)}`, aoRemover: () => definir({ cid: '' }) },
+    valores.sit && { rotulo: `Situação: ${rotuloDe(SITUACOES, valores.sit)}`, aoRemover: () => definir({ sit: '' }) },
+  ].filter((f): f is { rotulo: string; aoRemover: () => void } => !!f)
+  const limparFiltrosDosAnuncios = () => definir({ camp: '', sit: '', cid: '' })
+
+  // `?editar=<id>`: a página do anúncio manda para cá já com a campanha aberta.
+  const campanhaDaUrl = valores.editar ? campaigns.find(c => c.id === valores.editar) ?? null : null
 
   return (
     <div className="min-h-screen bg-background">
-      <CabecalhoPagina titulo="Marketing" descricao={canManageCampaigns ? 'Campanhas, tarefas e criativos' : 'Minhas tarefas'} />
+      <CabecalhoPagina titulo="Marketing" descricao={canManageCampaigns ? 'Anúncios, resultados, criativos e tarefas' : 'Minhas tarefas'} />
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-6">
-        {/* Controls Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          {/* View Mode Toggle */}
-          <div className="flex flex-wrap items-center gap-2 bg-background-card border border-border rounded-lg p-1">
-            {VISOES.filter(v => v.id !== 'estatisticas' || podeVerEstatisticas).map(({ id, rotulo, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setViewMode(id)}
-                aria-pressed={viewMode === id}
-                className={cn(
-                  "flex min-h-10 items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                  viewMode === id
-                    ? "bg-primary text-white"
-                    : "text-foreground-secondary hover:text-foreground hover:bg-background-soft"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {rotulo}
-              </button>
-            ))}
-          </div>
+        {/* Abas à esquerda, ações da aba à direita. */}
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border">
+          <nav className="-mb-px flex flex-wrap gap-1" aria-label="Seções do Marketing">
+            {ABAS.filter(a => a.id !== 'estatisticas' || meta?.ligada || podeVerEstatisticas).map(({ id, rotulo, Icon }) => {
+              const ativa = id === 'kanban' ? emTarefas : viewMode === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setViewMode(id)}
+                  aria-current={ativa ? 'page' : undefined}
+                  className={cn(
+                    'flex min-h-12 items-center gap-2 border-b-2 px-4 text-base font-medium transition-colors',
+                    ativa ? 'border-primary text-foreground' : 'border-transparent text-foreground-secondary hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {rotulo}
+                </button>
+              )
+            })}
+          </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exportar</span>
-            </button>
-            <button
-              onClick={fetchData}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-background-soft transition-colors text-foreground disabled:opacity-50"
-            >
-              <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
-              <span className="hidden sm:inline">Atualizar</span>
-            </button>
-            {((viewMode === 'campanhas' && canManageCampaigns) || (viewMode === 'kanban' && isAdmin)) && (
+          <div className="flex flex-wrap items-center gap-2 pb-2">
+            {emTarefas && (
+              <BotaoSecundario onClick={handleExport}>
+                <Download className="w-4 h-4" />
+                Exportar tarefas
+              </BotaoSecundario>
+            )}
+            {viewMode !== 'estatisticas' && (
+              <BotaoSecundario onClick={fetchData} disabled={isLoading}>
+                <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
+                Atualizar
+              </BotaoSecundario>
+            )}
+            {((viewMode === 'campanhas' && canManageCampaigns) || (emTarefas && isAdmin)) && (
               <button
                 onClick={viewMode === 'campanhas' ? handleCreateCampaign : handleCreateTask}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
               >
                 <Plus className="w-4 h-4" />
-                {viewMode === 'campanhas' ? 'Nova Campanha' : 'Nova Tarefa'}
+                {viewMode === 'campanhas' ? 'Cadastrar anúncio à mão' : 'Nova tarefa'}
               </button>
             )}
           </div>
         </div>
+
+        {emTarefas && (
+          <div className="mb-4 inline-flex gap-1 rounded-lg border border-border bg-background-card p-1" role="group" aria-label="Como ver as tarefas">
+            {([['kanban', 'Quadro'], ['dashboard', 'Indicadores']] as const).map(([id, rotulo]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={viewMode === id}
+                onClick={() => setViewMode(id)}
+                className={cn(
+                  'min-h-10 rounded-md px-4 text-sm font-medium transition-colors',
+                  viewMode === id ? 'bg-primary text-white' : 'text-foreground-secondary hover:text-foreground',
+                )}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
@@ -477,7 +513,7 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
                     : meta.erro
                       ? `A Meta não respondeu na última leitura (${meta.erro}). O quadro mostra o que já estava salvo.`
                       : meta.em
-                        ? `Anúncios da Meta lidos às ${new Date(meta.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Anúncio novo entra sozinho em Publicada.`
+                        ? `Anúncios da Meta lidos às ${new Date(meta.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Anúncio novo entra sozinho na lista.`
                         : 'Lendo os anúncios da Meta. Atualize em instantes.'}
                 </span>
                 {meta.ligada && canManageCampaigns && (
@@ -493,8 +529,8 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               !erroCarga && (
                 <EstadoVazio
                   Icon={Megaphone}
-                  titulo="Nenhuma campanha ainda"
-                  texto="As campanhas e os veículos anunciados aparecem aqui, cada veículo em um card."
+                  titulo="Nenhum anúncio ainda"
+                  texto="Os anúncios no ar na Meta aparecem aqui sozinhos, um card por carro."
                   acao={canManageCampaigns ? (
                     <BotaoSecundario onClick={handleCreateCampaign}>
                       <Plus className="w-4 h-4" />
@@ -506,30 +542,29 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
             ) : (
               <>
                 <BarraDeFiltros>
-                  <CampoBusca valor={valores.camp} aoMudar={aoBuscarCampanha} placeholder="Buscar por veículo ou campanha" />
+                  <CampoBusca valor={valores.camp} aoMudar={aoBuscarCampanha} placeholder="Buscar por carro ou campanha" />
+                  {opcoesDeCampanha.length > 1 && (
+                    <SeletorFiltro rotulo="Campanha" valor={valores.cid} aoMudar={v => definir({ cid: v })} opcoes={opcoesDeCampanha} todos="Todas" />
+                  )}
+                  <SeletorFiltro rotulo="Situação" valor={valores.sit} aoMudar={v => definir({ sit: v })} opcoes={SITUACOES} todos="Todas" />
+                  <SeletorFiltro rotulo="Ordenar" valor={valores.ord} aoMudar={v => definir({ ord: v })} opcoes={ORDENS_DOS_ANUNCIOS} todos="Maior gasto" />
                 </BarraDeFiltros>
                 <ResumoDosFiltros
                   total={totalVeiculos}
-                  mostrando={veiculosMostrados}
-                  nome={['veículo', 'veículos']}
-                  filtros={valores.camp ? [{ rotulo: `Busca: ${valores.camp}`, aoRemover: () => definir({ camp: '' }) }] : []}
-                  aoLimpar={() => definir({ camp: '' })}
+                  mostrando={anuncios.length}
+                  nome={['anúncio', 'anúncios']}
+                  filtros={filtrosDosAnuncios}
+                  aoLimpar={limparFiltrosDosAnuncios}
                 />
-                {valores.camp && veiculosMostrados === 0 ? (
+                {anuncios.length === 0 ? (
                   <EstadoVazio
                     Icon={Megaphone}
-                    titulo="Nenhum veículo com essa busca"
-                    texto="Há campanhas cadastradas, mas nenhum veículo ou campanha combina com o que foi digitado."
-                    acao={<BotaoSecundario onClick={() => definir({ camp: '' })}>Limpar filtros</BotaoSecundario>}
+                    titulo="Nenhum anúncio com esses filtros"
+                    texto="Há anúncios cadastrados, mas nenhum combina com a busca ou com a situação escolhida."
+                    acao={<BotaoSecundario onClick={limparFiltrosDosAnuncios}>Limpar filtros</BotaoSecundario>}
                   />
                 ) : (
-                  <CampaignsBoard
-                    campaigns={campanhasFiltradas}
-                    onCampaignClick={handleCampaignClick}
-                    onAnuncioClick={meta?.ligada ? (veiculo, campanha) => setAnuncioAberto({ veiculo, campanha }) : undefined}
-                    onVehicleStatusChange={handleVehicleStatusChange}
-                    isAdmin={canManageCampaigns}
-                  />
+                  <AnunciosLista itens={anuncios} aoAbrirCampanha={handleCampaignClick} podeEditar={canManageCampaigns} aoMudar={meta?.ligada && canManageCampaigns ? fetchData : undefined} />
                 )}
               </>
             )}
@@ -592,8 +627,15 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
               </>
             )}
           </div>
-        ) : viewMode === 'estatisticas' && podeVerEstatisticas ? (
-          <EstatisticasCampanhas />
+        ) : viewMode === 'estatisticas' ? (
+          meta?.ligada ? (
+            <ResultadosMeta periodo={periodo} aoMudarPeriodo={p => definir({ per: p === '30d' ? '' : p })} comLinkDoSite={podeVerEstatisticas} />
+          ) : podeVerEstatisticas ? (
+            // Sem a Meta ligada, fica a tabela das campanhas que trazem visita ao site.
+            <EstatisticasCampanhas />
+          ) : (
+            <EstadoVazio Icon={BarChart3} titulo="Meta Ads não está ligada" texto="Os resultados dos anúncios aparecem aqui quando o token da Meta estiver gravado no servidor." />
+          )
         ) : (
           <MetricsDashboard isAdmin={isAdmin} />
         )}
@@ -616,27 +658,15 @@ export function MarketingAdmin({ admin }: MarketingAdminProps) {
       )}
 
       {/* Campaign Modal */}
-      {anuncioAberto && (
-        <PainelAnuncio
-          veiculo={anuncioAberto.veiculo}
-          campanha={anuncioAberto.campanha}
-          podeEditar={canManageCampaigns}
-          aoEditar={() => {
-            const { campanha } = anuncioAberto
-            setAnuncioAberto(null)
-            handleCampaignClick(campanha)
-          }}
-          aoFechar={fecharAnuncio}
-        />
-      )}
-
-      {showCampaignModal && (
+      {(showCampaignModal || campanhaDaUrl) && (
         <CampaignModal
-          campaign={selectedCampaign}
+          key={campanhaDaUrl?.id ?? selectedCampaign?.id ?? 'nova'}
+          campaign={campanhaDaUrl ?? selectedCampaign}
           isAdmin={canManageCampaigns}
           onClose={() => {
             setShowCampaignModal(false)
             setSelectedCampaign(null)
+            if (valores.editar) definir({ editar: '' })
           }}
           onSaved={handleCampaignSaved}
         />

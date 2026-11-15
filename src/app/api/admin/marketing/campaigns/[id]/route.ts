@@ -111,7 +111,8 @@ export async function PATCH(
         // simples edição da campanha ressuscitava no board anúncios que já
         // tinham sido encerrados.
         const statusDoVeiculo = (motivo?: string): string => {
-          if (!motivo) return 'publicada'
+          // Troca de criativo é pausa: o carro continua anunciado.
+          if (!motivo || motivo === 'troca_criativo') return 'publicada'
           // 'ganho' e 'vendido_externo' são desfechos de venda; o resto é
           // encerramento por desempenho.
           return motivo === 'ganho' || motivo === 'vendido_externo'
@@ -126,7 +127,7 @@ export async function PATCH(
           added_date: v.added_date || null,
           notes: v.notes || null,
           display_order: i,
-          ended_date: v.ended_date || null,
+          ended_date: v.end_reason === 'troca_criativo' ? null : v.ended_date || null,
           end_reason: v.end_reason || null,
           status: statusDoVeiculo(v.end_reason),
         }))

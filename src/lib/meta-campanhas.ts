@@ -137,13 +137,26 @@ export interface ResultadoDaSincronia {
 	campanhasNovas: number
 }
 
+/**
+ * Conta as mudanças feitas pelo painel (pausar, reativar). Uma sincronia que
+ * leu a Meta ANTES de uma dessas mudanças tem o estado velho na mão: se
+ * gravasse, diria "no ar" para o anúncio recém-pausado e apagaria a marca de
+ * troca de criativo. Ela compara o contador antes de gravar e desiste.
+ */
+let mudancasDoPainel = 0
+export function descartarSincroniaEmCurso(): void {
+	mudancasDoPainel += 1
+}
+
 async function sincronizar(): Promise<ResultadoDaSincronia> {
+	const aoComecar = mudancasDoPainel
 	const [anuncios, campanhas, cards] = await Promise.all([
 		anunciosDaMeta(),
 		db.selectFrom('marketing_campaigns').select(['id', 'meta_campaign_id']).execute(),
 		db.selectFrom('campaign_vehicles').select(['id', 'campaign_id', 'vehicle_name', 'status', 'meta_ad_ids']).execute(),
 	])
 	const plano = planejar(anuncios, campanhas, cards)
+	if (mudancasDoPainel !== aoComecar) return { criados: 0, atualizados: 0, campanhasNovas: 0 }
 
 	await db.transaction().execute(async trx => {
 		const campanhaPorMeta = new Map(campanhas.filter(c => c.meta_campaign_id).map(c => [c.meta_campaign_id as string, c.id]))
@@ -187,6 +200,11 @@ async function sincronizar(): Promise<ResultadoDaSincronia> {
 				.execute()
 		}
 	})
+
+	// O anúncio novo do carro que estava em troca de criativo entrou no ar: a
+	// marca de troca sai sozinha.
+	await db.updateTable('campaign_vehicles').set({ end_reason: null })
+		.where('end_reason', '=', 'troca_criativo').where('meta_no_ar', '=', true).execute()
 
 	return { criados: plano.criar.length, atualizados: plano.atualizar.length, campanhasNovas: plano.campanhas.length }
 }

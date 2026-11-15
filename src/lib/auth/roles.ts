@@ -45,6 +45,9 @@ const ROUTE_ACCESS: Record<Exclude<AdminRole, 'admin'>, string[]> = {
     '/admin/crm',
     '/admin/visitors',
     '/admin/agencia',
+    // 15/11/2026: o operador pausa e reativa anúncio na Meta, e isso é feito
+    // na tela de Marketing.
+    '/admin/marketing',
   ],
   // Marketing: marketing, conteúdo e disparos.
   marketing: [
