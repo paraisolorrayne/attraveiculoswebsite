@@ -68,6 +68,9 @@ export function BoletoDetalhe({ boleto, eventos, hoje }: { boleto: Boleto; event
   const mudarStatus = async (status: StatusBoleto) => {
     if (await pedir(status, `/api/admin/boletos/${boleto.id}`, 'PATCH', status === 'pago' ? { status, pago_em: pagoEm } : { status })) router.refresh()
   }
+  const descartarComprovante = async () => {
+    if (await pedir('descartar', `/api/admin/boletos/${boleto.id}`, 'PATCH', { descartar_comprovante: true })) router.refresh()
+  }
   const anotarLembrete = () => {
     // O WhatsApp abre pelo próprio link; aqui só fica o registro, sem travar a tela.
     void fetch(`/api/admin/boletos/${boleto.id}/eventos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'lembrete' }) })
@@ -117,6 +120,10 @@ export function BoletoDetalhe({ boleto, eventos, hoje }: { boleto: Boleto; event
                   Abrir o comprovante
                 </a>
               )}
+              <button type="button" className={BOTAO_NEUTRO} disabled={ocupado !== null} onClick={() => void descartarComprovante()} title="O comprovante não serve: o boleto volta para a fila e a Ângela volta a lembrar">
+                {ocupado === 'descartar' && <Loader2 className="h-4 w-4 animate-spin" />}
+                Não confere
+              </button>
               <button type="button" className={BOTAO_PRIMARIO} disabled={ocupado !== null || !pagoEm} onClick={() => void mudarStatus('pago')}>
                 {ocupado === 'pago' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 Confirmar pagamento

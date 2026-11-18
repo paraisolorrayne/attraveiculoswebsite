@@ -24,7 +24,8 @@ export async function GET(_request: NextRequest, { params }: Contexto) {
 }
 
 /**
- * PATCH — muda o status (`{ status, pago_em? }`) ou corrige os dados
+ * PATCH — muda o status (`{ status, pago_em? }`), descarta um comprovante que
+ * não servia (`{ descartar_comprovante: true }`) ou corrige os dados
  * (`{ nome, telefone, vencimento, valor, email, descricao }`, todos juntos,
  * como o formulário manda). Cada mudança entra no histórico.
  */
@@ -44,9 +45,12 @@ export async function PATCH(request: NextRequest, { params }: Contexto) {
     if (corpo.pago_em) {
       const data = lerData(corpo.pago_em, hoje)
       if ('erro' in data) return NextResponse.json({ error: 'Data de pagamento inválida' }, { status: 400 })
+      // Pagamento é fato passado: data futura pararia os lembretes de um boleto que ninguém pagou.
+      if (data.data > hoje) return NextResponse.json({ error: 'A data do pagamento não pode ser no futuro.' }, { status: 400 })
       mudancas.pago_em = data.data
     }
   }
+  if (corpo.descartar_comprovante === true) mudancas.descartarComprovante = true
   if (corpo.nome !== undefined) {
     const lido = validarBoleto(corpo, hoje)
     if ('erros' in lido) return NextResponse.json({ error: 'Confira os campos.', erros: lido.erros }, { status: 400 })

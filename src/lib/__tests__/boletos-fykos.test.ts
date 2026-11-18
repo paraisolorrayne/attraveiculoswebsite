@@ -36,7 +36,7 @@ describe('aviso do painel ao Fykos', () => {
 	it('manda o boleto inteiro, com o telefone em E.164', () => {
 		expect(boletoParaOFykos(boleto())).toEqual({
 			id: ID, nome: 'Maria da Silva', telefone: '+5534999990000', email: null, vencimento: '2026-11-25', valor: 1250.5,
-			descricao: 'Parcela 3 de 12', status: 'aberto', pago_em: null, promessa_em: null,
+			descricao: 'Parcela 3 de 12', status: 'aberto', pago_em: null, promessa_em: null, comprovante_em: null,
 		})
 	})
 

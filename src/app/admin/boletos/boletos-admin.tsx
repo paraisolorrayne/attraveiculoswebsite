@@ -18,7 +18,7 @@ import {
 import { useFiltrosUrl } from '@/components/admin/filtros'
 import { cn } from '@/lib/utils'
 import {
-  dataBR, formatarTelefone, linkDoWhatsapp, mensagemDeLembrete, prazoPorExtenso, situacaoDoBoleto, type Boleto,
+  dataBR, formatarTelefone, linkDoWhatsapp, mensagemDeLembrete, prazoPorExtenso, situacaoDoBoleto, type Boleto, type StatusBoleto,
 } from '@/lib/boletos'
 import type { ResumoDosBoletos } from '@/lib/boletos-db'
 import type { EstadoDoFykos } from '@/lib/boletos-fykos'
@@ -85,7 +85,7 @@ export function BoletosAdmin() {
   const [novo, setNovo] = useState(false)
   const [ocupado, setOcupado] = useState<string | null>(null)
   /** O último boleto marcado como pago, para oferecer "Desfazer". */
-  const [desfazer, setDesfazer] = useState<Boleto | null>(null)
+  const [desfazer, setDesfazer] = useState<{ boleto: Boleto; antes: StatusBoleto } | null>(null)
   const [reenvio, setReenvio] = useState<'enviando' | string | null>(null)
 
   const consulta = new URLSearchParams(Object.entries(valores).filter(([, v]) => v)).toString()
@@ -112,13 +112,14 @@ export function BoletosAdmin() {
   const filtrar = (m: Partial<Record<(typeof CHAVES)[number], string>>) => definir({ pagina: '', ...m })
   const aoBuscar = useCallback((v: string) => definir({ q: v, pagina: '' }), [definir])
 
-  async function mudarStatus(b: Boleto, status: 'pago' | 'aberto') {
+  async function mudarStatus(b: Boleto, status: StatusBoleto) {
     setOcupado(b.id)
     try {
       const r = await fetch(`/api/admin/boletos/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
       const d = await r.json().catch(() => null)
       if (!r.ok) throw new Error(d?.error)
-      setDesfazer(status === 'pago' ? d.boleto : null)
+      // "Desfazer" devolve o boleto como estava (em negociação, por exemplo), não sempre como aberto.
+      setDesfazer(status === 'pago' ? { boleto: d.boleto, antes: b.status } : null)
       await carregar()
     } catch (e) {
       setErro(e instanceof Error && e.message ? e.message : 'Não foi possível salvar.')
@@ -185,8 +186,8 @@ export function BoletosAdmin() {
 
         {desfazer && (
           <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-foreground">
-            <span>Boleto de {desfazer.nome} marcado como pago.</span>
-            <button type="button" onClick={() => void mudarStatus(desfazer, 'aberto')} className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-background-card px-3 font-medium hover:border-foreground-secondary">
+            <span>Boleto de {desfazer.boleto.nome} marcado como pago.</span>
+            <button type="button" onClick={() => void mudarStatus(desfazer.boleto, desfazer.antes)} className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-background-card px-3 font-medium hover:border-foreground-secondary">
               <Undo2 className="h-4 w-4" />
               Desfazer
             </button>

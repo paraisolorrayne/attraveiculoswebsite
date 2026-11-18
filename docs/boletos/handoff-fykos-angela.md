@@ -61,7 +61,8 @@ Sem as duas variáveis o painel não envia nada.
       "descricao": "Parcela 3 de 12",
       "status": "aberto",
       "pago_em": null,
-      "promessa_em": null
+      "promessa_em": null,
+      "comprovante_em": null
     }
   ]
 }
@@ -69,7 +70,8 @@ Sem as duas variáveis o painel não envia nada.
 
 - `boletos` traz de 1 a 100 itens. Uma planilha grande vira vários avisos.
 - Cada item é o **estado completo e atual** do boleto. O Fykos pode gravar por `id` (criar se não existe, atualizar se existe) sem olhar o `evento`.
-- `telefone` vem em E.164. `valor`, `email`, `descricao`, `pago_em` e `promessa_em` podem ser `null`.
+- `telefone` vem em E.164. `valor`, `email`, `descricao`, `pago_em`, `promessa_em` e `comprovante_em` podem ser `null`.
+- `comprovante_em` preenchido quer dizer que há um comprovante esperando a conferência do financeiro. Se ele voltar a `null` com o boleto ainda aberto, o financeiro não aceitou o comprovante: a Ângela volta a lembrar.
 - `status`: `aberto`, `em_negociacao`, `pago` ou `cancelado`.
 
 ### Eventos
@@ -77,7 +79,7 @@ Sem as duas variáveis o painel não envia nada.
 | `evento` | Quando | O que a Ângela faz |
 |---|---|---|
 | `boleto.cadastrado` | Boleto novo (avulso ou planilha), ou reenvio de todos os em aberto | Guarda e passa a lembrar |
-| `boleto.atualizado` | Mudou nome, telefone, vencimento, valor ou descrição; entrou ou saiu de negociação | Atualiza. Com `status = em_negociacao`, **não lembra** |
+| `boleto.atualizado` | Mudou nome, telefone, vencimento, valor ou descrição; entrou ou saiu de negociação; o comprovante foi descartado | Atualiza. Com `status = em_negociacao`, **não lembra** |
 | `boleto.pago` | Marcado como pago no painel | **Para de lembrar** |
 | `boleto.cancelado` | Cancelado no painel | **Para de lembrar** |
 | `boleto.reaberto` | Voltou de pago ou cancelado para aberto | Volta a lembrar |
@@ -139,6 +141,8 @@ São dois segredos diferentes, um para cada sentido.
 | `pagamento.confirmado` | `pago_em` (opcional): `AAAA-MM-DD`, não pode ser futuro | Boleto vira pago. Use só quando o pagamento estiver confirmado de verdade |
 
 Textos (`mensagem`, `motivo`) são cortados em 1.000 caracteres.
+
+Eventos podem chegar fora de ordem ou repetidos. O painel compara pelo `ocorrido_em`: uma promessa, um comprovante ou um lembrete mais antigo que o último do mesmo tipo entra no histórico, mas não muda o boleto. Por isso vale mandar o `ocorrido_em` real do acontecimento.
 
 Se a Ângela não conseguir extrair a data de uma promessa ("pago semana que vem"), mande `cliente.respondeu` com a mensagem, e não `promessa.pagamento` com data chutada.
 

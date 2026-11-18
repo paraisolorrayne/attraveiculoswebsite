@@ -5,7 +5,7 @@
  * As regras (o que é telefone válido, em que situação o boleto está) moram em
  * src/lib/boletos.ts. Aqui só entra o que precisa do banco.
  */
-import { sql, type ExpressionBuilder } from 'kysely'
+import { sql, type ExpressionBuilder, type Transaction } from 'kysely'
 import { db } from '@/lib/db'
 import type { Database } from '@/lib/db/types'
 import { chaveDeDuplicata, somarDias, type Boleto, type DadosDoBoleto, type EventoDoBoleto, type StatusBoleto } from '@/lib/boletos'
@@ -214,10 +214,13 @@ export async function buscarBoleto(id: string): Promise<{ boleto: Boleto; evento
  * no banco em boleto não cancelado. Serve para não cadastrar o mesmo boleto
  * duas vezes quando a planilha é enviada de novo.
  */
-export async function duplicatasNoBanco(linhas: { telefone: string; vencimento: string; valor: number | null }[]): Promise<Set<string>> {
+export async function duplicatasNoBanco(
+	linhas: { telefone: string; vencimento: string; valor: number | null }[],
+	conexao: Transaction<Database> | typeof db = db,
+): Promise<Set<string>> {
 	const telefones = [...new Set(linhas.map(l => l.telefone))]
 	if (telefones.length === 0) return new Set()
-	const existentes = await db
+	const existentes = await conexao
 		.selectFrom('boletos')
 		.select(['telefone', 'valor', sql<string>`to_char(vencimento, 'YYYY-MM-DD')`.as('vencimento')])
 		.where('telefone', 'in', telefones)
@@ -226,8 +229,19 @@ export async function duplicatasNoBanco(linhas: { telefone: string; vencimento: 
 	return new Set(existentes.map(e => chaveDeDuplicata({ telefone: e.telefone, vencimento: e.vencimento, valor: e.valor === null ? null : Number(e.valor) })))
 }
 
-export async function criarBoleto(dados: DadosDoBoleto, por: Autor): Promise<Boleto> {
+/**
+ * Um cadastro de cada vez (avulso ou planilha). A checagem de duplicado e a
+ * gravação precisam enxergar o mesmo estado: sem esta trava, duas planilhas
+ * enviadas juntas passariam as duas pela checagem e gravariam o mesmo boleto
+ * duas vezes, e o cliente seria cobrado em dobro.
+ */
+const travarCadastro = (trx: Transaction<Database>) => sql`select pg_advisory_xact_lock(hashtext('boletos-cadastro'))`.execute(trx)
+
+/** Cadastra um boleto. Devolve `null` se já existe um igual e `forcar` não foi pedido. */
+export async function criarBoleto(dados: DadosDoBoleto, por: Autor, forcar = false): Promise<Boleto | null> {
 	return db.transaction().execute(async trx => {
+		await travarCadastro(trx)
+		if (!forcar && (await duplicatasNoBanco([dados], trx)).has(chaveDeDuplicata(dados))) return null
 		const linha = await trx
 			.insertInto('boletos')
 			.values({ ...dados, origem: 'manual', criado_por: por.id, criado_por_nome: por.nome })
@@ -240,9 +254,18 @@ export async function criarBoleto(dados: DadosDoBoleto, por: Autor): Promise<Bol
 	})
 }
 
-/** Grava a planilha inteira ou nada: uma falha no meio não deixa metade dos boletos. */
-export async function importarBoletos(linhas: DadosDoBoleto[], por: Autor): Promise<{ lote_id: string; criados: number }> {
+/**
+ * Soma a planilha ao que já existe: pula o que já está cadastrado e grava o
+ * resto, tudo ou nada. A checagem de duplicado é refeita aqui dentro, com a
+ * trava de cadastro, e é ela que vale; `puladas` diz o que ficou de fora por
+ * já existir.
+ */
+export async function importarBoletos(candidatas: DadosDoBoleto[], por: Autor): Promise<{ lote_id: string | null; criados: number; puladas: Set<string> }> {
 	return db.transaction().execute(async trx => {
+		await travarCadastro(trx)
+		const puladas = await duplicatasNoBanco(candidatas, trx)
+		const linhas = candidatas.filter(l => !puladas.has(chaveDeDuplicata(l)))
+		if (linhas.length === 0) return { lote_id: null, criados: 0, puladas }
 		const lote = await sql<{ id: string }>`select gen_random_uuid() as id`.execute(trx)
 		const lote_id = lote.rows[0].id
 		let criados = 0
@@ -260,7 +283,7 @@ export async function importarBoletos(linhas: DadosDoBoleto[], por: Autor): Prom
 			await avisarOFykos(trx, 'boleto.cadastrado', inseridos.map(b => paraBoleto(b as Linha)))
 			criados += inseridos.length
 		}
-		return { lote_id, criados }
+		return { lote_id, criados, puladas }
 	})
 }
 
@@ -277,6 +300,8 @@ export interface MudancasDoBoleto extends Partial<DadosDoBoleto> {
 	status?: StatusBoleto
 	/** Só com status 'pago'. Sem ela, vale hoje. */
 	pago_em?: string
+	/** O comprovante não servia (imagem errada, valor errado): o boleto volta para a fila normal. */
+	descartarComprovante?: boolean
 }
 
 export async function atualizarBoleto(id: string, m: MudancasDoBoleto, por: Autor, hoje: string): Promise<Boleto | null> {
@@ -309,11 +334,17 @@ export async function atualizarBoleto(id: string, m: MudancasDoBoleto, por: Auto
 		if (m.status && m.status !== atual.status) {
 			campos.status = m.status
 			campos.pago_em = m.status === 'pago' ? (m.pago_em ?? hoje) : null
-			// Voltou de pago ou cancelado: a conversa com o cliente recomeça do zero.
-			const reabriu = m.status === 'aberto' && (atual.status === 'pago' || atual.status === 'cancelado')
-			if (reabriu) Object.assign(campos, { promessa_em: null, comprovante_em: null, comprovante_url: null, falha_envio: null })
+			// Reabrir NÃO apaga a promessa nem o comprovante: "Desfazer" logo depois
+			// de marcar como pago precisa devolver o boleto como ele estava.
+			const reabriu = (m.status === 'aberto' || m.status === 'em_negociacao') && (atual.status === 'pago' || atual.status === 'cancelado')
 			eventos.push({ tipo: m.status === 'aberto' ? 'reaberto' : m.status, descricao: ROTULO_DO_STATUS[m.status] })
 			aviso = m.status === 'pago' ? 'boleto.pago' : m.status === 'cancelado' ? 'boleto.cancelado' : reabriu ? 'boleto.reaberto' : 'boleto.atualizado'
+		}
+		if (m.descartarComprovante && atual.comprovante_em) {
+			Object.assign(campos, { comprovante_em: null, comprovante_url: null })
+			eventos.push({ tipo: 'comprovante', descricao: 'Comprovante descartado: o pagamento não foi confirmado' })
+			// O Fykos precisa saber para a Ângela voltar a lembrar.
+			aviso ??= 'boleto.atualizado'
 		}
 		if (Object.keys(campos).length === 0) return atual
 
@@ -377,7 +408,11 @@ export async function excluirLote(loteId: string): Promise<number> {
  */
 export async function reenviarAbertosAoFykos(): Promise<number> {
 	return db.transaction().execute(async trx => {
-		const abertos = await trx.selectFrom('boletos').select(COLUNAS).where('status', 'in', ['aberto', 'em_negociacao']).orderBy('vencimento').execute()
+		// Trava as linhas lidas até o aviso entrar na fila: um pagamento ou uma
+		// exclusão ao mesmo tempo espera, e o aviso dele entra DEPOIS deste. Sem
+		// isso, o retrato "aberto" podia entrar na fila depois do "pago" e
+		// reabrir o boleto no Fykos.
+		const abertos = await trx.selectFrom('boletos').select(COLUNAS).where('status', 'in', ['aberto', 'em_negociacao']).orderBy('vencimento').forUpdate().execute()
 		await avisarOFykos(trx, 'boleto.cadastrado', abertos.map(b => paraBoleto(b as Linha)))
 		return abertos.length
 	})

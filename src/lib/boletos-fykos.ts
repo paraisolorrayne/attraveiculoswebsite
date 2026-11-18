@@ -56,6 +56,8 @@ export interface BoletoParaOFykos {
 	status: string
 	pago_em: string | null
 	promessa_em: string | null
+	/** Há um comprovante esperando conferência do financeiro (data e hora em que chegou), ou null. */
+	comprovante_em: string | null
 }
 
 export function boletoParaOFykos(b: Boleto): BoletoParaOFykos {
@@ -70,6 +72,7 @@ export function boletoParaOFykos(b: Boleto): BoletoParaOFykos {
 		status: b.status,
 		pago_em: b.pago_em,
 		promessa_em: b.promessa_em,
+		comprovante_em: b.comprovante_em,
 	}
 }
 
@@ -121,8 +124,14 @@ async function enviar(aviso: { id: string; corpo: string }, config: { url: strin
 /**
  * Entrega os avisos pendentes, o mais antigo primeiro. Para no primeiro que
  * falhar ou que ainda está esperando a próxima tentativa: a ordem precisa ser
- * mantida ("cadastrado" antes de "pago"). Uma entrega por transação, com
- * trava, para o cron e o envio imediato não mandarem o mesmo aviso juntos.
+ * mantida ("cadastrado" antes de "pago").
+ *
+ * Só um despachante entrega por vez, por uma trava de transação do Postgres.
+ * O cron e o envio logo depois de um clique rodam juntos com frequência: sem
+ * a trava, o segundo pularia o aviso que o primeiro está entregando e mandaria
+ * o seguinte na frente, e um "pago" chegaria antes do "cadastrado" antigo, que
+ * depois reabriria o boleto no Fykos. Quem não pega a trava simplesmente para:
+ * o outro despachante entrega a fila inteira.
  */
 export async function entregarBoletosAoFykos(limite = 20): Promise<number> {
 	const config = configuracaoBoletosFykos()
@@ -130,6 +139,8 @@ export async function entregarBoletosAoFykos(limite = 20): Promise<number> {
 	let entregues = 0
 	for (let i = 0; i < limite; i++) {
 		const resultado = await db.transaction().execute(async trx => {
+			const trava = await sql<{ pegou: boolean }>`select pg_try_advisory_xact_lock(hashtext('boletos-fykos-entrega')) as pegou`.execute(trx)
+			if (!trava.rows[0]?.pegou) return 'parar'
 			const aviso = await trx
 				.selectFrom('boleto_eventos_saida')
 				.selectAll()
@@ -137,7 +148,6 @@ export async function entregarBoletosAoFykos(limite = 20): Promise<number> {
 				.orderBy('sequencia')
 				.limit(1)
 				.forUpdate()
-				.skipLocked()
 				.executeTakeFirst()
 			if (!aviso || aviso.proxima_tentativa_em > new Date()) return 'parar'
 			const erro = await enviar(aviso, config)
@@ -289,6 +299,17 @@ export async function aplicarEventoDoFykos(e: EventoLido): Promise<ResultadoDoEv
 		if (jaVeio) return 'repetido'
 
 		const aberto = boleto.status === 'aberto' || boleto.status === 'em_negociacao'
+		// O Fykos repete eventos e eles podem chegar fora de ordem. Um evento
+		// mais antigo que o último do mesmo assunto entra no histórico, mas não
+		// muda o boleto: a promessa de ontem não apaga a de hoje.
+		const ultimoDe = async (tipos: string[]): Promise<Date | null> => {
+			const l = await trx.selectFrom('boleto_eventos').select(sql<Date | null>`max(criado_em)`.as('em')).where('boleto_id', '=', e.boletoId).where('tipo', 'in', tipos).where('por', '=', 'fykos').executeTakeFirst()
+			return l?.em ?? null
+		}
+		const eMaisNovo = async (tipos: string[]): Promise<boolean> => {
+			const ultimo = await ultimoDe(tipos)
+			return !ultimo || e.ocorridoEm.getTime() >= ultimo.getTime()
+		}
 		let tipo: string
 		let descricao: string
 		let mudancas: Record<string, unknown> = {}
@@ -296,12 +317,15 @@ export async function aplicarEventoDoFykos(e: EventoLido): Promise<ResultadoDoEv
 			case 'lembrete.enviado':
 				tipo = 'lembrete'
 				descricao = `Enviado pela Ângela${e.template ? ` (modelo ${e.template})` : ''}`
-				mudancas = { lembretes: sql`lembretes + 1`, ultimo_lembrete_em: e.ocorridoEm, falha_envio: null }
+				// O lembrete sempre conta; a hora e o aviso de falha só mudam se este for o mais recente.
+				mudancas = (await eMaisNovo(['lembrete', 'falha_envio']))
+					? { lembretes: sql`lembretes + 1`, ultimo_lembrete_em: e.ocorridoEm, falha_envio: null }
+					: { lembretes: sql`lembretes + 1` }
 				break
 			case 'lembrete.falhou':
 				tipo = 'falha_envio'
 				descricao = e.texto ?? 'O WhatsApp não entregou o lembrete'
-				mudancas = { falha_envio: descricao.slice(0, 300) }
+				if (await eMaisNovo(['lembrete', 'falha_envio'])) mudancas = { falha_envio: descricao.slice(0, 300) }
 				break
 			case 'cliente.respondeu':
 				tipo = 'resposta'
@@ -311,13 +335,13 @@ export async function aplicarEventoDoFykos(e: EventoLido): Promise<ResultadoDoEv
 				tipo = 'promessa'
 				descricao = `Disse que paga em ${dataBR(e.data as string)}${e.texto ? `: "${e.texto}"` : ''}`
 				// Promessa em boleto já pago ou cancelado fica só no histórico.
-				if (aberto) mudancas = { promessa_em: e.data }
+				if (aberto && (await eMaisNovo(['promessa']))) mudancas = { promessa_em: e.data }
 				break
 			case 'comprovante.recebido':
 				tipo = 'comprovante'
 				descricao = `Mandou o comprovante${e.data ? `, com pagamento em ${dataBR(e.data)}` : ''}${e.texto ? `: "${e.texto}"` : ''}`
 				// O comprovante NÃO marca como pago: alguém do financeiro confere e confirma.
-				if (aberto) mudancas = { comprovante_em: e.ocorridoEm, comprovante_url: e.url }
+				if (aberto && (await eMaisNovo(['comprovante']))) mudancas = { comprovante_em: e.ocorridoEm, comprovante_url: e.url }
 				break
 			case 'pagamento.confirmado':
 				tipo = 'pago'

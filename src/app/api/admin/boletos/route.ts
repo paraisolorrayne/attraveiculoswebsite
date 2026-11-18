@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { chaveDeDuplicata, hojeBRT, validarBoleto } from '@/lib/boletos'
-import { criarBoleto, duplicatasNoBanco, listarBoletos, resumoDosBoletos } from '@/lib/boletos-db'
+import { hojeBRT, validarBoleto } from '@/lib/boletos'
+import { criarBoleto, listarBoletos, resumoDosBoletos } from '@/lib/boletos-db'
 import { estadoDoFykos } from '@/lib/boletos-fykos'
 import { despacharAoFykos, exigirBoletos } from './acesso'
 
@@ -38,16 +38,13 @@ export async function POST(request: NextRequest) {
   const lido = validarBoleto(corpo, hojeBRT())
   if ('erros' in lido) return NextResponse.json({ error: 'Confira os campos.', erros: lido.erros }, { status: 400 })
   try {
-    if (corpo.forcar !== true) {
-      const existentes = await duplicatasNoBanco([lido.dados])
-      if (existentes.has(chaveDeDuplicata(lido.dados))) {
-        return NextResponse.json(
-          { error: 'Já existe um boleto com este telefone, vencimento e valor.', duplicado: true },
-          { status: 409 },
-        )
-      }
+    const boleto = await criarBoleto(lido.dados, acesso.autor, corpo.forcar === true)
+    if (!boleto) {
+      return NextResponse.json(
+        { error: 'Já existe um boleto com este telefone, vencimento e valor.', duplicado: true },
+        { status: 409 },
+      )
     }
-    const boleto = await criarBoleto(lido.dados, acesso.autor)
     despacharAoFykos()
     return NextResponse.json({ boleto }, { status: 201 })
   } catch (e) {

@@ -66,12 +66,19 @@ export async function POST(request: NextRequest) {
     // Planilha sem nada novo não é erro: é só o caso em que tudo já estava lá.
     if (paraGravar.length === 0) return NextResponse.json({ criados: 0, lote_id: null, linhas, resumo, colunas: planilha.colunas, comTitulos: planilha.comTitulos })
 
-    const { lote_id, criados } = await importarBoletos(
+    const { lote_id, criados, puladas } = await importarBoletos(
       paraGravar.map(l => ({ nome: l.nome, telefone: l.telefone, email: l.email, vencimento: l.vencimento, valor: l.valor, descricao: l.descricao })),
       acesso.autor,
     )
-    despacharAoFykos()
-    return NextResponse.json({ criados, lote_id, linhas, resumo, colunas: planilha.colunas, comTitulos: planilha.comTitulos }, { status: 201 })
+    // Outra planilha pode ter cadastrado alguma destas linhas entre a leitura
+    // e a gravação. A gravação refaz a checagem com trava, e é ela que vale.
+    if (puladas.size > 0) {
+      for (const l of linhas) if (l.erros.length === 0 && !l.duplicado && puladas.has(chaveDeDuplicata(l))) l.duplicado = 'banco'
+      resumo.novos = criados
+      resumo.duplicados = linhas.filter(l => l.duplicado).length
+    }
+    if (criados > 0) despacharAoFykos()
+    return NextResponse.json({ criados, lote_id, linhas, resumo, colunas: planilha.colunas, comTitulos: planilha.comTitulos }, { status: criados > 0 ? 201 : 200 })
   } catch (e) {
     console.error('[boletos] importar falhou:', e)
     return NextResponse.json({ error: 'Não foi possível importar a planilha. Nada foi gravado.' }, { status: 500 })
