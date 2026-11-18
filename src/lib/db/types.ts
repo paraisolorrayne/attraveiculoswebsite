@@ -664,7 +664,72 @@ export interface MetaAcoesTable {
   criado_em: Generated<Timestamp>
 }
 
+/** Boletos dos clientes, cadastrados pelo financeiro. Ver migration 20261118_boletos. */
+export interface BoletosTable {
+  id: Generated<string>
+  nome: string
+  /** Só dígitos, com DDD e sem o 55. */
+  telefone: string
+  email: string | null
+  /** date: o driver devolve Date; grava-se 'AAAA-MM-DD'. */
+  vencimento: ColumnType<Date, string, string>
+  /** numeric: o driver devolve como texto. */
+  valor: ColumnType<string | null, number | string | null, number | string | null>
+  descricao: string | null
+  carro: string | null
+  placa: string | null
+  /** "Parcela 3 de 10": parcela = 3, parcelas = 10. */
+  parcela: number | null
+  parcelas: number | null
+  status: Generated<string>
+  pago_em: ColumnType<Date | null, string | null, string | null>
+  origem: Generated<string>
+  lote_id: string | null
+  lembretes: Generated<number>
+  ultimo_lembrete_em: Timestamp | null
+  /** Devolvidos pelo Fykos: dia que o cliente disse que paga, comprovante (link) e falha de entrega. */
+  promessa_em: ColumnType<Date | null, string | null, string | null>
+  comprovante_em: Timestamp | null
+  comprovante_url: string | null
+  falha_envio: string | null
+  criado_por: string | null
+  criado_por_nome: string | null
+  // Timestamp puro (e não Generated<Timestamp>): o insert já é opcional e o
+  // update aceita Date. Embrulhado em Generated, o update não aceitava nada.
+  criado_em: Timestamp
+  atualizado_em: Timestamp
+}
+
+export interface BoletoEventosTable {
+  id: Generated<string>
+  boleto_id: string
+  tipo: string
+  descricao: string | null
+  por: string | null
+  por_nome: string | null
+  /** Id do evento no Fykos, para o mesmo evento não entrar duas vezes. */
+  id_externo: string | null
+  // Timestamp puro: o insert é opcional e aceita a hora em que o evento ocorreu no Fykos.
+  criado_em: Timestamp
+}
+
+/** Fila do que o painel avisa ao Fykos sobre os boletos. Mesmo desenho de `crm_eventos_saida`. */
+export interface BoletoEventosSaidaTable {
+  sequencia: Generated<string>
+  id: string
+  evento: string
+  corpo: string
+  criado_em: Timestamp
+  entregue_em: Timestamp | null
+  tentativas: Generated<number>
+  proxima_tentativa_em: Timestamp
+  ultimo_erro: string | null
+}
+
 export interface Database {
+  boletos: BoletosTable
+  boleto_eventos: BoletoEventosTable
+  boleto_eventos_saida: BoletoEventosSaidaTable
   meta_acoes: MetaAcoesTable
   visitor_fingerprints: VisitorFingerprintsTable
   visitor_sessions: VisitorSessionsTable
@@ -729,7 +794,7 @@ export const TABELAS_DO_CODIGO = [
   'task_assignments', 'task_comments', 'task_status_history', 'marketing_campaigns',
   'marketing_creatives', 'campaign_vehicles', 'whatsapp_clicks', 'newsletter_campaigns',
   'newsletter_subscribers', 'crm_cards', 'crm_eventos_saida', 'inventory_snapshots', 'indexnow_submissions', 'admin_users',
-  'agencias', 'veiculos_publicados', 'criativos_gerados', 'meta_acoes',
+  'agencias', 'veiculos_publicados', 'criativos_gerados', 'meta_acoes', 'boletos', 'boleto_eventos', 'boleto_eventos_saida',
 ] as const satisfies readonly (keyof Database)[]
 
 /**

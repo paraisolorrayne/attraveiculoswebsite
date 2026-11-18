@@ -5,7 +5,7 @@
  */
 import {
   Volume2, Palette, FileText, Megaphone, MailOpen,
-  KanbanSquare, BarChart3, Users, Settings,
+  KanbanSquare, BarChart3, Users, Settings, Receipt,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { canAccessRoute, type AdminRole, type SecoesExtras } from '@/lib/auth/roles'
@@ -16,10 +16,11 @@ import { canAccessRoute, type AdminRole, type SecoesExtras } from '@/lib/auth/ro
  * ("de onde veio o lead de ontem", "publicar um post"), e a intenção mora num
  * grupo, não espalhada entre nove cards de peso igual.
  */
-export type GrupoAdmin = 'aquisicao' | 'conteudo' | 'sistema'
+export type GrupoAdmin = 'aquisicao' | 'financeiro' | 'conteudo' | 'sistema'
 
 export const GRUPOS: { id: GrupoAdmin; titulo: string; resumo: string }[] = [
   { id: 'aquisicao', titulo: 'Aquisição', resumo: 'De onde vêm as visitas e o que vira lead' },
+  { id: 'financeiro', titulo: 'Financeiro', resumo: 'O que os clientes têm a pagar' },
   { id: 'conteudo', titulo: 'Conteúdo', resumo: 'O que o site publica' },
   { id: 'sistema', titulo: 'Sistema', resumo: 'Quem acessa e como o site se comporta' },
 ]
@@ -39,6 +40,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { label: 'Criativos', href: '/admin/gerador-criativos', description: 'Gerador de criativos para anúncios', grupo: 'aquisicao', Icon: Palette },
   { label: 'Visitantes', href: '/admin/visitors', description: 'Rastreamento e métricas de visita', grupo: 'aquisicao', Icon: BarChart3 },
   { label: 'CRM', href: '/admin/crm', description: 'Funil de leads', grupo: 'aquisicao', Icon: KanbanSquare },
+  { label: 'Boletos', href: '/admin/boletos', description: 'Vencimentos e lembretes aos clientes', grupo: 'financeiro', Icon: Receipt },
   { label: 'Blog', href: '/admin/blog', description: 'Posts e insights do blog', grupo: 'conteudo', Icon: FileText },
   { label: 'Newsletter', href: '/admin/newsletter/campaigns', description: 'Campanhas e inscritos', grupo: 'conteudo', Icon: MailOpen, ativaEm: '/admin/newsletter' },
   { label: 'Sons de Motor', href: '/admin/engine-sounds', description: 'Áudios de motor dos veículos', grupo: 'conteudo', Icon: Volume2 },
