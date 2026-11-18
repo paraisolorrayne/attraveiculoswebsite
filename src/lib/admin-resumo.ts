@@ -75,6 +75,7 @@ export async function carregarResumo(): Promise<ResumoAdmin> {
 		rascunhos,
 		inscritos,
 		audios,
+		boletos,
 		contas,
 	] = await Promise.all([
 		contar('sessões · 24h', async () =>
@@ -147,6 +148,17 @@ export async function carregarResumo(): Promise<ResumoAdmin> {
 		contar('áudios cadastrados', async () =>
 			n(await db.selectFrom('vehicle_sounds').select(total.as('total')).executeTakeFirst()),
 		),
+		// Boleto aberto com a data já passada. Data de São Paulo, não a do servidor.
+		contar('em atraso', async () =>
+			n(
+				await db
+					.selectFrom('boletos')
+					.select(total.as('total'))
+					.where('status', '=', 'aberto')
+					.where(sql<boolean>`vencimento < (now() at time zone 'America/Sao_Paulo')::date`)
+					.executeTakeFirst(),
+			),
+		),
 		contar('contas ativas', async () =>
 			n(
 				await db
@@ -165,6 +177,7 @@ export async function carregarResumo(): Promise<ResumoAdmin> {
 			'/admin/gerador-criativos': criativos,
 			'/admin/visitors': sessoes,
 			'/admin/crm': leads,
+			'/admin/boletos': boletos,
 			'/admin/blog': rascunhos,
 			'/admin/newsletter/campaigns': inscritos,
 			'/admin/engine-sounds': audios,
