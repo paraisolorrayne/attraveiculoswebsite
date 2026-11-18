@@ -53,6 +53,11 @@ export interface BoletoParaOFykos {
 	vencimento: string
 	valor: number | null
 	descricao: string | null
+	/** O carro e a placa do boleto, e qual parcela de quantas, quando a planilha informa. */
+	carro: string | null
+	placa: string | null
+	parcela: number | null
+	parcelas: number | null
 	status: string
 	pago_em: string | null
 	promessa_em: string | null
@@ -69,6 +74,10 @@ export function boletoParaOFykos(b: Boleto): BoletoParaOFykos {
 		vencimento: b.vencimento,
 		valor: b.valor,
 		descricao: b.descricao,
+		carro: b.carro,
+		placa: b.placa,
+		parcela: b.parcela,
+		parcelas: b.parcelas,
 		status: b.status,
 		pago_em: b.pago_em,
 		promessa_em: b.promessa_em,

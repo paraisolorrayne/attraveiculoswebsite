@@ -21,7 +21,7 @@ Decisões já tomadas no lado do site:
 
 - **Quando lembrar é decisão do Fykos.** O painel manda o boleto com o vencimento; a régua (quantos dias antes, no dia, depois) é da Ângela.
 - **Comprovante não marca como pago.** O painel mostra "Comprovante para conferir" e alguém do financeiro confirma. Quando confirmar, o Fykos recebe `boleto.pago`.
-- **O valor pode vir vazio.** A planilha do financeiro tem nome, vencimento e telefone; o valor é opcional. O template não pode depender dele.
+- **O valor pode vir vazio.** A planilha do financeiro costuma trazer carro, placa, valor da parcela, vencimento, cliente e contato, mas só cliente, vencimento e contato são obrigatórios. O template não pode depender de valor, carro ou número da parcela.
 - **O painel guarda só o link do comprovante**, nunca o arquivo.
 
 ## 1. Painel → Fykos
@@ -57,8 +57,12 @@ Sem as duas variáveis o painel não envia nada.
       "telefone": "+5534999990000",
       "email": null,
       "vencimento": "2026-11-25",
-      "valor": 1250.5,
-      "descricao": "Parcela 3 de 12",
+      "valor": 50000,
+      "descricao": null,
+      "carro": "DEFENDER",
+      "placa": "ABC-1D23",
+      "parcela": 3,
+      "parcelas": 8,
       "status": "aberto",
       "pago_em": null,
       "promessa_em": null,
@@ -70,7 +74,9 @@ Sem as duas variáveis o painel não envia nada.
 
 - `boletos` traz de 1 a 100 itens. Uma planilha grande vira vários avisos.
 - Cada item é o **estado completo e atual** do boleto. O Fykos pode gravar por `id` (criar se não existe, atualizar se existe) sem olhar o `evento`.
-- `telefone` vem em E.164. `valor`, `email`, `descricao`, `pago_em`, `promessa_em` e `comprovante_em` podem ser `null`.
+- `telefone` vem em E.164. `valor`, `email`, `descricao`, `carro`, `placa`, `parcela`, `parcelas`, `pago_em`, `promessa_em` e `comprovante_em` podem ser `null`.
+- `carro` e `placa` dizem a que o boleto se refere. `parcela` e `parcelas` vêm juntos ("parcela 3 de 8") quando a linha da planilha era um plano de parcelas mensais: **cada parcela é um boleto próprio, com `id` próprio**. Um cliente com um carro em 8 parcelas chega como 8 boletos, e o mesmo cliente pode ter dois carros com parcela no mesmo dia.
+- `nome` costuma ser só o primeiro nome, em maiúsculas, como o financeiro escreve.
 - `comprovante_em` preenchido quer dizer que há um comprovante esperando a conferência do financeiro. Se ele voltar a `null` com o boleto ainda aberto, o financeiro não aceitou o comprovante: a Ângela volta a lembrar.
 - `status`: `aberto`, `em_negociacao`, `pago` ou `cancelado`.
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hojeBRT, validarBoleto } from '@/lib/boletos'
+import { hojeBRT, paraALista, validarBoleto } from '@/lib/boletos'
 import { criarBoleto, listarBoletos, resumoDosBoletos } from '@/lib/boletos-db'
 import { estadoDoFykos } from '@/lib/boletos-fykos'
 import { despacharAoFykos, exigirBoletos } from './acesso'
@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
       resumoDosBoletos(hoje),
       estadoDoFykos(),
     ])
-    return NextResponse.json({ ...lista, resumo, hoje, fykos })
+    // A lista não leva o telefone inteiro nem o e-mail: só o que ela mostra.
+    return NextResponse.json({ ...lista, boletos: lista.boletos.map(paraALista), resumo, hoje, fykos })
   } catch (e) {
     console.error('[boletos] listar falhou:', e)
     return NextResponse.json({ error: 'Não foi possível carregar os boletos.' }, { status: 500 })

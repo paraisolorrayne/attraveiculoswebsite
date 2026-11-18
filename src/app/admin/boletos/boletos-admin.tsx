@@ -18,7 +18,7 @@ import {
 import { useFiltrosUrl } from '@/components/admin/filtros'
 import { cn } from '@/lib/utils'
 import {
-  dataBR, formatarTelefone, linkDoWhatsapp, mensagemDeLembrete, prazoPorExtenso, situacaoDoBoleto, type Boleto, type StatusBoleto,
+  dataBR, identificacaoDoBoleto, prazoPorExtenso, situacaoDoBoleto, type BoletoDaLista, type StatusBoleto,
 } from '@/lib/boletos'
 import type { ResumoDosBoletos } from '@/lib/boletos-db'
 import type { EstadoDoFykos } from '@/lib/boletos-fykos'
@@ -49,7 +49,7 @@ const ORDENS = [
 ] as const
 
 interface Resposta {
-  boletos: Boleto[]
+  boletos: BoletoDaLista[]
   total: number
   pagina: number
   paginas: number
@@ -85,7 +85,7 @@ export function BoletosAdmin() {
   const [novo, setNovo] = useState(false)
   const [ocupado, setOcupado] = useState<string | null>(null)
   /** O último boleto marcado como pago, para oferecer "Desfazer". */
-  const [desfazer, setDesfazer] = useState<{ boleto: Boleto; antes: StatusBoleto } | null>(null)
+  const [desfazer, setDesfazer] = useState<{ boleto: BoletoDaLista; antes: StatusBoleto } | null>(null)
   const [reenvio, setReenvio] = useState<'enviando' | string | null>(null)
 
   const consulta = new URLSearchParams(Object.entries(valores).filter(([, v]) => v)).toString()
@@ -112,14 +112,14 @@ export function BoletosAdmin() {
   const filtrar = (m: Partial<Record<(typeof CHAVES)[number], string>>) => definir({ pagina: '', ...m })
   const aoBuscar = useCallback((v: string) => definir({ q: v, pagina: '' }), [definir])
 
-  async function mudarStatus(b: Boleto, status: StatusBoleto) {
+  async function mudarStatus(b: BoletoDaLista, status: StatusBoleto) {
     setOcupado(b.id)
     try {
       const r = await fetch(`/api/admin/boletos/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
       const d = await r.json().catch(() => null)
       if (!r.ok) throw new Error(d?.error)
       // "Desfazer" devolve o boleto como estava (em negociação, por exemplo), não sempre como aberto.
-      setDesfazer(status === 'pago' ? { boleto: d.boleto, antes: b.status } : null)
+      setDesfazer(status === 'pago' ? { boleto: b, antes: b.status } : null)
       await carregar()
     } catch (e) {
       setErro(e instanceof Error && e.message ? e.message : 'Não foi possível salvar.')
@@ -141,15 +141,12 @@ export function BoletosAdmin() {
     }
   }
 
-  /** O clique abre o WhatsApp pelo próprio link; aqui só fica o registro. */
-  function anotarLembrete(b: Boleto) {
-    fetch(`/api/admin/boletos/${b.id}/eventos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'lembrete' }) })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => {
-        if (d?.boleto) setDados(atual => (atual ? { ...atual, boletos: atual.boletos.map(x => (x.id === b.id ? d.boleto : x)) } : atual))
-      })
-      .catch(() => {})
-  }
+  /**
+   * "Lembrar" abre /api/admin/boletos/<id>/lembrar numa aba nova: é o servidor
+   * que monta o link do WhatsApp e anota o lembrete, porque a lista não tem o
+   * telefone inteiro. Aqui só se recarrega a lista para a contagem aparecer.
+   */
+  const depoisDeLembrar = () => setTimeout(() => void carregar(), 2000)
 
   const resumo = dados?.resumo
   const hoje = dados?.hoje ?? ''
@@ -186,7 +183,7 @@ export function BoletosAdmin() {
 
         {desfazer && (
           <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-3 text-sm text-foreground">
-            <span>Boleto de {desfazer.boleto.nome} marcado como pago.</span>
+            <span>Boleto de {identificacaoDoBoleto(desfazer.boleto)} marcado como pago.</span>
             <button type="button" onClick={() => void mudarStatus(desfazer.boleto, desfazer.antes)} className="flex min-h-9 items-center gap-2 rounded-lg border border-border bg-background-card px-3 font-medium hover:border-foreground-secondary">
               <Undo2 className="h-4 w-4" />
               Desfazer
@@ -251,7 +248,7 @@ export function BoletosAdmin() {
             </div>
 
             <BarraDeFiltros>
-              <CampoBusca valor={valores.q} aoMudar={aoBuscar} placeholder="Buscar por nome, telefone ou descrição" />
+              <CampoBusca valor={valores.q} aoMudar={aoBuscar} placeholder="Buscar por nome, carro, placa ou telefone" />
               <SeletorFiltro rotulo="Situação" valor={valores.sit} aoMudar={v => filtrar({ sit: v })} opcoes={SITUACOES} todos="Em aberto" />
               <SeletorFiltro rotulo="Ordenar" valor={valores.ordem} aoMudar={v => filtrar({ ordem: v })} opcoes={ORDENS} todos="Vencimento mais próximo" />
               <BotaoSecundario onClick={() => void carregar()} disabled={carregando} className="ml-auto">
@@ -292,10 +289,18 @@ export function BoletosAdmin() {
                           className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-background-soft/60"
                         >
                           <td className="min-w-48 px-3 py-3">
+                            {/* Nome, carro e fim do telefone juntos: a planilha traz só o primeiro
+                                nome, e é a composição que diz de quem é o boleto. */}
                             <Link href={`/admin/boletos/${b.id}`} onClick={e => e.stopPropagation()} className="font-medium text-foreground hover:underline">
                               {b.nome}
                             </Link>
-                            <div className="whitespace-nowrap text-sm tabular-nums text-foreground-secondary">{formatarTelefone(b.telefone)}</div>
+                            {b.carro && <span className="text-foreground"> · {b.carro}</span>}
+                            <span className="whitespace-nowrap tabular-nums text-foreground-secondary"> · {b.telefone_final}</span>
+                            {(b.placa || (b.parcela && b.parcelas)) && (
+                              <div className="text-sm text-foreground-secondary">
+                                {[b.placa, b.parcela && b.parcelas ? `parcela ${b.parcela} de ${b.parcelas}` : null].filter(Boolean).join(' · ')}
+                              </div>
+                            )}
                             {b.descricao && <div className="max-w-md truncate text-sm text-foreground-secondary" title={b.descricao}>{b.descricao}</div>}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3">
@@ -347,10 +352,10 @@ export function BoletosAdmin() {
                               {aberto && (
                                 <>
                                   <a
-                                    href={linkDoWhatsapp(b.telefone, mensagemDeLembrete(b, hoje))}
+                                    href={`/api/admin/boletos/${b.id}/lembrar`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    onClick={() => anotarLembrete(b)}
+                                    onClick={depoisDeLembrar}
                                     title="Lembrar: abre o WhatsApp com o lembrete pronto"
                                     aria-label="Lembrar pelo WhatsApp"
                                     className="flex min-h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-border px-3 text-sm font-medium text-foreground hover:border-foreground-secondary"

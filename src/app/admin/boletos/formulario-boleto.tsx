@@ -21,6 +21,8 @@ export function FormularioBoleto({ boleto, aoFechar, aoSalvar }: { boleto?: Bole
   const [valor, setValor] = useState(boleto?.valor ? boleto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
   const [email, setEmail] = useState(boleto?.email ?? '')
   const [descricao, setDescricao] = useState(boleto?.descricao ?? '')
+  const [carro, setCarro] = useState(boleto?.carro ?? '')
+  const [placa, setPlaca] = useState(boleto?.placa ?? '')
   const [erros, setErros] = useState<Erros>({})
   const [erro, setErro] = useState<string | null>(null)
   const [duplicado, setDuplicado] = useState(false)
@@ -42,7 +44,7 @@ export function FormularioBoleto({ boleto, aoFechar, aoSalvar }: { boleto?: Bole
       const r = await fetch(boleto ? `/api/admin/boletos/${boleto.id}` : '/api/admin/boletos', {
         method: boleto ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, telefone, vencimento, valor, email, descricao, forcar }),
+        body: JSON.stringify({ nome, telefone, vencimento, valor, email, descricao, carro, placa, forcar }),
       })
       const d = await r.json().catch(() => null)
       if (r.ok && d?.boleto) return aoSalvar(d.boleto)
@@ -102,9 +104,17 @@ export function FormularioBoleto({ boleto, aoFechar, aoSalvar }: { boleto?: Bole
             <input className={CAMPO} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />
             {aviso('email')}
           </label>
+          <label>
+            <span className={rotulo}>Carro <span className="font-normal text-foreground-secondary">(opcional)</span></span>
+            <input className={CAMPO} value={carro} onChange={e => setCarro(e.target.value)} placeholder="Defender" maxLength={120} autoComplete="off" />
+          </label>
+          <label>
+            <span className={rotulo}>Placa <span className="font-normal text-foreground-secondary">(opcional)</span></span>
+            <input className={CAMPO} value={placa} onChange={e => setPlaca(e.target.value)} placeholder="ABC-1D23" maxLength={20} autoComplete="off" />
+          </label>
           <label className="sm:col-span-2">
             <span className={rotulo}>Descrição <span className="font-normal text-foreground-secondary">(opcional)</span></span>
-            <input className={CAMPO} value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Carro, parcela, observação" maxLength={500} autoComplete="off" />
+            <input className={CAMPO} value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Observação" maxLength={500} autoComplete="off" />
           </label>
 
           {erro && (

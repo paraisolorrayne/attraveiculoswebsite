@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-	campoDoTitulo, chaveDeDuplicata, diasAte, formatarTelefone, lerData, lerPlanilha, lerTexto, lerValor,
-	linkDoWhatsapp, mensagemDeLembrete, normalizarTelefone, prazoPorExtenso, situacaoDoBoleto,
+	campoDoTitulo, chaveDeDuplicata, diasAte, formatarTelefone, lerData, lerPlanilha, lerTexto, lerValor, lerVencimentos,
+	linkDoWhatsapp, mensagemDeLembrete, normalizarTelefone, prazoPorExtenso, referenciaDoBoleto, situacaoDoBoleto,
 } from '@/lib/boletos'
 
 const HOJE = '2026-11-18'
@@ -111,9 +111,10 @@ describe('planilha', () => {
 		)
 		expect(p.erro).toBeNull()
 		expect(p.comTitulos).toBe(true)
+		const vazio = { carro: null, placa: null, parcela: null, parcelas: null, aviso: null, ignorada: null }
 		expect(p.linhas).toEqual([
-			{ linha: 2, nome: 'MARIA DA SILVA', telefone: '34999990000', email: null, vencimento: '2026-12-05', valor: 1234.56, descricao: null, erros: [] },
-			{ linha: 4, nome: 'João Souza', telefone: '34988887777', email: null, vencimento: '2026-12-05', valor: 800, descricao: null, erros: [] },
+			{ linha: 2, nome: 'MARIA DA SILVA', telefone: '34999990000', email: null, vencimento: '2026-12-05', valor: 1234.56, descricao: null, erros: [], ...vazio },
+			{ linha: 4, nome: 'João Souza', telefone: '34988887777', email: null, vencimento: '2026-12-05', valor: 800, descricao: null, erros: [], ...vazio },
 		])
 	})
 
@@ -247,5 +248,147 @@ describe('lembrete', () => {
 
 	it('o link leva o 55 e o texto codificado', () => {
 		expect(linkDoWhatsapp('34999990000', 'Olá, Maria!')).toBe('https://wa.me/5534999990000?text=Ol%C3%A1%2C%20Maria!')
+	})
+})
+
+describe('parcelas: o vencimento como o financeiro escreve', () => {
+	const datas = (v: unknown) => {
+		const r = lerVencimentos(v, HOJE)
+		return 'erro' in r ? r.erro : r.datas
+	}
+
+	it('um intervalo vira uma data por mês, no mesmo dia', () => {
+		// De dezembro deste ano a julho do ano que vem.
+		expect(datas('08/12 A 08/07')).toEqual(['2026-12-08', '2027-01-08', '2027-02-08', '2027-03-08', '2027-04-08', '2027-05-08', '2027-06-08', '2027-07-08'])
+		expect(datas('10/12 A 10/02')).toEqual(['2026-12-10', '2027-01-10', '2027-02-10'])
+		// Só o fim com ano.
+		expect(datas('04/12 A 04/09/27')).toHaveLength(10)
+		expect(datas('04/12 A 04/09/27')[9]).toBe('2027-09-04')
+		// Em novembro, "20/01" é janeiro do ano que vem; o fim vem depois do começo.
+		expect(datas('20/01 A 20/10')).toHaveLength(10)
+		expect(datas('20/01 A 20/10')[0]).toBe('2027-01-20')
+		expect(datas('20/01 A 20/10')[9]).toBe('2027-10-20')
+		// Outras grafias do "a".
+		expect(datas('08/12 a 08/01')).toEqual(['2026-12-08', '2027-01-08'])
+		expect(datas('08/12 até 08/01')).toEqual(['2026-12-08', '2027-01-08'])
+		expect(datas('08/12/2026 - 08/01/2027')).toEqual(['2026-12-08', '2027-01-08'])
+	})
+
+	it('dia 31 cai no último dia dos meses mais curtos', () => {
+		expect(datas('31/01/2027 A 31/03/2027')).toEqual(['2027-01-31', '2027-02-28', '2027-03-31'])
+	})
+
+	it('uma data só continua sendo uma data', () => {
+		expect(datas('2027-05-15')).toEqual(['2027-05-15'])
+		expect(datas('15/05/2027')).toEqual(['2027-05-15'])
+		expect(datas(46361)).toEqual(['2026-12-05'])
+	})
+
+	it('avisa quando o ano não estava escrito, para a pessoa conferir', () => {
+		expect(lerVencimentos('08/12 A 08/07', HOJE)).toMatchObject({ aviso: 'vencimento sem ano: entendi 8 parcelas, de 08/12/2026 a 08/07/2027' })
+		expect(lerVencimentos('25/11', HOJE)).toMatchObject({ aviso: 'vencimento sem ano: entendi 25/11/2026' })
+		expect(lerVencimentos('08/12/2026 A 08/07/2027', HOJE)).toMatchObject({ aviso: null })
+		expect(lerVencimentos('15/05/2027', HOJE)).toMatchObject({ aviso: null })
+	})
+
+	it('recusa intervalo que não fecha', () => {
+		expect(datas('08/12 A 15/07')).toBe('o dia do começo e do fim das parcelas é diferente')
+		expect(datas('08/12/2027 A 08/07/2027')).toBe('o fim das parcelas vem antes do começo')
+		expect(datas('08/12 A semana que vem')).toBe('vencimento inválido')
+		expect(datas('08/01/2027 A 08/01/2040')).toBe('mais de 120 parcelas')
+	})
+})
+
+describe('a planilha de cobrança do financeiro (carro, placa, valor da parcela, vencimento, cliente, contato)', () => {
+	const planilha = [
+		['CARRO', 'PLACA', 'VALOR PARCELA', 'VENCIMENTO', 'CLIENTE', 'CONTATO'],
+		['PANAMERA', 'AAA-1A11', 62500, '20/01 A 20/10', 'Fulano ', null],
+		['DEFENDER', 'BBB-2B22', 680000, '2027-05-15', 'BELTRANO', '34 99999-0001'],
+		['RANGE ROVER SPORT', 'CCC-3C33', 42000, '08/12 A 08/07', 'SICRANO', '34 99999-0002'],
+		['DEFENDER', '0KM', 50000, '08/12 A 08/07', 'SICRANO', '34 99999-0002'],
+		['CAYENNE', 'DDD-4D44', 28420, '10/09 A 10/02', 'ZUTANO', '34 99999-0003'],
+	]
+	const p = lerPlanilha(planilha, HOJE)
+
+	it('reconhece as colunas, com o contato valendo como telefone', () => {
+		expect(p.erro).toBeNull()
+		expect(p.colunas).toEqual({ carro: 0, placa: 1, valor: 2, vencimento: 3, nome: 4, telefone: 5 })
+	})
+
+	it('cada linha vira as parcelas dela, com carro, placa e o número da parcela', () => {
+		const range = p.linhas.filter(l => l.linha === 4)
+		expect(range).toHaveLength(8)
+		expect(range[0]).toMatchObject({ nome: 'SICRANO', telefone: '34999990002', carro: 'RANGE ROVER SPORT', placa: 'CCC-3C33', valor: 42000, vencimento: '2026-12-08', parcela: 1, parcelas: 8, erros: [], ignorada: null })
+		expect(range[7]).toMatchObject({ vencimento: '2027-07-08', parcela: 8, parcelas: 8 })
+		// Data única: um boleto só, sem número de parcela.
+		expect(p.linhas.filter(l => l.linha === 3)).toMatchObject([{ vencimento: '2027-05-15', valor: 680000, parcela: null, parcelas: null }])
+	})
+
+	it('linha sem contato fica de fora inteira, uma vez só', () => {
+		expect(p.linhas.filter(l => l.linha === 2)).toMatchObject([{ nome: 'Fulano', erros: ['sem telefone'], parcela: null }])
+	})
+
+	it('o mesmo cliente com dois carros no mesmo dia não é duplicado', () => {
+		const a = p.linhas.find(l => l.linha === 4 && l.parcela === 1)!
+		const b = p.linhas.find(l => l.linha === 5 && l.parcela === 1)!
+		expect(a.vencimento).toBe(b.vencimento)
+		expect(chaveDeDuplicata(a)).not.toBe(chaveDeDuplicata(b))
+		// Mesmo valor, carros diferentes: continua não sendo duplicado.
+		expect(chaveDeDuplicata({ ...a, valor: 50000 })).not.toBe(chaveDeDuplicata(b))
+		// E a mesma parcela lida de novo é.
+		expect(chaveDeDuplicata(a)).toBe(chaveDeDuplicata({ ...a, nome: 'Outro nome' } as typeof a))
+	})
+
+	it('parcela de um intervalo que já venceu não é criada; data única vencida é', () => {
+		// 10/09 A 10/02 em 18/11: setembro, outubro e novembro já passaram.
+		const cayenne = p.linhas.filter(l => l.linha === 6)
+		expect(cayenne.map(l => [l.vencimento, l.parcela, l.ignorada])).toEqual([
+			['2026-09-10', 1, 'parcela já vencida'],
+			['2026-10-10', 2, 'parcela já vencida'],
+			['2026-11-10', 3, 'parcela já vencida'],
+			['2026-12-10', 4, null],
+			['2027-01-10', 5, null],
+			['2027-02-10', 6, null],
+		])
+		const unica = lerPlanilha([['Nome', 'Vencimento', 'Telefone'], ['Maria', '10/11/2026', '34 99999-0000']], HOJE)
+		expect(unica.linhas[0]).toMatchObject({ vencimento: '2026-11-10', ignorada: null, erros: [] })
+	})
+
+	it('descreve o boleto numa linha e no lembrete', () => {
+		const l = p.linhas.find(x => x.linha === 4 && x.parcela === 3)!
+		expect(referenciaDoBoleto(l)).toBe('RANGE ROVER SPORT · CCC-3C33 · parcela 3 de 8')
+		expect(referenciaDoBoleto({ carro: null, placa: null, parcela: null, parcelas: null })).toBeNull()
+		const m = mensagemDeLembrete(l, HOJE)
+		expect(m).toContain('Olá, Sicrano!')
+		expect(m).toContain('a parcela 3 de 8 do veículo RANGE ROVER SPORT, de R$')
+		expect(m).toContain('vence em 08/02')
+		const atrasada = mensagemDeLembrete({ ...l, vencimento: '2026-11-08', valor: null }, HOJE)
+		expect(atrasada).toContain('o pagamento da parcela 3 de 8 do veículo RANGE ROVER SPORT que venceu em 08/11')
+		expect(m + atrasada).not.toMatch(/—| – /)
+	})
+})
+
+describe('telefone protegido na lista', async () => {
+	const { identificacaoDoBoleto, mascararTelefone, paraALista } = await import('@/lib/boletos')
+
+	it('mostra só os quatro últimos dígitos', () => {
+		expect(mascararTelefone('34999990537')).toBe('****0537')
+		expect(mascararTelefone('(34) 3222-0000')).toBe('****0000')
+		expect(mascararTelefone('12')).toBe('****')
+	})
+
+	it('o boleto da lista não leva o telefone inteiro nem o e-mail', () => {
+		const b = {
+			id: 'x', nome: 'MARIA', telefone: '34999990537', email: 'maria@exemplo.com', vencimento: '2026-12-08', valor: 50000, descricao: null,
+			carro: 'DEFENDER', placa: '0KM', parcela: 1, parcelas: 8, status: 'aberto' as const, pago_em: null, origem: 'planilha', lote_id: null, lembretes: 0,
+			ultimo_lembrete_em: null, promessa_em: null, comprovante_em: null, comprovante_url: null, falha_envio: null, criado_por_nome: null, criado_em: '', atualizado_em: '',
+		}
+		const daLista = paraALista(b)
+		expect(daLista.telefone_final).toBe('****0537')
+		expect(JSON.stringify(daLista)).not.toContain('34999990537')
+		expect(JSON.stringify(daLista)).not.toContain('maria@exemplo.com')
+		// Nome, carro e fim do telefone: o que distingue dois clientes de mesmo primeiro nome.
+		expect(identificacaoDoBoleto(daLista)).toBe('MARIA · DEFENDER · ****0537')
+		expect(identificacaoDoBoleto({ nome: 'Maria', carro: null, telefone_final: '****0000' })).toBe('Maria · ****0000')
 	})
 })

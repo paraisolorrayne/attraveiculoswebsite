@@ -26,12 +26,16 @@ interface Resultado {
   criados: number
   lote_id: string | null
   linhas: LinhaDaPrevia[]
-  resumo: { total: number; novos: number; comErro: number; duplicados: number }
+  resumo: { linhasDaPlanilha: number; total: number; novos: number; comErro: number; duplicados: number; vencidas: number }
   colunas: Partial<Record<Campo, number>>
   comTitulos: boolean
 }
 
-const MODELO = '﻿Nome;Vencimento;Telefone;Valor;Descrição\r\nMaria da Silva;25/12/2026;(34) 99999-0000;1.250,00;Parcela 3 de 12\r\n'
+// O mesmo desenho da planilha de cobrança do financeiro.
+const MODELO =
+  '﻿CARRO;PLACA;VALOR PARCELA;VENCIMENTO;CLIENTE;CONTATO\r\n' +
+  'DEFENDER;ABC-1D23;50.000,00;08/12/2026 A 08/07/2027;MARIA;(34) 99999-0000\r\n' +
+  'CAYENNE;EFG-4H56;680.000,00;15/05/2027;JOÃO;(34) 98888-0000\r\n'
 
 /** As células de um .xlsx, com data virando AAAA-MM-DD e o resto texto ou número. */
 async function lerExcel(arquivo: File): Promise<Celula[][]> {
@@ -54,7 +58,7 @@ export function ImportarPlanilha() {
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<'enviando' | 'desfazendo' | null>(null)
   const [colado, setColado] = useState('')
-  const [aba, setAba] = useState<'erro' | 'duplicado'>('erro')
+  const [aba, setAba] = useState<'erro' | 'duplicado' | 'vencida'>('erro')
   const [confirmarDesfazer, setConfirmarDesfazer] = useState(false)
   const [desfeito, setDesfeito] = useState<number | null>(null)
   const [sobre, setSobre] = useState(false)
@@ -72,7 +76,7 @@ export function ImportarPlanilha() {
       if (!r.ok || !d?.linhas) throw new Error(d?.error || 'Não foi possível ler a planilha. Nada foi gravado.')
       setOrigem(nome)
       setResultado(d)
-      setAba(d.resumo.comErro > 0 ? 'erro' : 'duplicado')
+      setAba(d.resumo.comErro > 0 ? 'erro' : d.resumo.vencidas > 0 ? 'vencida' : 'duplicado')
       setColado('')
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível ler a planilha. Nada foi gravado.')
@@ -126,7 +130,9 @@ export function ImportarPlanilha() {
   }
 
   const r = resultado
-  const deFora = r ? r.linhas.filter(l => (aba === 'erro' ? l.erros.length > 0 : !!l.duplicado)) : []
+  const deFora = r ? r.linhas.filter(l => (aba === 'erro' ? l.erros.length > 0 : aba === 'vencida' ? !!l.ignorada : !!l.duplicado)) : []
+  // Datas sem ano: um aviso por linha da planilha, não um por parcela.
+  const avisos = r ? [...new Map(r.linhas.filter(l => l.aviso).map(l => [l.linha, l])).values()] : []
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -174,9 +180,11 @@ export function ImportarPlanilha() {
                         : 'Nada novo: todos os boletos desta planilha já estavam no painel'}
                   </p>
                   <p className="mt-1 text-sm text-foreground-secondary">
-                    {plural(r.resumo.total, 'linha lida', 'linhas lidas')}
+                    {plural(r.resumo.linhasDaPlanilha, 'linha lida', 'linhas lidas')}
+                    {r.resumo.total > r.resumo.linhasDaPlanilha && `, que dão ${plural(r.resumo.total, 'parcela', 'parcelas')}`}
                     {r.resumo.duplicados > 0 && `, ${plural(r.resumo.duplicados, 'pulada por já estar cadastrada', 'puladas por já estarem cadastradas')}`}
-                    {r.resumo.comErro > 0 && `, ${plural(r.resumo.comErro, 'ficou de fora por erro', 'ficaram de fora por erro')}`}
+                    {r.resumo.vencidas > 0 && `, ${plural(r.resumo.vencidas, 'parcela já vencida não foi criada', 'parcelas já vencidas não foram criadas')}`}
+                    {r.resumo.comErro > 0 && `, ${plural(r.resumo.comErro, 'linha ficou de fora por erro', 'linhas ficaram de fora por erro')}`}
                     . Colunas: {(Object.entries(r.colunas) as [Campo, number][]).map(([c, i]) => `${ROTULO_DO_CAMPO[c]} (${letraDaColuna(i)})`).join(', ')}.
                     {!r.comTitulos && ' A planilha não tem linha de títulos, então as colunas foram identificadas pelo conteúdo: confira nos boletos se ficaram certas.'}
                   </p>
@@ -208,11 +216,31 @@ export function ImportarPlanilha() {
               )}
             </section>
 
-            {(r.resumo.comErro > 0 || r.resumo.duplicados > 0) && (
+            {avisos.length > 0 && (
+              <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                  Confira o ano: a planilha não diz, então foi assumido
+                </h2>
+                <ul className="mt-2 space-y-1 text-sm text-foreground">
+                  {avisos.map(l => (
+                    <li key={l.linha}>
+                      <span className="text-foreground-secondary">Linha {l.linha}, {[l.nome, l.carro].filter(Boolean).join(', ')}:</span>{' '}
+                      {l.aviso?.replace('vencimento sem ano: entendi ', '')}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-sm text-foreground-secondary">
+                  Se algum estiver errado, desfaça o envio, escreva o ano na planilha (08/12/2026 A 08/07/2027) e envie de novo.
+                </p>
+              </section>
+            )}
+
+            {(r.resumo.comErro > 0 || r.resumo.duplicados > 0 || r.resumo.vencidas > 0) && (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex gap-1 rounded-lg border border-border bg-background-card p-1" role="group" aria-label="Linhas que não entraram">
-                    {([['erro', `Com erro (${r.resumo.comErro})`, r.resumo.comErro], ['duplicado', `Já cadastradas (${r.resumo.duplicados})`, r.resumo.duplicados]] as const)
+                    {([['erro', `Com erro (${r.resumo.comErro})`, r.resumo.comErro], ['vencida', `Parcelas já vencidas (${r.resumo.vencidas})`, r.resumo.vencidas], ['duplicado', `Já cadastradas (${r.resumo.duplicados})`, r.resumo.duplicados]] as const)
                       .filter(([, , n]) => n > 0)
                       .map(([valor, rotulo]) => (
                         <button
@@ -229,6 +257,9 @@ export function ImportarPlanilha() {
                   {aba === 'erro' && (
                     <span className="text-sm text-foreground-secondary">Corrija estas linhas na planilha e envie de novo: o que já entrou é pulado.</span>
                   )}
+                  {aba === 'vencida' && (
+                    <span className="text-sm text-foreground-secondary">Não dá para saber se foram pagas. Se alguma está em aberto, cadastre em Novo boleto.</span>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-border bg-background-card">
@@ -237,6 +268,7 @@ export function ImportarPlanilha() {
                       <tr className="border-b border-border text-left text-sm text-foreground-secondary">
                         <th className="px-4 py-3 font-medium">Linha</th>
                         <th className="px-4 py-3 font-medium">Nome</th>
+                        <th className="px-4 py-3 font-medium">Carro</th>
                         <th className="px-4 py-3 font-medium">Telefone</th>
                         <th className="px-4 py-3 font-medium">Vencimento</th>
                         <th className="px-4 py-3 text-right font-medium">Valor</th>
@@ -248,19 +280,22 @@ export function ImportarPlanilha() {
                         const errado = (palavra: string) => l.erros.some(e => e.includes(palavra))
                         const telRuim = errado('telefone') || errado('DDD')
                         return (
-                          <tr key={l.linha} className="border-b border-border/60 last:border-0">
+                          <tr key={`${l.linha}-${l.parcela ?? 0}`} className="border-b border-border/60 last:border-0">
                             <td className="px-4 py-2.5 tabular-nums text-foreground-secondary">{l.linha}</td>
                             <td className="px-4 py-2.5 text-foreground">{l.nome || <span className="text-red-600 dark:text-red-400">vazio</span>}</td>
+                            <td className="px-4 py-2.5 text-sm text-foreground-secondary">{[l.carro, l.placa, l.parcela && l.parcelas ? `parcela ${l.parcela} de ${l.parcelas}` : null].filter(Boolean).join(' · ')}</td>
                             <td className={cn('whitespace-nowrap px-4 py-2.5 tabular-nums', telRuim ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
                               {telRuim ? l.telefone || 'vazio' : formatarTelefone(l.telefone)}
                             </td>
                             <td className={cn('whitespace-nowrap px-4 py-2.5 tabular-nums', errado('vencimento') ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
-                              {errado('vencimento') ? l.vencimento || 'vazio' : dataBR(l.vencimento)}
+                              {/^\d{4}-\d{2}-\d{2}$/.test(l.vencimento) ? dataBR(l.vencimento) : l.vencimento || 'vazio'}
                             </td>
                             <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums text-foreground">{l.valor ? dinheiro(l.valor) : ''}</td>
                             <td className="px-4 py-2.5 text-sm">
                               {l.erros.length > 0 ? (
                                 <span className="text-red-600 dark:text-red-400">{l.erros.join(', ')}</span>
+                              ) : l.ignorada ? (
+                                <span className="text-foreground-secondary">Já venceu, pode estar paga</span>
                               ) : (
                                 <span className="text-foreground-secondary">{l.duplicado === 'planilha' ? 'Repetida nesta planilha' : 'Já estava no painel'}</span>
                               )}
@@ -305,7 +340,7 @@ export function ImportarPlanilha() {
               <textarea
                 value={colado}
                 onChange={e => setColado(e.target.value)}
-                placeholder={'Nome\tVencimento\tTelefone\nMaria da Silva\t25/12/2026\t(34) 99999-0000'}
+                placeholder={'CARRO\tPLACA\tVALOR PARCELA\tVENCIMENTO\tCLIENTE\tCONTATO\nDEFENDER\tABC-1D23\t50000\t08/12 A 08/07\tMARIA\t(34) 99999-0000'}
                 className="mt-4 min-h-48 w-full rounded-lg border border-border bg-background p-3 font-mono text-sm text-foreground placeholder:text-foreground-secondary focus:border-primary focus:outline-none"
               />
               <button type="button" className={cn(BOTAO_NEUTRO, 'mt-3')} disabled={!colado.trim() || ocupado !== null} onClick={() => void enviar(lerTexto(colado), 'células coladas')}>
@@ -319,7 +354,9 @@ export function ImportarPlanilha() {
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground-secondary">
                 <li><span className="text-foreground">Cada planilha soma à lista.</span> O que já está no painel (mesmo telefone, vencimento e valor) é pulado; o que é novo entra. Nada é trocado nem apagado.</li>
                 <li>Pode enviar sempre a mesma planilha com as linhas novas no fim: só as novas entram.</li>
-                <li><span className="text-foreground">Nome, Vencimento e Telefone</span> são obrigatórios. Valor, E-mail, Contato e Descrição são opcionais. A ordem das colunas não importa.</li>
+                <li><span className="text-foreground">Cliente, Vencimento e Contato (o telefone)</span> são obrigatórios. Carro, Placa, Valor da parcela e Descrição são opcionais. A ordem das colunas não importa.</li>
+                <li><span className="text-foreground">Parcelas:</span> escreva o vencimento como 08/12/2026 A 08/07/2027 e a linha vira uma parcela por mês, todo dia 8. Sem o ano, o painel assume e mostra para conferir.</li>
+                <li>Parcela de um intervalo que já venceu não é criada, porque não dá para saber se foi paga.</li>
                 <li>Telefone com DDD, do jeito que estiver escrito: (34) 99999-0000, 34999990000 ou +55 34 99999-0000. Sem DDD a linha fica de fora.</li>
                 <li>Vencimento como dia/mês/ano. Data do próprio Excel também funciona.</li>
               </ul>

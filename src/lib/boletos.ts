@@ -38,6 +38,12 @@ export interface Boleto {
 	vencimento: string
 	valor: number | null
 	descricao: string | null
+	/** O carro e a placa a que o boleto se refere, quando a planilha informa. */
+	carro: string | null
+	placa: string | null
+	/** "Parcela 3 de 10": `parcela` = 3 e `parcelas` = 10. Boleto avulso não tem. */
+	parcela: number | null
+	parcelas: number | null
 	status: StatusBoleto
 	pago_em: string | null
 	origem: string
@@ -124,6 +130,37 @@ export function normalizarTelefone(v: unknown): { telefone: string } | { erro: s
 	return { telefone: d }
 }
 
+/**
+ * O telefone como aparece na LISTA: só os quatro últimos dígitos, "****0537".
+ * A lista é a tela que fica aberta o dia inteiro e mostra todo mundo de uma
+ * vez; o número inteiro só aparece na página do boleto, para quem vai ligar.
+ */
+export function mascararTelefone(t: string): string {
+	const d = t.replace(/\D/g, '')
+	return d.length >= 4 ? `****${d.slice(-4)}` : '****'
+}
+
+/**
+ * O boleto como a lista recebe: sem o telefone inteiro e sem o e-mail. A
+ * máscara é aplicada no servidor, e não só na tela, para o número não ir
+ * junto na resposta que o navegador guarda.
+ */
+export type BoletoDaLista = Omit<Boleto, 'telefone' | 'email'> & { telefone_final: string }
+
+export function paraALista(b: Boleto): BoletoDaLista {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const { telefone, email, ...resto } = b
+	return { ...resto, telefone_final: mascararTelefone(telefone) }
+}
+
+/**
+ * Quem é o contato, sem ambiguidade: nome, carro e o fim do telefone. A
+ * planilha traz só o primeiro nome, e dois clientes "MARIA" só se distinguem assim.
+ */
+export function identificacaoDoBoleto(b: { nome: string; carro: string | null; telefone_final: string }): string {
+	return [b.nome, b.carro, b.telefone_final].filter(Boolean).join(' · ')
+}
+
 export function formatarTelefone(t: string): string {
 	const d = t.replace(/\D/g, '')
 	if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
@@ -145,25 +182,25 @@ const diaValido = (a: number, m: number, d: number): string | null => {
  * Lê uma data de planilha brasileira: dd/mm/aaaa, dd/mm/aa, dd-mm-aaaa,
  * aaaa-mm-dd, o número de série do Excel, ou dd/mm sem ano (assume o ano em
  * que a data fica mais perto de hoje para a frente: em novembro, "15/01" é
- * janeiro do ano que vem).
+ * janeiro do ano que vem). `anoAssumido` diz quando o ano não estava escrito.
  */
-export function lerData(v: unknown, hoje: string): { data: string } | { erro: string } {
+function lerDataComAno(v: unknown, hoje: string): { data: string; anoAssumido: boolean } | { erro: string } {
 	if (v === null || v === undefined || v === '') return { erro: 'sem vencimento' }
 	if (typeof v === 'number') {
 		// Número de série do Excel: dias desde 30/12/1899.
-		if (v > 20000 && v < 80000) return { data: new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * DIA_MS).toISOString().slice(0, 10) }
+		if (v > 20000 && v < 80000) return { data: new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * DIA_MS).toISOString().slice(0, 10), anoAssumido: false }
 		return { erro: 'vencimento inválido' }
 	}
 	const texto = String(v).trim()
 	const iso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ].*)?$/)
 	if (iso) {
 		const data = diaValido(+iso[1], +iso[2], +iso[3])
-		return data ? { data } : { erro: 'vencimento inválido' }
+		return data ? { data, anoAssumido: false } : { erro: 'vencimento inválido' }
 	}
 	const br = texto.match(/^(\d{1,2})[/.\-](\d{1,2})(?:[/.\-](\d{2}|\d{4}))?$/)
 	if (!br) {
 		// Excel exportado como texto às vezes traz o número de série.
-		if (/^\d{5}$/.test(texto)) return lerData(Number(texto), hoje)
+		if (/^\d{5}$/.test(texto)) return lerDataComAno(Number(texto), hoje)
 		return { erro: 'vencimento inválido' }
 	}
 	let dia = +br[1]
@@ -173,7 +210,7 @@ export function lerData(v: unknown, hoje: string): { data: string } | { erro: st
 	if (br[3]) {
 		const ano = br[3].length === 2 ? 2000 + +br[3] : +br[3]
 		const data = diaValido(ano, mes, dia)
-		return data ? { data } : { erro: 'vencimento inválido' }
+		return data ? { data, anoAssumido: false } : { erro: 'vencimento inválido' }
 	}
 	const anoDeHoje = +hoje.slice(0, 4)
 	const neste = diaValido(anoDeHoje, mes, dia)
@@ -181,9 +218,61 @@ export function lerData(v: unknown, hoje: string): { data: string } | { erro: st
 	// Mais de seis meses para trás: era do ano que vem.
 	if (diasAte(neste, hoje) < -180) {
 		const proximo = diaValido(anoDeHoje + 1, mes, dia)
-		if (proximo) return { data: proximo }
+		if (proximo) return { data: proximo, anoAssumido: true }
 	}
-	return { data: neste }
+	return { data: neste, anoAssumido: true }
+}
+
+export function lerData(v: unknown, hoje: string): { data: string } | { erro: string } {
+	const lida = lerDataComAno(v, hoje)
+	return 'erro' in lida ? lida : { data: lida.data }
+}
+
+/** O mesmo dia do mês, `meses` depois. Dia 31 em mês de 30 vira o último dia do mês. */
+function somarMeses(dia: string, meses: number): string {
+	const [a, m, d] = dia.split('-').map(Number)
+	const alvo = new Date(Date.UTC(a, m - 1 + meses, 1))
+	const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate()
+	return new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth(), Math.min(d, ultimo))).toISOString().slice(0, 10)
+}
+
+export const MAXIMO_DE_PARCELAS = 120
+
+/**
+ * O vencimento de uma linha da planilha: uma data, ou um intervalo de
+ * parcelas mensais como o financeiro escreve, "08/12 A 08/07" ou
+ * "04/12 A 04/09/27" (todo dia 8, de dezembro a julho).
+ *
+ * No intervalo, o começo sem ano segue a regra de `lerData`; o fim sem ano é
+ * a primeira vez que aquele dia e mês aparecem depois do começo. `aviso` vem
+ * preenchido quando algum ano foi assumido, para a pessoa conferir.
+ */
+export function lerVencimentos(v: unknown, hoje: string): { datas: string[]; aviso: string | null } | { erro: string } {
+	const intervalo = typeof v === 'string' ? v.trim().match(/^(\S+)\s+(?:a|à|ao|ate|até|-|–)\s+(\S+)$/i) : null
+	if (!intervalo) {
+		const unica = lerDataComAno(v, hoje)
+		if ('erro' in unica) return unica
+		return { datas: [unica.data], aviso: unica.anoAssumido ? `vencimento sem ano: entendi ${dataBR(unica.data)}` : null }
+	}
+	const inicio = lerDataComAno(intervalo[1], hoje)
+	if ('erro' in inicio) return { erro: 'vencimento inválido' }
+	// O fim é lido tendo o começo como "hoje": sem ano, cai na primeira vez depois dele.
+	let fim = lerDataComAno(intervalo[2], inicio.data)
+	if ('erro' in fim) return { erro: 'vencimento inválido' }
+	if (fim.anoAssumido && fim.data < inicio.data) {
+		const proximo = diaValido(+fim.data.slice(0, 4) + 1, +fim.data.slice(5, 7), +fim.data.slice(8, 10))
+		if (!proximo) return { erro: 'vencimento inválido' }
+		fim = { data: proximo, anoAssumido: true }
+	}
+	if (fim.data < inicio.data) return { erro: 'o fim das parcelas vem antes do começo' }
+	if (inicio.data.slice(8) !== fim.data.slice(8)) return { erro: 'o dia do começo e do fim das parcelas é diferente' }
+	const meses = (+fim.data.slice(0, 4) - +inicio.data.slice(0, 4)) * 12 + (+fim.data.slice(5, 7) - +inicio.data.slice(5, 7))
+	if (meses + 1 > MAXIMO_DE_PARCELAS) return { erro: `mais de ${MAXIMO_DE_PARCELAS} parcelas` }
+	const datas = Array.from({ length: meses + 1 }, (_, i) => somarMeses(inicio.data, i))
+	return {
+		datas,
+		aviso: inicio.anoAssumido || fim.anoAssumido ? `vencimento sem ano: entendi ${datas.length} parcelas, de ${dataBR(inicio.data)} a ${dataBR(fim.data)}` : null,
+	}
 }
 
 /* ------------------------------------------------------------------ valor */
@@ -220,6 +309,10 @@ export interface DadosDoBoleto {
 	vencimento: string
 	valor: number | null
 	descricao: string | null
+	carro: string | null
+	placa: string | null
+	parcela: number | null
+	parcelas: number | null
 }
 
 /**
@@ -240,14 +333,17 @@ export function validarBoleto(corpo: Record<string, unknown>, hoje: string): { d
 	const email = String(corpo.email ?? '').trim() || null
 	if (email && !/^\S+@\S+\.\S+$/.test(email)) erros.email = 'E-mail inválido.'
 	const descricao = String(corpo.descricao ?? '').trim().slice(0, 500) || null
+	const carro = String(corpo.carro ?? '').replace(/\s+/g, ' ').trim().slice(0, 120) || null
+	const placa = String(corpo.placa ?? '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 20) || null
 	if (Object.keys(erros).length > 0 || 'erro' in tel || 'erro' in data || 'erro' in valor) return { erros }
-	return { dados: { nome, telefone: tel.telefone, email, vencimento: data.data, valor: valor.valor, descricao } }
+	// O formulário cadastra um boleto só: sem número de parcela.
+	return { dados: { nome, telefone: tel.telefone, email, vencimento: data.data, valor: valor.valor, descricao, carro, placa, parcela: null, parcelas: null } }
 }
 
 /* --------------------------------------------------------------- planilha */
 
 export type Celula = string | number | null
-export type Campo = 'nome' | 'vencimento' | 'telefone' | 'contato' | 'email' | 'valor' | 'descricao'
+export type Campo = 'nome' | 'vencimento' | 'telefone' | 'contato' | 'email' | 'valor' | 'carro' | 'placa' | 'descricao'
 
 export const ROTULO_DO_CAMPO: Record<Campo, string> = {
 	nome: 'Nome',
@@ -256,6 +352,8 @@ export const ROTULO_DO_CAMPO: Record<Campo, string> = {
 	contato: 'Contato',
 	email: 'E-mail',
 	valor: 'Valor',
+	carro: 'Carro',
+	placa: 'Placa',
 	descricao: 'Descrição',
 }
 
@@ -272,7 +370,9 @@ export function campoDoTitulo(titulo: unknown): Campo | null {
 	if (t.startsWith('contato')) return 'contato'
 	if (t.startsWith('nome') || ['cliente', 'pessoa', 'sacado', 'pagador', 'devedor', 'name', 'razaosocial'].includes(t)) return 'nome'
 	if (t.startsWith('valor') || ['total', 'parcela', 'montante', 'preco', 'quantia'].includes(t)) return 'valor'
-	if (t.startsWith('desc') || t.startsWith('obs') || ['veiculo', 'carro', 'referencia', 'ref', 'historico', 'detalhe', 'detalhes', 'nota', 'notas'].includes(t)) return 'descricao'
+	if (t.startsWith('placa')) return 'placa'
+	if (t.startsWith('carro') || t.startsWith('veiculo') || t.startsWith('modelo') || ['automovel', 'bem'].includes(t)) return 'carro'
+	if (t.startsWith('desc') || t.startsWith('obs') || ['referencia', 'ref', 'historico', 'detalhe', 'detalhes', 'nota', 'notas'].includes(t)) return 'descricao'
 	return null
 }
 
@@ -321,8 +421,21 @@ export interface LinhaLida {
 	vencimento: string
 	valor: number | null
 	descricao: string | null
+	carro: string | null
+	placa: string | null
+	/** Quando a linha da planilha é um intervalo de parcelas: qual é esta e quantas são. */
+	parcela: number | null
+	parcelas: number | null
 	/** Vazio = a linha pode ser importada. */
 	erros: string[]
+	/** Não é erro, mas vale conferir (ano que não estava escrito). */
+	aviso: string | null
+	/**
+	 * Preenchido quando a parcela NÃO entra: é de um intervalo e já venceu. Não
+	 * dá para saber se foi paga, e cadastrá-la como atrasada faria o cliente
+	 * ser cobrado por algo que pode já ter quitado.
+	 */
+	ignorada: string | null
 }
 
 export interface PlanilhaLida {
@@ -372,22 +485,23 @@ export function lerPlanilha(celulas: Celula[][], hoje: string): PlanilhaLida {
 	}
 
 	const de = (l: Celula[], campo: Campo): Celula => (colunas[campo] === undefined ? null : (l[colunas[campo] as number] ?? null))
-	const linhas = dados.map(({ l, numero }): LinhaLida => {
+	const limpo = (v: Celula): string => String(v ?? '').replace(/\s+/g, ' ').trim()
+	const linhas = dados.flatMap(({ l, numero }): LinhaLida[] => {
 		const erros: string[] = []
-		const nome = String(de(l, 'nome') ?? '').replace(/\s+/g, ' ').trim()
+		const nome = limpo(de(l, 'nome'))
 		if (!nome) erros.push('sem nome')
 
 		const tel = normalizarTelefone(de(l, 'telefone'))
 		if ('erro' in tel) erros.push(tel.erro)
-		const data = lerData(de(l, 'vencimento'), hoje)
-		if ('erro' in data) erros.push(data.erro)
+		const venc = lerVencimentos(de(l, 'vencimento'), hoje)
+		if ('erro' in venc) erros.push(venc.erro)
 		const valor = lerValor(de(l, 'valor'))
 		if ('erro' in valor) erros.push(valor.erro)
 
-		let email = String(de(l, 'email') ?? '').trim() || null
-		const notas = [String(de(l, 'descricao') ?? '').trim()].filter(Boolean)
+		let email = limpo(de(l, 'email')) || null
+		const notas = [limpo(de(l, 'descricao'))].filter(Boolean)
 		// "Contato" ao lado de "Telefone": e-mail, um segundo número ou o nome de alguém.
-		const contato = String(de(l, 'contato') ?? '').trim()
+		const contato = limpo(de(l, 'contato'))
 		if (contato) {
 			if (pareceEmail(contato) && !email) email = contato
 			else {
@@ -399,16 +513,31 @@ export function lerPlanilha(celulas: Celula[][], hoje: string): PlanilhaLida {
 		}
 		if (email && !pareceEmail(email)) erros.push('e-mail inválido')
 
-		return {
+		const base = {
 			linha: numero,
 			nome,
-			telefone: 'telefone' in tel ? tel.telefone : String(de(l, 'telefone') ?? '').trim(),
+			telefone: 'telefone' in tel ? tel.telefone : limpo(de(l, 'telefone')),
 			email,
-			vencimento: 'data' in data ? data.data : String(de(l, 'vencimento') ?? '').trim(),
 			valor: 'valor' in valor ? valor.valor : null,
 			descricao: notas.join(' · ').slice(0, 500) || null,
-			erros,
+			carro: limpo(de(l, 'carro')).slice(0, 120) || null,
+			placa: limpo(de(l, 'placa')).toUpperCase().slice(0, 20) || null,
 		}
+		// Com qualquer erro, a linha aparece uma vez só, do jeito que está na planilha.
+		if ('erro' in venc || erros.length > 0) {
+			return [{ ...base, vencimento: 'datas' in venc ? venc.datas[0] : limpo(de(l, 'vencimento')), parcela: null, parcelas: null, erros, aviso: null, ignorada: null }]
+		}
+		const total = venc.datas.length
+		return venc.datas.map((vencimento, i) => ({
+			...base,
+			vencimento,
+			parcela: total > 1 ? i + 1 : null,
+			parcelas: total > 1 ? total : null,
+			erros: [],
+			aviso: venc.aviso,
+			// Só as parcelas de um intervalo: uma data única já vencida foi escrita assim de propósito.
+			ignorada: total > 1 && vencimento < hoje ? 'parcela já vencida' : null,
+		}))
 	})
 	return { colunas, comTitulos, linhas, erro: linhas.length === 0 ? 'A planilha só tem a linha de títulos.' : null }
 }
@@ -454,9 +583,18 @@ export function lerTexto(texto: string): Celula[][] {
 	return linhas
 }
 
-/** Dois boletos são o mesmo quando batem telefone, vencimento e valor. */
-export function chaveDeDuplicata(b: { telefone: string; vencimento: string; valor: number | null }): string {
-	return `${b.telefone}|${b.vencimento}|${b.valor === null ? '' : b.valor.toFixed(2)}`
+/**
+ * Dois boletos são o mesmo quando batem telefone, vencimento, valor e carro
+ * (com a placa). O carro entra porque o mesmo cliente pode ter dois carros
+ * com parcela de mesmo valor no mesmo dia.
+ */
+export function chaveDeDuplicata(b: { telefone: string; vencimento: string; valor: number | null; carro?: string | null; placa?: string | null }): string {
+	return `${b.telefone}|${b.vencimento}|${b.valor === null ? '' : b.valor.toFixed(2)}|${chave(b.carro)}${chave(b.placa)}`
+}
+
+/** "DEFENDER · ABC-1D23 · parcela 3 de 10": a que o boleto se refere, numa linha. */
+export function referenciaDoBoleto(b: { carro: string | null; placa: string | null; parcela: number | null; parcelas: number | null }): string | null {
+	return [b.carro, b.placa, b.parcela && b.parcelas ? `parcela ${b.parcela} de ${b.parcelas}` : null].filter(Boolean).join(' · ') || null
 }
 
 /* --------------------------------------------------------------- lembrete */
@@ -470,16 +608,21 @@ function primeiroNome(nome: string): string {
 const dinheiro = (n: number): string => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 /** O texto que abre no WhatsApp. Muda conforme o boleto vai vencer, vence hoje ou já venceu. */
-export function mensagemDeLembrete(b: { nome: string; vencimento: string; valor: number | null; descricao?: string | null }, hoje: string): string {
+export function mensagemDeLembrete(
+	b: { nome: string; vencimento: string; valor: number | null; carro?: string | null; parcela?: number | null; parcelas?: number | null },
+	hoje: string,
+): string {
 	const dias = diasAte(b.vencimento, hoje)
-	const boleto = b.valor ? `boleto de ${dinheiro(b.valor)}` : 'boleto'
+	const parcela = b.parcela && b.parcelas ? `parcela ${b.parcela} de ${b.parcelas}` : null
+	// "do veículo X" serve para qualquer carro: não dá para saber se é "do Porsche" ou "da Ferrari".
+	const resto = `${b.carro ? ` do veículo ${b.carro}` : ''}${b.valor ? `, de ${dinheiro(b.valor)},` : ''}`
 	const dia = `${b.vencimento.slice(8, 10)}/${b.vencimento.slice(5, 7)}`
 	const oi = `Olá, ${primeiroNome(b.nome)}! Aqui é da Attra Veículos.`
 	if (dias < 0) {
-		return `${oi} Não identificamos o pagamento do ${boleto} que venceu em ${dia}. Consegue verificar para a gente? Se já pagou, pode desconsiderar esta mensagem.`
+		return `${oi} Não identificamos o pagamento ${parcela ? `da ${parcela}` : 'do boleto'}${resto} que venceu em ${dia}. Consegue verificar para a gente? Se já pagou, pode desconsiderar esta mensagem.`
 	}
 	const quando = dias === 0 ? `vence hoje (${dia})` : dias === 1 ? `vence amanhã (${dia})` : `vence em ${dia}`
-	return `${oi} Passando para lembrar que o seu ${boleto} ${quando}. Se já pagou, pode desconsiderar esta mensagem. Qualquer dúvida, estou à disposição.`
+	return `${oi} Passando para lembrar que ${parcela ? `a ${parcela}` : 'o boleto'}${resto} ${quando}. Se já pagou, pode desconsiderar esta mensagem. Qualquer dúvida, estou à disposição.`
 }
 
 export const linkDoWhatsapp = (telefone: string, mensagem: string): string =>

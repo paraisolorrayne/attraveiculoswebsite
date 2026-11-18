@@ -9,8 +9,8 @@ const AGORA = new Date('2026-11-18T15:00:00Z')
 const ID = '0b6c1c1e-7a2f-4c55-9d0e-3f6f5a1b2c3d'
 
 const boleto = (p: Partial<Boleto> = {}): Boleto => ({
-	id: ID, nome: 'Maria da Silva', telefone: '34999990000', email: null, vencimento: '2026-11-25', valor: 1250.5, descricao: 'Parcela 3 de 12',
-	status: 'aberto', pago_em: null, origem: 'planilha', lote_id: null, lembretes: 0, ultimo_lembrete_em: null,
+	id: ID, nome: 'Maria da Silva', telefone: '34999990000', email: null, vencimento: '2026-11-25', valor: 1250.5, descricao: null,
+	carro: 'DEFENDER', placa: 'ABC-1D23', parcela: 3, parcelas: 12, status: 'aberto', pago_em: null, origem: 'planilha', lote_id: null, lembretes: 0, ultimo_lembrete_em: null,
 	promessa_em: null, comprovante_em: null, comprovante_url: null, falha_envio: null, criado_por_nome: 'Gabriel', criado_em: '', atualizado_em: '', ...p,
 })
 
@@ -36,7 +36,7 @@ describe('aviso do painel ao Fykos', () => {
 	it('manda o boleto inteiro, com o telefone em E.164', () => {
 		expect(boletoParaOFykos(boleto())).toEqual({
 			id: ID, nome: 'Maria da Silva', telefone: '+5534999990000', email: null, vencimento: '2026-11-25', valor: 1250.5,
-			descricao: 'Parcela 3 de 12', status: 'aberto', pago_em: null, promessa_em: null, comprovante_em: null,
+			descricao: null, carro: 'DEFENDER', placa: 'ABC-1D23', parcela: 3, parcelas: 12, status: 'aberto', pago_em: null, promessa_em: null, comprovante_em: null,
 		})
 	})
 

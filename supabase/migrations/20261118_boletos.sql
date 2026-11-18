@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS boletos (
   vencimento         date NOT NULL,
   valor              numeric(12,2),
   descricao          text,
+  -- A que o boleto se refere, como vem na planilha do financeiro: o carro, a
+  -- placa e, quando a linha é um intervalo de parcelas, qual parcela de quantas.
+  carro              text,
+  placa              text,
+  parcela            integer,
+  parcelas           integer,
   status             text NOT NULL DEFAULT 'aberto'
                      CHECK (status IN ('aberto', 'em_negociacao', 'pago', 'cancelado')),
   pago_em            date,

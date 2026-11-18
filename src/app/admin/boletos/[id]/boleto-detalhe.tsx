@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Check, Loader2, Mail, MessageCircle, Paperclip, Pencil, Phone, RotateCcw, Trash2 } from 'lucide-react'
 import { CabecalhoPagina } from '@/components/admin/cabecalho-pagina'
 import {
-  dataBR, formatarTelefone, linkDoWhatsapp, mensagemDeLembrete, prazoPorExtenso, situacaoDoBoleto, type Boleto, type EventoDoBoleto, type StatusBoleto,
+  dataBR, formatarTelefone, linkDoWhatsapp, mensagemDeLembrete, prazoPorExtenso, referenciaDoBoleto, situacaoDoBoleto, type Boleto, type EventoDoBoleto, type StatusBoleto,
 } from '@/lib/boletos'
 import { BOTAO_NEUTRO, BOTAO_PRIMARIO, CAMPO, dataHora, dinheiro, EtiquetaDaSituacao, ROTULO_DO_EVENTO } from '../boletos-ui'
 import { FormularioBoleto } from '../formulario-boleto'
@@ -91,7 +91,7 @@ export function BoletoDetalhe({ boleto, eventos, hoje }: { boleto: Boleto; event
     <div className="min-h-screen bg-background pb-12">
       <CabecalhoPagina
         titulo={boleto.nome}
-        descricao={[boleto.valor ? dinheiro(boleto.valor) : null, `vencimento em ${dataBR(boleto.vencimento)}`, aberto ? prazoPorExtenso(boleto.vencimento, hoje) : null].filter(Boolean).join(' · ')}
+        descricao={[referenciaDoBoleto(boleto), boleto.valor ? dinheiro(boleto.valor) : null, `vencimento em ${dataBR(boleto.vencimento)}`, aberto ? prazoPorExtenso(boleto.vencimento, hoje) : null].filter(Boolean).join(' · ')}
         trilha={[{ rotulo: 'Boletos', href: '/admin/boletos' }]}
         acoes={
           <>
@@ -166,6 +166,8 @@ export function BoletoDetalhe({ boleto, eventos, hoje }: { boleto: Boleto; event
                     <span className="text-foreground-secondary">não informado</span>
                   )}
                 </Dado>
+                {(boleto.carro || boleto.placa) && <Dado rotulo="Carro">{[boleto.carro, boleto.placa].filter(Boolean).join(' · ')}</Dado>}
+                {boleto.parcela && boleto.parcelas && <Dado rotulo="Parcela">{boleto.parcela} de {boleto.parcelas}</Dado>}
                 <Dado rotulo="Vencimento">{dataBR(boleto.vencimento)}</Dado>
                 <Dado rotulo="Valor">{boleto.valor ? dinheiro(boleto.valor) : <span className="text-foreground-secondary">não informado</span>}</Dado>
                 {boleto.status === 'pago' && boleto.pago_em && <Dado rotulo="Pago em">{dataBR(boleto.pago_em)}</Dado>}

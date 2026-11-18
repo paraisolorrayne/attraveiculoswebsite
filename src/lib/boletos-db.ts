@@ -28,6 +28,10 @@ function paraBoleto(l: Linha): Boleto {
 		vencimento: String(l.vencimento),
 		valor: l.valor === null || l.valor === undefined ? null : Number(l.valor),
 		descricao: (l.descricao as string | null) ?? null,
+		carro: (l.carro as string | null) ?? null,
+		placa: (l.placa as string | null) ?? null,
+		parcela: l.parcela === null || l.parcela === undefined ? null : Number(l.parcela),
+		parcelas: l.parcelas === null || l.parcelas === undefined ? null : Number(l.parcelas),
 		status: l.status as StatusBoleto,
 		pago_em: (l.pago_em as string | null) ?? null,
 		origem: String(l.origem),
@@ -50,7 +54,7 @@ function paraBoleto(l: Linha): Boleto {
  * de volta para dia pode cair no dia anterior.
  */
 const COLUNAS = [
-	'id', 'nome', 'telefone', 'email', 'valor', 'descricao', 'status', 'origem', 'lote_id', 'lembretes',
+	'id', 'nome', 'telefone', 'email', 'valor', 'descricao', 'carro', 'placa', 'parcela', 'parcelas', 'status', 'origem', 'lote_id', 'lembretes',
 	'ultimo_lembrete_em', 'comprovante_em', 'comprovante_url', 'falha_envio', 'criado_por_nome', 'criado_em', 'atualizado_em',
 	sql<string>`to_char(vencimento, 'YYYY-MM-DD')`.as('vencimento'),
 	sql<string | null>`to_char(promessa_em, 'YYYY-MM-DD')`.as('promessa_em'),
@@ -125,6 +129,8 @@ function filtrar(f: FiltrosDeBoletos, hoje: string) {
 				eb.or([
 					sql<boolean>`${semAcentoSql('nome')} like ${`%${limpo}%`}`,
 					sql<boolean>`${semAcentoSql('descricao')} like ${`%${limpo}%`}`,
+					sql<boolean>`${semAcentoSql('carro')} like ${`%${limpo}%`}`,
+					sql<boolean>`lower(placa) like ${`%${limpo}%`}`,
 					...(digitos.length >= 3 ? [eb('telefone', 'like', `%${digitos}%`)] : []),
 				]),
 			)
@@ -215,18 +221,18 @@ export async function buscarBoleto(id: string): Promise<{ boleto: Boleto; evento
  * duas vezes quando a planilha é enviada de novo.
  */
 export async function duplicatasNoBanco(
-	linhas: { telefone: string; vencimento: string; valor: number | null }[],
+	linhas: { telefone: string; vencimento: string; valor: number | null; carro?: string | null; placa?: string | null }[],
 	conexao: Transaction<Database> | typeof db = db,
 ): Promise<Set<string>> {
 	const telefones = [...new Set(linhas.map(l => l.telefone))]
 	if (telefones.length === 0) return new Set()
 	const existentes = await conexao
 		.selectFrom('boletos')
-		.select(['telefone', 'valor', sql<string>`to_char(vencimento, 'YYYY-MM-DD')`.as('vencimento')])
+		.select(['telefone', 'valor', 'carro', 'placa', sql<string>`to_char(vencimento, 'YYYY-MM-DD')`.as('vencimento')])
 		.where('telefone', 'in', telefones)
 		.where('status', '!=', 'cancelado')
 		.execute()
-	return new Set(existentes.map(e => chaveDeDuplicata({ telefone: e.telefone, vencimento: e.vencimento, valor: e.valor === null ? null : Number(e.valor) })))
+	return new Set(existentes.map(e => chaveDeDuplicata({ telefone: e.telefone, vencimento: e.vencimento, valor: e.valor === null ? null : Number(e.valor), carro: e.carro, placa: e.placa })))
 }
 
 /**
@@ -324,6 +330,8 @@ export async function atualizarBoleto(id: string, m: MudancasDoBoleto, por: Auto
 		comparar('vencimento', 'vencimento')
 		comparar('valor', 'valor')
 		comparar('descricao', 'descrição')
+		comparar('carro', 'carro')
+		comparar('placa', 'placa')
 
 		const eventos: { tipo: string; descricao: string }[] = []
 		if (mudou.length > 0) {

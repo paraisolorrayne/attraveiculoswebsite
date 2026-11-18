@@ -42,22 +42,26 @@ export async function POST(request: NextRequest) {
     const planilha = lerPlanilha(celulas, hojeBRT())
     if (planilha.erro) return NextResponse.json({ error: planilha.erro, colunas: planilha.colunas }, { status: 422 })
 
-    const boas = planilha.linhas.filter(l => l.erros.length === 0)
+    const boas = planilha.linhas.filter(l => l.erros.length === 0 && !l.ignorada)
     const noBanco = await duplicatasNoBanco(boas)
     const vistas = new Set<string>()
     const linhas: LinhaDaPrevia[] = planilha.linhas.map(l => {
-      if (l.erros.length > 0) return { ...l, duplicado: null }
+      if (l.erros.length > 0 || l.ignorada) return { ...l, duplicado: null }
       const chave = chaveDeDuplicata(l)
       const duplicado = noBanco.has(chave) ? 'banco' : vistas.has(chave) ? 'planilha' : null
       vistas.add(chave)
       return { ...l, duplicado }
     })
-    const paraGravar = linhas.filter(l => l.erros.length === 0 && !l.duplicado)
+    const paraGravar = linhas.filter(l => l.erros.length === 0 && !l.duplicado && !l.ignorada)
     const resumo = {
+      /** Linhas da planilha (uma linha com 10 parcelas conta uma vez). */
+      linhasDaPlanilha: new Set(linhas.map(l => l.linha)).size,
       total: linhas.length,
       novos: paraGravar.length,
       comErro: linhas.filter(l => l.erros.length > 0).length,
       duplicados: linhas.filter(l => l.duplicado).length,
+      /** Parcelas de um intervalo que já venceram e por isso não foram criadas. */
+      vencidas: linhas.filter(l => l.ignorada).length,
     }
 
     if (corpo.confirmar !== true) {
@@ -67,13 +71,16 @@ export async function POST(request: NextRequest) {
     if (paraGravar.length === 0) return NextResponse.json({ criados: 0, lote_id: null, linhas, resumo, colunas: planilha.colunas, comTitulos: planilha.comTitulos })
 
     const { lote_id, criados, puladas } = await importarBoletos(
-      paraGravar.map(l => ({ nome: l.nome, telefone: l.telefone, email: l.email, vencimento: l.vencimento, valor: l.valor, descricao: l.descricao })),
+      paraGravar.map(l => ({
+        nome: l.nome, telefone: l.telefone, email: l.email, vencimento: l.vencimento, valor: l.valor, descricao: l.descricao,
+        carro: l.carro, placa: l.placa, parcela: l.parcela, parcelas: l.parcelas,
+      })),
       acesso.autor,
     )
     // Outra planilha pode ter cadastrado alguma destas linhas entre a leitura
     // e a gravação. A gravação refaz a checagem com trava, e é ela que vale.
     if (puladas.size > 0) {
-      for (const l of linhas) if (l.erros.length === 0 && !l.duplicado && puladas.has(chaveDeDuplicata(l))) l.duplicado = 'banco'
+      for (const l of linhas) if (l.erros.length === 0 && !l.duplicado && !l.ignorada && puladas.has(chaveDeDuplicata(l))) l.duplicado = 'banco'
       resumo.novos = criados
       resumo.duplicados = linhas.filter(l => l.duplicado).length
     }

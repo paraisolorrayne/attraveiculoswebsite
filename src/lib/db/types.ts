@@ -676,6 +676,11 @@ export interface BoletosTable {
   /** numeric: o driver devolve como texto. */
   valor: ColumnType<string | null, number | string | null, number | string | null>
   descricao: string | null
+  carro: string | null
+  placa: string | null
+  /** "Parcela 3 de 10": parcela = 3, parcelas = 10. */
+  parcela: number | null
+  parcelas: number | null
   status: Generated<string>
   pago_em: ColumnType<Date | null, string | null, string | null>
   origem: Generated<string>
