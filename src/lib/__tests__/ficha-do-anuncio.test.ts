@@ -177,8 +177,24 @@ describe('potenciaEmCv e opcionaisDoVeiculo', () => {
 		expect(opcionaisDoVeiculo({
 			options: ['Alarme', 'Câmera 360°', 'Blindado'],
 			ficha: { ...lerFichaDoAnuncio({ descricao: 'MOTOR: V8\nOPCIONAIS:\nCamera 360°\nTeto solar' })! },
-		})).toEqual(['Camera 360°', 'Teto solar', 'Alarme', 'Blindado'])
+		})).toEqual(['Camera 360°', 'Teto solar', 'Blindado'])
 		expect(opcionaisDoVeiculo({ options: null, ficha: null })).toEqual([])
+	})
+
+	// Auditoria de 20/11/2026: a Ferrari 296 GTB de R$ 2,99 mi listava como
+	// "Opcionais" a lista padrão da AutoConf (alarme, travas, vidros dianteiros,
+	// airbag, direção hidráulica, freios ABS). Item de série sai; o que o
+	// marketing escreveu na ficha fica sempre, mesmo que pareça de série.
+	it('tira do catálogo da AutoConf o item de série, e mantém o da ficha', () => {
+		expect(opcionaisDoVeiculo({
+			options: ['Alarme', 'Travas elétricas', 'Turbo', 'Vidros elétricos dianteiros', 'Airbag motorista',
+				'Airbag passageiro', 'Ar-condicionado', 'Direção hidráulica', 'Farol de neblina', 'Freios ABS'],
+			ficha: null,
+		})).toEqual(['Turbo'])
+		expect(opcionaisDoVeiculo({
+			options: ['Ar-condicionado', 'Ar-condicionado digital dual zone'],
+			ficha: { ...lerFichaDoAnuncio({ descricao: 'MOTOR: V8\nOPCIONAIS:\nFreios ABS de carbono-cerâmica' })! },
+		})).toEqual(['Freios ABS de carbono-cerâmica', 'Ar-condicionado digital dual zone'])
 	})
 })
 

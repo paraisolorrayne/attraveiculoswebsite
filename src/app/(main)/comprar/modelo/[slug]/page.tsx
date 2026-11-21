@@ -78,7 +78,7 @@ export default async function ModeloPage({ params }: PageProps) {
 								href={getWhatsAppUrl(`Olá! Tenho interesse no ${data.brand} ${data.model}. Gostaria de saber sobre disponibilidade.`)}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 							>
 								<MessageCircle className="w-4 h-4" />
 								Consultar disponibilidade
@@ -182,7 +182,7 @@ export default async function ModeloPage({ params }: PageProps) {
 							href={getWhatsAppUrl(`Olá! Gostaria de saber mais sobre o ${data.brand} ${data.model} disponível na Attra.`)}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+							className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 						>
 							<MessageCircle className="w-4 h-4" />
 							Falar no WhatsApp
@@ -281,7 +281,7 @@ export default async function ModeloPage({ params }: PageProps) {
 								href={getWhatsAppUrl(`Olá! Quero encontrar o ${data.brand} ${data.model} ideal. Podem me ajudar?`)}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 							>
 								<MessageCircle className="w-4 h-4" />
 								Falar no WhatsApp

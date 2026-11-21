@@ -76,7 +76,7 @@ export function FloatingCTABar() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleWhatsAppClick}
-          className="flex items-center justify-center w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-110 active:scale-95"
+          className="flex items-center justify-center w-14 h-14 bg-green-700 hover:bg-green-800 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-110 active:scale-95"
           title="Conversar no WhatsApp"
           aria-label="Abrir WhatsApp"
         >

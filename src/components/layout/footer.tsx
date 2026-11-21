@@ -9,7 +9,7 @@ import { Phone, MessageCircle, Mail, MapPin, Clock, Instagram, Facebook, Youtube
 import { Container } from '@/components/ui/container'
 import { cn } from '@/lib/utils'
 import { LARGURA_LARGA, paginaLarga } from '@/lib/navegacao'
-import { PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_RESUMIDO, getWhatsAppUrl } from '@/lib/constants'
+import { PHONE_NUMBER, PHONE_DISPLAY, CELLPHONE_DISPLAY, HORARIO_RESUMIDO, getWhatsAppUrl, RAZAO_SOCIAL, CNPJ } from '@/lib/constants'
 
 // Os hubs (/comprar, /guia) e as páginas que só o sitemap alcançava entram
 // aqui: o rodapé está em todas as páginas (handoff de SEO de 02/11/2026).
@@ -191,7 +191,10 @@ export function Footer() {
       <div className="border-t border-border">
         <Container className={cn('py-4', larga)}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-foreground-secondary">
-            <p>© {currentYear} Attra Veículos. Todos os direitos reservados.</p>
+            <p>
+              © {currentYear} Attra Veículos. Todos os direitos reservados.
+              {RAZAO_SOCIAL && CNPJ && <span className="block md:inline md:before:content-['_·_']">{RAZAO_SOCIAL} · CNPJ {CNPJ}</span>}
+            </p>
             <div className="flex gap-4">
               <Link href="/politica-privacidade" className="alvo-toque hover:text-primary transition-colors">Política de Privacidade</Link>
               <Link href="/termos-uso" className="alvo-toque hover:text-primary transition-colors">Termos de Uso</Link>

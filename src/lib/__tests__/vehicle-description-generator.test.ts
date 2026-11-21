@@ -63,12 +63,38 @@ describe('"Sobre este veículo" com a ficha do molde', () => {
 		expect(texto).not.toMatch(/excelente estado|bem cuidado|conservad|garantia|procedência/i)
 	})
 
-	it('sem ficha, o texto continua o de antes', () => {
+})
+
+// Desde a auditoria de 20/11/2026: sem a ficha, o texto também só traz fatos do
+// cadastro. Antes saíam adjetivos por marca ("Este exclusivo Ferrari…",
+// "combina exclusividade e paixão italiana"), estado que ninguém conferiu
+// ("está em excelente estado") e a lista padrão da AutoConf ("airbag
+// motorista, freios abs") num carro de R$ 3 milhões.
+describe('"Sobre este veículo" sem a ficha do molde', () => {
+	it('o S 63 sai com motor, câmbio, km, cor e motorização, sem adjetivo', () => {
 		expect(generateVehicleDescription(s63)).toBe(
-			'Este Mercedes S-63 AMG S E Performance Automático 2025 oferece motor de 802 cv e câmbio automático, '
-			+ 'aliando desempenho e sofisticação. Com apenas 1.920 km rodados, está em excelente estado. '
-			+ 'Apresenta-se na cor prata e motorização híbrida. Um veículo premium completo para quem valoriza qualidade.',
+			'Este Mercedes S-63 AMG S E Performance Automático 2025 tem motor de 802 cv e câmbio automático. '
+			+ 'Com apenas 1.920 km rodados, vem na cor prata, com motorização híbrida. Traz blindado.',
 		)
+	})
+
+	// A Ferrari 296 GTB (817434) como estava no ar em 20/11/2026.
+	const ferrari = {
+		...s63, id: '817434', brand: 'Ferrari', model: '296', version: 'GTB', year_manufacture: 2024, year_model: 2024,
+		mileage: 2610, color: 'Vermelho', fuel_type: 'Híbrido', category: 'supercar', body_type: 'Cupê', horsepower: null,
+		options: ['Alarme', 'Travas elétricas', 'Turbo', 'Vidros elétricos dianteiros', 'Airbag motorista',
+			'Airbag passageiro', 'Ar-condicionado', 'Direção hidráulica', 'Farol de neblina', 'Freios ABS'],
+	} as unknown as Vehicle
+
+	it('a Ferrari 296 sai sem adjetivo de marca, sem estado presumido e sem a lista padrão da AutoConf', () => {
+		const texto = generateVehicleDescription(ferrari)
+		expect(texto).toBe('Este Ferrari 296 GTB 2024 tem câmbio automático. Com apenas 2.610 km rodados, vem na cor vermelho, com motorização híbrida.')
+		expect(texto).not.toMatch(/exclusiv|paixão|intacta|excelente estado|bem cuidado|airbag|freios abs|travas/i)
+	})
+
+	it('item que diferencia o carro (blindagem, teto, som) entra; item de série não', () => {
+		const texto = generateVehicleDescription({ ...ferrari, options: ['Airbag motorista', 'Blindado', 'Teto solar', 'Freios ABS'] })
+		expect(texto).toMatch(/Traz blindado e teto solar\.$/)
 	})
 })
 

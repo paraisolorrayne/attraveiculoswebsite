@@ -12,9 +12,9 @@ export const metadata: Metadata = metadadosDaPagina('/solicitar-veiculo', {
 })
 
 const features = [
-  { icon: Search, title: 'Busca Personalizada', description: 'Encontramos exatamente o veículo que você procura.' },
-  { icon: Globe, title: 'Rede Nacional', description: 'Buscamos em todo o Brasil para encontrar o melhor.' },
-  { icon: Shield, title: 'Garantia de Procedência', description: 'Todos os veículos passam por nossa inspeção.' },
+  { icon: Search, title: 'Busca pelo seu pedido', description: 'Você informa marca, modelo, ano e orçamento, e a busca segue esse pedido.' },
+  { icon: Globe, title: 'Rede nacional', description: 'A busca vai além do estoque visível, na rede nacional de procedência.' },
+  { icon: Shield, title: 'Mesma verificação do acervo', description: 'O carro encontrado passa pela verificação que a Attra faz em todo veículo antes de vender.' },
   { icon: Check, title: 'Sem Compromisso', description: 'Você só fecha se aprovar o veículo encontrado.' },
 ]
 
@@ -35,8 +35,8 @@ export default function SolicitarVeiculoPage() {
           <div className="max-w-3xl mx-auto text-center mt-8">
             <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">Solicitar Veículo</h1>
             <p className="text-lg text-foreground-secondary">
-              Não encontrou o carro dos seus sonhos em nosso acervo?
-              Nossa equipe busca em todo o Brasil para você.
+              O carro que você procura não está no estoque? A Attra busca na rede nacional, fora do
+              estoque visível, e só apresenta o que passa pela mesma verificação do acervo.
             </p>
           </div>
         </Container>

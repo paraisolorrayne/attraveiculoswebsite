@@ -104,30 +104,30 @@ export function ContactForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
-        <Input {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
+        <label htmlFor="contato-nome-completo" className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
+        <Input id="contato-nome-completo" {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-          <Input {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
+          <label htmlFor="contato-e-mail" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
+          <Input id="contato-e-mail" {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Telefone</label>
-          <Input {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
+          <label htmlFor="contato-telefone" className="block text-sm font-medium text-foreground mb-1">Telefone</label>
+          <Input id="contato-telefone" {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Assunto</label>
-        <Select {...register('subject')} options={subjectOptions} placeholder="Selecione um assunto" />
+        <label htmlFor="contato-assunto" className="block text-sm font-medium text-foreground mb-1">Assunto</label>
+        <Select id="contato-assunto" {...register('subject')} options={subjectOptions} placeholder="Selecione um assunto" />
         {errors.subject && <p className="mt-1 text-sm text-primary">{errors.subject.message}</p>}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Mensagem</label>
-        <textarea
+        <label htmlFor="contato-mensagem" className="block text-sm font-medium text-foreground mb-1">Mensagem</label>
+        <textarea id="contato-mensagem"
           {...register('message')}
           className="w-full h-32 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           placeholder="Como podemos ajudar?"

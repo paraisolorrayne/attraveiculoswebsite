@@ -86,7 +86,7 @@ export function CartaoDoEstoque({ v }: { v: Vehicle }) {
 						sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 					/>
 					{v.is_new && (
-						<span className="absolute top-2 left-2 px-2 py-0.5 bg-green-600 text-white text-xs font-medium rounded">
+						<span className="absolute top-2 left-2 px-2 py-0.5 bg-green-700 text-white text-xs font-medium rounded">
 							0 km
 						</span>
 					)}

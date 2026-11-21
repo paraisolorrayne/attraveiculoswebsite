@@ -15,7 +15,7 @@ const ctaItems = [
   {
     icon: Wallet,
     title: 'Financiamento Premium',
-    description: 'Condições especiais para veículos de luxo e alto padrão. Taxas competitivas, análise personalizada e agilidade.',
+    description: 'Entrada a partir de 20%, até 60 parcelas e análise de crédito com um consultor.',
     href: '/financiamento',
     cta: 'Simular meu financiamento premium',
   },

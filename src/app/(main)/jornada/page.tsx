@@ -148,7 +148,7 @@ const diferenciais = [
   {
     icon: CreditCard,
     title: 'Financiamento diferenciado',
-    description: 'Condições especiais para veículos premium: taxas diferenciadas, financiamento de até 80% do valor e análise de crédito personalizada.',
+    description: 'Financiamento de até 80% do valor, em até 60 parcelas, com análise de crédito personalizada.',
   },
   {
     icon: HeadphonesIcon,

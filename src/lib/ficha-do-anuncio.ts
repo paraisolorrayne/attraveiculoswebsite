@@ -221,13 +221,27 @@ export function lerFichaDoAnuncio(anuncio: AnuncioComDescricao): FichaDoAnuncio 
 	return temAlgo ? ficha : null
 }
 
+// Item de série do catálogo fixo da AutoConf. Num carro de luxo, listar isso
+// como "Opcional" rebaixa o anúncio, e a lista nem sempre bate com o carro (a
+// Ferrari 296 GTB aparecia com "Direção hidráulica"). Casa o item inteiro:
+// "Ar-condicionado" sai, "Ar-condicionado digital dual zone" fica.
+const ITEM_DE_SERIE = new RegExp(
+	'^(alarme|travas? el[ée]tricas?|vidros el[ée]tricos( dianteiros| traseiros)?|airbags?( motorista| passageiro| duplo| laterais| de cortina)?'
+	+ '|ar[- ]condicionado|dire[çc][ãa]o (hidr[áa]ulica|el[ée]trica|assistida|eletro-?hidr[áa]ulica)|(farol|far[óo]is) de neblina|freios? abs'
+	+ '|desemba[çc]ador( traseiro)?|limpador traseiro|retrovisores? el[ée]tricos?|computador de bordo|r[áa]dio|cd player'
+	+ '|encostos? de cabe[çc]a( traseiros?)?|cintos? de (seguran[çc]a de )?3 pontos)$',
+	'i',
+)
+
 /**
  * Opcionais para a página: os do molde, escritos pelo marketing, antes dos do
- * catálogo fixo da AutoConf ("Alarme", "Travas elétricas"); repetidos saem.
+ * catálogo fixo da AutoConf; repetidos saem. Do catálogo, sai o item de série
+ * (auditoria de 20/11/2026); o que o marketing escreveu fica sempre.
  */
 export function opcionaisDoVeiculo(vehicle: Pick<Vehicle, 'options' | 'ficha'>): string[] {
 	const vistos = new Set<string>()
-	return [...(vehicle.ficha?.opcionais ?? []), ...(vehicle.options ?? [])].filter(item => {
+	const doCatalogo = (vehicle.options ?? []).filter(item => !ITEM_DE_SERIE.test(item.trim()))
+	return [...(vehicle.ficha?.opcionais ?? []), ...doCatalogo].filter(item => {
 		const k = chave(item)
 		if (vistos.has(k)) return false
 		vistos.add(k)

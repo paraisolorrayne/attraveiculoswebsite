@@ -106,44 +106,44 @@ export function TradeInForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
-        <Input {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
+        <label htmlFor="avaliacao-nome-completo" className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
+        <Input id="avaliacao-nome-completo" {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-          <Input {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
+          <label htmlFor="avaliacao-e-mail" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
+          <Input id="avaliacao-e-mail" {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Telefone</label>
-          <Input {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
+          <label htmlFor="avaliacao-telefone" className="block text-sm font-medium text-foreground mb-1">Telefone</label>
+          <Input id="avaliacao-telefone" {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Marca</label>
-          <Input {...register('brand')} placeholder="Ex: BMW" error={errors.brand?.message} />
+          <label htmlFor="avaliacao-marca" className="block text-sm font-medium text-foreground mb-1">Marca</label>
+          <Input id="avaliacao-marca" {...register('brand')} placeholder="Ex: BMW" error={errors.brand?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Modelo</label>
-          <Input {...register('model')} placeholder="Ex: X5" error={errors.model?.message} />
+          <label htmlFor="avaliacao-modelo" className="block text-sm font-medium text-foreground mb-1">Modelo</label>
+          <Input id="avaliacao-modelo" {...register('model')} placeholder="Ex: X5" error={errors.model?.message} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Ano</label>
-          <Input {...register('year')} placeholder="Ex: 2023" error={errors.year?.message} />
+          <label htmlFor="avaliacao-ano" className="block text-sm font-medium text-foreground mb-1">Ano</label>
+          <Input id="avaliacao-ano" {...register('year')} placeholder="Ex: 2023" error={errors.year?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Quilometragem</label>
-          <Input {...register('mileage')} placeholder="Ex: 25000" error={errors.mileage?.message} />
+          <label htmlFor="avaliacao-quilometragem" className="block text-sm font-medium text-foreground mb-1">Quilometragem</label>
+          <Input id="avaliacao-quilometragem" {...register('mileage')} placeholder="Ex: 25000" error={errors.mileage?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Estado</label>
-          <Select {...register('condition')} options={conditionOptions} placeholder="Selecione" />
+          <label htmlFor="avaliacao-estado" className="block text-sm font-medium text-foreground mb-1">Estado</label>
+          <Select id="avaliacao-estado" {...register('condition')} options={conditionOptions} placeholder="Selecione" />
           {errors.condition && <p className="mt-1 text-sm text-primary">{errors.condition.message}</p>}
         </div>
       </div>
