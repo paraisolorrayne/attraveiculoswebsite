@@ -150,25 +150,25 @@ export function VehicleRequestForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
-        <Input {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
+        <label htmlFor="solicitacao-nome-completo" className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
+        <Input id="solicitacao-nome-completo" {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-          <Input {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
+          <label htmlFor="solicitacao-e-mail" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
+          <Input id="solicitacao-e-mail" {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Telefone</label>
-          <Input {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
+          <label htmlFor="solicitacao-telefone" className="block text-sm font-medium text-foreground mb-1">Telefone</label>
+          <Input id="solicitacao-telefone" {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Marca desejada</label>
-          <Input
+          <label htmlFor="solicitacao-marca-desejada" className="block text-sm font-medium text-foreground mb-1">Marca desejada</label>
+          <Input id="solicitacao-marca-desejada"
             {...register('brand')}
             defaultValue={marcaInicial}
             placeholder={marcaInicial ?? 'Ex: Porsche'}
@@ -176,8 +176,8 @@ export function VehicleRequestForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Modelo desejado</label>
-          <Input
+          <label htmlFor="solicitacao-modelo-desejado" className="block text-sm font-medium text-foreground mb-1">Modelo desejado</label>
+          <Input id="solicitacao-modelo-desejado"
             {...register('model')}
             defaultValue={modeloInicial}
             placeholder={modeloInicial ?? 'Ex: 911 Carrera'}
@@ -188,22 +188,22 @@ export function VehicleRequestForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Ano mínimo</label>
-          <Input {...register('yearMin')} placeholder="Ex: 2022" />
+          <label htmlFor="solicitacao-ano-minimo" className="block text-sm font-medium text-foreground mb-1">Ano mínimo</label>
+          <Input id="solicitacao-ano-minimo" {...register('yearMin')} placeholder="Ex: 2022" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Ano máximo</label>
-          <Input {...register('yearMax')} placeholder="Ex: 2024" />
+          <label htmlFor="solicitacao-ano-maximo" className="block text-sm font-medium text-foreground mb-1">Ano máximo</label>
+          <Input id="solicitacao-ano-maximo" {...register('yearMax')} placeholder="Ex: 2024" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Orçamento máximo</label>
-          <Input {...register('budgetMax')} placeholder="R$ 800.000" />
+          <label htmlFor="solicitacao-orcamento-maximo" className="block text-sm font-medium text-foreground mb-1">Orçamento máximo</label>
+          <Input id="solicitacao-orcamento-maximo" {...register('budgetMax')} placeholder="R$ 800.000" />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Detalhes adicionais (opcional)</label>
-        <textarea
+        <label htmlFor="solicitacao-detalhes-adicionais" className="block text-sm font-medium text-foreground mb-1">Detalhes adicionais (opcional)</label>
+        <textarea id="solicitacao-detalhes-adicionais"
           {...register('details')}
           className="w-full h-24 px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           placeholder="Cor, opcionais, versão específica..."

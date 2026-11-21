@@ -66,7 +66,7 @@ export default async function ImportacaoMarcaPage({ params }: PageProps) {
 							href={getWhatsAppUrl(`Olá! Tenho interesse em importar um ${data.brand}. Gostaria de mais informações.`)}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+							className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 						>
 							<MessageCircle className="w-4 h-4" />
 							{data.ctaText}
@@ -143,7 +143,7 @@ export default async function ImportacaoMarcaPage({ params }: PageProps) {
 								href={getWhatsAppUrl(`Olá! Quero um orçamento para importar um ${data.brand}.`)}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 							>
 								<MessageCircle className="w-4 h-4" />
 								{data.ctaText}

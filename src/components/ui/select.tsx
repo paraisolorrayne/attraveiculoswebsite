@@ -15,6 +15,9 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     // já vinha com "Até R$ 300 mil" (29/10/2026). Com o placeholder, ele é o inicial.
     const inicial =
       placeholder && props.value === undefined && props.defaultValue === undefined ? { defaultValue: '' } : {}
+    // Com id (vindo do <label htmlFor>), o erro fica ligado ao campo para o
+    // leitor de tela (auditoria de acessibilidade de 20/11/2026).
+    const idDoErro = error && props.id ? `${props.id}-erro` : undefined
     return (
       <div className="relative w-full">
         <select
@@ -24,6 +27,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             error && 'border-primary ring-1 ring-primary',
             className
           )}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={idDoErro}
           {...inicial}
           {...props}
         >
@@ -40,7 +45,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         </select>
         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
         {error && (
-          <p className="mt-1 text-sm text-primary">{error}</p>
+          <p id={idDoErro} className="mt-1 text-sm text-primary">{error}</p>
         )}
       </div>
     )

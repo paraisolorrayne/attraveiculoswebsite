@@ -89,10 +89,10 @@ Gostaria de mais informações sobre financiamento.`
         {/* Vehicle Value */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-medium text-foreground">Valor do Veículo</label>
+            <label htmlFor="calculadora-valor-do-veiculo" className="text-sm font-medium text-foreground">Valor do Veículo</label>
             <span className="text-lg font-bold text-primary">{formatCurrency(vehicleValue)}</span>
           </div>
-          <input
+          <input id="calculadora-valor-do-veiculo"
             type="range"
             min={100000}
             max={5000000}
@@ -114,10 +114,10 @@ Gostaria de mais informações sobre financiamento.`
         {/* Down Payment */}
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-medium text-foreground">Entrada ({downPaymentPercent}%)</label>
+            <label htmlFor="calculadora-entrada" className="text-sm font-medium text-foreground">Entrada ({downPaymentPercent}%)</label>
             <span className="text-base font-semibold text-foreground">{formatCurrency(downPayment)}</span>
           </div>
-          <input
+          <input id="calculadora-entrada"
             type="range"
             min={Math.round(vehicleValue * 0.2)}
             max={vehicleValue}

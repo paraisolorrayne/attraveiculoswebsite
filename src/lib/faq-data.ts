@@ -15,7 +15,7 @@ export const homepageFAQs: FAQItem[] = [
   },
   {
     question: 'A Attra oferece financiamento para veículos premium e supercarros?',
-    answer: 'Sim, oferecemos financiamento premium com condições especiais para carros de luxo e supercarros. Taxas diferenciadas, financiamento de até 80% do valor e análise de crédito personalizada para cada cliente.',
+    answer: 'Sim. O financiamento cobre até 80% do valor do veículo, em até 60 parcelas, com análise de crédito personalizada para cada cliente.',
   },
   {
     question: 'A Attra entrega supercarros e veículos premium em todo o Brasil?',
@@ -54,19 +54,15 @@ export const veiculosFAQs: FAQItem[] = [
   },
   {
     question: 'Quais são as condições de pagamento para supercarros e veículos de luxo?',
-    answer: 'Oferecemos diversas condições de pagamento para veículos premium: financiamento com taxas diferenciadas, pagamento à vista, e aceitamos seu carro na troca. Nossos consultores fazem análise personalizada para encontrar a melhor condição para você.',
+    answer: 'Oferecemos diversas condições de pagamento para veículos premium: financiamento de até 80% do valor, pagamento à vista, e aceitamos seu carro na troca. Nossos consultores fazem análise personalizada para encontrar a melhor condição para você.',
   },
 ]
 
 // Serviços FAQs - Questions about services
 export const servicosFAQs: FAQItem[] = [
   {
-    question: 'Quais são as taxas de financiamento para veículos de luxo?',
-    answer: 'As taxas variam conforme perfil de crédito, valor de entrada e prazo. Fazemos simulação personalizada sem compromisso.',
-  },
-  {
     question: 'Qual o prazo máximo de financiamento?',
-    answer: 'Oprazo varia conforme o banco, geralmente com entrada mínima de 20% do valor do veículo. Quanto maior a entrada, melhores as condições de taxa.',
+    answer: 'Até 60 parcelas, com entrada a partir de 20% do valor do veículo, conforme a análise de crédito.',
   },
   {
     question: 'A Attra oferece seguro para veículos de alto valor?',

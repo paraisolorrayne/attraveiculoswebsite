@@ -63,7 +63,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
               'flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border pointer-events-auto',
               'animate-slide-up backdrop-blur-lg',
               'min-w-[280px] max-w-[400px]',
-              toast.type === 'success' && 'bg-green-500/95 border-green-400/50 text-white',
+              toast.type === 'success' && 'bg-green-700/95 border-green-600/50 text-white',
               toast.type === 'error' && 'bg-red-500/95 border-red-400/50 text-white',
               toast.type === 'loading' && 'bg-background-card/95 border-border text-foreground'
             )}

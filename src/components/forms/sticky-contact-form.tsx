@@ -250,7 +250,7 @@ export function StickyContactForm() {
                     rel="noopener noreferrer"
                     // Sem trackInteraction aqui: o ouvinte global de wa.me já
                     // registra o clique, e chamar de novo gravava em dobro.
-                    className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                    className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
                   >
                     <MessageCircle className="w-5 h-5" />
                     Falar com Especialista

@@ -71,7 +71,7 @@ export default function PorQueComprarPage() {
 								href={getWhatsAppUrl('Olá! Gostaria de saber mais sobre o processo de compra na Attra.')}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 							>
 								<MessageCircle className="w-4 h-4" />
 								Falar no WhatsApp

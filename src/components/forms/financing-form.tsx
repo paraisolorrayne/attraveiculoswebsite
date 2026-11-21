@@ -159,25 +159,25 @@ export function FinancingForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
-        <Input {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
+        <label htmlFor="financiamento-nome-completo" className="block text-sm font-medium text-foreground mb-1">Nome completo</label>
+        <Input id="financiamento-nome-completo" {...register('name')} placeholder="Seu nome" error={errors.name?.message} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">E-mail</label>
-          <Input {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
+          <label htmlFor="financiamento-e-mail" className="block text-sm font-medium text-foreground mb-1">E-mail</label>
+          <Input id="financiamento-e-mail" {...register('email')} type="email" placeholder="seu@email.com" error={errors.email?.message} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Telefone</label>
-          <Input {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
+          <label htmlFor="financiamento-telefone" className="block text-sm font-medium text-foreground mb-1">Telefone</label>
+          <Input id="financiamento-telefone" {...register('phone')} placeholder="(00) 00000-0000" error={errors.phone?.message} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Valor do veículo</label>
-          <Input
+          <label htmlFor="financiamento-valor-do-veiculo" className="block text-sm font-medium text-foreground mb-1">Valor do veículo</label>
+          <Input id="financiamento-valor-do-veiculo"
             type="text"
             inputMode="numeric"
             value={vehicleValueDisplay}
@@ -188,8 +188,8 @@ export function FinancingForm() {
           <input type="hidden" {...register('vehicleValue')} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Entrada (opcional)</label>
-          <Input
+          <label htmlFor="financiamento-entrada" className="block text-sm font-medium text-foreground mb-1">Entrada (opcional)</label>
+          <Input id="financiamento-entrada"
             type="text"
             inputMode="numeric"
             value={downPaymentDisplay}
@@ -201,8 +201,8 @@ export function FinancingForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Número de parcelas</label>
-        <Select {...register('installments')} options={installmentOptions} placeholder="Selecione" />
+        <label htmlFor="financiamento-numero-de-parcelas" className="block text-sm font-medium text-foreground mb-1">Número de parcelas</label>
+        <Select id="financiamento-numero-de-parcelas" {...register('installments')} options={installmentOptions} placeholder="Selecione" />
         {errors.installments && <p className="mt-1 text-sm text-primary">{errors.installments.message}</p>}
       </div>
 

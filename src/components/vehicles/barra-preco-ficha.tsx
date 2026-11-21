@@ -100,7 +100,7 @@ export function BarraPrecoFicha({ titulo, preco, whatsappUrl }: BarraPrecoFichaP
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-12 items-center gap-2 rounded-lg bg-green-500 px-5 font-medium text-white hover:bg-green-600 transition-colors"
+          className="inline-flex h-12 items-center gap-2 rounded-lg bg-green-700 px-5 font-medium text-white hover:bg-green-800 transition-colors"
         >
           <MessageCircle className="w-5 h-5" aria-hidden="true" />
           WhatsApp

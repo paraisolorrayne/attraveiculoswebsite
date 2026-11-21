@@ -29,3 +29,20 @@ export function semModeloRepetido(lista: Vehicle[], quantos: number): Vehicle[] 
   }
   return escolhidos
 }
+
+/**
+ * A frase de cada carro na seleção editorial da home: o primeiro diferencial
+ * que o marketing escreveu na ficha do anúncio ou, no 0 km, só o fato. Sem
+ * ficha, devolve null e o componente não mostra frase.
+ *
+ * Até 20/11/2026 a frase saía de faixas de preço e marca ("rara no mercado
+ * brasileiro" para todo carro acima de R$ 2 mi; "Configuração rara selecionada
+ * à mão" para o resto). Alegação que o dado não sustenta derruba a confiança de
+ * quem conhece o mercado (auditoria de 20/11/2026).
+ */
+export function motivoDaCuradoria(v: Vehicle): string | null {
+  const diferencial = v.ficha?.diferenciais?.find((d) => d.trim())
+  if (diferencial) return diferencial.trim().replace(/[.;]+$/, '')
+  if (v.is_new || v.mileage === 0) return '0 km, em estoque'
+  return null
+}

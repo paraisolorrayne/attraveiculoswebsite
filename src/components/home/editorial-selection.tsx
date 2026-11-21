@@ -8,38 +8,12 @@ import { Vehicle } from '@/types'
 import { formatPrice, formatMileage } from '@/lib/utils'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { anoDoVeiculo, versaoDoVeiculo } from '@/lib/identidade-do-veiculo'
+import { motivoDaCuradoria } from '@/lib/selecao-editorial'
 
 interface EditorialSelectionProps {
   vehicles?: Vehicle[]
   /** Total do estoque (o mesmo número de /veiculos), no bloco "Ver todo o acervo". */
   totalEstoque?: number
-}
-
-const SUPERCAR_BRANDS = ['ferrari', 'lamborghini', 'mclaren', 'bugatti', 'pagani', 'koenigsegg']
-
-function curationReason(vehicle: Vehicle): string {
-  const currentYear = new Date().getFullYear()
-  const brand = vehicle.brand?.toLowerCase() || ''
-
-  if (vehicle.is_new || vehicle.mileage === 0) {
-    return '0 km, pronto para entrega imediata'
-  }
-  if (vehicle.mileage > 0 && vehicle.mileage < 5000) {
-    return 'Baixíssima rodagem, praticamente novo'
-  }
-  if (vehicle.price >= 2_000_000) {
-    return 'Peça de acervo, rara no mercado brasileiro'
-  }
-  if (SUPERCAR_BRANDS.some((b) => brand.includes(b))) {
-    return 'Superesportivo com procedência verificada'
-  }
-  if (vehicle.year_model && vehicle.year_model >= currentYear - 1) {
-    return 'Ano/modelo recente com documentação impecável'
-  }
-  if (vehicle.horsepower && vehicle.horsepower >= 500) {
-    return 'Motorização disputada em estado superior'
-  }
-  return 'Configuração rara selecionada à mão'
 }
 
 // Os botões levam `data-vehicle-id`: o rastreio global de cliques liga o
@@ -134,10 +108,12 @@ export function EditorialSelection({ vehicles = [], totalEstoque }: EditorialSel
             {versaoDoVeiculo(main) && (
               <p data-revelar style={atraso(0.05)} className="order-3 mt-2 text-lg text-foreground-secondary">{versaoDoVeiculo(main)}</p>
             )}
-            <p data-revelar style={atraso(0.1)} className="order-6 mt-6 flex gap-3 text-[17px] leading-relaxed text-foreground lg:order-4">
-              <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
-              {curationReason(main)}.
-            </p>
+            {motivoDaCuradoria(main) && (
+              <p data-revelar style={atraso(0.1)} className="order-6 mt-6 flex gap-3 text-[17px] leading-relaxed text-foreground lg:order-4">
+                <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
+                {motivoDaCuradoria(main)}.
+              </p>
+            )}
             <dl data-revelar style={atraso(0.15)} className="order-7 mt-6 grid grid-cols-2 border-t border-border lg:order-5 lg:mt-8">
               <div className="py-4">
                 <dt className="text-[14px] uppercase tracking-[0.12em] text-foreground-secondary">Ano</dt>
@@ -237,10 +213,12 @@ function SecondaryPick({ vehicle: v, atrasoFoto }: { vehicle: Vehicle; atrasoFot
       </div>
       {versao && <p className="mt-1 text-[15px] text-foreground-secondary">{versao}</p>}
       <p className="mt-3 text-[15px] text-foreground-secondary">{[anoDoVeiculo(v), km(v)].filter(Boolean).join(' · ')}</p>
-      <p className="mt-3 flex gap-2.5 text-[15px] text-foreground">
-        <span aria-hidden="true" className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
-        {curationReason(v)}.
-      </p>
+      {motivoDaCuradoria(v) && (
+        <p className="mt-3 flex gap-2.5 text-[15px] text-foreground">
+          <span aria-hidden="true" className="mt-[0.55em] h-1.5 w-1.5 shrink-0 rotate-45 bg-primary" />
+          {motivoDaCuradoria(v)}.
+        </p>
+      )}
       <div className="mt-5 flex flex-col gap-3 xl:flex-row [&>*]:whitespace-nowrap">
         <Button asChild size="lg" className="text-base">
           <a href={vehicleWhatsAppUrl(v)} target="_blank" rel="noopener noreferrer" data-vehicle-id={v.id} className="inline-flex items-center justify-center gap-2">

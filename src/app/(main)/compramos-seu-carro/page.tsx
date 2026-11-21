@@ -50,7 +50,7 @@ const purchaseSteps = [
     number: '03',
     icon: Shield,
     title: 'Proposta Transparente',
-    description: 'Você recebe uma proposta de compra com valor justo de mercado. Sem compromisso e sem custos para você.',
+    description: 'Você recebe a proposta com o valor que a Attra paga pelo carro. Sem compromisso e sem custo para você.',
     time: '1 dia'
   },
   {
@@ -67,17 +67,17 @@ const benefits = [
   {
     icon: Shield,
     title: 'Avaliação Profissional',
-    description: 'Avaliação técnica considerando o valor real de mercado. Transparência total no processo.'
+    description: 'Documentação, mecânica e originalidade: a mesma verificação aplicada aos carros que entram no acervo.'
   },
   {
     icon: Award,
     title: 'Especialistas em Premium',
-    description: `Expertise de ${anosDeMercado()} anos no mercado de veículos de luxo, importados e superesportivos.`
+    description: `Há ${anosDeMercado()} anos no mercado de veículos de luxo, importados e superesportivos.`
   },
   {
     icon: Users,
     title: 'Atendimento Nacional',
-    description: 'Compramos veículos de todo o Brasil. Nossa equipe vai até você para avaliação presencial.'
+    description: 'Compramos veículos de todo o Brasil. À distância, a avaliação é feita pelas fotos e pelos dados do carro.'
   },
 ]
 
@@ -115,7 +115,7 @@ const faqs = [
   },
   {
     question: 'A Attra compra veículos de outras cidades e estados?',
-    answer: 'Sim, a Attra atende todo o Brasil. Para veículos em outras cidades, iniciamos a avaliação remotamente por fotos e vídeos, e nossa equipe pode se deslocar até você para a vistoria presencial quando necessário. Cuidamos de toda a logística.'
+    answer: 'Sim, a Attra atende todo o Brasil. Para veículos em outras cidades, a avaliação é feita pelas fotos e pelos dados do carro. A logística é combinada caso a caso.'
   },
   {
     question: 'Posso usar meu carro como entrada para outro veículo?',
@@ -252,7 +252,7 @@ export default function CompramosSeuCarroPage() {
               Como Vendemos seu Veículo
             </h2>
             <p className="text-foreground-secondary max-w-2xl mx-auto">
-              Processo rápido e transparente em 4 etapas para você vender seu carro premium com segurança.
+              Quatro etapas, do envio dos dados à finalização da venda.
             </p>
           </div>
 
