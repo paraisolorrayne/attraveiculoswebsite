@@ -64,6 +64,9 @@ interface Dados {
 		utm_content: string | null
 		utm_term: string | null
 		gclid: string | null
+		/** Clique do Google no iPhone com ATT: vem no lugar do gclid. */
+		gbraid: string | null
+		wbraid: string | null
 		fbclid: string | null
 		ttclid: string | null
 		page_views_count: number
@@ -136,6 +139,8 @@ export function SessaoDetalhe({ sessionId }: { sessionId: string }) {
 				[`utm_content · ${papeis.conteudo.titulo}`, s.utm_content],
 				[`utm_term · ${papeis.termo.titulo}`, s.utm_term],
 				['gclid', s.gclid],
+				['gbraid · clique do Google no iPhone', s.gbraid],
+				['wbraid · clique do Google no iPhone', s.wbraid],
 				['fbclid', s.fbclid],
 				['ttclid', s.ttclid],
 				['referrer', s.referrer_url ?? s.referrer_domain],

@@ -6,13 +6,22 @@ import { conversasDaSessao } from '@/lib/visitors/consultas/conversas-da-sessao'
 
 // Migrado de supabase-js → Kysely (ver docs/MIGRACAO_POSTGRES_PURO.md).
 
-// Helper: extract query params from URL string
-function extractUrlParams(url: string): Record<string, string> {
+/**
+ * Os três identificadores de clique pago do Google. No iPhone com ATT o
+ * anúncio não manda `gclid`: manda `gbraid` ou `wbraid` no lugar, e a visita
+ * chega com o Google como referrer. Até 27/11/2026 esta tela olhava só o
+ * `gclid` e chamava essa visita paga de "Organic - Google". O classificador
+ * comum (src/lib/traffic-channel.ts) já tratava os três como o mesmo clique.
+ */
+const CLIQUES_DO_GOOGLE = ['gclid', 'gbraid', 'wbraid'] as const
+
+// Helper: extract query params from URL string. Exportada para teste.
+export function extractUrlParams(url: string): Record<string, string> {
   try {
     const parsed = new URL(url)
     const params: Record<string, string> = {}
     for (const [key, value] of parsed.searchParams.entries()) {
-      if (['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'ttclid'].includes(key)) {
+      if (['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', ...CLIQUES_DO_GOOGLE, 'ttclid'].includes(key)) {
         params[key] = value
       }
     }
@@ -22,14 +31,14 @@ function extractUrlParams(url: string): Record<string, string> {
   }
 }
 
-// Helper: determine likely origin
-function determineLikelyOrigin(session: Record<string, unknown>, extractedParams: Record<string, string>): { origin: string; confidence: string } {
+// Helper: determine likely origin. Exportada para teste.
+export function determineLikelyOrigin(session: Record<string, unknown>, extractedParams: Record<string, string>): { origin: string; confidence: string } {
   const fbclid = session.fbclid || extractedParams.fbclid
-  const gclid = session.gclid || extractedParams.gclid
+  const cliqueDoGoogle = CLIQUES_DO_GOOGLE.some(campo => session[campo] || extractedParams[campo])
   const utmSource = (session.utm_source as string) || extractedParams.utm_source || ''
   const referrer = (session.referrer_domain as string) || ''
 
-  if (gclid) return { origin: 'Paid - Google Ads', confidence: 'alta' }
+  if (cliqueDoGoogle) return { origin: 'Paid - Google Ads', confidence: 'alta' }
   if (fbclid || utmSource.toLowerCase().includes('facebook') || utmSource.toLowerCase().includes('fb') || utmSource.toLowerCase().includes('ig')) {
     return { origin: 'Paid - Facebook/Instagram', confidence: 'alta' }
   }
@@ -151,7 +160,9 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
     .select([
       'session_id', 'started_at', 'duration_seconds', 'city', 'region',
       'utm_source', 'utm_medium', 'utm_campaign', 'utm_id',
-      'gclid', 'fbclid', 'ttclid', 'referrer_domain',
+      // wbraid/gbraid: sem eles o classificador vê só o Google como referrer
+      // e chama de busca orgânica o clique pago feito no iPhone.
+      'gclid', 'wbraid', 'gbraid', 'fbclid', 'ttclid', 'referrer_domain',
       'contacted_whatsapp', 'submitted_form', 'page_views_count',
     ])
     .where('fingerprint_id', '=', session.fingerprint_id)
@@ -289,6 +300,8 @@ export async function consultarSessaoDetalhe(endereco: string, escopo: Escopo) {
         utm_term: session.utm_term,
         fbclid: session.fbclid,
         gclid: session.gclid,
+        gbraid: session.gbraid,
+        wbraid: session.wbraid,
         ttclid: session.ttclid,
         extracted_params: extractedParams,
         page_views_count: session.page_views_count,
