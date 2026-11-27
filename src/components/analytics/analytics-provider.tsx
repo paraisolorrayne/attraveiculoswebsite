@@ -4,7 +4,6 @@ import { GoogleTagManager, GoogleTagManagerNoScript } from './google-tag-manager
 import { MicrosoftClarity } from './microsoft-clarity'
 import { GoogleAnalytics } from './google-analytics'
 import { OpenAIPixel } from './openai-pixel'
-import { MetaPixel } from './meta-pixel'
 
 /**
  * Analytics Provider Component
@@ -41,9 +40,9 @@ export function AnalyticsProvider() {
           uma tag dentro do contêiner. Só carrega com NEXT_PUBLIC_OPENAI_PIXEL_ID. */}
       <OpenAIPixel />
 
-      {/* Meta Pixel — só os eventos de catálogo. O código-base do pixel vem de
-          uma tag do GTM; este componente não carrega nem inicializa nada. */}
-      <MetaPixel />
+      {/* Meta Pixel: o código-base vem de uma tag do GTM. Os eventos de
+          catálogo saem da ficha (ViewContent) e da listagem (Search). Lead não
+          sai do navegador: ver src/components/analytics/meta-pixel.tsx. */}
 
       {/* Google Tag Manager (recommended - includes GA4, Clarity, and Google Ads) */}
       {useGTM && <GoogleTagManager gtmId={gtmId} />}

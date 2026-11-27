@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { medirOpenAI } from '@/components/analytics'
+import { medirLeadOpenAI } from '@/components/analytics'
 import { FormErrorFallback } from './form-error-fallback'
 import { usePathname } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -14,7 +14,6 @@ import { Loader2, X, MessageCircle, Car, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getWhatsAppUrl } from '@/lib/constants'
 import { useVehicleContext } from '@/contexts/vehicle-context'
-import { trackVehicle, valorEmReais } from '@/lib/meta-pixel'
 import { useVisitorTracking } from '@/components/providers/visitor-tracking-provider'
 
 const schema = z.object({
@@ -167,25 +166,11 @@ export function StickyContactForm() {
       // Conversão do OpenAI Ads — DEPOIS do !resposta.ok, não antes.
       // A rota devolve 502 quando nenhum canal recebeu o lead; medir antes
       // contaria como conversão um envio que não chegou a ninguém.
-      medirOpenAI('lead_submitted', {
-        type: 'customer_action',
-        amount: 0,
-        currency: 'BRL',
-      })
+      medirLeadOpenAI()
 
-      // `Lead` do Meta Pixel — mesma regra de posição do medirOpenAI acima:
-      // depois do `!resposta.ok`, senão contaria um lead que não chegou a
-      // ninguém.
-      //
-      // Só sai com veículo no contexto, que é o caso do formulário aberto na
-      // ficha. Em página sem veículo o `trackVehicle` descarta sozinho: `Lead`
-      // sem `content_ids` não casa com o catálogo, que é o defeito que esta
-      // mudança conserta.
-      //
-      // Nome, e-mail e telefone NÃO vão nos parâmetros — a Meta proíbe dado
-      // pessoal aqui, e o lead em si já segue para o CRM pela rota /api/contact.
-      trackVehicle('Lead', [vehicle?.vehicleId], valorEmReais(vehicle?.vehiclePrice))
-
+      // A Meta não recebe `Lead` daqui (27/11/2026): o formulário enviado
+      // ainda não é lead para a Attra. O lead vai à Meta quando chega ao
+      // vendedor, pelo attra-py. Ver src/components/analytics/meta-pixel.tsx.
 
       // Notify the tracking provider that user converted
       trackInteraction('form_submit', {

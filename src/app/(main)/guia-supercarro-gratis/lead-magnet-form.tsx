@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { medirOpenAI } from '@/components/analytics'
+import { medirLeadOpenAI } from '@/components/analytics'
 import { FormErrorFallback } from '@/components/forms/form-error-fallback'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -60,11 +60,7 @@ export function LeadMagnetForm() {
       // Conversão do OpenAI Ads — DEPOIS do !resposta.ok, não antes.
       // A rota devolve 502 quando nenhum canal recebeu o lead; medir antes
       // contaria como conversão um envio que não chegou a ninguém.
-      medirOpenAI('lead_submitted', {
-        type: 'customer_action',
-        amount: 0,
-        currency: 'BRL',
-      })
+      medirLeadOpenAI()
 
 
       // Track form submission and guide download in analytics with visitor context (includes geolocation)
