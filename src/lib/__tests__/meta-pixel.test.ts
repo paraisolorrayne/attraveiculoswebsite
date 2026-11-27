@@ -150,10 +150,10 @@ describe('trackVehicle', () => {
 	})
 
 	it('a trava de repetição vale só para ViewContent e Search', () => {
-		// Dois leads do mesmo carro são dois leads.
+		// Duas ações da pessoa com o mesmo carro são duas ações.
 		const chamadas = instalarPixel()
-		trackVehicle('Lead', ['1006232'])
-		trackVehicle('Lead', ['1006232'])
+		trackVehicle('AddToWishlist', ['1006232'])
+		trackVehicle('AddToWishlist', ['1006232'])
 		expect(chamadas).toHaveLength(2)
 	})
 })

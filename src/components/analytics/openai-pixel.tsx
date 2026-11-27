@@ -3,6 +3,7 @@
 import Script from 'next/script'
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { EVENTOS_OPENAI } from '@/lib/openai-pixel'
 
 /**
  * Pixel do OpenAI Ads.
@@ -54,6 +55,15 @@ export function medirOpenAI(
   }
 }
 
+/**
+ * O lead de formulário enviado, no formato que o SDK aceita. Clique no WhatsApp
+ * não é lead e não chama isto (src/lib/__tests__/clique-nao-e-lead.test.ts).
+ * Ver src/lib/openai-pixel.ts.
+ */
+export function medirLeadOpenAI(): void {
+  medirOpenAI(EVENTOS_OPENAI.lead.evento, EVENTOS_OPENAI.lead.parametros)
+}
+
 /** Dispara `page_viewed` a cada rota — inclusive nas trocas sem recarregar. */
 function PageViewTracker() {
   const pathname = usePathname()
@@ -62,68 +72,17 @@ function PageViewTracker() {
     // O site é uma SPA: sem isto, só a primeira página da visita seria contada,
     // e quem entra pelo anúncio e navega até a ficha do carro apareceria como
     // uma visualização só.
-    medirOpenAI('page_viewed', { type: 'contents' })
+    medirOpenAI(EVENTOS_OPENAI.paginaVista.evento, EVENTOS_OPENAI.paginaVista.parametros)
   }, [pathname])
 
   return null
 }
 
-/**
- * Mede QUALQUER clique em link de WhatsApp do site, por delegação.
- *
- * Existem 37 arquivos com link de wa.me — botão flutuante, ficha de veículo,
- * páginas de marca, guias, blog. Marcar um por um significa esquecer alguns
- * hoje e todos os que forem criados depois; a ficha de veículo sozinha tem 7
- * botões, e nenhum media até aqui.
- *
- * Um ouvinte na fase de captura resolve de uma vez e continua valendo para link
- * novo. Roda antes de qualquer handler que pare a propagação, e mede ANTES da
- * navegação — a aba do WhatsApp abre em seguida.
- *
- * O evento é o MESMO para todos os botões, de propósito: o que interessa ao
- * anúncio é aprender que "conversa iniciada" é o resultado desejado, não de qual
- * botão da página ela partiu. O contexto do veículo vai como parâmetro.
+/*
+ * Clique no WhatsApp não mede lead (27/11/2026). Até essa data, um ouvinte aqui
+ * mandava `lead_created` a cada clique em link de WhatsApp, e a OpenAI contava
+ * como lead quem só clicou. A Attra conta o lead quando ele chega ao vendedor.
  */
-function WhatsAppClickTracker() {
-  useEffect(() => {
-    const aoClicar = (e: MouseEvent) => {
-      const alvo = e.target as Element | null
-      const link = alvo?.closest?.('a[href*="wa.me"], a[href*="api.whatsapp.com"]')
-      if (!link) return
-
-      // Contexto do veículo.
-      //
-      // Vai o ID NUMÉRICO, não o slug: é o mesmo valor que o feed publica em
-      // `sku` e o que o estoque usa como chave. Identificador precisa ser
-      // idêntico no feed, na URL e na conversão — senão não dá para responder
-      // QUAL veículo gerou interesse, só quantos cliques houve.
-      //
-      // Duas origens, nesta ordem. O botão pode se identificar por
-      // `data-vehicle-id` — é o caso dos cards de listagem, onde o caminho é só
-      // `/veiculos` e o href não diz de que carro o botão é. Faltando isso, o
-      // id sai do próprio caminho da ficha, que termina nele
-      // (`mercedes-gt-2025-916079`).
-      //
-      // Sem nenhum dos dois, manda nada em vez de mandar o slug: valor que não
-      // casa com o feed é pior que valor ausente.
-      const doBotao = link.closest<HTMLElement>('[data-vehicle-id]')?.dataset.vehicleId
-      const naFicha = window.location.pathname.match(/^\/veiculo\/[\w-]*?(\d+)$/)
-      const contentId = doBotao ?? naFicha?.[1]
-
-      medirOpenAI('whatsapp_click', {
-        type: 'customer_action',
-        amount: 0,
-        currency: 'BRL',
-        ...(contentId ? { content_id: contentId } : {}),
-      })
-    }
-
-    document.addEventListener('click', aoClicar, { capture: true })
-    return () => document.removeEventListener('click', aoClicar, { capture: true })
-  }, [])
-
-  return null
-}
 
 export function OpenAIPixel() {
   if (!PIXEL_ID) return null
@@ -136,7 +95,6 @@ export function OpenAIPixel() {
         {`!function(w,d,s,u){if(w.oaiq)return;var q=function(){q.q.push(arguments)};q.q=[];w.oaiq=q;var j=d.createElement(s);j.async=1;j.src=u;var f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(j,f)}(window,document,"script","https://bzrcdn.openai.com/sdk/oaiq.min.js");oaiq("init",{pixelId:${JSON.stringify(PIXEL_ID)},debug:${debug}});`}
       </Script>
       <PageViewTracker />
-      <WhatsAppClickTracker />
     </>
   )
 }

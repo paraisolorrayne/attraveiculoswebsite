@@ -50,7 +50,13 @@ const INTERVALO_DE_ESPERA_MS = 200
 /** Teto do `search_string` — o que passa disso é ruído para a Meta. */
 const LIMITE_BUSCA = 100
 
-export type EventoDeVeiculo = 'ViewContent' | 'Lead' | 'AddToWishlist' | 'Search'
+/**
+ * Sem `Lead`, de propósito (27/11/2026). Clique no WhatsApp não é lead, e o
+ * formulário enviado ainda não é: a Attra conta o lead quando ele chega ao
+ * vendedor, e esse vai à Meta pelo attra-py (API de Conversões, evento
+ * `LeadEncaminhadoVendedor`). Ver src/lib/__tests__/clique-nao-e-lead.test.ts.
+ */
+export type EventoDeVeiculo = 'ViewContent' | 'AddToWishlist' | 'Search'
 
 declare global {
   interface Window {
@@ -147,9 +153,8 @@ function quandoOPixelExistir(disparar: () => void): void {
  * componente repetiria o evento — foi o que apareceu na listagem, com dois
  * `Search` idênticos. O critério de aceite pede UM `ViewContent` por página.
  *
- * `Lead` e `AddToWishlist` ficam de fora porque são AÇÃO da pessoa: dois
- * cliques no WhatsApp do mesmo carro são dois leads, e engoli-los esconderia
- * interesse real.
+ * `AddToWishlist` fica de fora porque é AÇÃO da pessoa: fazer duas vezes é
+ * fazer duas vezes, e engolir a segunda esconderia interesse real.
  */
 const EVENTOS_DE_ESTADO: ReadonlySet<string> = new Set<EventoDeVeiculo>(['ViewContent', 'Search'])
 
@@ -197,7 +202,7 @@ export function trackVehicle(
 }
 
 /**
- * `value` + `currency` para `ViewContent` e `Lead`.
+ * `value` + `currency` para o `ViewContent`.
  *
  * Preço ausente, zero ou não numérico sai como `{}` em vez de `value: 0`: zero
  * é um número válido para a Meta, entra no cálculo de retorno e rebaixa a média
