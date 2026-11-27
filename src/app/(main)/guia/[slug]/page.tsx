@@ -127,7 +127,7 @@ export default async function GuiaPage({ params }: PageProps) {
 								href={getWhatsAppUrl(`Olá! Li o guia sobre ${data.title.toLowerCase()} e gostaria de falar com um especialista.`)}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 bg-green-700 text-white rounded-lg font-medium hover:bg-green-800 transition-colors"
 							>
 								<MessageCircle className="w-4 h-4" />
 								{data.ctaPrimario}

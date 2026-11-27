@@ -166,10 +166,10 @@ export function LeadCaptureSection() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
               <div>
-                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label htmlFor="consultoria-nome" className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Nome
                 </label>
-                <Input
+                <Input id="consultoria-nome"
                   {...register('name')}
                   placeholder="Como devemos te chamar?"
                   error={errors.name?.message}
@@ -177,10 +177,10 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label htmlFor="consultoria-whatsapp" className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   WhatsApp
                 </label>
-                <Input
+                <Input id="consultoria-whatsapp"
                   {...register('phone')}
                   placeholder="(00) 00000-0000"
                   error={errors.phone?.message}
@@ -188,10 +188,10 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label htmlFor="consultoria-veiculo-desejado" className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Veículo desejado
                 </label>
-                <Input
+                <Input id="consultoria-veiculo-desejado"
                   {...register('vehicle')}
                   placeholder="Ex.: Porsche 911, Range Rover…"
                   error={errors.vehicle?.message}
@@ -199,10 +199,10 @@ export function LeadCaptureSection() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
+                <label htmlFor="consultoria-faixa-de-valor" className="block text-[13px] font-semibold uppercase tracking-wider text-foreground-secondary mb-1.5">
                   Faixa de valor
                 </label>
-                <Select
+                <Select id="consultoria-faixa-de-valor"
                   {...register('budget')}
                   options={budgetOptions}
                   placeholder="Selecione"

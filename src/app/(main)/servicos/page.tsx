@@ -50,7 +50,7 @@ const mainServices = [
   {
     icon: Wallet,
     title: 'Financiamento Premium',
-    description: 'Soluções financeiras exclusivas para veículos de alto valor, com taxas diferenciadas, aprovação personalizada e parcelamento flexível.',
+    description: 'Financiamento para veículos do estoque, com entrada a partir de 20%, até 60 parcelas e análise de crédito com um consultor.',
     href: '/financiamento',
     external: false,
     benefits: [
@@ -103,7 +103,7 @@ const whyChooseAttra = [
 const faqs = [
   {
     question: 'Quais serviços a Attra Veículos oferece?',
-    answer: 'A Attra Veículos oferece três serviços principais para clientes de veículos premium: importação sob medida de veículos de luxo e superesportivos, financiamento premium com condições especiais e taxas diferenciadas, e consignado automotivo para venda segura do seu veículo.'
+    answer: 'A Attra Veículos oferece três serviços principais para clientes de veículos premium: importação sob medida de veículos de luxo e superesportivos, financiamento com entrada a partir de 20% e análise de crédito personalizada, e consignado automotivo para venda segura do seu veículo.'
   },
   {
     question: 'Como funciona a importação de veículos na Attra?',
@@ -111,7 +111,7 @@ const faqs = [
   },
   {
     question: 'Quais são as condições do financiamento premium?',
-    answer: 'O financiamento premium da Attra oferece análise de crédito personalizada e ágil, taxas diferenciadas para veículos de alto valor, financiamento de até 80% do valor do veículo, e condições especiais para clientes Attra. Trabalhamos com as melhores instituições financeiras do mercado.'
+    answer: 'O financiamento da Attra cobre até 80% do valor do veículo, em até 60 parcelas, com análise de crédito personalizada.'
   },
   {
     question: 'Como funciona o consignado automotivo?',

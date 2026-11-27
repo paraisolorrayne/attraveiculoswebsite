@@ -105,7 +105,7 @@ const FAQS = [
   {
     question: 'Preciso ir até Uberlândia para trocar?',
     answer:
-      `A avaliação começa à distância, pelos dados e fotos do veículo. A Attra fica na ${ADDRESS.street}, em ${ADDRESS.city} (${ADDRESS.state}), e entrega em todo o Brasil. A logística do seu carro é combinada caso a caso.`,
+      `À distância, a avaliação é feita pelas fotos e pelos dados do veículo. A Attra fica na ${ADDRESS.street}, em ${ADDRESS.city} (${ADDRESS.state}), e entrega em todo o Brasil. A logística do seu carro é combinada caso a caso.`,
   },
   {
     question: 'Posso trocar por um carro mais barato e receber a diferença?',
@@ -213,7 +213,7 @@ export default function TrocaPage() {
               href={whatsapp}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-green-500 px-5 py-3 font-medium text-white transition-colors hover:bg-green-600"
+              className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-5 py-3 font-medium text-white transition-colors hover:bg-green-800"
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
               Avaliar meu carro no WhatsApp

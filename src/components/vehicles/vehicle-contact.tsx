@@ -4,7 +4,7 @@ import { MessageCircle, Phone, Mail, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Vehicle } from '@/types'
 import { getWhatsAppUrl, PHONE_NUMBER } from '@/lib/constants'
-import { mensagemWhatsAppDoVeiculo } from '@/lib/mensagem-whatsapp-veiculo'
+import { mensagemWhatsAppDoVeiculo, mensagemPedidoDeDocumentos } from '@/lib/mensagem-whatsapp-veiculo'
 
 interface VehicleContactProps {
   vehicle: Vehicle
@@ -28,6 +28,17 @@ export function VehicleContact({ vehicle, compact = false }: VehicleContactProps
             <MessageCircle className="w-5 h-5 mr-2" />
             Falar com consultor
           </Button>
+        </a>
+        {/* Baixo compromisso: quem ainda avalia pede os documentos (auditoria de 20/11/2026). */}
+        <a
+          href={getWhatsAppUrl(mensagemPedidoDeDocumentos(vehicle))}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-vehicle-id={vehicle.id}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-3 text-sm text-foreground transition-colors hover:bg-background-soft"
+        >
+          <FileText className="h-4 w-4" aria-hidden="true" />
+          Receber laudo e histórico
         </a>
         <div className="flex gap-2">
           <a
@@ -59,7 +70,7 @@ export function VehicleContact({ vehicle, compact = false }: VehicleContactProps
         {/* WhatsApp CTA */}
         <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block">
           <Button
-            className="w-full bg-green-500 hover:bg-green-600 text-white"
+            className="w-full bg-green-700 hover:bg-green-800 text-white"
             size="lg"
           >
             <MessageCircle className="w-5 h-5 mr-2" />

@@ -7,6 +7,9 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, error, ...props }, ref) => {
+    // Com id (vindo do <label htmlFor>), o erro fica ligado ao campo para o
+    // leitor de tela (auditoria de acessibilidade de 20/11/2026).
+    const idDoErro = error && props.id ? `${props.id}-erro` : undefined
     return (
       <div className="w-full">
         <input
@@ -16,10 +19,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             error && 'border-primary ring-1 ring-primary',
             className
           )}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={idDoErro}
           {...props}
         />
         {error && (
-          <p className="mt-1 text-sm text-primary">{error}</p>
+          <p id={idDoErro} className="mt-1 text-sm text-primary">{error}</p>
         )}
       </div>
     )

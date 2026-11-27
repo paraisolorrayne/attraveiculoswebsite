@@ -6,6 +6,7 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CinematicGallery } from '@/components/vehicles/cinematic-gallery'
 import { VehicleInfo } from '@/components/vehicles/vehicle-info'
 import { VehicleOptions } from '@/components/vehicles/vehicle-options'
+import { ProcedenciaDoVeiculo } from '@/components/vehicles/procedencia-do-veiculo'
 import { VehicleContact } from '@/components/vehicles/vehicle-contact'
 import { RelatedVehicles } from '@/components/vehicles/related-vehicles'
 import { EngineAudioPlayer } from '@/components/vehicles/engine-audio-player'
@@ -320,6 +321,10 @@ export default async function VehiclePage({ params }: VehiclePageProps) {
 							{opcionais.length > 0 && (
 								<VehicleOptions options={opcionais} />
 							)}
+
+							{/* Procedência: o que a Attra verifica e o pedido de documentos
+							    deste carro (auditoria de 20/11/2026). */}
+							<ProcedenciaDoVeiculo vehicle={vehicle} />
 
 							{/* Contact - Mobile. O id é onde a barra fixa de preço some. */}
 							<div className="lg:hidden" id="contato-ficha">

@@ -43,7 +43,7 @@ export const homeFAQs: FAQItem[] = [
   },
   {
     question: 'A Attra oferece financiamento?',
-    answer: 'Sim, oferecemos financiamento premium com condições especiais, taxas diferenciadas e financiamento de até 80% do valor do veículo. Nossa equipe faz análise de crédito personalizada para cada cliente.',
+    answer: 'Sim. O financiamento cobre até 80% do valor do veículo, em até 60 parcelas, com análise de crédito personalizada para cada cliente.',
   },
   {
     question: 'Como funciona a compra de um veículo na Attra?',
@@ -89,7 +89,7 @@ export const servicosFAQs: FAQItem[] = [
   },
   {
     question: 'Quais são as condições do financiamento premium?',
-    answer: 'Oferecemos análise de crédito personalizada, taxas diferenciadas para veículos de alto valor, financiamento de até 80% do valor, e condições especiais para clientes Attra.',
+    answer: 'Financiamento de até 80% do valor do veículo, em até 60 parcelas, com análise de crédito personalizada.',
   },
   {
     question: 'Como funciona o consignado automotivo?',

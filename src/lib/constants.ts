@@ -107,6 +107,15 @@ export const PERFIS_OFICIAIS = [
 // Email
 export const EMAIL = 'faleconosco@attraveiculos.com.br'
 
+/**
+ * Identificação do fornecedor no rodapé (auditoria de 20/11/2026; Decreto
+ * 7.962/2013, art. 2º). CNPJ da matriz, informado pela Attra em 20/11/2026
+ * (há também a filial 07.627.884/0002-39). Vazio, o rodapé não mostra a linha.
+ */
+export const RAZAO_SOCIAL = 'Attra Veículos Multimarcas Ltda'
+export const CNPJ = '07.627.884/0001-58'
+
+
 // URLs
 export const SITE_URL = 'https://attraveiculos.com.br'
 

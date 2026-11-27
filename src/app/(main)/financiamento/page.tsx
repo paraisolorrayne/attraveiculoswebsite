@@ -2,19 +2,24 @@ import { Metadata } from 'next'
 import { Container } from '@/components/ui/container'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { FinancingForm } from '@/components/forms/financing-form'
-import { Check, Shield, Clock, Percent } from 'lucide-react'
+import { Check, Clock, Percent, Car } from 'lucide-react'
 import { metadadosDaPagina } from '@/lib/seo/page-metadata'
 
 export const metadata: Metadata = metadadosDaPagina('/financiamento', {
   titulo: 'Financiamento',
-  descricao: 'Simule seu financiamento na Attra Veículos. Taxas a partir de 0,99% a.m., aprovação rápida e sem burocracia.',
+  descricao: 'Simule o financiamento na Attra Veículos: entrada a partir de 20%, até 60 parcelas e o seu carro como parte da entrada.',
   complemento: 'Simulação com um consultor da Attra, em Uberlândia, para carros de todo o estoque.',
 })
 
+// Auditoria de 20/11/2026: os destaques diziam "Taxas competitivas",
+// "Resposta em até 2 horas" (a FAQ diz "após a documentação completa") e "as
+// melhores condições do mercado". Agora cada destaque traz a condição junto.
+// Taxa de juros não aparece no site: a Attra não consegue garantir um número,
+// que depende do perfil de crédito e da instituição (decisão de 20/11/2026).
 const benefits = [
-  { icon: Percent, title: 'Taxas competitivas', description: 'A partir de 0,99% ao mês' },
-  { icon: Clock, title: 'Aprovação rápida', description: 'Resposta em até 2 horas' },
-  { icon: Shield, title: 'Sem burocracia', description: 'Processo 100% digital' },
+  { icon: Percent, title: 'Entrada a partir de 20%', description: 'Parcelamento em até 60 meses, conforme a análise de crédito.' },
+  { icon: Clock, title: 'Resposta em até 2 horas', description: 'Depois do envio da documentação completa.' },
+  { icon: Car, title: 'Seu carro na entrada', description: 'Avaliamos o seu veículo e o valor entra como parte do pagamento.' },
 ]
 
 const requirements = [
@@ -27,9 +32,8 @@ const requirements = [
 
 const faq = [
   { q: 'Qual o valor mínimo de entrada?', a: 'Trabalhamos com entrada a partir de 20% do valor do veículo, podendo variar conforme análise de crédito.' },
-  { q: 'Em quantas vezes posso parcelar?', a: 'Oferecemos parcelamento em até 60 vezes, com parcelas que cabem no seu bolso.' },
-  { q: 'Qual a taxa de juros?', a: 'Nossas taxas começam a partir de 0,99% ao mês, variando conforme perfil e instituição financeira.' },
-  { q: 'Posso usar meu carro como entrada?', a: 'Sim! Avaliamos seu veículo atual e utilizamos o valor como parte do pagamento.' },
+  { q: 'Em quantas vezes posso parcelar?', a: 'Em até 60 vezes, conforme a análise de crédito.' },
+  { q: 'Posso usar meu carro como entrada?', a: 'Sim. Avaliamos o seu veículo atual e o valor entra como parte do pagamento.' },
   { q: 'Quanto tempo leva para aprovar?', a: 'A aprovação geralmente ocorre em até 2 horas após o envio da documentação completa.' },
 ]
 
@@ -43,8 +47,8 @@ export default function FinanciamentoPage() {
           <div className="max-w-3xl mx-auto text-center mt-8">
             <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">Financiamento</h1>
             <p className="text-lg text-foreground-secondary">
-              Realize o sonho do seu carro premium com as melhores condições do mercado.
-              Aprovação rápida, taxas competitivas e sem burocracia.
+              Entrada a partir de 20%, parcelamento em até 60 meses e o seu carro como parte da entrada.
+              Um consultor da Attra faz a simulação com você, para qualquer veículo do estoque.
             </p>
           </div>
         </Container>
